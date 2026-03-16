@@ -27,7 +27,7 @@ function sendError(
     error: {
       code,
       message,
-      details,
+      details: details ?? [],
       traceId: getTraceId(req),
     },
   });
@@ -43,8 +43,28 @@ function getAuth(req: Request): AuthContext {
 export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
+  private ensureManagerScope(req: Request, res: Response, auth: AuthContext, employeeId: string): boolean {
+    if (auth.role !== 'Manager' || !auth.department_id) {
+      return true;
+    }
+
+    const target = this.employeeService.getEmployeeById(employeeId);
+    if (target.department_id !== auth.department_id) {
+      sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
+      return false;
+    }
+
+    return true;
+  }
+
   createEmployee = (req: Request, res: Response): void => {
     try {
+      const auth = getAuth(req);
+      if (auth.role === 'Manager' && auth.department_id && req.body.department_id !== auth.department_id) {
+        sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
+        return;
+      }
+
       const employee = this.employeeService.createEmployee(req.body);
       res.status(201).json({ data: employee });
     } catch (error) {
@@ -54,6 +74,10 @@ export class EmployeeController {
 
   getEmployee = (req: Request, res: Response): void => {
     try {
+      const auth = getAuth(req);
+      if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
+        return;
+      }
       const employee = this.employeeService.getEmployeeById(req.params.employeeId);
       res.status(200).json({ data: employee });
     } catch (error) {
@@ -72,6 +96,14 @@ export class EmployeeController {
       return;
     }
 
+    const rawLimit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 25;
+    if (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 100) {
+      sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
+        { field: 'limit', reason: 'must be an integer between 1 and 100' },
+      ]);
+      return;
+    }
+
     let departmentFilter = typeof req.query.department_id === 'string' ? req.query.department_id : undefined;
     if (auth.role === 'Employee') {
       departmentFilter = undefined;
@@ -85,20 +117,25 @@ export class EmployeeController {
         department_id: departmentFilter,
         status: typeof status === 'string' ? (status as never) : undefined,
       })
-      .filter((employee) => auth.role !== 'Employee' || auth.employee_id === employee.employee_id);
+      .filter((employee) => auth.role !== 'Employee' || auth.employee_id === employee.employee_id)
+      .slice(0, rawLimit);
 
     res.status(200).json({
       data: employees,
       page: {
         nextCursor: null,
         hasNext: false,
-        limit: Number(req.query.limit) || 25,
+        limit: rawLimit,
       },
     });
   };
 
   updateEmployee = (req: Request, res: Response): void => {
     try {
+      const auth = getAuth(req);
+      if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
+        return;
+      }
       const employee = this.employeeService.updateEmployee(req.params.employeeId, req.body);
       res.status(200).json({ data: employee });
     } catch (error) {
@@ -108,6 +145,14 @@ export class EmployeeController {
 
   assignDepartment = (req: Request, res: Response): void => {
     try {
+      const auth = getAuth(req);
+      if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
+        return;
+      }
+      if (auth.role === 'Manager' && auth.department_id && req.body.department_id !== auth.department_id) {
+        sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
+        return;
+      }
       const employee = this.employeeService.assignDepartment(req.params.employeeId, req.body.department_id);
       res.status(200).json({ data: employee });
     } catch (error) {
@@ -117,6 +162,10 @@ export class EmployeeController {
 
   updateStatus = (req: Request, res: Response): void => {
     try {
+      const auth = getAuth(req);
+      if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
+        return;
+      }
       const employee = this.employeeService.updateStatus(req.params.employeeId, req.body.status);
       res.status(200).json({ data: employee });
     } catch (error) {
@@ -126,6 +175,10 @@ export class EmployeeController {
 
   deleteEmployee = (req: Request, res: Response): void => {
     try {
+      const auth = getAuth(req);
+      if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
+        return;
+      }
       this.employeeService.deleteEmployee(req.params.employeeId);
       res.status(204).send();
     } catch (error) {
@@ -135,7 +188,7 @@ export class EmployeeController {
 
   private handleError(req: Request, res: Response, error: unknown): void {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') {
-      sendError(req, res, 401, 'UNAUTHORIZED', 'Missing or invalid bearer token');
+      sendError(req, res, 401, 'TOKEN_INVALID', 'Missing or invalid bearer token');
       return;
     }
 
