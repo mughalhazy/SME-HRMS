@@ -1,83 +1,174 @@
 # Workflow Catalog
 
-This catalog defines core HRMS workflows based on the canonical domain model entities and lifecycle states.
+This catalog defines deterministic HR workflows and explicitly maps each workflow to canonical services and domain entities.
+
+## Valid service registry
+- `employee-service`
+- `attendance-service`
+- `leave-service`
+- `payroll-service`
+- `hiring-service`
+- `auth-service`
+- `notification-service`
 
 ## employee_onboarding
+
+### Owning service
+- `employee-service`
+
+### Participating services
+- `hiring-service` (optional source via `CandidateHired` event)
+- `auth-service`
+- `notification-service`
+
+### Entities referenced
+- `Employee`
+- `Department`
+- `Role`
+- `Candidate` (only when sourced from hiring flow)
 
 ### Trigger
 - A candidate is marked as **Hired** in recruitment, or HR initiates a direct hire onboarding request.
 
 ### Steps
-1. Create or confirm **Department** and **Role** assignment for the incoming employee.
-2. Create **Employee** record in **Draft** state with required identity, contact, and employment metadata.
-3. Assign manager (`manager_employee_id`) and organizational placement (`department_id`, `role_id`).
-4. Validate mandatory onboarding fields (employee number, email uniqueness, hire date, employment type).
-5. Activate employee by transitioning **Employee** from **Draft** to **Active** on hire date.
-6. Initialize downstream eligibility for attendance, leave, payroll, and performance workflows.
+1. Confirm `Department` and `Role` exist and are active for assignment.
+2. Create `Employee` in `Draft`.
+3. Assign `department_id`, `role_id`, and optional `manager_employee_id`.
+4. Validate uniqueness and required fields (`employee_number`, `email`, `hire_date`, `employment_type`).
+5. Transition `Employee` from `Draft` to `Active` on hire date.
+6. Publish eligibility events to attendance, leave, payroll, and performance consumers.
 
 ## attendance_tracking
 
+### Owning service
+- `attendance-service`
+
+### Participating services
+- `employee-service`
+- `auth-service`
+- `notification-service`
+
+### Entities referenced
+- `AttendanceRecord`
+- `Employee`
+
 ### Trigger
-- An employee checks in/out (manual, biometric, or API import), or a daily attendance batch process runs.
+- Employee check-in/out event (manual, biometric, or API import), or daily sync job.
 
 ### Steps
-1. Capture attendance event and create/update **AttendanceRecord** in **Captured** state.
-2. Resolve attendance date and compute `total_hours` from check-in/check-out timestamps when available.
-3. Apply attendance rules to classify `attendance_status` (Present, Late, HalfDay, Absent, Holiday).
-4. Validate record against policy and move to **Validated** state.
-5. Route for supervisor/time-admin confirmation and mark as **Approved**.
-6. Lock period records to **Locked** state for payroll and reporting integrity.
+1. Create/update `AttendanceRecord` in `Captured` state.
+2. Compute `total_hours` from check-in/check-out timestamps.
+3. Classify `attendance_status` (Present, Late, HalfDay, Absent, Holiday).
+4. Validate policy and transition to `Validated`.
+5. Supervisor/time-admin action transitions to `Approved`.
+6. Period close transitions records to `Locked` for payroll safety.
 
 ## leave_request
 
+### Owning service
+- `leave-service`
+
+### Participating services
+- `employee-service`
+- `auth-service`
+- `notification-service`
+- `payroll-service` (consumer of approved leave impact)
+
+### Entities referenced
+- `LeaveRequest`
+- `Employee`
+
 ### Trigger
-- An employee submits a leave request from draft.
+- Employee submits a leave request from draft.
 
 ### Steps
-1. Employee creates **LeaveRequest** in **Draft** with leave type, date range, and reason.
-2. System calculates `total_days` and validates date overlap/policy constraints.
-3. Submit request and transition status to **Submitted** with `submitted_at` timestamp.
-4. Notify approver (`approver_employee_id`) for decision.
-5. Approver reviews and sets status to **Approved** or **Rejected**, recording `decision_at`.
-6. If approved, update employee availability/status context for the leave period (e.g., **OnLeave** as applicable).
-7. Allow cancellation path to **Cancelled** when initiated by employee/admin under policy.
+1. Create `LeaveRequest` in `Draft` with leave type, date range, and reason.
+2. Calculate `total_days`; validate overlap and policy constraints.
+3. Submit request (`status=Submitted`, set `submitted_at`).
+4. Notify `approver_employee_id`.
+5. Approver sets `Approved` or `Rejected` and stamps `decision_at`.
+6. If approved, propagate availability impact to dependent consumers.
+7. Allow policy-governed cancellation (`Cancelled`).
 
 ## payroll_processing
 
+### Owning service
+- `payroll-service`
+
+### Participating services
+- `employee-service`
+- `attendance-service`
+- `leave-service`
+- `auth-service`
+- `notification-service`
+
+### Entities referenced
+- `PayrollRecord`
+- `Employee`
+- `AttendanceRecord`
+- `LeaveRequest`
+
 ### Trigger
-- Payroll cycle reaches period close date, or payroll admin starts an off-cycle payroll run.
+- Payroll period close date, or payroll admin starts off-cycle run.
 
 ### Steps
-1. Create **PayrollRecord** entries in **Draft** for all eligible active employees in the pay period.
-2. Pull period inputs (base salary, allowances, deductions, overtime) from configured sources.
-3. Calculate `gross_pay` and `net_pay` per employee and validate currency/period boundaries.
-4. Review and transition records to **Processed** after payroll validation checks.
-5. Execute payment disbursement and stamp `payment_date`.
-6. Update records to **Paid** on successful payout, or **Cancelled** for reversed/invalid runs.
+1. Create `PayrollRecord` in `Draft` for eligible active employees.
+2. Pull compensation, attendance summary, and approved leave impacts.
+3. Calculate `gross_pay` and `net_pay`; validate currency/period boundaries.
+4. Transition validated records to `Processed`.
+5. Execute disbursement and stamp `payment_date`.
+6. Transition to `Paid` on success or `Cancelled` if reversed/invalid.
 
 ## candidate_hiring
 
+### Owning service
+- `hiring-service`
+
+### Participating services
+- `employee-service` (consumes `CandidateHired`)
+- `auth-service`
+- `notification-service`
+
+### Entities referenced
+- `JobPosting`
+- `Candidate`
+- `Interview`
+- `Department`
+- `Role`
+- `Employee` (conversion target)
+
 ### Trigger
-- A **JobPosting** is opened, or a new candidate application is submitted.
+- A `JobPosting` is opened, or a candidate application is received.
 
 ### Steps
-1. Publish **JobPosting** in **Open** state with department, role profile, and vacancy details.
-2. Capture **Candidate** application in **Applied** state.
-3. Progress candidate to **Screening** after recruiter review.
-4. Schedule and conduct **Interview** rounds (`Scheduled` → `Completed`) and capture recommendations.
-5. Move qualified candidate to **Offered** and complete offer decision.
-6. On acceptance, transition candidate to **Hired** and close or update related job posting status.
-7. Convert hired candidate into **Employee** onboarding flow.
+1. Publish `JobPosting` in `Open` with department/role/vacancy details.
+2. Capture `Candidate` in `Applied`.
+3. Progress candidate to `Screening`.
+4. Schedule and complete `Interview` rounds (`Scheduled` → `Completed`).
+5. Move qualified candidate to `Offered`.
+6. On acceptance, transition candidate to `Hired`.
+7. Emit `CandidateHired` for employee onboarding.
 
 ## performance_review
 
+### Owning service
+- `employee-service`
+
+### Participating services
+- `auth-service`
+- `notification-service`
+
+### Entities referenced
+- `PerformanceReview`
+- `Employee`
+
 ### Trigger
-- Review cycle start date is reached, or manager initiates an ad hoc review.
+- Review cycle start date, or manager initiates ad hoc review.
 
 ### Steps
-1. Create **PerformanceReview** in **Draft** for target employee and assigned reviewer.
-2. Reviewer records assessment inputs (strengths, improvement areas, goals, optional rating).
-3. Submit review and transition to **Submitted** with `submitted_at`.
-4. Employee reads and acknowledges review, setting status to **Acknowledged** with `acknowledged_at`.
-5. Final HR/manager closure transitions review to **Finalized**.
-6. Store finalized outcomes for promotion, compensation, and development planning.
+1. Create `PerformanceReview` in `Draft`.
+2. Reviewer captures strengths, improvement areas, goals, and optional rating.
+3. Submit review (`Submitted`, set `submitted_at`).
+4. Employee acknowledges (`Acknowledged`, set `acknowledged_at`).
+5. Final closure transitions record to `Finalized`.
+6. Persist outcomes for talent and compensation planning.

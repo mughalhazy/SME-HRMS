@@ -1,66 +1,45 @@
 # Security Model
 
 ## Overview
-This document defines role-based access control (RBAC) for SME-HRMS. Permissions are granted to system roles and scoped by resource ownership where applicable.
+This document defines RBAC and capability-level authorization for SME-HRMS.
 
 ## Roles
+- **Admin**: unrestricted tenant-wide HR operations and access administration.
+- **Manager**: scoped to assigned department and reporting hierarchy.
+- **Employee**: self-service scope plus limited organizational directory visibility.
 
-### Admin
-- Full system administration access.
-- Can manage organization settings, users, roles, and all business records.
-- Can view and operate across all departments and employees.
+## Capability-to-role authorization
 
-### Manager
-- Operational access for team and department management.
-- Can manage records for direct reports and assigned department(s).
-- Can approve/reject workflow items within managerial authority.
+| Capability ID | Capability | Admin | Manager | Employee |
+|---|---|---|---|---|
+| `CAP-EMP-001` | Employee directory and lifecycle management | Allow | Allow (scoped) | Read (limited) |
+| `CAP-EMP-002` | Employee profile maintenance | Allow | Allow (direct/indirect reports) | Update own profile |
+| `CAP-ATT-001` | Attendance capture and monitoring | Allow | Allow (team) | Create/read/update own |
+| `CAP-ATT-002` | Attendance validation and lock | Allow | Allow (team periods) | Deny |
+| `CAP-LEV-001` | Leave request lifecycle | Allow | Allow (team) | Create/read/update own |
+| `CAP-LEV-002` | Leave decision workflow | Allow | Allow (team approvals) | Deny |
+| `CAP-PAY-001` | Payroll processing | Allow | Read (team summary/detail per policy) | Read own |
+| `CAP-PAY-002` | Payroll disbursement completion | Allow | Deny (unless delegated) | Deny |
+| `CAP-HIR-001` | Job posting management | Allow | Allow (department postings) | Read |
+| `CAP-HIR-002` | Candidate pipeline and interviews | Allow | Allow (assigned requisitions) | Deny |
+| `CAP-PRF-001` | Performance review lifecycle | Allow | Allow (team reviews) | Read own + acknowledge |
 
-### Employee
-- Self-service access for personal profile and personal workflow records.
-- Can view only information required for daily HR operations.
-- Cannot access cross-employee confidential records except where explicitly exposed (for example, directory basics).
+## Module permission coverage
 
-## Permission Matrix
-
-### Legend
-- **C**: Create
-- **R**: Read
-- **U**: Update
-- **D**: Delete
-- **A**: Approve/Decide
-- **\***: Scoped (own record, direct-report record, or assigned department)
-
-| Resource | Admin | Manager | Employee |
+| Module / Resource | Admin | Manager | Employee |
 |---|---|---|---|
-| Employee profile | CRUD | CRU* | R/U* (own) |
-| Department | CRUD | R | R |
-| Role definitions | CRUD | R | - |
-| Attendance records | CRUD | CRUA* | CRU* (own) |
-| Leave requests | CRUDA | CRUA* | CRU* (own), submit |
-| Payroll records | CRUD | R* (team summary/detail per policy) | R* (own) |
-| Performance reviews | CRUDA | CRUA* | R* (own), acknowledge |
-| Job postings | CRUD | CRU* | R |
-| Candidates | CRUD | CRU* | - |
-| Interviews | CRUD | CRU* | - |
-| Reports & analytics | Full | R* (team/department) | R* (self metrics only) |
-| User & access management | CRUD | - | - |
-| Organization settings | CRUD | - | - |
-| Audit logs | R | R* (team actions where allowed) | - |
+| Employee / Department / Role | CRUD | CRU (scoped) | R (directory), U (own profile) |
+| AttendanceRecord | CRUD | CRUA (scoped) | CRU (own) |
+| LeaveRequest | CRUDA | CRUA (scoped) | CRU (own), submit |
+| PayrollRecord | CRUD | R (policy scoped) | R (own) |
+| JobPosting / Candidate / Interview | CRUD | CRU (scoped) | R (job posting only) |
+| PerformanceReview | CRUDA | CRUA (scoped) | R (own), acknowledge |
+| User/access administration | CRUD | Deny | Deny |
+| Audit logs | Read | Read (scoped) | Deny |
 
-## Scope Rules
-
-1. **Admin scope**: Unrestricted across all entities and departments.
-2. **Manager scope**: Limited to direct reports, indirect reports (if enabled), and assigned departments.
-3. **Employee scope**: Limited to own records except explicitly shared organizational data (for example department list, job postings).
-4. **Sensitive data controls**:
-   - Compensation data is restricted to Admin and policy-authorized Managers.
-   - Performance feedback visibility is restricted to reviewer chain and reviewed employee.
-5. **Approval authority**:
-   - Managers may approve leave and performance workflows for in-scope employees.
-   - Admin may override approvals with audit justification.
-
-## Enforcement Notes
-- Every permission check must evaluate both **role** and **scope**.
-- All write operations should be audit-logged with actor, timestamp, previous value, and new value.
-- Deny-by-default policy applies where permission is not explicitly granted.
-- API and UI authorization must remain consistent to avoid privilege escalation.
+## Enforcement rules
+1. Deny-by-default when capability permission is not explicitly granted.
+2. Authorization must evaluate both **role** and **scope**.
+3. Scope filters must be enforced in API handlers and data queries.
+4. All write and approval actions are audit logged with actor, timestamp, and before/after values.
+5. Compensation and sensitive review data are never exposed outside permitted scopes.
