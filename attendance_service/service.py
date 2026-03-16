@@ -219,6 +219,44 @@ class AttendanceService:
             "records": len(rows),
         }
 
+    def attendance_absence_alerts(self, actor: Actor, *, attendance_date: date) -> dict:
+        """Return absence alert candidates for a specific date."""
+
+        if actor.role not in {"Admin", "Manager"}:
+            raise AttendanceServiceError("FORBIDDEN", "Not allowed to generate absence alerts")
+
+        alert_records: list[dict] = []
+        for record in self._records.values():
+            if record.attendance_date != attendance_date or record.attendance_status != AttendanceStatus.ABSENT:
+                continue
+
+            employee = self._employee_directory.get(record.employee_id)
+            if actor.role == "Manager" and actor.department_id != employee.department_id:
+                continue
+
+            alert_records.append(
+                {
+                    "attendanceId": str(record.attendance_id),
+                    "employeeId": str(record.employee_id),
+                    "attendanceDate": record.attendance_date.isoformat(),
+                    "attendanceStatus": record.attendance_status.value,
+                    "managerEmployeeId": str(employee.manager_employee_id) if employee.manager_employee_id else None,
+                }
+            )
+
+        self.events.append(
+            {
+                "type": "AttendanceAbsenceAlertsGenerated",
+                "attendance_date": attendance_date.isoformat(),
+                "count": len(alert_records),
+            }
+        )
+        return {
+            "attendanceDate": attendance_date.isoformat(),
+            "alerts": alert_records,
+            "count": len(alert_records),
+        }
+
     def _get_record(self, attendance_id: UUID) -> AttendanceRecord:
         record = self._records.get(attendance_id)
         if not record:

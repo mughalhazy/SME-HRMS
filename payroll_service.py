@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import calendar
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -236,6 +237,42 @@ class PayrollService:
                 "period_end": period_end,
                 "processed_count": len(processed_ids),
                 "record_ids": sorted(processed_ids),
+            }
+        }
+
+    def payroll_monthly_trigger(
+        self,
+        run_date: str,
+        authorization: str | None,
+        records: list[dict[str, Any]] | None = None,
+    ) -> tuple[int, dict[str, Any]]:
+        """Trigger a monthly payroll run based on the month from run_date."""
+
+        trigger_date = date.fromisoformat(run_date)
+        period_start = trigger_date.replace(day=1)
+        period_end = trigger_date.replace(day=calendar.monthrange(trigger_date.year, trigger_date.month)[1])
+
+        status, payload = self.run_payroll(
+            period_start.isoformat(),
+            period_end.isoformat(),
+            authorization,
+            records=records,
+        )
+        self.events.append(
+            {
+                "type": "PayrollMonthlyTriggerExecuted",
+                "run_date": trigger_date.isoformat(),
+                "period_start": period_start.isoformat(),
+                "period_end": period_end.isoformat(),
+                "processed_count": payload["data"]["processed_count"],
+                "at": self._now().isoformat(),
+            }
+        )
+        return status, {
+            "data": {
+                "trigger": "monthly",
+                "run_date": trigger_date.isoformat(),
+                **payload["data"],
             }
         }
 

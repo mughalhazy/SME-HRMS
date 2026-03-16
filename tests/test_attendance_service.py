@@ -150,6 +150,48 @@ class AttendanceServiceTests(unittest.TestCase):
         self.assertEqual(status, 422)
         self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
 
+    def test_absence_alerts_returns_absent_records_for_admin(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        self.service.create_record(
+            admin,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 4, 10),
+            attendance_status=AttendanceStatus.ABSENT,
+        )
+        self.service.create_record(
+            admin,
+            employee_id=self.emp_2,
+            attendance_date=date(2026, 4, 10),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 4, 10, 9, 0),
+            check_out_time=datetime(2026, 4, 10, 18, 0),
+        )
+
+        alerts = self.service.attendance_absence_alerts(admin, attendance_date=date(2026, 4, 10))
+        self.assertEqual(alerts["count"], 1)
+        self.assertEqual(alerts["alerts"][0]["employeeId"], str(self.emp_1))
+        self.assertEqual(self.service.events[-1]["type"], "AttendanceAbsenceAlertsGenerated")
+
+    def test_absence_alerts_scoped_to_manager_department(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        self.service.create_record(
+            admin,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 4, 11),
+            attendance_status=AttendanceStatus.ABSENT,
+        )
+        self.service.create_record(
+            admin,
+            employee_id=self.emp_2,
+            attendance_date=date(2026, 4, 11),
+            attendance_status=AttendanceStatus.ABSENT,
+        )
+
+        manager = Actor(employee_id=uuid4(), role="Manager", department_id=self.dep_a)
+        alerts = self.service.attendance_absence_alerts(manager, attendance_date=date(2026, 4, 11))
+        self.assertEqual(alerts["count"], 1)
+        self.assertEqual(alerts["alerts"][0]["employeeId"], str(self.emp_1))
+
 
 if __name__ == "__main__":
     unittest.main()
