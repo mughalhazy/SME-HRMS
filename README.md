@@ -16,3 +16,11 @@ This repository now includes a reference `attendance-service` implementation ali
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+## Deployment baseline
+
+- `Dockerfile` builds a Python 3.12 container for the repository.
+- `docker-compose.yml` defines a runnable `hrms` service.
+- `.github/workflows/ci-cd.yml` runs tests on PRs and builds/publishes an image on `main`.
+
+See `docs/deployment.md` for usage details.
