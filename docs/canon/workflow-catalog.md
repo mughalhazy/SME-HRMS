@@ -30,6 +30,13 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 ### Trigger
 - A candidate is marked as **Hired** in recruitment, or HR initiates a direct hire onboarding request.
 
+### Events
+- Consumes:
+  - `CandidateHired` (when onboarding is sourced from hiring)
+- Publishes:
+  - `EmployeeCreated`
+  - `EmployeeStatusChanged`
+
 ### Steps
 1. Confirm `Department` and `Role` exist and are active for assignment.
 2. Create `Employee` in `Draft`.
@@ -54,6 +61,17 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 
 ### Trigger
 - Employee check-in/out event (manual, biometric, or API import), or daily sync job.
+
+### Events
+- Consumes:
+  - `EmployeeCreated`
+  - `EmployeeStatusChanged`
+- Publishes:
+  - `AttendanceCaptured`
+  - `AttendanceValidated`
+  - `AttendanceApproved`
+  - `AttendanceLocked`
+  - `AttendancePeriodClosed`
 
 ### Steps
 1. Create/update `AttendanceRecord` in `Captured` state.
@@ -80,6 +98,16 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 
 ### Trigger
 - Employee submits a leave request from draft.
+
+### Events
+- Consumes:
+  - `EmployeeCreated`
+  - `EmployeeStatusChanged`
+- Publishes:
+  - `LeaveRequestSubmitted`
+  - `LeaveRequestApproved`
+  - `LeaveRequestRejected`
+  - `LeaveRequestCancelled`
 
 ### Steps
 1. Create `LeaveRequest` in `Draft` with leave type, date range, and reason.
@@ -111,6 +139,17 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 ### Trigger
 - Payroll period close date, or payroll admin starts off-cycle run.
 
+### Events
+- Consumes:
+  - `AttendancePeriodClosed`
+  - `LeaveRequestApproved`
+  - `EmployeeStatusChanged`
+- Publishes:
+  - `PayrollDrafted`
+  - `PayrollProcessed`
+  - `PayrollPaid`
+  - `PayrollCancelled`
+
 ### Steps
 1. Create `PayrollRecord` in `Draft` for eligible active employees.
 2. Pull compensation, attendance summary, and approved leave impacts.
@@ -140,6 +179,19 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 ### Trigger
 - A `JobPosting` is opened, or a candidate application is received.
 
+### Events
+- Consumes:
+  - `DepartmentUpdated`
+  - `RoleUpdated`
+- Publishes:
+  - `JobPostingOpened`
+  - `JobPostingClosed`
+  - `CandidateApplied`
+  - `CandidateStageChanged`
+  - `InterviewScheduled`
+  - `InterviewCompleted`
+  - `CandidateHired`
+
 ### Steps
 1. Publish `JobPosting` in `Open` with department/role/vacancy details.
 2. Capture `Candidate` in `Applied`.
@@ -164,6 +216,11 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 
 ### Trigger
 - Review cycle start date, or manager initiates ad hoc review.
+
+### Events
+- Publishes:
+  - `PerformanceReviewSubmitted`
+  - `PerformanceReviewFinalized`
 
 ### Steps
 1. Create `PerformanceReview` in `Draft`.
