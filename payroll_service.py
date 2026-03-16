@@ -5,7 +5,7 @@ import calendar
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -119,7 +119,10 @@ class PayrollService:
     def _money(value: Decimal | str | int | float | None, field: str, min_zero: bool = True) -> Decimal:
         if value is None:
             return Decimal("0.00")
-        val = Decimal(str(value)).quantize(Decimal("0.01"))
+        try:
+            val = Decimal(str(value)).quantize(Decimal("0.01"))
+        except (InvalidOperation, ValueError, TypeError) as exc:
+            raise ServiceError("VALIDATION_ERROR", f"{field} must be a valid decimal amount", 422) from exc
         if min_zero and val < 0:
             raise ServiceError("VALIDATION_ERROR", f"{field} must be >= 0", 422)
         return val
@@ -138,7 +141,10 @@ class PayrollService:
     def _decode_cursor(cursor: str | None) -> str | None:
         if not cursor:
             return None
-        return json.loads(base64.urlsafe_b64decode(cursor + "==").decode("utf-8")).get("last_id")
+        try:
+            return json.loads(base64.urlsafe_b64decode(cursor + "==").decode("utf-8")).get("last_id")
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise ServiceError("VALIDATION_ERROR", "cursor is invalid", 422) from exc
 
     @staticmethod
     def _require_admin(ctx: AuthContext) -> None:
