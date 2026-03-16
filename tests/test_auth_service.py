@@ -30,7 +30,7 @@ get_auth_me = api_module.get_auth_me
 
 class AuthServiceTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.service = AuthService(token_secret="test-secret")
+        self.service = AuthService(token_secret="test-secret-for-hardening-1234567890")
         self.employee_id = uuid4()
         self.department_id = uuid4()
         self.service.register_user(
