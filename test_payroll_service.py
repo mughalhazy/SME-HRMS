@@ -119,3 +119,26 @@ def test_manager_can_read_records(service: PayrollService):
     status, result = service.list_payroll_records(token("Manager"))
     assert status == 200
     assert len(result["data"]) == 1
+
+
+def test_monthly_trigger_runs_full_month_period(service: PayrollService):
+    admin = token("Admin")
+    status, payload = service.payroll_monthly_trigger(
+        "2026-05-15",
+        admin,
+        records=[
+            {
+                "employee_id": "emp-7",
+                "pay_period_start": "2026-05-01",
+                "pay_period_end": "2026-05-31",
+                "base_salary": "1000.00",
+                "currency": "USD",
+            }
+        ],
+    )
+    assert status == 200
+    assert payload["data"]["trigger"] == "monthly"
+    assert payload["data"]["period_start"] == "2026-05-01"
+    assert payload["data"]["period_end"] == "2026-05-31"
+    assert payload["data"]["processed_count"] == 1
+    assert service.events[-1]["type"] == "PayrollMonthlyTriggerExecuted"
