@@ -41,6 +41,8 @@ class Candidate:
     status: str
     created_at: datetime
     updated_at: datetime
+    source_candidate_id: str | None = None
+    source_profile_url: str | None = None
 
 
 @dataclass(slots=True)
@@ -51,6 +53,8 @@ class Interview:
     scheduled_start: datetime
     scheduled_end: datetime
     location_or_link: str | None
+    google_calendar_event_id: str | None = None
+    google_calendar_event_link: str | None = None
     interviewer_employee_ids: list[str] = field(default_factory=list)
     feedback_summary: str | None = None
     recommendation: str | None = None
@@ -74,7 +78,7 @@ class HiringService:
     }
     INTERVIEW_STATUSES = {"Scheduled", "Completed", "Cancelled", "NoShow"}
     EMPLOYMENT_TYPES = {"FullTime", "PartTime", "Contract", "Intern"}
-    CANDIDATE_SOURCES = {"Referral", "JobBoard", "CareerSite", "Agency", "Other"}
+    CANDIDATE_SOURCES = {"Referral", "JobBoard", "CareerSite", "Agency", "LinkedIn", "Other"}
     INTERVIEW_TYPES = {"PhoneScreen", "Technical", "Behavioral", "Panel", "Final"}
     RECOMMENDATIONS = {"StrongHire", "Hire", "NoHire", "Undecided"}
 
@@ -205,6 +209,8 @@ class HiringService:
             phone=payload.get("phone"),
             resume_url=payload.get("resume_url"),
             source=source,
+            source_candidate_id=payload.get("source_candidate_id"),
+            source_profile_url=payload.get("source_profile_url"),
             application_date=self._coerce_date(payload["application_date"], "application_date"),
             status=payload.get("status", "Applied"),
             created_at=self._now(),
@@ -219,7 +225,16 @@ class HiringService:
         candidate = self._require_candidate(candidate_id)
         previous_status = candidate.status
 
-        for key in ["first_name", "last_name", "email", "phone", "resume_url", "source"]:
+        for key in [
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "resume_url",
+            "source",
+            "source_candidate_id",
+            "source_profile_url",
+        ]:
             if key in patch:
                 if key == "source" and patch[key] is not None:
                     self._validate_value(patch[key], self.CANDIDATE_SOURCES, "source")
@@ -296,6 +311,100 @@ class HiringService:
         self.interviews[interview.interview_id] = interview
         self._emit("InterviewScheduled", {"interview_id": interview.interview_id, "candidate_id": interview.candidate_id})
         return self._serialize(interview)
+
+    def schedule_interview_with_google_calendar(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Schedule interview and simulate synchronization to Google Calendar."""
+        interview = self.create_interview(payload)
+        interview_model = self._require_interview(interview["interview_id"])
+        calendar_event_id = self._new_id()
+        interview_model.google_calendar_event_id = calendar_event_id
+        interview_model.google_calendar_event_link = f"https://calendar.google.com/calendar/event?eid={calendar_event_id}"
+        if not interview_model.location_or_link:
+            interview_model.location_or_link = f"https://meet.google.com/{calendar_event_id[:3]}-{calendar_event_id[3:6]}-{calendar_event_id[6:9]}"
+        interview_model.updated_at = self._now()
+
+        self._emit(
+            "InterviewCalendarSynced",
+            {
+                "interview_id": interview_model.interview_id,
+                "candidate_id": interview_model.candidate_id,
+                "provider": "GoogleCalendar",
+                "external_event_id": calendar_event_id,
+            },
+        )
+        return self._serialize(interview_model)
+
+    def import_candidates_from_linkedin(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Import candidates from LinkedIn payloads for a target job posting."""
+        self._require(payload, ["job_posting_id", "candidates"])
+        self._require_job_posting(payload["job_posting_id"])
+        rows = payload["candidates"]
+        if not isinstance(rows, list) or not rows:
+            raise HiringValidationError("candidates must be a non-empty list")
+
+        imported: list[dict[str, Any]] = []
+        skipped: list[dict[str, str]] = []
+        for row in rows:
+            source_candidate_id = row.get("source_candidate_id") or row.get("linkedin_member_id") or "unknown"
+            email = row.get("email")
+            if not email:
+                skipped.append({"source_candidate_id": source_candidate_id, "reason": "email is required"})
+                continue
+
+            duplicate = any(
+                c.job_posting_id == payload["job_posting_id"] and c.email.lower() == email.lower()
+                for c in self.candidates.values()
+            )
+            if duplicate:
+                skipped.append({"source_candidate_id": source_candidate_id, "reason": "duplicate email for job posting"})
+                continue
+
+            full_name = (row.get("full_name") or "").strip()
+            first_name = row.get("first_name")
+            last_name = row.get("last_name")
+            if not first_name and full_name:
+                name_parts = full_name.split(maxsplit=1)
+                first_name = name_parts[0]
+                last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+            candidate_payload = {
+                "job_posting_id": payload["job_posting_id"],
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "phone": row.get("phone"),
+                "resume_url": row.get("resume_url"),
+                "source": "LinkedIn",
+                "source_candidate_id": source_candidate_id,
+                "source_profile_url": row.get("source_profile_url") or row.get("linkedin_profile_url"),
+                "application_date": row.get("application_date", self._now().date().isoformat()),
+            }
+            imported_candidate = self.create_candidate(candidate_payload)
+            imported.append(imported_candidate)
+            self._emit(
+                "CandidateImported",
+                {
+                    "candidate_id": imported_candidate["candidate_id"],
+                    "job_posting_id": payload["job_posting_id"],
+                    "provider": "LinkedIn",
+                    "source_candidate_id": source_candidate_id,
+                },
+            )
+
+        self._emit(
+            "LinkedInCandidatesImported",
+            {
+                "job_posting_id": payload["job_posting_id"],
+                "imported_count": len(imported),
+                "skipped_count": len(skipped),
+            },
+        )
+        return {
+            "job_posting_id": payload["job_posting_id"],
+            "provider": "LinkedIn",
+            "imported": imported,
+            "skipped": skipped,
+        }
 
     def update_interview(self, interview_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         interview = self._require_interview(interview_id)

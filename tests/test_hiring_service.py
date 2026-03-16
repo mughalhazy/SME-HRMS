@@ -136,6 +136,68 @@ class HiringServiceTest(unittest.TestCase):
         self.assertEqual(row["next_interview_at"], "2026-01-08T10:00:00+00:00")
         self.assertEqual(row["interview_count"], 1)
 
+
+    def test_schedule_interview_with_google_calendar_emits_sync_event(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Lia",
+                "last_name": "North",
+                "email": "lia@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+
+        interview = self.service.schedule_interview_with_google_calendar(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-09T10:00:00Z",
+                "scheduled_end": "2026-01-09T11:00:00Z",
+            }
+        )
+
+        self.assertIsNotNone(interview["google_calendar_event_id"])
+        self.assertIn("calendar.google.com", interview["google_calendar_event_link"])
+        self.assertIn("meet.google.com", interview["location_or_link"])
+        event_types = [event["event_type"] for event in self.service.events]
+        self.assertIn("InterviewCalendarSynced", event_types)
+
+    def test_import_candidates_from_linkedin(self) -> None:
+        result = self.service.import_candidates_from_linkedin(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "candidates": [
+                    {
+                        "linkedin_member_id": "ln-100",
+                        "full_name": "Mia Gray",
+                        "email": "mia@example.com",
+                        "linkedin_profile_url": "https://linkedin.example/mia",
+                        "resume_url": "https://cdn.example/mia.pdf",
+                        "application_date": "2026-01-06",
+                    },
+                    {
+                        "linkedin_member_id": "ln-101",
+                        "full_name": "No Email",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(result["provider"], "LinkedIn")
+        self.assertEqual(len(result["imported"]), 1)
+        self.assertEqual(len(result["skipped"]), 1)
+        imported = result["imported"][0]
+        self.assertEqual(imported["source"], "LinkedIn")
+        self.assertEqual(imported["source_candidate_id"], "ln-100")
+        self.assertEqual(imported["source_profile_url"], "https://linkedin.example/mia")
+
+        event_types = [event["event_type"] for event in self.service.events]
+        self.assertIn("CandidateImported", event_types)
+        self.assertIn("LinkedInCandidatesImported", event_types)
+
     def test_build_hiring_ui_returns_job_postings_and_candidate_pipeline_surfaces(self) -> None:
         candidate = self.service.create_candidate(
             {

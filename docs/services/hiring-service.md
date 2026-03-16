@@ -15,8 +15,10 @@ Canonical implementation notes for `hiring-service`, aligned to the domain, work
 - `PATCH /api/v1/hiring/candidates/{candidate_id}`
 - `GET /api/v1/hiring/candidates/{candidate_id}`
 - `POST /api/v1/hiring/interviews`
+- `POST /api/v1/hiring/interviews/google-calendar` — schedule interview + sync to Google Calendar.
 - `PATCH /api/v1/hiring/interviews/{interview_id}`
 - `POST /api/v1/hiring/candidates/{candidate_id}/mark-hired`
+- `POST /api/v1/hiring/candidates/import/linkedin` — import candidates into a posting from LinkedIn payloads.
 
 ## Authorization capabilities
 - `CAP-HIR-001`: manage job postings.
@@ -25,7 +27,8 @@ Canonical implementation notes for `hiring-service`, aligned to the domain, work
 ## Domain rules implemented in code
 - Job postings validate `employment_type`, date boundaries, openings count, and status.
 - Candidates enforce unique `(job_posting_id, email)` and valid stage transitions.
-- Interviews enforce schedule boundaries and enum integrity.
+- Interviews enforce schedule boundaries and enum integrity, with optional Google Calendar sync metadata (`google_calendar_event_id`, `google_calendar_event_link`).
+- LinkedIn import maps source identifiers/profile URLs and records provider-specific import events.
 - Candidate hire finalization allowed only from `Offered` stage.
 
 ## Events
@@ -35,6 +38,9 @@ Canonical implementation notes for `hiring-service`, aligned to the domain, work
 - `CandidateStageChanged`
 - `InterviewScheduled`
 - `InterviewCompleted`
+- `InterviewCalendarSynced`
+- `CandidateImported`
+- `LinkedInCandidatesImported`
 - `CandidateHired`
 
 ## Notes
