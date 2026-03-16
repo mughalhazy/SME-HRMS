@@ -162,6 +162,26 @@ services:
       timeout: 5s
       retries: 5
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: notification-service
+      PORT: 8007
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+      AUTH_SERVICE_URL: http://auth-service:8006
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   api-gateway:
     build:
       context: .
@@ -176,6 +196,7 @@ services:
       PAYROLL_SERVICE_URL: http://payroll-service:8004
       HIRING_SERVICE_URL: http://hiring-service:8005
       AUTH_SERVICE_URL: http://auth-service:8006
+      NOTIFICATION_SERVICE_URL: http://notification-service:8007
     depends_on:
       employee-service:
         condition: service_healthy
@@ -188,6 +209,8 @@ services:
       hiring-service:
         condition: service_healthy
       auth-service:
+        condition: service_healthy
+      notification-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
