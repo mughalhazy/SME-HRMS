@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "routes": {
+    "employees": "http://employee-service:8001",
+    "attendance": "http://attendance-service:8002",
+    "leave": "http://leave-service:8003",
+    "payroll": "http://payroll-service:8004",
+    "hiring": "http://hiring-service:8005",
+    "auth": "http://auth-service:8006"
+  }
+}

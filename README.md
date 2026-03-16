@@ -1,26 +1,28 @@
 # SME-HRMS
 
-## Attendance service implementation
+## Deployment Layer
 
-This repository now includes a reference `attendance-service` implementation aligned to canonical docs in `docs/canon/`.
+This repository includes a deterministic deployment layer aligned to canonical service and data architecture docs.
 
-### Key coverage
-- Attendance record capture/update/list/read.
-- Validation/approval/period lock lifecycle (`Captured` → `Validated` → `Approved` → `Locked`).
-- Role-aware authorization aligned with the RBAC matrix (`Admin`, `Manager`, `Employee`).
-- Event emission for `AttendanceCaptured`, `AttendanceValidated`, `AttendanceApproved`, `AttendanceLocked`, and `AttendancePeriodClosed`.
-- API adapter helpers with canonical error envelope support.
+### Included services
+- employee-service
+- attendance-service
+- leave-service
+- payroll-service
+- hiring-service
+- auth-service
+- api-gateway
+- frontend-ui
 
-### Run tests
+### Key deployment artifacts
+- `docker-compose.yml`
+- `Dockerfile.services`
+- `Dockerfile.api`
+- `Dockerfile.ui`
+- `.env.example`
+- `deployment/`
+- `.github/workflows/test.yml`
+- `.github/workflows/build.yml`
+- `.github/workflows/deploy.yml`
 
-```bash
-python -m unittest discover -s tests -v
-```
-
-## Deployment baseline
-
-- `Dockerfile` builds a Python 3.12 container for the repository.
-- `docker-compose.yml` defines a runnable `hrms` service.
-- `.github/workflows/ci-cd.yml` runs tests on PRs and builds/publishes an image on `main`.
-
-See `docs/deployment.md` for usage details.
+See `docs/deployment.md` for startup, migration, and QC validation instructions.
