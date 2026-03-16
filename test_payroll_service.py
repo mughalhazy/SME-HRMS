@@ -101,3 +101,21 @@ def test_cursor_pagination(service: PayrollService):
     _, second = service.list_payroll_records(admin, limit=2, cursor=first["page"]["nextCursor"])
     assert len(second["data"]) == 1
     assert second["page"]["hasNext"] is False
+
+
+def test_manager_can_read_records(service: PayrollService):
+    admin = token("Admin")
+    service.create_payroll_record(
+        {
+            "employee_id": "emp-1",
+            "pay_period_start": "2026-04-01",
+            "pay_period_end": "2026-04-30",
+            "base_salary": "900.00",
+            "currency": "USD",
+        },
+        admin,
+    )
+
+    status, result = service.list_payroll_records(token("Manager"))
+    assert status == 200
+    assert len(result["data"]) == 1
