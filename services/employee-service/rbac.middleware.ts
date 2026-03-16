@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 
 export type AuthRole = 'Admin' | 'Manager' | 'Employee';
@@ -24,6 +24,10 @@ const ROLE_ACTIONS: Record<AuthRole, EmployeeAction[]> = {
   Employee: ['read', 'list', 'updateProfile'],
 };
 
+const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET ?? 'dev-secret';
+const TOKEN_ISSUER = process.env.AUTH_TOKEN_ISSUER ?? 'sme-hrms.auth-service';
+const TOKEN_AUDIENCE = process.env.AUTH_TOKEN_AUDIENCE ?? 'sme-hrms.api';
+
 function getTraceId(req: Request): string {
   const incomingTraceId = req.headers['x-trace-id'];
   if (typeof incomingTraceId === 'string' && incomingTraceId.length > 0) {
@@ -37,9 +41,26 @@ function sendError(req: Request, res: Response, status: number, code: string, me
     error: {
       code,
       message,
+      details: [],
       traceId: getTraceId(req),
     },
   });
+}
+
+function decodeSegment(segment: string): string {
+  return Buffer.from(segment, 'base64url').toString('utf8');
+}
+
+function validateSignature(headerSegment: string, payloadSegment: string, signatureSegment: string): boolean {
+  const signingInput = `${headerSegment}.${payloadSegment}`;
+  const expectedSignature = createHmac('sha256', TOKEN_SECRET).update(signingInput).digest();
+  const actualSignature = Buffer.from(signatureSegment, 'base64url');
+
+  if (actualSignature.length !== expectedSignature.length) {
+    return false;
+  }
+
+  return timingSafeEqual(actualSignature, expectedSignature);
 }
 
 function parseAuth(req: Request): AuthContext {
@@ -48,9 +69,24 @@ function parseAuth(req: Request): AuthContext {
     throw new Error('UNAUTHORIZED');
   }
 
+  const token = authorization.slice(7);
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('UNAUTHORIZED');
+  }
+
+  const [headerSegment, payloadSegment, signatureSegment] = parts;
+  if (!validateSignature(headerSegment, payloadSegment, signatureSegment)) {
+    throw new Error('UNAUTHORIZED');
+  }
+
   let payload: unknown;
   try {
-    payload = JSON.parse(Buffer.from(authorization.slice(7), 'base64url').toString('utf8'));
+    const header = JSON.parse(decodeSegment(headerSegment)) as { alg?: string; typ?: string };
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') {
+      throw new Error('UNAUTHORIZED');
+    }
+    payload = JSON.parse(decodeSegment(payloadSegment));
   } catch {
     throw new Error('UNAUTHORIZED');
   }
@@ -59,8 +95,17 @@ function parseAuth(req: Request): AuthContext {
     throw new Error('UNAUTHORIZED');
   }
 
-  const { role, employee_id, department_id } = payload as Record<string, unknown>;
+  const { role, employee_id, department_id, iss, aud, nbf, exp } = payload as Record<string, unknown>;
   if (role !== 'Admin' && role !== 'Manager' && role !== 'Employee') {
+    throw new Error('UNAUTHORIZED');
+  }
+
+  if (iss !== TOKEN_ISSUER || aud !== TOKEN_AUDIENCE) {
+    throw new Error('UNAUTHORIZED');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof nbf !== 'number' || typeof exp !== 'number' || now < nbf || now >= exp) {
     throw new Error('UNAUTHORIZED');
   }
 
@@ -81,7 +126,7 @@ export const authenticate: RequestHandler = (req: Request, res: Response, next: 
     req.auth = parseAuth(req);
     next();
   } catch {
-    sendError(req, res, 401, 'UNAUTHORIZED', 'Missing or invalid bearer token');
+    sendError(req, res, 401, 'TOKEN_INVALID', 'Missing or invalid bearer token');
   }
 };
 
@@ -89,7 +134,7 @@ export function authorizeEmployeeAction(action: EmployeeAction): RequestHandler 
   return (req: Request, res: Response, next: NextFunction): void => {
     const auth = req.auth;
     if (!auth) {
-      sendError(req, res, 401, 'UNAUTHORIZED', 'Missing or invalid bearer token');
+      sendError(req, res, 401, 'TOKEN_INVALID', 'Missing or invalid bearer token');
       return;
     }
 
