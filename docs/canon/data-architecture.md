@@ -22,7 +22,7 @@ Stores organizational units used for employee assignment, budgeting, and hiring 
 | code | VARCHAR(30) | No | UQ | Unique short code. |
 | description | TEXT | Yes |  | Optional details. |
 | head_employee_id | UUID | Yes | FK | References `employees.employee_id`; nullable to avoid circular create dependency. |
-| status | VARCHAR(20) | No |  | One of: `Active`, `Inactive`, `Archived`. |
+| status | VARCHAR(20) | No |  | One of: `Proposed`, `Active`, `Inactive`, `Archived`. |
 | created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
 | updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
 
@@ -75,7 +75,7 @@ Stores core employee identity and employment metadata.
 | phone | VARCHAR(30) | Yes |  | Optional contact number. |
 | hire_date | DATE | No |  | Employment start date. |
 | employment_type | VARCHAR(20) | No |  | One of: `FullTime`, `PartTime`, `Contract`, `Intern`. |
-| status | VARCHAR(20) | No |  | One of: `Active`, `OnLeave`, `Suspended`, `Terminated`. |
+| status | VARCHAR(20) | No |  | One of: `Draft`, `Active`, `OnLeave`, `Suspended`, `Terminated`. |
 | department_id | UUID | No | FK | References `departments.department_id`. |
 | role_id | UUID | No | FK | References `roles.role_id`. |
 | manager_employee_id | UUID | Yes | FK | Self-reference to `employees.employee_id`. |
@@ -197,7 +197,7 @@ Stores open/planned roles for recruitment campaigns.
 | title | VARCHAR(200) | No |  | Posting title. |
 | department_id | UUID | No | FK | References `departments.department_id`. |
 | role_id | UUID | Yes | FK | References `roles.role_id`. |
-| employment_type | VARCHAR(20) | No |  | One of: `FullTime`, `PartTime`, `Contract`, `Internship`. |
+| employment_type | VARCHAR(20) | No |  | One of: `FullTime`, `PartTime`, `Contract`, `Intern`. |
 | location | VARCHAR(200) | Yes |  | Work location. |
 | description | TEXT | No |  | Responsibilities and requirements. |
 | openings_count | INTEGER | No |  | Must be `>= 1`. |

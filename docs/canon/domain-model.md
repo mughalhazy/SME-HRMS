@@ -16,7 +16,7 @@ Represents a person employed by the organization, including identity, organizati
 | phone | String | No | Contact number. |
 | hire_date | Date | Yes | Employment start date. |
 | employment_type | Enum | Yes | FullTime, PartTime, Contract, Intern. |
-| status | Enum | Yes | Active, OnLeave, Suspended, Terminated. |
+| status | Enum | Yes | Draft, Active, OnLeave, Suspended, Terminated. |
 | department_id | UUID | Yes | Foreign key to Department. |
 | role_id | UUID | Yes | Foreign key to Role. |
 | manager_employee_id | UUID | No | Self-reference to manager Employee. |
@@ -52,7 +52,7 @@ Represents an organizational unit used for grouping employees, budgeting, and re
 | code | String | Yes | Short unique code. |
 | description | Text | No | Department purpose/details. |
 | head_employee_id | UUID | No | Employee leading the department. |
-| status | Enum | Yes | Active, Inactive, Archived. |
+| status | Enum | Yes | Proposed, Active, Inactive, Archived. |
 | created_at | DateTime | Yes | Record creation timestamp. |
 | updated_at | DateTime | Yes | Record last update timestamp. |
 
@@ -200,7 +200,7 @@ Represents an open or planned vacancy published for recruitment.
 | title | String | Yes | Posting title. |
 | department_id | UUID | Yes | Target hiring department. |
 | role_id | UUID | No | Optional link to standard Role. |
-| employment_type | Enum | Yes | FullTime, PartTime, Contract, Internship. |
+| employment_type | Enum | Yes | FullTime, PartTime, Contract, Intern. |
 | location | String | No | Work location. |
 | description | Text | Yes | Responsibilities and requirements. |
 | openings_count | Integer | Yes | Number of vacancies. |

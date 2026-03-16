@@ -1,50 +1,38 @@
 # Capability Matrix
 
-> Source anchors: `docs/canon/domain-model.md` and `docs/canon/service-map.md`.
-> Note: `docs/canon/service-map.md` was not present in the repository at generation time, so this matrix is derived from the domain model entities and relationships.
+Source anchors:
+- `docs/canon/domain-model.md`
+- `docs/canon/service-map.md`
+- `docs/canon/ui-surface-map.md`
+- `docs/canon/api-standards.md`
 
-## Purpose
+## Capability registry
 
-This matrix maps each HRMS module to:
-- Core business capabilities
-- Primary domain entities
-- Key upstream/downstream dependencies
+| Capability ID | Capability Name | Service Owner | Primary Entities | UI Surface(s) | API Endpoint Category |
+|---|---|---|---|---|---|
+| `CAP-EMP-001` | Employee directory and lifecycle management | `employee-service` | Employee, Department, Role | `dashboard`, `employee_list` | `/employees`, `/departments`, `/roles` |
+| `CAP-EMP-002` | Employee profile maintenance and org assignment | `employee-service` | Employee, Department, Role | `employee_profile` | `/employees/{employee_id}` |
+| `CAP-ATT-001` | Attendance capture and monitoring | `attendance-service` | AttendanceRecord, Employee | `dashboard`, `attendance_dashboard`, `employee_profile` | `/attendance/records`, `/attendance/summaries` |
+| `CAP-ATT-002` | Attendance validation and period lock | `attendance-service` | AttendanceRecord | `attendance_dashboard` | `/attendance/periods/{period_id}/lock` |
+| `CAP-LEV-001` | Leave request lifecycle management | `leave-service` | LeaveRequest, Employee | `dashboard`, `leave_requests`, `employee_profile` | `/leave/requests` |
+| `CAP-LEV-002` | Leave decision workflow | `leave-service` | LeaveRequest | `leave_requests` | `/leave/requests/{leave_request_id}/approve`, `/reject`, `/submit` |
+| `CAP-PAY-001` | Payroll record processing and payroll dashboard | `payroll-service` | PayrollRecord, Employee | `dashboard`, `payroll_dashboard`, `employee_profile` | `/payroll/records`, `/payroll/run` |
+| `CAP-PAY-002` | Payroll disbursement completion | `payroll-service` | PayrollRecord | `payroll_dashboard` | `/payroll/records/{payroll_record_id}/mark-paid` |
+| `CAP-HIR-001` | Job posting and requisition management | `hiring-service` | JobPosting, Department, Role | `dashboard`, `job_postings` | `/job-postings` |
+| `CAP-HIR-002` | Candidate pipeline and interview management | `hiring-service` | Candidate, Interview, JobPosting | `candidate_pipeline`, `dashboard` | `/candidates`, `/interviews` |
+| `CAP-PRF-001` | Performance review lifecycle | `employee-service` | PerformanceReview, Employee | `dashboard`, `performance_reviews`, `employee_profile` | `/performance-reviews` |
 
----
+## Entity coverage check
 
-## Module Capability Matrix
-
-| Module | Core Capabilities | Primary Entities | Upstream Inputs | Downstream Outputs / Integrations |
-|---|---|---|---|---|
-| `employee_management` | Employee profile lifecycle (create/update/status transitions), organizational assignment (department/role/manager), directory and reporting hierarchy management | Employee, Department, Role | Hiring outcomes (new hire conversion), org structure definitions | Attendance, Leave, Payroll, and Performance processes consume active employee master data |
-| `attendance_management` | Daily attendance capture (check-in/out), attendance validation and approval, period locking for payroll readiness | AttendanceRecord, Employee | Employee master data, attendance source events (manual/biometric/API import) | Approved/locked time data contributes to payroll calculations and operational attendance reporting |
-| `leave_management` | Leave request submission workflow, manager approval/rejection workflow, leave status tracking and scheduling | LeaveRequest, Employee | Employee master data, approver hierarchy (manager/approver employee) | Approved leave affects employee availability and can influence payroll deductions/entitlements |
-| `payroll_management` | Pay-period payroll calculation (gross/net), earning and deduction consolidation, payroll processing and disbursement state tracking | PayrollRecord, Employee | Employee master data, approved attendance summaries, approved leave impacts | Processed/paid payroll records for finance disbursement, employee payslip/reporting outputs |
-| `hiring_management` | Job posting and vacancy planning, candidate application pipeline management, interview progression, candidate-to-employee conversion | JobPosting, Candidate, Interview (relationship-level), Department, Role, Employee (conversion target) | Department/role demand signals, hiring approvals | New employee creation in employee management; staffing pipeline and hiring analytics |
-| `performance_management` | Review cycle administration, review subject assignment, performance outcome recording and progression tracking | PerformanceReview, Employee | Employee master data, reviewer/manager relationships | Performance outcomes for talent decisions (promotion, compensation input, development plans) |
-
----
-
-## Capability Coverage by Domain Entity
-
-| Domain Entity | employee_management | attendance_management | leave_management | payroll_management | hiring_management | performance_management |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Employee | ✅ Primary | ✅ Reference | ✅ Reference | ✅ Reference | ✅ Conversion Target | ✅ Reference/Subject |
-| Department | ✅ Primary | — | — | — | ✅ Reference | — |
-| Role | ✅ Primary | — | — | — | ✅ Reference | — |
-| AttendanceRecord | — | ✅ Primary | — | ✅ Input | — | — |
-| LeaveRequest | — | — | ✅ Primary | ✅ Input | — | — |
-| PayrollRecord | — | — | — | ✅ Primary | — | — |
-| JobPosting | — | — | — | — | ✅ Primary | — |
-| Candidate | — | — | — | — | ✅ Primary | — |
-| Interview | — | — | — | — | ✅ Primary Process Artifact | — |
-| PerformanceReview | — | — | — | — | — | ✅ Primary |
-
----
-
-## Notes and Assumptions
-
-1. `Interview` and `PerformanceReview` are referenced by relationships in the domain model narrative but are not fully specified as standalone entity sections; they are treated here as module-owned artifacts.
-2. `hiring_management` is modeled as the producer of `Employee` onboarding handoff (candidate hired -> employee record creation).
-3. `payroll_management` depends on approved attendance and leave outcomes, consistent with record lifecycle states and HR process norms.
-4. `performance_management` is anchored on `PerformanceReview` references from `Employee` relationships and assumed review workflows.
+| Domain Entity | Owning Service | Capabilities |
+|---|---|---|
+| Employee | `employee-service` | `CAP-EMP-001`, `CAP-EMP-002` |
+| Department | `employee-service` | `CAP-EMP-001` |
+| Role | `employee-service` | `CAP-EMP-001` |
+| AttendanceRecord | `attendance-service` | `CAP-ATT-001`, `CAP-ATT-002` |
+| LeaveRequest | `leave-service` | `CAP-LEV-001`, `CAP-LEV-002` |
+| PayrollRecord | `payroll-service` | `CAP-PAY-001`, `CAP-PAY-002` |
+| JobPosting | `hiring-service` | `CAP-HIR-001`, `CAP-HIR-002` |
+| Candidate | `hiring-service` | `CAP-HIR-002` |
+| Interview | `hiring-service` | `CAP-HIR-002` |
+| PerformanceReview | `employee-service` | `CAP-PRF-001` |
