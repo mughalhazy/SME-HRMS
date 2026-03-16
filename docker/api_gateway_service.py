@@ -14,6 +14,7 @@ ROUTES = {
     "payroll-service": os.getenv("PAYROLL_SERVICE_URL", "http://payroll-service:8004"),
     "hiring-service": os.getenv("HIRING_SERVICE_URL", "http://hiring-service:8005"),
     "auth-service": os.getenv("AUTH_SERVICE_URL", "http://auth-service:8006"),
+    "notification-service": os.getenv("NOTIFICATION_SERVICE_URL", "http://notification-service:8007"),
 }
 
 

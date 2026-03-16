@@ -18,6 +18,7 @@ required = [
     "payroll-service",
     "hiring-service",
     "auth-service",
+    "notification-service",
     "api-gateway",
     "frontend-ui",
 ]
@@ -27,7 +28,7 @@ checks.append(("service containers", all(f"\n  {name}:" in COMPOSE for name in r
 checks.append(("environment variables", "EMPLOYEE_SERVICE_URL" in ENV_EXAMPLE and "POSTGRES_PASSWORD" in ENV_EXAMPLE))
 
 # 3 API gateway connectivity
-checks.append(("api gateway connectivity", all(k in COMPOSE for k in ["EMPLOYEE_SERVICE_URL", "ATTENDANCE_SERVICE_URL", "AUTH_SERVICE_URL"])))
+checks.append(("api gateway connectivity", all(k in COMPOSE for k in ["EMPLOYEE_SERVICE_URL", "ATTENDANCE_SERVICE_URL", "AUTH_SERVICE_URL", "NOTIFICATION_SERVICE_URL"])))
 
 # 4 db connectivity
 checks.append(("database connectivity", "postgres:" in COMPOSE and "DATABASE_URL" in COMPOSE))
