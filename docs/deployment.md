@@ -1,39 +1,50 @@
 # Deployment
 
-This repository includes a containerized deployment baseline and a CI/CD workflow.
+## Stack Overview
 
-## Docker
+The deployment layer provisions these runtime services:
 
-Build image:
+- employee-service
+- attendance-service
+- leave-service
+- payroll-service
+- hiring-service
+- auth-service
+- api-gateway
+- frontend-ui
+- postgres (shared relational store)
+- migrations (one-shot schema migration job)
+
+## Artifacts
+
+- `docker-compose.yml`
+- `Dockerfile.services`
+- `Dockerfile.api`
+- `Dockerfile.ui`
+- `.env.example`
+- `deployment/config/*`
+- `deployment/migrations/*`
+- `.github/workflows/test.yml`
+- `.github/workflows/build.yml`
+- `.github/workflows/deploy.yml`
+
+## Local run
 
 ```bash
-docker build -t sme-hrms:latest .
+cp .env.example .env
+docker compose up -d --build
+curl http://localhost:8000/ready
+curl http://localhost:3000/
 ```
 
-Run containerized test workload:
+## Migration support
+
+Compose runs a `migrations` service after PostgreSQL is healthy and before app services become healthy.
+
+## QC validation
 
 ```bash
-docker run --rm sme-hrms:latest
+python deployment/qc_validate.py
 ```
 
-Use Compose:
-
-```bash
-docker compose up --build
-```
-
-## CI/CD pipeline
-
-The workflow is defined in `.github/workflows/ci-cd.yml` and runs on every pull request and on pushes to `main`:
-
-1. Installs Python 3.12 and dependencies.
-2. Runs `python -m unittest discover -s tests -v`.
-3. Builds a Docker image.
-4. Pushes the image to GHCR (`ghcr.io/<owner>/sme-hrms`) only when the event is a push to `main`.
-
-### Required repository settings
-
-- Ensure GitHub Packages permissions are enabled for the repository.
-- If publishing to a different container registry, update the image reference in:
-  - `docker-compose.yml`
-  - `.github/workflows/ci-cd.yml`
+The validator checks a 10-point deployment quality rubric and exits non-zero if score is below 10.
