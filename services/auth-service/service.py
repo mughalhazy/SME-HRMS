@@ -229,9 +229,13 @@ class AuthService:
 
     @staticmethod
     def _verify_password(password: str, password_hash: str) -> bool:
-        salt_hex, key_hex = password_hash.split(":")
-        salt = bytes.fromhex(salt_hex)
-        expected = bytes.fromhex(key_hex)
+        try:
+            salt_hex, key_hex = password_hash.split(":", 1)
+            salt = bytes.fromhex(salt_hex)
+            expected = bytes.fromhex(key_hex)
+        except (TypeError, ValueError):
+            return False
+
         actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 390000)
         return hmac.compare_digest(actual, expected)
 

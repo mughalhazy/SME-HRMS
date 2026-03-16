@@ -89,6 +89,15 @@ class AuthServiceTests(unittest.TestCase):
         self.assertEqual(bad_status, 401)
         self.assertEqual(bad_payload["error"]["traceId"], "trace-bad")
 
+    def test_malformed_password_hash_is_treated_as_invalid_credentials(self) -> None:
+        user = self.service.register_user(username="broken.hash", password="Password123!", role="Employee")
+        user.password_hash = "not-a-valid-password-hash"
+
+        with self.assertRaises(AuthServiceError) as ctx:
+            self.service.login("broken.hash", "Password123!")
+
+        self.assertEqual(ctx.exception.code, "INVALID_CREDENTIALS")
+
 
 if __name__ == "__main__":
     unittest.main()
