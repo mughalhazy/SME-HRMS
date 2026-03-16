@@ -1,0 +1,22 @@
+"""Attendance service implementation aligned with canonical HRMS docs."""
+
+from attendance_service.models import AttendanceRecord, AttendanceSource, AttendanceStatus, RecordState
+from attendance_service.service import (
+    Actor,
+    AttendanceService,
+    AttendanceServiceError,
+    EmployeeSnapshot,
+    InMemoryEmployeeDirectory,
+)
+
+__all__ = [
+    "Actor",
+    "AttendanceRecord",
+    "AttendanceService",
+    "AttendanceServiceError",
+    "AttendanceSource",
+    "AttendanceStatus",
+    "EmployeeSnapshot",
+    "InMemoryEmployeeDirectory",
+    "RecordState",
+]
