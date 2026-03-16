@@ -81,6 +81,8 @@ class AuthService:
     def __init__(self, token_secret: str, issuer: str = "sme-hrms.auth-service", audience: str = "sme-hrms.api"):
         if not token_secret:
             raise ValueError("token_secret is required")
+        if len(token_secret) < 32:
+            raise ValueError("token_secret must be at least 32 characters for production-grade entropy")
         self._token_secret = token_secret.encode("utf-8")
         self._issuer = issuer
         self._audience = audience
@@ -102,6 +104,10 @@ class AuthService:
             raise AuthServiceError("ROLE_INVALID", "Role is not supported")
         if not normalized_username or not password:
             raise AuthServiceError("VALIDATION_ERROR", "username and password are required")
+        if len(normalized_username) > 128:
+            raise AuthServiceError("VALIDATION_ERROR", "username exceeds maximum length")
+        if len(password) > 1024:
+            raise AuthServiceError("VALIDATION_ERROR", "password exceeds maximum length")
         if normalized_username in self._users_by_name:
             raise AuthServiceError("USER_EXISTS", "User already exists")
 
@@ -118,6 +124,8 @@ class AuthService:
         return user
 
     def login(self, username: str, password: str, *, ttl_seconds: int = 900) -> dict[str, Any]:
+        if ttl_seconds < 60 or ttl_seconds > 3600:
+            raise AuthServiceError("VALIDATION_ERROR", "ttl_seconds must be between 60 and 3600")
         normalized_username = username.strip().lower()
         user = self._users_by_name.get(normalized_username)
         if not user or not self._verify_password(password, user.password_hash):
@@ -205,7 +213,10 @@ class AuthService:
         if not hmac.compare_digest(expected_signature, actual_signature):
             raise AuthServiceError("TOKEN_INVALID", "Token signature is invalid")
 
-        payload = json.loads(self._b64url_decode(payload_segment).decode("utf-8"))
+        try:
+            payload = json.loads(self._b64url_decode(payload_segment).decode("utf-8"))
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise AuthServiceError("TOKEN_INVALID", "Token payload is invalid") from exc
         self._validate_registered_claims(payload)
         return payload
 

@@ -24,9 +24,13 @@ const ROLE_ACTIONS: Record<AuthRole, EmployeeAction[]> = {
   Employee: ['read', 'list', 'updateProfile'],
 };
 
-const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET ?? 'dev-secret';
+const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;
 const TOKEN_ISSUER = process.env.AUTH_TOKEN_ISSUER ?? 'sme-hrms.auth-service';
 const TOKEN_AUDIENCE = process.env.AUTH_TOKEN_AUDIENCE ?? 'sme-hrms.api';
+
+if (!TOKEN_SECRET || TOKEN_SECRET.length < 32) {
+  throw new Error('AUTH_TOKEN_SECRET must be configured with at least 32 characters');
+}
 
 function getTraceId(req: Request): string {
   const incomingTraceId = req.headers['x-trace-id'];
