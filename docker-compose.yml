@@ -1,0 +1,9 @@
+version: "3.9"
+
+services:
+  hrms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sme-hrms:${IMAGE_TAG:-latest}
+    command: ["python", "-m", "unittest", "discover", "-s", "tests", "-v"]
