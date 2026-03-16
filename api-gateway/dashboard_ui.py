@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
 
 DASHBOARD_SURFACE = "dashboard"
@@ -47,7 +47,18 @@ def build_dashboard_ui(read_models: dict[str, list[dict[str, Any]]], *, today: d
 
     ui = {
         "surface": DASHBOARD_SURFACE,
+        "primary_read_models": [widget.read_model for widget in DASHBOARD_WIDGETS],
         "capabilities": [widget.capability_id for widget in DASHBOARD_WIDGETS],
+        "primary_service_owner": "employee-service",
+        "domain_entities": [
+            "Employee",
+            "AttendanceRecord",
+            "LeaveRequest",
+            "PayrollRecord",
+            "JobPosting",
+            "Candidate",
+            "PerformanceReview",
+        ],
         "widgets": {
             "employees": {
                 "summary": {
@@ -73,7 +84,11 @@ def build_dashboard_ui(read_models: dict[str, list[dict[str, Any]]], *, today: d
             "payroll": {
                 "summary": {
                     "records": len(payroll_rows),
-                    "net_pay_total": str(sum(Decimal(str(row.get("net_pay", 0))) for row in payroll_rows)),
+                    "net_pay_total": str(
+                        sum((_to_decimal(row.get("net_pay")) for row in payroll_rows), Decimal("0")).quantize(
+                            Decimal("0.01")
+                        )
+                    ),
                 },
                 "recent": _take(payroll_rows, 5, ["payroll_record_id", "employee_name", "pay_period_start", "pay_period_end", "status", "net_pay"]),
             },
@@ -110,3 +125,12 @@ def _parse_date(raw: Any) -> date | None:
         return date.fromisoformat(raw)
     except ValueError:
         return None
+
+
+def _to_decimal(raw: Any) -> Decimal:
+    if raw in (None, ""):
+        return Decimal("0")
+    try:
+        return Decimal(str(raw))
+    except (InvalidOperation, ValueError):
+        return Decimal("0")

@@ -56,6 +56,15 @@ class DashboardUiTests(unittest.TestCase):
         )
 
         self.assertEqual(payload["surface"], "dashboard")
+        self.assertEqual(payload["primary_service_owner"], "employee-service")
+        self.assertEqual(payload["primary_read_models"], [
+            "employee_directory_view",
+            "attendance_dashboard_view",
+            "leave_requests_view",
+            "payroll_summary_view",
+            "candidate_pipeline_view",
+            "performance_review_view",
+        ])
         self.assertEqual(payload["widgets"]["employees"]["summary"], {"total": 2, "active": 1})
         self.assertEqual(payload["widgets"]["attendance"]["summary"], {"today_records": 2, "present": 1})
         self.assertEqual(payload["widgets"]["leave"]["summary"], {"pending": 1, "approved": 1})
