@@ -146,7 +146,7 @@ class PayrollService:
 
     @staticmethod
     def _assert_read_scope(ctx: AuthContext, record: PayrollRecord) -> None:
-        if ctx.role == Role.ADMIN:
+        if ctx.role in {Role.ADMIN, Role.MANAGER}:
             return
         if ctx.role == Role.EMPLOYEE and ctx.employee_id == record.employee_id:
             return

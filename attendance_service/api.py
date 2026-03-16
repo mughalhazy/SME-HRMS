@@ -34,8 +34,28 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
         try:
             return handler(*args, **kwargs)
         except AttendanceServiceError as exc:
-            status = 403 if exc.code == "FORBIDDEN" else 422
+            status_map = {
+                "FORBIDDEN": 403,
+                "EMPLOYEE_NOT_FOUND": 404,
+                "ATTENDANCE_NOT_FOUND": 404,
+                "ATTENDANCE_DUPLICATE": 409,
+                "ATTENDANCE_LOCKED": 409,
+                "LOCK_REQUIRES_APPROVAL": 409,
+            }
+            status = status_map.get(exc.code, 422)
             return status, error_envelope(trace_id, exc)
+        except ValueError:
+            return (
+                422,
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid request payload.",
+                        "details": [],
+                        "traceId": trace_id,
+                    }
+                },
+            )
 
     return wrapped
 

@@ -118,5 +118,38 @@ class AttendanceServiceTests(unittest.TestCase):
         self.assertEqual(payload["error"]["traceId"], "trace-1")
 
 
+
+
+    def test_api_maps_employee_not_found_to_404(self) -> None:
+        admin = Actor(employee_id=self.emp_1, role="Admin")
+        status, payload = post_attendance_records(
+            self.service,
+            admin,
+            {
+                "employee_id": str(uuid4()),
+                "attendance_date": "2026-01-01",
+                "attendance_status": "Present",
+            },
+            trace_id="trace-404",
+        )
+        self.assertEqual(status, 404)
+        self.assertEqual(payload["error"]["traceId"], "trace-404")
+
+    def test_api_maps_invalid_payload_to_422(self) -> None:
+        admin = Actor(employee_id=self.emp_1, role="Admin")
+        status, payload = post_attendance_records(
+            self.service,
+            admin,
+            {
+                "employee_id": str(self.emp_1),
+                "attendance_date": "not-a-date",
+                "attendance_status": "Present",
+            },
+            trace_id="trace-422",
+        )
+        self.assertEqual(status, 422)
+        self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
+
+
 if __name__ == "__main__":
     unittest.main()
