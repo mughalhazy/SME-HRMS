@@ -142,3 +142,30 @@ def test_monthly_trigger_runs_full_month_period(service: PayrollService):
     assert payload["data"]["period_end"] == "2026-05-31"
     assert payload["data"]["processed_count"] == 1
     assert service.events[-1]["type"] == "PayrollMonthlyTriggerExecuted"
+
+
+def test_invalid_money_value_returns_validation_error(service: PayrollService):
+    with pytest.raises(ServiceError) as exc:
+        service.create_payroll_record(
+            {
+                "employee_id": "emp-1",
+                "pay_period_start": "2026-06-01",
+                "pay_period_end": "2026-06-30",
+                "base_salary": "not-a-number",
+                "currency": "USD",
+            },
+            token("Admin"),
+        )
+
+    assert exc.value.status == 422
+    assert exc.value.code == "VALIDATION_ERROR"
+    assert "base_salary" in exc.value.message
+
+
+def test_invalid_cursor_returns_validation_error(service: PayrollService):
+    with pytest.raises(ServiceError) as exc:
+        service.list_payroll_records(token("Admin"), cursor="%%%")
+
+    assert exc.value.status == 422
+    assert exc.value.code == "VALIDATION_ERROR"
+    assert exc.value.message == "cursor is invalid"
