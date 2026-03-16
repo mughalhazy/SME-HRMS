@@ -347,6 +347,74 @@ class HiringService:
         self._emit("CandidateHired", {"candidate_id": candidate_id, "job_posting_id": candidate.job_posting_id})
         return self._serialize(candidate)
 
+    def list_candidate_pipeline_view(
+        self,
+        *,
+        pipeline_stage: str | None = None,
+        department_id: str | None = None,
+        job_posting_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if pipeline_stage is not None:
+            self._validate_value(pipeline_stage, self.CANDIDATE_STATUSES, "pipeline_stage")
+
+        rows: list[dict[str, Any]] = []
+        for candidate in self.candidates.values():
+            posting = self._require_job_posting(candidate.job_posting_id)
+            interviews = [x for x in self.interviews.values() if x.candidate_id == candidate.candidate_id]
+
+            next_interview = None
+            scheduled = sorted((x.scheduled_start for x in interviews if x.status == "Scheduled"), reverse=False)
+            if scheduled:
+                next_interview = scheduled[0]
+
+            row = {
+                "candidate_id": candidate.candidate_id,
+                "candidate_name": f"{candidate.first_name} {candidate.last_name}".strip(),
+                "candidate_email": candidate.email,
+                "job_posting_id": posting.job_posting_id,
+                "job_title": posting.title,
+                "department_id": posting.department_id,
+                "department_name": None,
+                "role_id": posting.role_id,
+                "role_title": None,
+                "application_date": candidate.application_date.isoformat(),
+                "pipeline_stage": candidate.status,
+                "stage_updated_at": candidate.updated_at.isoformat(),
+                "next_interview_at": next_interview.isoformat() if next_interview else None,
+                "interview_count": len(interviews),
+                "hiring_owner_employee_id": None,
+                "hiring_owner_name": None,
+                "updated_at": candidate.updated_at.isoformat(),
+            }
+            rows.append(row)
+
+        if pipeline_stage:
+            rows = [row for row in rows if row["pipeline_stage"] == pipeline_stage]
+        if department_id:
+            rows = [row for row in rows if row["department_id"] == department_id]
+        if job_posting_id:
+            rows = [row for row in rows if row["job_posting_id"] == job_posting_id]
+
+        rows.sort(key=lambda row: (row["stage_updated_at"], row["candidate_id"]), reverse=True)
+        return rows
+
+    def build_hiring_ui(
+        self,
+        *,
+        pipeline_stage: str | None = None,
+        department_id: str | None = None,
+        job_posting_id: str | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Build UI-friendly surfaces for hiring pages from canonical read-model fields."""
+        return {
+            "job_postings": self.list_job_postings(department_id=department_id),
+            "candidate_pipeline": self.list_candidate_pipeline_view(
+                pipeline_stage=pipeline_stage,
+                department_id=department_id,
+                job_posting_id=job_posting_id,
+            ),
+        }
+
     def _serialize(self, instance: Any) -> dict[str, Any]:
         payload = asdict(instance)
         for key, value in list(payload.items()):

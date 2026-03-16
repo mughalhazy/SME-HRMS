@@ -101,6 +101,59 @@ class HiringServiceTest(unittest.TestCase):
                 }
             )
 
+    def test_list_candidate_pipeline_view_maps_read_model_fields(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Noah",
+                "last_name": "Lane",
+                "email": "noah@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+        self.service.create_interview(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-08T10:00:00Z",
+                "scheduled_end": "2026-01-08T11:00:00Z",
+                "interviewer_employee_ids": ["emp-1"],
+            }
+        )
+
+        rows = self.service.list_candidate_pipeline_view(pipeline_stage="Interviewing")
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["candidate_id"], candidate["candidate_id"])
+        self.assertEqual(row["candidate_name"], "Noah Lane")
+        self.assertEqual(row["candidate_email"], "noah@example.com")
+        self.assertEqual(row["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(row["job_title"], "Backend Engineer")
+        self.assertEqual(row["department_id"], "dep-1")
+        self.assertEqual(row["pipeline_stage"], "Interviewing")
+        self.assertEqual(row["next_interview_at"], "2026-01-08T10:00:00+00:00")
+        self.assertEqual(row["interview_count"], 1)
+
+    def test_build_hiring_ui_returns_job_postings_and_candidate_pipeline_surfaces(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Iris",
+                "last_name": "Vale",
+                "email": "iris@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+
+        surfaces = self.service.build_hiring_ui(department_id="dep-1", job_posting_id=self.posting["job_posting_id"])
+        self.assertEqual(set(surfaces.keys()), {"job_postings", "candidate_pipeline"})
+        self.assertEqual(len(surfaces["job_postings"]), 1)
+        self.assertEqual(surfaces["job_postings"][0]["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(len(surfaces["candidate_pipeline"]), 1)
+        self.assertEqual(surfaces["candidate_pipeline"][0]["candidate_id"], candidate["candidate_id"])
+
 
 if __name__ == "__main__":
     unittest.main()
