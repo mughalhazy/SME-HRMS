@@ -5,6 +5,8 @@ from datetime import date, datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, run_with_retry
+
 
 class HiringValidationError(ValueError):
     """Raised for domain validation errors."""
@@ -97,6 +99,12 @@ class HiringService:
         self.candidates: dict[str, Candidate] = {}
         self.interviews: dict[str, Interview] = {}
         self.events: list[dict[str, Any]] = []
+        self.error_logger = CentralErrorLogger("hiring-service")
+        self.dead_letters = DeadLetterQueue()
+        self.integration_breakers = {
+            "google-calendar": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
+            "linkedin": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
+        }
 
     def create_job_posting(self, payload: dict[str, Any]) -> dict[str, Any]:
         self._require(payload, ["title", "department_id", "employment_type", "description", "openings_count", "posting_date"])
@@ -316,22 +324,45 @@ class HiringService:
         """Schedule interview and simulate synchronization to Google Calendar."""
         interview = self.create_interview(payload)
         interview_model = self._require_interview(interview["interview_id"])
-        calendar_event_id = self._new_id()
-        interview_model.google_calendar_event_id = calendar_event_id
-        interview_model.google_calendar_event_link = f"https://calendar.google.com/calendar/event?eid={calendar_event_id}"
-        if not interview_model.location_or_link:
-            interview_model.location_or_link = f"https://meet.google.com/{calendar_event_id[:3]}-{calendar_event_id[3:6]}-{calendar_event_id[6:9]}"
-        interview_model.updated_at = self._now()
 
-        self._emit(
-            "InterviewCalendarSynced",
-            {
-                "interview_id": interview_model.interview_id,
-                "candidate_id": interview_model.candidate_id,
-                "provider": "GoogleCalendar",
-                "external_event_id": calendar_event_id,
-            },
-        )
+        def sync_calendar() -> str:
+            if payload.get("simulate_google_failure"):
+                raise TimeoutError("google calendar sync timed out")
+            return self._new_id()
+
+        try:
+            calendar_event_id = self.integration_breakers["google-calendar"].call(
+                lambda: run_with_retry(
+                    sync_calendar,
+                    attempts=3,
+                    base_delay=0.05,
+                    timeout_seconds=0.2,
+                    retryable=lambda exc: isinstance(exc, TimeoutError),
+                )
+            )
+            interview_model.google_calendar_event_id = calendar_event_id
+            interview_model.google_calendar_event_link = f"https://calendar.google.com/calendar/event?eid={calendar_event_id}"
+            if not interview_model.location_or_link:
+                interview_model.location_or_link = f"https://meet.google.com/{calendar_event_id[:3]}-{calendar_event_id[3:6]}-{calendar_event_id[6:9]}"
+            interview_model.updated_at = self._now()
+
+            self._emit(
+                "InterviewCalendarSynced",
+                {
+                    "interview_id": interview_model.interview_id,
+                    "candidate_id": interview_model.candidate_id,
+                    "provider": "GoogleCalendar",
+                    "external_event_id": calendar_event_id,
+                },
+            )
+        except CircuitBreakerOpenError as exc:
+            self.error_logger.log("schedule_interview_with_google_calendar", exc, details={"candidate_id": interview_model.candidate_id})
+            self.dead_letters.push("candidate_hiring", "InterviewCalendarSyncDeferred", {"interview_id": interview_model.interview_id, "candidate_id": interview_model.candidate_id}, str(exc))
+            interview_model.location_or_link = interview_model.location_or_link or "manual-scheduling-required"
+        except Exception as exc:  # noqa: BLE001
+            self.error_logger.log("schedule_interview_with_google_calendar", exc, details={"candidate_id": interview_model.candidate_id})
+            self.dead_letters.push("candidate_hiring", "InterviewCalendarSyncDeferred", {"interview_id": interview_model.interview_id, "candidate_id": interview_model.candidate_id}, str(exc))
+            interview_model.location_or_link = interview_model.location_or_link or "manual-scheduling-required"
         return self._serialize(interview_model)
 
     def import_candidates_from_linkedin(self, payload: dict[str, Any]) -> dict[str, Any]:
