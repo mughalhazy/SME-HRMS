@@ -17,7 +17,9 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/feedback'
+import { Input, Select } from '@/components/ui/input'
 import { PageGrid, PageStack } from '@/components/ui/page'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   type AttendanceRecord,
   type PayrollRecord,
@@ -93,7 +95,7 @@ function SurfaceCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)]">
+    <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <div className="mb-2 inline-flex rounded-full bg-slate-100 p-2 text-slate-700">
@@ -110,7 +112,7 @@ function SurfaceCard({
 
 function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
       <p className="mt-1 text-sm text-slate-600">{hint}</p>
@@ -309,7 +311,7 @@ export function AttendancePayrollWorkspace() {
 
   return (
     <PageStack>
-      <section className="rounded-[32px] border border-slate-200/80 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-6 shadow-[0_32px_120px_-48px_rgba(15,23,42,0.22)] lg:p-8">
+      <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-6 shadow-[0_32px_120px_-48px_rgba(15,23,42,0.22)] lg:p-8">
 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -333,12 +335,12 @@ export function AttendancePayrollWorkspace() {
       <PageGrid className="xl:grid-cols-[1.2fr_1fr]">
           <SurfaceCard title="Attendance dashboard" subtitle="Clock in/out, live status, and clean history for the selected employee." icon={Clock3}>
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex flex-col gap-3 rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4 lg:flex-row lg:items-end lg:justify-between">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="text-sm font-medium text-slate-700">
                     Employee
-                    <select
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none ring-0"
+                    <Select
+                      className="mt-2"
                       value={selectedEmployeeId}
                       onChange={(event: ChangeEvent<HTMLSelectElement>) => setSelectedEmployeeId(event.target.value)}
                     >
@@ -347,13 +349,13 @@ export function AttendancePayrollWorkspace() {
                           {employee.name} · {employee.number}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
 
                   <label className="text-sm font-medium text-slate-700">
                     From
-                    <input
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    <Input
+                      className="mt-2"
                       type="date"
                       value={attendanceFrom}
                       onChange={(event: ChangeEvent<HTMLInputElement>) => setAttendanceFrom(event.target.value)}
@@ -362,8 +364,8 @@ export function AttendancePayrollWorkspace() {
 
                   <label className="text-sm font-medium text-slate-700">
                     To
-                    <input
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    <Input
+                      className="mt-2"
                       type="date"
                       value={attendanceTo}
                       onChange={(event: ChangeEvent<HTMLInputElement>) => setAttendanceTo(event.target.value)}
@@ -386,7 +388,7 @@ export function AttendancePayrollWorkspace() {
                 <Metric label="Present days" value={String(attendanceSummary.presentDays)} hint={attendanceSummary.openEntry ? 'Active session open now' : 'No active session'} />
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-slate-950 p-4 text-white">
+              <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-surface)] bg-slate-950 p-4 text-white">
                 <div className="mr-auto">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">Clock actions</p>
                   <p className="mt-1 text-sm text-slate-300">
@@ -403,63 +405,61 @@ export function AttendancePayrollWorkspace() {
                 </Button>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
+                <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-4">
                   <div>
                     <h3 className="font-semibold text-slate-900">Attendance history</h3>
                     <p className="text-sm text-slate-600">Recent records sorted by attendance date.</p>
                   </div>
                   <span className="text-sm text-slate-500">Updated {formatDateTime(attendanceRecords[0]?.updatedAt ?? null)}</span>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-white text-left text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Date</th>
-                        <th className="px-4 py-3 font-medium">Status</th>
-                        <th className="px-4 py-3 font-medium">Check in</th>
-                        <th className="px-4 py-3 font-medium">Check out</th>
-                        <th className="px-4 py-3 font-medium">Hours</th>
-                        <th className="px-4 py-3 font-medium">State</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white">
-                      {attendanceRecords.map((record) => (
-                        <tr key={record.attendanceId} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 font-medium text-slate-900">{record.attendanceDate}</td>
-                          <td className="px-4 py-3">
-                            <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1', statusTone(record.attendanceStatus))}>
-                              {record.attendanceStatus}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-slate-600">{formatDateTime(record.checkInTime)}</td>
-                          <td className="px-4 py-3 text-slate-600">{formatDateTime(record.checkOutTime)}</td>
-                          <td className="px-4 py-3 text-slate-900">{record.totalHours}</td>
-                          <td className="px-4 py-3 text-slate-600">{record.recordState}</td>
-                        </tr>
-                      ))}
-                      {!attendanceRecords.length && (
-                        <tr>
-                          <td className="px-4 py-10 text-center text-slate-500" colSpan={6}>
-                            No attendance records found for the selected filters.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Check in</TableHead>
+                      <TableHead>Check out</TableHead>
+                      <TableHead>Hours</TableHead>
+                      <TableHead>State</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attendanceRecords.map((record) => (
+                      <TableRow key={record.attendanceId}>
+                        <TableCell className="font-medium text-slate-900">{record.attendanceDate}</TableCell>
+                        <TableCell>
+                          <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1', statusTone(record.attendanceStatus))}>
+                            {record.attendanceStatus}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-slate-600">{formatDateTime(record.checkInTime)}</TableCell>
+                        <TableCell className="text-slate-600">{formatDateTime(record.checkOutTime)}</TableCell>
+                        <TableCell className="font-medium text-slate-900">{record.totalHours}</TableCell>
+                        <TableCell className="text-slate-600">{record.recordState}</TableCell>
+                      </TableRow>
+                    ))}
+                    {!attendanceRecords.length && (
+                      <TableRow>
+                        <TableCell className="py-10 text-center text-slate-500" colSpan={6}>
+                          No attendance records found for the selected filters.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </SurfaceCard>
 
           <SurfaceCard title="Payroll dashboard" subtitle="Period-aware payroll summaries with a built-in payslip viewer." icon={Wallet}>
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-3 rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="text-sm font-medium text-slate-700">
                     Period start
-                    <input
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    <Input
+                      className="mt-2"
                       type="date"
                       value={payrollPeriodStart}
                       onChange={(event: ChangeEvent<HTMLInputElement>) => setPayrollPeriodStart(event.target.value)}
@@ -467,8 +467,8 @@ export function AttendancePayrollWorkspace() {
                   </label>
                   <label className="text-sm font-medium text-slate-700">
                     Period end
-                    <input
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    <Input
+                      className="mt-2"
                       type="date"
                       value={payrollPeriodEnd}
                       onChange={(event: ChangeEvent<HTMLInputElement>) => setPayrollPeriodEnd(event.target.value)}
@@ -476,8 +476,8 @@ export function AttendancePayrollWorkspace() {
                   </label>
                   <label className="text-sm font-medium text-slate-700">
                     Status
-                    <select
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    <Select
+                      className="mt-2"
                       value={payrollStatus}
                       onChange={(event: ChangeEvent<HTMLSelectElement>) => setPayrollStatus(event.target.value)}
                     >
@@ -486,7 +486,7 @@ export function AttendancePayrollWorkspace() {
                           {status}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -509,8 +509,8 @@ export function AttendancePayrollWorkspace() {
               </div>
 
               <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                  <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)]">
+                  <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface-subtle)] px-5 py-4">
                     <div>
                       <h3 className="font-semibold text-slate-900">Payroll records</h3>
                       <p className="text-sm text-slate-600">Select a row to inspect the payslip breakdown.</p>
@@ -538,48 +538,46 @@ export function AttendancePayrollWorkspace() {
                       />
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-white text-left text-slate-500">
-                          <tr>
-                            <th className="px-4 py-3 font-medium">Employee</th>
-                            <th className="px-4 py-3 font-medium">Period</th>
-                            <th className="px-4 py-3 font-medium">Status</th>
-                            <th className="px-4 py-3 font-medium">Net pay</th>
-                            <th className="px-4 py-3 font-medium">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 bg-white">
-                          {payrollRecords.map((record) => (
-                            <tr key={record.payrollRecordId} className="hover:bg-slate-50">
-                              <td className="px-4 py-3">
-                                <p className="font-medium text-slate-900">{record.employeeName}</p>
-                                <p className="text-xs text-slate-500">{record.departmentName}</p>
-                              </td>
-                              <td className="px-4 py-3 text-slate-600">
-                                {record.payPeriodStart} → {record.payPeriodEnd}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1', statusTone(record.status))}>
-                                  {record.status}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 font-medium text-slate-900">{formatCurrency(record.netPay, record.currency)}</td>
-                              <td className="px-4 py-3">
-                                <Button variant="outline" size="sm" onClick={() => setSelectedPayslip(record)}>
-                                  View payslip
-                                  <ArrowUpRight className="size-4" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Period</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Net pay</TableHead>
+                          <TableHead>Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {payrollRecords.map((record) => (
+                          <TableRow key={record.payrollRecordId}>
+                            <TableCell>
+                              <p className="font-medium text-slate-900">{record.employeeName}</p>
+                              <p className="text-xs text-slate-500">{record.departmentName}</p>
+                            </TableCell>
+                            <TableCell className="text-slate-600">
+                              {record.payPeriodStart} → {record.payPeriodEnd}
+                            </TableCell>
+                            <TableCell>
+                              <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1', statusTone(record.status))}>
+                                {record.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-medium text-slate-900">{formatCurrency(record.netPay, record.currency)}</TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="sm" onClick={() => setSelectedPayslip(record)}>
+                                View payslip
+                                <ArrowUpRight className="size-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] p-5">
                   <div className="mb-4 flex items-center gap-3">
                     <div className="rounded-2xl bg-white p-2 text-slate-700 shadow-sm">
                       <Wallet className="size-4" />
@@ -605,7 +603,7 @@ export function AttendancePayrollWorkspace() {
                         <Metric label="Deductions" value={formatCurrency(selectedPayslip.deductions, selectedPayslip.currency)} hint="Taxes and adjustments" />
                       </div>
 
-                      <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                      <div className="rounded-[var(--radius-surface)] bg-slate-950 p-4 text-white">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Net pay</p>
                         <p className="mt-3 text-3xl font-semibold">{formatCurrency(selectedPayslip.netPay, selectedPayslip.currency)}</p>
                         <p className="mt-2 text-sm text-slate-300">
@@ -614,7 +612,7 @@ export function AttendancePayrollWorkspace() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 text-center">
+                    <div className="flex min-h-64 flex-col items-center justify-center rounded-[var(--radius-surface)] border border-dashed border-slate-300 bg-[var(--surface)] px-6 text-center">
                       <Wallet className="size-8 text-slate-400" />
                       <p className="mt-4 font-medium text-slate-900">Select a payroll row to open the payslip viewer.</p>
                       <p className="mt-2 text-sm text-slate-600">
