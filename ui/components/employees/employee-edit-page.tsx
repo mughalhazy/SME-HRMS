@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 
 import { EmployeeForm, getDefaultEmployeeFormValues, toApiPayload } from '@/components/employees/employee-form'
+import { ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
 import { getEmployee, updateEmployee } from '@/lib/employees/api'
 
 export function EmployeeEditPage({ employeeId }: { employeeId: string }) {
@@ -14,11 +15,11 @@ export function EmployeeEditPage({ employeeId }: { employeeId: string }) {
   })
 
   if (query.isLoading) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-slate-500">Loading employee record…</div>
+    return <SurfaceSkeleton lines={8} />
   }
 
   if (query.isError) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-rose-600">{query.error.message}</div>
+    return <ErrorState title="Unable to load employee record" message={query.error.message} onRetry={() => query.refetch()} />
   }
 
   if (!query.data) {

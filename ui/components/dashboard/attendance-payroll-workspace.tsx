@@ -9,12 +9,14 @@ import {
   BadgeDollarSign,
   CalendarRange,
   Clock3,
+  ReceiptText,
   RefreshCw,
   TimerReset,
   Wallet,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/feedback'
 import {
   type AttendanceRecord,
   type PayrollRecord,
@@ -305,9 +307,9 @@ export function AttendancePayrollWorkspace() {
   })
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_35%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <section className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_32px_120px_-48px_rgba(15,23,42,0.45)] backdrop-blur lg:p-8">
+    <div className="flex flex-col gap-6">
+      <section className="rounded-[32px] border border-slate-200/80 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-6 shadow-[0_32px_120px_-48px_rgba(15,23,42,0.22)] lg:p-8">
+
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-sm font-semibold uppercase tracking-[0.28em] text-sky-700">SME HRMS · Attendance + Payroll</p>
@@ -325,9 +327,9 @@ export function AttendancePayrollWorkspace() {
               <Metric label="UX target" value="10/10" hint="Fast tables, fallback resilience, responsive layout" />
             </div>
           </div>
-        </section>
+      </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
           <SurfaceCard title="Attendance dashboard" subtitle="Clock in/out, live status, and clean history for the selected employee." icon={Clock3}>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -514,51 +516,66 @@ export function AttendancePayrollWorkspace() {
                     </div>
                     <CalendarRange className="size-4 text-slate-400" />
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200 text-sm">
-                      <thead className="bg-white text-left text-slate-500">
-                        <tr>
-                          <th className="px-4 py-3 font-medium">Employee</th>
-                          <th className="px-4 py-3 font-medium">Period</th>
-                          <th className="px-4 py-3 font-medium">Status</th>
-                          <th className="px-4 py-3 font-medium">Net pay</th>
-                          <th className="px-4 py-3 font-medium">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white">
-                        {payrollRecords.map((record) => (
-                          <tr key={record.payrollRecordId} className="hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              <p className="font-medium text-slate-900">{record.employeeName}</p>
-                              <p className="text-xs text-slate-500">{record.departmentName}</p>
-                            </td>
-                            <td className="px-4 py-3 text-slate-600">
-                              {record.payPeriodStart} → {record.payPeriodEnd}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1', statusTone(record.status))}>
-                                {record.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 font-medium text-slate-900">{formatCurrency(record.netPay, record.currency)}</td>
-                            <td className="px-4 py-3">
-                              <Button variant="outline" size="sm" onClick={() => setSelectedPayslip(record)}>
-                                View payslip
-                                <ArrowUpRight className="size-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                        {!payrollRecords.length && (
+                  {payrollQuery.isLoading ? (
+                    <TableSkeleton rows={5} columns={5} />
+                  ) : payrollQuery.isError ? (
+                    <div className="p-4">
+                      <ErrorState title="Unable to load payroll data" message={payrollQuery.error.message} onRetry={() => payrollQuery.refetch()} />
+                    </div>
+                  ) : payrollRecords.length === 0 ? (
+                    <div className="p-4">
+                      <EmptyState
+                        icon={ReceiptText}
+                        title="No payroll records yet"
+                        message="No payroll records match the selected period and status filters. Adjust the filters or run payroll to generate the next batch."
+                        action={
+                          <Button onClick={() => runPayrollMutation.mutate()} disabled={runPayrollMutation.isPending}>
+                            <BadgeDollarSign className="size-4" />
+                            {runPayrollMutation.isPending ? 'Running payroll…' : 'Run payroll'}
+                          </Button>
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-white text-left text-slate-500">
                           <tr>
-                            <td className="px-4 py-10 text-center text-slate-500" colSpan={5}>
-                              No payroll records match the selected period and status filters.
-                            </td>
+                            <th className="px-4 py-3 font-medium">Employee</th>
+                            <th className="px-4 py-3 font-medium">Period</th>
+                            <th className="px-4 py-3 font-medium">Status</th>
+                            <th className="px-4 py-3 font-medium">Net pay</th>
+                            <th className="px-4 py-3 font-medium">Action</th>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {payrollRecords.map((record) => (
+                            <tr key={record.payrollRecordId} className="hover:bg-slate-50">
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-slate-900">{record.employeeName}</p>
+                                <p className="text-xs text-slate-500">{record.departmentName}</p>
+                              </td>
+                              <td className="px-4 py-3 text-slate-600">
+                                {record.payPeriodStart} → {record.payPeriodEnd}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1', statusTone(record.status))}>
+                                  {record.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 font-medium text-slate-900">{formatCurrency(record.netPay, record.currency)}</td>
+                              <td className="px-4 py-3">
+                                <Button variant="outline" size="sm" onClick={() => setSelectedPayslip(record)}>
+                                  View payslip
+                                  <ArrowUpRight className="size-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -610,6 +627,5 @@ export function AttendancePayrollWorkspace() {
           </SurfaceCard>
         </div>
       </div>
-    </main>
   )
 }

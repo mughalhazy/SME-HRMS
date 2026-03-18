@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
 import { apiRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -365,8 +366,7 @@ export function HiringPipelineBoard() {
   const errorMessage = candidatesQuery.error?.message ?? interviewsQuery.error?.message
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_48%,_#ffffff_100%)] px-4 py-6 text-slate-950 md:px-8 lg:px-10">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+    <div className="flex flex-col gap-6 rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_48%,_#ffffff_100%)] p-4 text-slate-950 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-6">
         <section className="overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.7fr_1fr] lg:px-8">
             <div className="space-y-4">
@@ -417,11 +417,16 @@ export function HiringPipelineBoard() {
         </section>
 
         {isLoading ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm inline-flex items-center gap-2">
-            <LoaderCircle className="h-4 w-4 animate-spin" /> Loading candidate pipeline…
-          </section>
+          <SurfaceSkeleton lines={6} />
         ) : isError ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-8 text-sm text-rose-600 shadow-sm">{errorMessage}</section>
+          <ErrorState title="Unable to load candidate pipeline" message={errorMessage ?? 'Unknown error'} onRetry={() => { void candidatesQuery.refetch(); void interviewsQuery.refetch() }} />
+        ) : candidates.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No candidates in pipeline"
+            message="Candidate cards will appear here once new applications are created. Refresh the board or create a new candidate from the hiring workflow."
+            action={<Button variant="outline" onClick={() => { void candidatesQuery.refetch(); void interviewsQuery.refetch() }}>Refresh board</Button>}
+          />
         ) : (
           <section className="grid gap-4 xl:grid-cols-4">
             {STAGES.map((stage) => {
@@ -631,8 +636,7 @@ export function HiringPipelineBoard() {
             })}
           </section>
         )}
-      </div>
-    </main>
+    </div>
   )
 }
 

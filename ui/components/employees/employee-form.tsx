@@ -2,11 +2,19 @@
 
 import type { FormEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { AlertTriangle, LoaderCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api/client'
-import { EMPLOYEE_STATUSES, EMPLOYMENT_TYPES, type CreateEmployeeInput, type Employee, type EmployeeFormValues, type UpdateEmployeeInput } from '@/lib/employees/types'
+import {
+  EMPLOYEE_STATUSES,
+  EMPLOYMENT_TYPES,
+  type CreateEmployeeInput,
+  type Employee,
+  type EmployeeFormValues,
+  type UpdateEmployeeInput,
+} from '@/lib/employees/types'
 import { validateEmployeeForm, type EmployeeFormErrors } from '@/lib/employees/validation'
 
 function normalizeValues(values: EmployeeFormValues): EmployeeFormValues {
@@ -75,24 +83,26 @@ function Field({
   label,
   htmlFor,
   error,
+  hint,
   children,
 }: {
   label: string
   htmlFor: string
   error?: string
+  hint?: string
   children: ReactNode
 }) {
   return (
     <label htmlFor={htmlFor} className="flex flex-col gap-2 text-sm font-medium text-slate-700">
       <span>{label}</span>
       {children}
-      {error ? <span className="text-xs font-medium text-rose-600">{error}</span> : null}
+      {error ? <span className="text-xs font-medium text-rose-600">{error}</span> : hint ? <span className="text-xs text-slate-500">{hint}</span> : null}
     </label>
   )
 }
 
 const inputClassName =
-  'h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200'
+  'h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 aria-[invalid=true]:border-rose-300 aria-[invalid=true]:ring-rose-100'
 
 export function EmployeeForm({
   mode,
@@ -152,13 +162,23 @@ export function EmployeeForm({
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Employee create / edit</p>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">{heading}</h1>
         <p className="max-w-2xl text-sm leading-6 text-slate-600">
-          Capture canonical employee fields with inline validation and API-aligned payloads.
+          Capture canonical employee fields with inline validation, clear submit feedback, and API-aligned payloads.
         </p>
       </div>
 
+      {submitError ? (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium text-rose-900">Unable to save employee</p>
+            <p>{submitError}</p>
+          </div>
+        </div>
+      ) : null}
+
       <form className="grid gap-5 md:grid-cols-2" onSubmit={handleSubmit} noValidate>
-        <Field label="Employee number" htmlFor="employee_number" error={errors.employee_number}>
-          <input
+        <Field label="Employee number" htmlFor="employee_number" error={errors.employee_number} hint={mode === 'edit' ? 'Employee number cannot be changed after creation.' : 'Use the canonical employee identifier.'}>
+          <Input
             id="employee_number"
             className={inputClassName}
             value={values.employee_number}
@@ -169,7 +189,7 @@ export function EmployeeForm({
         </Field>
 
         <Field label="Email" htmlFor="email" error={errors.email}>
-          <input
+          <Input
             id="email"
             className={inputClassName}
             type="email"
@@ -180,7 +200,7 @@ export function EmployeeForm({
         </Field>
 
         <Field label="First name" htmlFor="first_name" error={errors.first_name}>
-          <input
+          <Input
             id="first_name"
             className={inputClassName}
             value={values.first_name}
@@ -190,7 +210,7 @@ export function EmployeeForm({
         </Field>
 
         <Field label="Last name" htmlFor="last_name" error={errors.last_name}>
-          <input
+          <Input
             id="last_name"
             className={inputClassName}
             value={values.last_name}
@@ -199,8 +219,8 @@ export function EmployeeForm({
           />
         </Field>
 
-        <Field label="Phone" htmlFor="phone" error={errors.phone}>
-          <input
+        <Field label="Phone" htmlFor="phone" error={errors.phone} hint="Optional, but recommended for operational contact.">
+          <Input
             id="phone"
             className={inputClassName}
             value={values.phone}
@@ -210,7 +230,7 @@ export function EmployeeForm({
         </Field>
 
         <Field label="Hire date" htmlFor="hire_date" error={errors.hire_date}>
-          <input
+          <Input
             id="hire_date"
             className={inputClassName}
             type="date"
@@ -236,7 +256,7 @@ export function EmployeeForm({
           </select>
         </Field>
 
-        <Field label="Status" htmlFor="status" error={errors.status}>
+        <Field label="Status" htmlFor="status" error={errors.status} hint={mode === 'edit' ? 'Status is controlled by lifecycle workflows on the detail view.' : undefined}>
           <select
             id="status"
             className={inputClassName}
@@ -254,7 +274,7 @@ export function EmployeeForm({
         </Field>
 
         <Field label="Department ID" htmlFor="department_id" error={errors.department_id}>
-          <input
+          <Input
             id="department_id"
             className={inputClassName}
             value={values.department_id}
@@ -264,7 +284,7 @@ export function EmployeeForm({
         </Field>
 
         <Field label="Role ID" htmlFor="role_id" error={errors.role_id}>
-          <input
+          <Input
             id="role_id"
             className={inputClassName}
             value={values.role_id}
@@ -273,8 +293,8 @@ export function EmployeeForm({
           />
         </Field>
 
-        <Field label="Manager employee ID" htmlFor="manager_employee_id" error={errors.manager_employee_id}>
-          <input
+        <Field label="Manager employee ID" htmlFor="manager_employee_id" error={errors.manager_employee_id} hint="Leave blank if no manager is assigned yet.">
+          <Input
             id="manager_employee_id"
             className={inputClassName}
             value={values.manager_employee_id}
@@ -284,15 +304,14 @@ export function EmployeeForm({
         </Field>
 
         <div className="flex items-end justify-end gap-3 md:col-span-2">
-          {submitError ? <p className="mr-auto text-sm text-rose-600">{submitError}</p> : null}
           {onCancel ? (
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               Cancel
             </Button>
           ) : null}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-            {mode === 'create' ? 'Create employee' : 'Save changes'}
+            {isSubmitting ? 'Saving…' : mode === 'create' ? 'Create employee' : 'Save changes'}
           </Button>
         </div>
       </form>

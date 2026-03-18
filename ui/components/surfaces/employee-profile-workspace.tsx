@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Mail, Phone, UserRoundSearch } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
 import { getEmployeeFullName, listEmployees } from '@/lib/employees/api'
 
 function formatDate(value: string) {
@@ -27,11 +28,11 @@ export function EmployeeProfileWorkspace() {
   }, [employees, selectedEmployeeId])
 
   if (query.isLoading) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-slate-500">Loading employee profiles…</div>
+    return <SurfaceSkeleton lines={7} />
   }
 
   if (query.isError) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-rose-600">{query.error.message}</div>
+    return <ErrorState title="Unable to load employee profiles" message={query.error.message} onRetry={() => query.refetch()} />
   }
 
   return (
@@ -49,39 +50,54 @@ export function EmployeeProfileWorkspace() {
           </div>
         </div>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Select employee
-          <select
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"
-            value={selectedEmployee?.employee_id ?? ''}
-            onChange={(event) => setSelectedEmployeeId(event.target.value)}
-          >
-            {employees.map((employee) => (
-              <option key={employee.employee_id} value={employee.employee_id}>
-                {getEmployeeFullName(employee)} · {employee.employee_number}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="mt-5 space-y-3">
-          {employees.map((employee) => {
-            const active = employee.employee_id === selectedEmployee?.employee_id
-            return (
-              <button
-                key={employee.employee_id}
-                type="button"
-                onClick={() => setSelectedEmployeeId(employee.employee_id)}
-                className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-                  active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white hover:bg-slate-50'
-                }`}
+        {employees.length === 0 ? (
+          <EmptyState
+            icon={UserRoundSearch}
+            title="No employees available"
+            message="Add your first employee to start using the profile workspace and detail screens."
+            action={
+              <Button asChild>
+                <Link href="/employees/new">Add employee</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              Select employee
+              <select
+                className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                value={selectedEmployee?.employee_id ?? ''}
+                onChange={(event) => setSelectedEmployeeId(event.target.value)}
               >
-                <p className="font-semibold">{getEmployeeFullName(employee)}</p>
-                <p className={`text-sm ${active ? 'text-slate-200' : 'text-slate-500'}`}>{employee.department_id} · {employee.role_id}</p>
-              </button>
-            )
-          })}
-        </div>
+                {employees.map((employee) => (
+                  <option key={employee.employee_id} value={employee.employee_id}>
+                    {getEmployeeFullName(employee)} · {employee.employee_number}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="mt-5 space-y-3">
+              {employees.map((employee) => {
+                const active = employee.employee_id === selectedEmployee?.employee_id
+                return (
+                  <button
+                    key={employee.employee_id}
+                    type="button"
+                    onClick={() => setSelectedEmployeeId(employee.employee_id)}
+                    className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                      active ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <p className="font-semibold">{getEmployeeFullName(employee)}</p>
+                    <p className={`text-sm ${active ? 'text-slate-200' : 'text-slate-500'}`}>{employee.department_id} · {employee.role_id}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
       </section>
 
       {selectedEmployee ? (
@@ -116,7 +132,11 @@ export function EmployeeProfileWorkspace() {
           </div>
         </section>
       ) : (
-        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-slate-500">No employee records available yet.</div>
+        <EmptyState
+          icon={UserRoundSearch}
+          title="No employee selected"
+          message="Choose an employee from the launcher to preview profile details here."
+        />
       )}
     </div>
   )
