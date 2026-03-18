@@ -1,4 +1,17 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+const env = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env
+const API_BASE_URL = env?.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+
+export class ApiError extends Error {
+  status?: number
+  payload?: unknown
+
+  constructor(message: string, options?: { status?: number; payload?: unknown }) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = options?.status
+    this.payload = options?.payload
+  }
+}
 
 type ApiRequestOptions = RequestInit & {
   headers?: HeadersInit
