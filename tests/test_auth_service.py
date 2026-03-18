@@ -98,6 +98,17 @@ class AuthServiceTests(unittest.TestCase):
 
         self.assertEqual(ctx.exception.code, "INVALID_CREDENTIALS")
 
+    def test_auth_observability_tracks_api_calls(self) -> None:
+        post_auth_login(
+            self.service,
+            {"username": "ava.manager", "password": "Password123!"},
+            trace_id="trace-auth-login",
+        )
+        metrics = self.service.observability.metrics.snapshot()
+        self.assertEqual(metrics["request_count"], 1)
+        self.assertEqual(metrics["recent_requests"][0]["trace_id"], "trace-auth-login")
+        self.assertEqual(self.service.health_snapshot()["status"], "ok")
+
 
 if __name__ == "__main__":
     unittest.main()

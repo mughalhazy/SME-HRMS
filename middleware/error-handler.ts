@@ -1,5 +1,6 @@
-import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
+import { getStructuredLogger } from './logger';
+import { getRequestId } from './request-id';
 
 export type ApiErrorDetail = {
   field?: string;
@@ -19,14 +20,17 @@ export class ApiError extends Error {
 }
 
 export function getTraceId(req: Request): string {
-  const incomingTraceId = req.headers['x-trace-id'];
-  if (typeof incomingTraceId === 'string' && incomingTraceId.length > 0) {
-    return incomingTraceId;
-  }
-  return randomUUID().replace(/-/g, '').slice(0, 16);
+  return req.traceId ?? getRequestId(req);
 }
 
 export function sendApiError(req: Request, res: Response, error: ApiError): void {
+  getStructuredLogger('employee-service').error('request.error', getTraceId(req), error.message, {
+    status: error.status,
+    code: error.code,
+    details: error.details,
+    method: req.method,
+    path: req.originalUrl,
+  });
   res.status(error.status).json({
     error: {
       code: error.code,

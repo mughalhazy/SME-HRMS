@@ -169,3 +169,25 @@ def test_invalid_cursor_returns_validation_error(service: PayrollService):
     assert exc.value.status == 422
     assert exc.value.code == "VALIDATION_ERROR"
     assert exc.value.message == "cursor is invalid"
+
+
+def test_payroll_observability_captures_metrics_and_audit_logs(service: PayrollService):
+    admin = token("Admin")
+    _, created = service.create_payroll_record(
+        {
+            "employee_id": "emp-9",
+            "pay_period_start": "2026-07-01",
+            "pay_period_end": "2026-07-31",
+            "base_salary": "1500.00",
+            "currency": "USD",
+        },
+        admin,
+        trace_id="trace-payroll-create",
+    )
+    service.run_payroll("2026-07-01", "2026-07-31", admin, trace_id="trace-payroll-run")
+    service.mark_paid(created["payroll_record_id"], admin, trace_id="trace-payroll-paid")
+
+    metrics = service.observability.metrics.snapshot()
+    assert metrics["request_count"] >= 3
+    assert any(record["trace_id"] == "trace-payroll-paid" and record["message"] == "payroll_record_paid" for record in service.observability.logger.records)
+    assert service.health_snapshot()["status"] == "ok"

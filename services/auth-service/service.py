@@ -10,6 +10,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
+from resilience import Observability
+
 
 class AuthServiceError(Exception):
     def __init__(self, code: str, message: str, details: list[dict[str, Any]] | None = None):
@@ -89,6 +91,7 @@ class AuthService:
         self._users_by_name: dict[str, UserAccount] = {}
         self._users_by_id: dict[UUID, UserAccount] = {}
         self._revoked_session_ids: set[str] = set()
+        self.observability = Observability("auth-service")
 
     def register_user(
         self,
@@ -121,6 +124,13 @@ class AuthService:
         )
         self._users_by_name[normalized_username] = user
         self._users_by_id[user.user_id] = user
+        self.observability.logger.audit(
+            "auth_user_registered",
+            actor=str(user.user_id),
+            entity="UserAccount",
+            entity_id=str(user.user_id),
+            context={"username": normalized_username, "role": role},
+        )
         return user
 
     def login(self, username: str, password: str, *, ttl_seconds: int = 900) -> dict[str, Any]:
@@ -148,6 +158,10 @@ class AuthService:
             "aud": self._audience,
         }
         token = self._encode_token(claims)
+        self.observability.logger.info(
+            "auth.login_succeeded",
+            context={"username": normalized_username, "role": user.role},
+        )
         return {
             "access_token": token,
             "token_type": "Bearer",
@@ -183,6 +197,13 @@ class AuthService:
         sid = claims.get("sid")
         if sid:
             self._revoked_session_ids.add(sid)
+            self.observability.logger.audit(
+                "auth_logout",
+                actor=claims.get("sub"),
+                entity="Session",
+                entity_id=sid,
+                context={"role": claims.get("role")},
+            )
 
     def validate_role(self, principal: AuthenticatedPrincipal, capability_id: str) -> bool:
         allowed = self._ROLE_CAPABILITY_MAP.get(principal.role, set())
@@ -191,6 +212,14 @@ class AuthService:
     def require_capability(self, principal: AuthenticatedPrincipal, capability_id: str) -> None:
         if not self.validate_role(principal, capability_id):
             raise AuthServiceError("FORBIDDEN", "Insufficient permissions for requested capability")
+
+    def health_snapshot(self) -> dict[str, Any]:
+        return self.observability.health_status(
+            checks={
+                "users": len(self._users_by_id),
+                "revoked_sessions": len(self._revoked_session_ids),
+            }
+        )
 
     def _encode_token(self, claims: dict[str, Any]) -> str:
         header = {"alg": "HS256", "typ": "JWT"}

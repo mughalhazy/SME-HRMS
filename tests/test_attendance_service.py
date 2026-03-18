@@ -192,6 +192,24 @@ class AttendanceServiceTests(unittest.TestCase):
         self.assertEqual(alerts["count"], 1)
         self.assertEqual(alerts["alerts"][0]["employeeId"], str(self.emp_1))
 
+    def test_attendance_observability_records_metrics_and_health(self) -> None:
+        admin = Actor(employee_id=self.emp_1, role="Admin")
+        status, _ = post_attendance_records(
+            self.service,
+            admin,
+            {
+                "employee_id": str(self.emp_1),
+                "attendance_date": "2026-05-01",
+                "attendance_status": "Present",
+            },
+            trace_id="trace-attendance",
+        )
+        self.assertEqual(status, 201)
+        metrics = self.service.observability.metrics.snapshot()
+        self.assertEqual(metrics["request_count"], 1)
+        self.assertEqual(metrics["recent_requests"][0]["trace_id"], "trace-attendance")
+        self.assertEqual(self.service.health_snapshot()["status"], "ok")
+
 
 if __name__ == "__main__":
     unittest.main()
