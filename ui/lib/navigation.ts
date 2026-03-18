@@ -14,7 +14,28 @@ export type NavigationItem = {
   shortLabel: string
   description: string
   capabilityIds: string[]
-  readModels: string[]
+  readModels: ReadModelKey[]
+}
+
+export type ReadModelKey =
+  | 'employee_directory_view'
+  | 'attendance_dashboard_view'
+  | 'leave_requests_view'
+  | 'payroll_summary_view'
+  | 'candidate_pipeline_view'
+  | 'performance_review_view'
+
+export const readModelLabels: Record<ReadModelKey, string> = {
+  employee_directory_view: 'Employee Directory',
+  attendance_dashboard_view: 'Attendance',
+  leave_requests_view: 'Leave',
+  payroll_summary_view: 'Payroll',
+  candidate_pipeline_view: 'Candidates',
+  performance_review_view: 'Performance',
+}
+
+export function getReadModelLabel(readModel: ReadModelKey) {
+  return readModelLabels[readModel]
 }
 
 export const navigationItems: NavigationItem[] = [

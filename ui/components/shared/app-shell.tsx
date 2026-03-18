@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { BriefcaseBusiness, CalendarDays, ClipboardList, LayoutGrid, LoaderCircle, Sparkles, TrendingUp, UserRoundSearch, Users, Wallet } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { navigationItems } from '@/lib/navigation'
+import { getReadModelLabel, navigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
 const navIcons = {
@@ -106,9 +106,6 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
     [activePath, groupedNavigation],
   )
 
-  const contextualItems = activeSection?.items ?? []
-  const showSecondaryNavigation = contextualItems.length > 1
-
   const onNavigationStart = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (!shouldHandleNavigation(event, href, routePathname)) {
       return
@@ -118,7 +115,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
+    <div className="min-h-screen bg-gray-50 text-slate-950">
       <div
         aria-hidden="true"
         className={cn(
@@ -127,21 +124,21 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
         )}
       />
 
-      <div className="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 xl:grid-cols-[252px_minmax(0,1fr)]">
-        <aside className="border-b border-gray-200 bg-slate-950 px-4 py-5 text-white xl:border-b-0 xl:border-r xl:px-4 xl:py-6">
+      <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[252px_minmax(0,1fr)]">
+        <aside className="border-b border-gray-200 bg-white px-4 py-5 xl:border-b-0 xl:border-r xl:px-4 xl:py-6">
           <div className="space-y-6">
-            <div className="space-y-3">
-              <Badge variant="outline" className="w-fit border-white/20 bg-white/10 text-white">Primary navigation</Badge>
-              <Link href="/" onClick={onNavigationStart('/')} className="group flex items-center gap-3 text-white transition-colors duration-150 hover:text-white">
-                <span className="rounded-lg border border-white/10 bg-white/10 p-2 text-white transition-colors duration-150 group-hover:bg-white/15">
+            <div className="space-y-3 border-b border-gray-200 pb-6">
+              <Badge variant="outline" className="w-fit border-gray-200 bg-white text-slate-700">Primary navigation</Badge>
+              <Link href="/" onClick={onNavigationStart('/')} className="group flex items-center gap-3 text-slate-900 transition-colors duration-150 hover:text-slate-950">
+                <span className="rounded-lg border border-gray-200 bg-gray-50 p-2 text-slate-700 transition-colors duration-150 group-hover:bg-gray-100">
                   <BriefcaseBusiness className="h-5 w-5" />
                 </span>
                 <div>
                   <p className="text-base font-semibold tracking-tight">SME HRMS</p>
-                  <p className="text-sm text-slate-300">Main application workspace</p>
+                  <p className="text-sm text-slate-500">Main application workspace</p>
                 </div>
               </Link>
-              <p className="text-sm leading-6 text-slate-300">
+              <p className="text-sm leading-6 text-slate-600">
                 Use the sidebar for primary movement across core HR domains. The top bar stays focused on the current section only.
               </p>
             </div>
@@ -149,7 +146,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
             <nav aria-label="Primary navigation" className="space-y-1">
               {groupedNavigation.map((section, sectionIndex) => (
                 <div key={section.key} className={cn(sectionIndex > 0 && 'mt-6')}>
-                  <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{section.title}</p>
+                  <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{section.title}</p>
                   <div className="space-y-1">
                     {section.items.map((item) => {
                       const Icon = navIcons[item.key]
@@ -163,26 +160,22 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
                           onClick={onNavigationStart(item.href)}
                           aria-busy={isPending}
                           className={cn(
-                            'flex items-start gap-3 rounded-lg px-3 py-3 transition-[background-color,color,opacity] duration-150 ease-out',
-                            active ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-200 hover:bg-white/10 hover:text-white',
+                            'flex items-start gap-3 rounded-lg border px-3 py-3 transition-[background-color,border-color,color,opacity] duration-150 ease-out',
+                            active ? 'border-gray-200 bg-gray-50 text-slate-950' : 'border-transparent text-slate-600 hover:border-gray-200 hover:bg-white hover:text-slate-950',
                             isPending && 'opacity-85',
                           )}
                         >
                           <span
                             className={cn(
-                              'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
-                              active ? 'bg-slate-100 text-slate-900' : 'bg-white/10 text-slate-200',
+                              'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200',
+                              active ? 'bg-white text-slate-900' : 'bg-gray-50 text-slate-500',
                             )}
                           >
                             {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className={cn('block text-sm font-semibold', active ? 'text-slate-950' : 'text-white')}>
-                              {item.label}
-                            </span>
-                            <span className={cn('mt-1 block text-xs leading-5', active ? 'text-slate-600' : 'text-slate-300')}>
-                              {item.description}
-                            </span>
+                            <span className="block text-sm font-semibold text-inherit">{item.label}</span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-500">{item.description}</span>
                           </span>
                         </Link>
                       )
@@ -194,78 +187,37 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-col">
-          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white backdrop-blur">
+        <div className="flex min-w-0 flex-col bg-gray-50">
+          <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
             <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 lg:px-7">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{activeSection?.secondaryLabel ?? 'Current workspace'}</p>
                     {pendingHref ? (
-                      <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                      <span className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-slate-600">
                         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                         Navigating…
                       </span>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
                     <h1 className="text-lg font-semibold tracking-tight text-slate-950">{activeItem.label}</h1>
                     <p className="text-sm text-slate-600">{activeItem.description}</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {activeItem.readModels.map((model) => (
-                    <Badge key={model} variant="outline">{model}</Badge>
+                    <Badge key={model} variant="outline" className="border-gray-200 bg-white text-slate-700">
+                      {getReadModelLabel(model)}
+                    </Badge>
                   ))}
                 </div>
               </div>
             </div>
-
-            {showSecondaryNavigation ? (
-              <div className="border-t border-slate-200 px-4 sm:px-6 lg:px-7">
-                <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Secondary navigation</p>
-                      <p className="text-sm text-slate-600">Switch between pages in the {activeSection.title} section.</p>
-                    </div>
-                  </div>
-                  <nav aria-label="Secondary navigation" className="flex min-w-0 overflow-x-auto">
-                    <div className="flex min-w-max items-center gap-2 text-sm">
-                      {contextualItems.map((item) => {
-                        const active = isPathActive(activePath, item.href)
-                        const isPending = pendingHref === item.href
-
-                        return (
-                          <Link
-                            key={`${item.key}-tab`}
-                            href={item.href}
-                            onClick={onNavigationStart(item.href)}
-                            aria-busy={isPending}
-                            className={cn(
-                              'inline-flex whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 transition-[background-color,color,opacity] duration-150 ease-out hover:bg-slate-100 hover:text-slate-950',
-                              active && 'bg-slate-950 text-white hover:bg-slate-950 hover:text-white',
-                              isPending && 'opacity-85',
-                            )}
-                          >
-                            {item.shortLabel}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </nav>
-                </div>
-              </div>
-            ) : null}
           </header>
 
-          <main key={routePathname} className="flex-1 px-4 py-6 sm:px-6 lg:px-7">
-            <div className="mx-auto flex w-full max-w-7xl animate-[page-enter_180ms_ease-out] flex-col">
-              <div className="flex flex-1 flex-col gap-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                {children}
-              </div>
-            </div>
-          </main>
+          <main className="flex-1 bg-gray-50 px-4 py-6 sm:px-6 lg:px-7">{children}</main>
         </div>
       </div>
     </div>
