@@ -102,7 +102,7 @@ function Field({
 }
 
 const inputClassName =
-  'h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 aria-[invalid=true]:border-rose-300 aria-[invalid=true]:ring-rose-100'
+  'h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 aria-[invalid=true]:border-rose-300 aria-[invalid=true]:ring-rose-100'
 
 export function EmployeeForm({
   mode,
@@ -157,8 +157,8 @@ export function EmployeeForm({
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-6 flex flex-col gap-2">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-5 flex flex-col gap-2">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Employee create / edit</p>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">{heading}</h1>
         <p className="max-w-2xl text-sm leading-6 text-slate-600">
@@ -176,7 +176,7 @@ export function EmployeeForm({
         </div>
       ) : null}
 
-      <form className="grid gap-5 md:grid-cols-2" onSubmit={handleSubmit} noValidate>
+      <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit} noValidate>
         <Field label="Employee number" htmlFor="employee_number" error={errors.employee_number} hint={mode === 'edit' ? 'Employee number cannot be changed after creation.' : 'Use the canonical employee identifier.'}>
           <Input
             id="employee_number"
@@ -303,7 +303,7 @@ export function EmployeeForm({
           />
         </Field>
 
-        <div className="flex items-end justify-end gap-3 md:col-span-2">
+        <div className="mt-2 flex items-end justify-end gap-3 border-t border-slate-200 pt-4 md:col-span-2">
           {onCancel ? (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               Cancel

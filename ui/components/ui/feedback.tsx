@@ -16,7 +16,7 @@ export function SurfaceSkeleton({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-3xl border border-slate-200 bg-white p-6 shadow-sm', className)}>
+    <div className={cn('rounded-2xl border border-slate-200 bg-white p-5 shadow-sm', className)}>
       <div className="space-y-3">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-8 w-72 max-w-full" />
@@ -33,9 +33,9 @@ export function SurfaceSkeleton({
 
 export function StatSkeletonGrid({ count = 3 }: { count?: number }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div key={index} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <Skeleton className="h-10 w-10 rounded-2xl" />
           <Skeleton className="mt-4 h-4 w-28" />
           <Skeleton className="mt-3 h-8 w-20" />
@@ -48,13 +48,13 @@ export function StatSkeletonGrid({ count = 3 }: { count?: number }) {
 
 export function TableSkeleton({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-6 py-4">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 px-5 py-3.5">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="mt-2 h-4 w-72 max-w-full" />
       </div>
       <div className="space-y-0">
-        <div className="grid gap-4 border-b border-slate-200 bg-slate-50 px-6 py-3" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+        <div className="grid gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
           {Array.from({ length: columns }).map((_, index) => (
             <Skeleton key={index} className="h-3 w-20" />
           ))}
@@ -62,7 +62,7 @@ export function TableSkeleton({ rows = 5, columns = 5 }: { rows?: number; column
         {Array.from({ length: rows }).map((_, rowIndex) => (
           <div
             key={rowIndex}
-            className="grid gap-4 border-b border-slate-100 px-6 py-4 last:border-b-0"
+            className="grid gap-4 border-b border-slate-100 px-5 py-3.5 last:border-b-0"
             style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
           >
             {Array.from({ length: columns }).map((_, columnIndex) => (
@@ -87,7 +87,7 @@ export function ErrorState({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-3xl border border-rose-200 bg-rose-50/70 p-6 shadow-sm', className)} role="alert">
+    <div className={cn('rounded-2xl border border-rose-200 bg-rose-50/70 p-5 shadow-sm', className)} role="alert">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-white p-2 text-rose-600 shadow-sm">
@@ -123,7 +123,7 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center shadow-sm', className)}>
+    <div className={cn('rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-6 text-center shadow-sm', className)}>
       <div className="mx-auto flex max-w-md flex-col items-center gap-4">
         <div className="rounded-2xl bg-white p-3 text-slate-700 shadow-sm ring-1 ring-slate-200">
           <Icon className="h-5 w-5" />
