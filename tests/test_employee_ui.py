@@ -7,7 +7,7 @@ class EmployeeUiBuilderTests(unittest.TestCase):
     def test_build_employee_ui_includes_expected_surfaces(self) -> None:
         ui = build_employee_ui()
 
-        self.assertEqual(set(ui.keys()), {"employee_list", "employee_profile"})
+        self.assertEqual(set(ui.keys()), {"employee_list", "employee_form", "employee_profile"})
 
     def test_employee_list_maps_to_canonical_read_model(self) -> None:
         ui = build_employee_ui()
@@ -20,6 +20,16 @@ class EmployeeUiBuilderTests(unittest.TestCase):
         self.assertEqual(employee_list["view"]["read_model"], "employee_directory_view")
         self.assertIn("full_name", employee_list["view"]["columns"])
         self.assertIn("department_name", employee_list["view"]["columns"])
+
+    def test_employee_form_supports_create_and_edit_modes(self) -> None:
+        ui = build_employee_ui()
+        employee_form = ui["employee_form"]
+
+        self.assertEqual(employee_form["primary_read_models"], ["employee_directory_view"])
+        self.assertEqual(employee_form["view"]["type"], "form")
+        self.assertEqual(employee_form["view"]["mode"], ["create", "edit"])
+        self.assertIn("email", employee_form["view"]["fields"])
+        self.assertEqual(employee_form["view"]["validation"], "client_and_api")
 
     def test_employee_profile_composes_related_panels(self) -> None:
         ui = build_employee_ui()
