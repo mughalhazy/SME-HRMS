@@ -7,6 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = (ROOT / "docker-compose.yml").read_text()
 ENV_EXAMPLE = (ROOT / ".env.example").read_text()
 WORKFLOW_BUILD = (ROOT / ".github/workflows/build.yml").read_text()
+CORE_SCHEMA = (ROOT / "deployment/migrations/001_core_schema.sql").read_text()
+WORKFLOW_SCHEMA = (ROOT / "deployment/migrations/002_workflow_schema.sql").read_text()
 
 checks: list[tuple[str, bool]] = []
 
@@ -46,7 +48,16 @@ checks.append(("tests before build", "needs: test-before-build" in WORKFLOW_BUIL
 checks.append(("build containers", all(df in WORKFLOW_BUILD for df in ["Dockerfile.api", "Dockerfile.services", "Dockerfile.ui"])))
 
 # 9 matches data architecture relational postgres
-checks.append(("data architecture match", "postgres:16-alpine" in COMPOSE))
+schema_markers = [
+    "first_name VARCHAR(100) NOT NULL",
+    "manager_employee_id UUID",
+    "leave_type VARCHAR(20) NOT NULL",
+    "base_salary NUMERIC(12,2) NOT NULL",
+    "CREATE TABLE IF NOT EXISTS interviews",
+    "CREATE TABLE IF NOT EXISTS performance_reviews",
+    "ON UPDATE CASCADE",
+]
+checks.append(("data architecture match", "postgres:16-alpine" in COMPOSE and all(marker in (CORE_SCHEMA + WORKFLOW_SCHEMA) for marker in schema_markers)))
 
 # 10 secrets not committed
 checks.append(("no committed secrets", not re.search(r"AKIA|PRIVATE KEY|BEGIN RSA", ENV_EXAMPLE + COMPOSE)))
