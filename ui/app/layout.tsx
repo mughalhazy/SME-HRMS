@@ -5,8 +5,8 @@ import './globals.css'
 import { QueryProvider } from '@/components/shared/query-provider'
 
 export const metadata: Metadata = {
-  title: 'SME HRMS',
-  description: 'Frontend workspace for the SME HRMS platform.',
+  title: 'SME HRMS UI System',
+  description: 'Enterprise-grade Next.js and shadcn-style UI foundation for SME HRMS.',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

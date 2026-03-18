@@ -1,19 +1,42 @@
 :root {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --app-background: #f4f7fb;
   --background: #ffffff;
-  --foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #475569;
-  --border: #e2e8f0;
-  --primary: #0f172a;
-  --primary-foreground: #f8fafc;
+  --foreground: #152033;
+  --surface: #ffffff;
+  --surface-subtle: #f8fafc;
+  --sidebar-background: #eef3f9;
+  --border: #d8e1ee;
+  --muted-foreground: #5c6c86;
+  --accent: #edf3ff;
+  --accent-strong: #dfe9fb;
+  --primary: #2347aa;
+  --primary-strong: #1d3a8d;
+  --primary-foreground: #f8fbff;
+  --primary-soft: #e9f0ff;
+  --ring: #5a7fe6;
+  --success: #0f766e;
+  --success-soft: #dbfaf3;
+  --danger: #b42318;
 }
 
 .dark {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --muted: #0f172a;
-  --muted-foreground: #94a3b8;
-  --border: #1e293b;
-  --primary: #f8fafc;
-  --primary-foreground: #020617;
+  --app-background: #0f1728;
+  --background: #10192d;
+  --foreground: #edf2ff;
+  --surface: #162036;
+  --surface-subtle: #1d2740;
+  --sidebar-background: #121b2e;
+  --border: #293551;
+  --muted-foreground: #9fb0d0;
+  --accent: #22314f;
+  --accent-strong: #294063;
+  --primary: #8fa9ff;
+  --primary-strong: #7592f8;
+  --primary-foreground: #09101f;
+  --primary-soft: #1e315f;
+  --ring: #8fa9ff;
+  --success: #67e8c7;
+  --success-soft: #173b39;
+  --danger: #fda29b;
 }
