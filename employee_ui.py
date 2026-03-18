@@ -36,6 +36,32 @@ _EMPLOYEE_UI_CONFIG: dict[str, Any] = {
             "key": "employee_id",
         },
     },
+    "employee_form": {
+        "surface": "employee_form",
+        "primary_read_models": ["employee_directory_view"],
+        "capability_ids": ["CAP-EMP-001", "CAP-EMP-002"],
+        "primary_service_owner": "employee-service",
+        "domain_entities": ["Employee", "Department", "Role"],
+        "view": {
+            "type": "form",
+            "mode": ["create", "edit"],
+            "read_model": "employee_directory_view",
+            "fields": [
+                "employee_number",
+                "first_name",
+                "last_name",
+                "email",
+                "phone",
+                "hire_date",
+                "employment_type",
+                "employee_status",
+                "department_id",
+                "role_id",
+                "manager_employee_id",
+            ],
+            "validation": "client_and_api",
+        },
+    },
     "employee_profile": {
         "surface": "employee_profile",
         "primary_read_models": [
