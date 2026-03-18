@@ -1,0 +1,19 @@
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --muted: #f8fafc;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
+  --primary: #0f172a;
+  --primary-foreground: #f8fafc;
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
+  --muted: #0f172a;
+  --muted-foreground: #94a3b8;
+  --border: #1e293b;
+  --primary: #f8fafc;
+  --primary-foreground: #020617;
+}
