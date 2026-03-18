@@ -16,9 +16,16 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background: var(--background);
+  background: var(--app-background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 a {
