@@ -4,9 +4,11 @@ import type { ReactNode } from 'react'
 
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Mail, Phone, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, ShieldCheck, UserRound } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
+import { PageStack } from '@/components/ui/page'
 import { getEmployee, getEmployeeFullName } from '@/lib/employees/api'
 
 function formatDate(value: string) {
@@ -38,11 +40,11 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
   })
 
   if (query.isLoading) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-slate-500">Loading employee profile…</div>
+    return <SurfaceSkeleton lines={7} />
   }
 
   if (query.isError) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-rose-600">{query.error.message}</div>
+    return <ErrorState title="Unable to load employee profile" message={query.error.message} onRetry={() => query.refetch()} />
   }
 
   if (!query.data) {
@@ -52,7 +54,7 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
   const employee = query.data.data
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageStack>
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-3">
@@ -124,9 +126,10 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
             <DetailRow label="Last updated" value={formatDate(employee.updated_at)} />
             <DetailRow label="Canonical surface" value="employee_profile" />
             <DetailRow label="Primary owner" value="employee-service" />
+            <DetailRow label="Workspace status" value={<span className="inline-flex items-center gap-2"><UserRound className="h-4 w-4 text-slate-400" />Ready for edits</span>} />
           </DetailCard>
         </div>
       </div>
-    </div>
+    </PageStack>
   )
 }
