@@ -8,7 +8,7 @@ import { ArrowRight, RefreshCw, Search, UserPlus, Users } from 'lucide-react'
 import { PageHero, PageStack } from '@/components/ui/page'
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, InlineLoading, TableSkeleton } from '@/components/ui/feedback'
-import { Input } from '@/components/ui/input'
+import { Input, Select } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { getEmployeeFullName, listEmployees } from '@/lib/employees/api'
 import { EMPLOYEE_STATUSES, type Employee } from '@/lib/employees/types'
@@ -102,7 +102,7 @@ export function EmployeeListPage() {
         }
       />
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
         <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
             <span>
@@ -128,8 +128,7 @@ export function EmployeeListPage() {
 
             <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
               <span>Status</span>
-              <select
-                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              <Select
                 value={status}
                 onChange={(event) => setStatus(event.target.value as (typeof EMPLOYEE_STATUSES)[number] | 'all')}
               >
@@ -139,7 +138,7 @@ export function EmployeeListPage() {
                     {item}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">

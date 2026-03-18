@@ -17,7 +17,7 @@ function formatDate(value: string) {
 
 function DetailCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]">
       <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
       <div className="mt-4 grid gap-4 text-sm text-slate-600">{children}</div>
     </section>
@@ -55,7 +55,7 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
 
   return (
     <PageStack>
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-3">
             <Link href="/employees" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900">

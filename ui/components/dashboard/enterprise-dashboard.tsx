@@ -14,7 +14,8 @@ import {
   Users,
 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Input, Select, Textarea } from '@/components/ui/input'
 import { PageGrid, PageStack } from '@/components/ui/page'
 import { apiRequest, buildApiUrl, buildHeaders } from '@/lib/api/client'
 
@@ -388,14 +389,14 @@ export function EnterpriseDashboard() {
               </div>
             </div>
 
-            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:min-w-[320px]">
+            <div className="grid gap-3 rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4 sm:min-w-[320px]">
               <label className="space-y-2 text-sm font-medium text-slate-700">
                 <span>Bearer token</span>
-                <input
+                <Input
                   value={token}
                   onChange={(event) => setToken(event.target.value)}
                   placeholder="Optional for authenticated reads/actions"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
+                 
                 />
               </label>
               <div className="flex flex-wrap items-center gap-3">
@@ -417,7 +418,7 @@ export function EnterpriseDashboard() {
         </section>
 
         {actionMessage ? (
-          <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+          <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-slate-700 shadow-[var(--shadow-surface)]">
             {actionMessage}
           </section>
         ) : null}
@@ -425,7 +426,7 @@ export function EnterpriseDashboard() {
         <PageGrid className="xl:grid-cols-[minmax(0,1fr)_320px]">
           <PageGrid className="md:grid-cols-2">
             {cards.map((card) => (
-              <article key={card.key} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+              <article key={card.key} className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-slate-500">{card.title}</p>
@@ -464,7 +465,7 @@ export function EnterpriseDashboard() {
             ))}
           </PageGrid>
 
-          <aside className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+          <aside className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-500">Quick actions</p>
               <h2 className="text-2xl font-semibold tracking-tight">Move work forward fast.</h2>
@@ -489,18 +490,22 @@ export function EnterpriseDashboard() {
                       }
                     }
                   }}
-                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50"
+                  className={buttonVariants({
+                    variant: 'outline',
+                    size: 'lg',
+                    className: 'h-auto w-full justify-between rounded-[var(--radius-surface)] px-4 py-3 text-left whitespace-normal',
+                  })}
                 >
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{action.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{action.description}</p>
+                    <p className="mt-1 text-sm font-normal text-slate-500">{action.description}</p>
                   </div>
                   <ChevronRight className="size-4 text-slate-400" />
                 </button>
               ))}
             </div>
 
-            <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+            <div className="mt-5 rounded-[var(--radius-surface)] bg-[var(--surface-subtle)] p-4">
               <p className="text-sm font-medium text-slate-500">Read model coverage</p>
               <div className="mt-3 grid gap-3 text-sm text-slate-600">
                 <div className="flex items-center justify-between"><span>Employees</span><span>{employeesSummary.total}</span></div>
@@ -555,16 +560,16 @@ function ActionDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-4 sm:items-center">
-      <div className="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+      <div className="w-full max-w-xl rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-slate-500">Quick action</p>
             <h3 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{action.title}</h3>
             <p className="mt-2 text-sm leading-6 text-slate-600">{action.description}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-500 transition hover:bg-slate-50">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
 
         <div className="mt-6 space-y-4">{renderFields(action.key, form, pendingLeaveRows, onChange)}</div>
@@ -672,11 +677,11 @@ function InputField({
   return (
     <label className="space-y-2 text-sm font-medium text-slate-700">
       <span>{label}</span>
-      <input
+      <Input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
+       
       />
     </label>
   )
@@ -694,10 +699,10 @@ function TextAreaField({
   return (
     <label className="space-y-2 text-sm font-medium text-slate-700">
       <span>{label}</span>
-      <textarea
+      <Textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-slate-400"
+       
       />
     </label>
   )
@@ -719,10 +724,10 @@ function SelectField({
   return (
     <label className="space-y-2 text-sm font-medium text-slate-700">
       <span>{label}</span>
-      <select
+      <Select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
+       
       >
         {placeholder ? <option value="">{placeholder}</option> : null}
         {options.map((option) => {
@@ -733,7 +738,7 @@ function SelectField({
             </option>
           )
         })}
-      </select>
+      </Select>
     </label>
   )
 }

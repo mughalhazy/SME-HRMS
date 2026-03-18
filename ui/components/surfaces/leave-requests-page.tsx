@@ -96,7 +96,7 @@ export function LeaveRequestsPage() {
             })}
           </PageGrid>
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <section className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
             <SectionHeading
               title="Approval queue"
               description="Most urgent requests stay at the top with department and approver context visible."
