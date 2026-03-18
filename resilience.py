@@ -27,6 +27,7 @@ class StructuredLogger:
     def __init__(self, service_name: str):
         self.service_name = service_name
         self.records: list[dict[str, Any]] = []
+        self._lock = Lock()
 
     def log(
         self,
@@ -46,7 +47,8 @@ class StructuredLogger:
             "message": message or event,
             "context": context or {},
         }
-        self.records.append(record)
+        with self._lock:
+            self.records.append(record)
         LOGGER.log(getattr(logging, record["level"], logging.INFO), json.dumps(record, sort_keys=True))
         return record
 
@@ -167,6 +169,7 @@ class CentralErrorLogger:
         self.service_name = service_name
         self.failures: list[LoggedFailure] = []
         self.structured_logger = StructuredLogger(service_name)
+        self._lock = Lock()
 
     def log(self, operation: str, error: Exception, *, trace_id: str | None = None, details: dict[str, Any] | None = None) -> LoggedFailure:
         trace = trace_id or new_trace_id()
@@ -179,7 +182,8 @@ class CentralErrorLogger:
             occurred_at=utc_now().isoformat(),
             details=details or {},
         )
-        self.failures.append(failure)
+        with self._lock:
+            self.failures.append(failure)
         self.structured_logger.error(
             "error",
             trace_id=trace,
@@ -209,6 +213,7 @@ class DeadLetter:
 class DeadLetterQueue:
     def __init__(self):
         self.entries: list[DeadLetter] = []
+        self._lock = Lock()
 
     def push(self, workflow: str, operation: str, payload: dict[str, Any], reason: str, *, trace_id: str | None = None, retryable: bool = True) -> DeadLetter:
         entry = DeadLetter(
@@ -221,17 +226,19 @@ class DeadLetterQueue:
             created_at=utc_now().isoformat(),
             retryable=retryable,
         )
-        self.entries.append(entry)
+        with self._lock:
+            self.entries.append(entry)
         return entry
 
     def recover(self, predicate: Callable[[DeadLetter], bool], retry: Callable[[DeadLetter], bool]) -> list[DeadLetter]:
         recovered: list[DeadLetter] = []
-        for entry in self.entries:
-            if entry.recovered_at is not None or not entry.retryable or not predicate(entry):
-                continue
-            if retry(entry):
-                entry.recovered_at = utc_now().isoformat()
-                recovered.append(entry)
+        with self._lock:
+            for entry in self.entries:
+                if entry.recovered_at is not None or not entry.retryable or not predicate(entry):
+                    continue
+                if retry(entry):
+                    entry.recovered_at = utc_now().isoformat()
+                    recovered.append(entry)
         return recovered
 
 

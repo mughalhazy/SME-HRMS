@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
 from datetime import date, datetime, timezone
+from threading import RLock
 from time import perf_counter
 from typing import Any
 from uuid import uuid4
@@ -107,40 +108,42 @@ class HiringService:
             "google-calendar": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
             "linkedin": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
         }
+        self._lock = RLock()
 
     def create_job_posting(self, payload: dict[str, Any]) -> dict[str, Any]:
         started = perf_counter()
-        self._require(payload, ["title", "department_id", "employment_type", "description", "openings_count", "posting_date"])
-        self._validate_value(payload["employment_type"], self.EMPLOYMENT_TYPES, "employment_type")
-        if payload["openings_count"] < 1:
-            raise HiringValidationError("openings_count must be >= 1")
+        with self._lock:
+            self._require(payload, ["title", "department_id", "employment_type", "description", "openings_count", "posting_date"])
+            self._validate_value(payload["employment_type"], self.EMPLOYMENT_TYPES, "employment_type")
+            if payload["openings_count"] < 1:
+                raise HiringValidationError("openings_count must be >= 1")
 
-        posting_date = self._coerce_date(payload["posting_date"], "posting_date")
-        closing_date = self._coerce_optional_date(payload.get("closing_date"), "closing_date")
-        if closing_date and closing_date < posting_date:
-            raise HiringValidationError("closing_date must be on or after posting_date")
+            posting_date = self._coerce_date(payload["posting_date"], "posting_date")
+            closing_date = self._coerce_optional_date(payload.get("closing_date"), "closing_date")
+            if closing_date and closing_date < posting_date:
+                raise HiringValidationError("closing_date must be on or after posting_date")
 
-        status = payload.get("status", "Draft")
-        self._validate_value(status, self.JOB_POSTING_STATUSES, "status")
+            status = payload.get("status", "Draft")
+            self._validate_value(status, self.JOB_POSTING_STATUSES, "status")
 
-        job_posting = JobPosting(
-            job_posting_id=self._new_id(),
-            title=payload["title"],
-            department_id=payload["department_id"],
-            role_id=payload.get("role_id"),
-            employment_type=payload["employment_type"],
-            location=payload.get("location"),
-            description=payload["description"],
-            openings_count=payload["openings_count"],
-            posting_date=posting_date,
-            closing_date=closing_date,
-            status=status,
-            created_at=self._now(),
-            updated_at=self._now(),
-        )
-        self.job_postings[job_posting.job_posting_id] = job_posting
-        if status == "Open":
-            self._emit("JobPostingOpened", {"job_posting_id": job_posting.job_posting_id})
+            job_posting = JobPosting(
+                job_posting_id=self._new_id(),
+                title=payload["title"],
+                department_id=payload["department_id"],
+                role_id=payload.get("role_id"),
+                employment_type=payload["employment_type"],
+                location=payload.get("location"),
+                description=payload["description"],
+                openings_count=payload["openings_count"],
+                posting_date=posting_date,
+                closing_date=closing_date,
+                status=status,
+                created_at=self._now(),
+                updated_at=self._now(),
+            )
+            self.job_postings[job_posting.job_posting_id] = job_posting
+            if status == "Open":
+                self._emit("JobPostingOpened", {"job_posting_id": job_posting.job_posting_id})
         self.observability.track("create_job_posting", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "job_posting_id": job_posting.job_posting_id})
         return self._serialize(job_posting)
 
@@ -199,39 +202,40 @@ class HiringService:
 
     def create_candidate(self, payload: dict[str, Any]) -> dict[str, Any]:
         started = perf_counter()
-        self._require(payload, ["job_posting_id", "first_name", "last_name", "email", "application_date"])
-        posting = self._require_job_posting(payload["job_posting_id"])
-        if posting.status not in {"Open", "OnHold"}:
-            raise HiringValidationError("candidates can only be created for Open/OnHold job postings")
+        with self._lock:
+            self._require(payload, ["job_posting_id", "first_name", "last_name", "email", "application_date"])
+            posting = self._require_job_posting(payload["job_posting_id"])
+            if posting.status not in {"Open", "OnHold"}:
+                raise HiringValidationError("candidates can only be created for Open/OnHold job postings")
 
-        source = payload.get("source")
-        if source is not None:
-            self._validate_value(source, self.CANDIDATE_SOURCES, "source")
+            source = payload.get("source")
+            if source is not None:
+                self._validate_value(source, self.CANDIDATE_SOURCES, "source")
 
-        # unique (job_posting_id, email)
-        for existing in self.candidates.values():
-            if existing.job_posting_id == payload["job_posting_id"] and existing.email.lower() == payload["email"].lower():
-                raise HiringValidationError("candidate email must be unique within the job posting")
+            # unique (job_posting_id, email)
+            for existing in self.candidates.values():
+                if existing.job_posting_id == payload["job_posting_id"] and existing.email.lower() == payload["email"].lower():
+                    raise HiringValidationError("candidate email must be unique within the job posting")
 
-        candidate = Candidate(
-            candidate_id=self._new_id(),
-            job_posting_id=payload["job_posting_id"],
-            first_name=payload["first_name"],
-            last_name=payload["last_name"],
-            email=payload["email"],
-            phone=payload.get("phone"),
-            resume_url=payload.get("resume_url"),
-            source=source,
-            source_candidate_id=payload.get("source_candidate_id"),
-            source_profile_url=payload.get("source_profile_url"),
-            application_date=self._coerce_date(payload["application_date"], "application_date"),
-            status=payload.get("status", "Applied"),
-            created_at=self._now(),
-            updated_at=self._now(),
-        )
-        self._validate_value(candidate.status, self.CANDIDATE_STATUSES, "status")
-        self.candidates[candidate.candidate_id] = candidate
-        self._emit("CandidateApplied", {"candidate_id": candidate.candidate_id, "job_posting_id": candidate.job_posting_id})
+            candidate = Candidate(
+                candidate_id=self._new_id(),
+                job_posting_id=payload["job_posting_id"],
+                first_name=payload["first_name"],
+                last_name=payload["last_name"],
+                email=payload["email"],
+                phone=payload.get("phone"),
+                resume_url=payload.get("resume_url"),
+                source=source,
+                source_candidate_id=payload.get("source_candidate_id"),
+                source_profile_url=payload.get("source_profile_url"),
+                application_date=self._coerce_date(payload["application_date"], "application_date"),
+                status=payload.get("status", "Applied"),
+                created_at=self._now(),
+                updated_at=self._now(),
+            )
+            self._validate_value(candidate.status, self.CANDIDATE_STATUSES, "status")
+            self.candidates[candidate.candidate_id] = candidate
+            self._emit("CandidateApplied", {"candidate_id": candidate.candidate_id, "job_posting_id": candidate.job_posting_id})
         self.observability.track("create_candidate", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "candidate_id": candidate.candidate_id})
         return self._serialize(candidate)
 

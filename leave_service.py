@@ -6,6 +6,7 @@ import uuid
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
 from enum import Enum
+from threading import RLock
 from time import perf_counter
 
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
@@ -104,6 +105,7 @@ class LeaveService:
             "emp-001": EmployeeRecord("emp-001", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
             "emp-002": EmployeeRecord("emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
         }
+        self._lock = RLock()
 
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
@@ -211,30 +213,31 @@ class LeaveService:
         started = perf_counter()
         role = Role(actor_role)
         try:
-            if end_date < start_date:
-                self._fail(422, "VALIDATION_ERROR", "end_date must be >= start_date", trace)
-            self._ensure_employee_eligible(employee_id, trace)
-            self._ensure_lifecycle_scope(role, actor_employee_id, employee_id, trace)
-            if self._overlap_exists(employee_id, start_date, end_date):
-                self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
+            with self._lock:
+                if end_date < start_date:
+                    self._fail(422, "VALIDATION_ERROR", "end_date must be >= start_date", trace)
+                self._ensure_employee_eligible(employee_id, trace)
+                self._ensure_lifecycle_scope(role, actor_employee_id, employee_id, trace)
+                if self._overlap_exists(employee_id, start_date, end_date):
+                    self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
 
-            now = self._now()
-            leave = LeaveRequest(
-                leave_request_id=str(uuid.uuid4()),
-                employee_id=employee_id,
-                leave_type=LeaveType(leave_type),
-                start_date=start_date,
-                end_date=end_date,
-                total_days=self._total_days(start_date, end_date),
-                reason=reason,
-                approver_employee_id=approver_employee_id,
-                status=LeaveStatus.DRAFT,
-                submitted_at=None,
-                decision_at=None,
-                created_at=now,
-                updated_at=now,
-            )
-            self.requests[leave.leave_request_id] = leave
+                now = self._now()
+                leave = LeaveRequest(
+                    leave_request_id=str(uuid.uuid4()),
+                    employee_id=employee_id,
+                    leave_type=LeaveType(leave_type),
+                    start_date=start_date,
+                    end_date=end_date,
+                    total_days=self._total_days(start_date, end_date),
+                    reason=reason,
+                    approver_employee_id=approver_employee_id,
+                    status=LeaveStatus.DRAFT,
+                    submitted_at=None,
+                    decision_at=None,
+                    created_at=now,
+                    updated_at=now,
+                )
+                self.requests[leave.leave_request_id] = leave
             self.observability.logger.info(
                 "leave.request_created",
                 trace_id=trace,
@@ -250,35 +253,36 @@ class LeaveService:
         trace = self._trace(trace_id)
         started = perf_counter()
         role = Role(actor_role)
-        leave = self.requests.get(leave_request_id)
-        if not leave:
-            self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
-        self._ensure_lifecycle_scope(role, actor_employee_id, leave.employee_id, trace)
+        with self._lock:
+            leave = self.requests.get(leave_request_id)
+            if not leave:
+                self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
+            self._ensure_lifecycle_scope(role, actor_employee_id, leave.employee_id, trace)
 
-        key = idempotency_key or f"leave-submit:{leave_request_id}:{actor_employee_id}"
-        fingerprint = f"submit:{leave_request_id}:{actor_role}:{actor_employee_id}"
-        replay = self.idempotency.replay_or_conflict(key, fingerprint)
-        if replay is not None:
-            self._finalize_observation("submit_request", trace, started, True, {"status": replay.status_code, "replayed": True})
-            return replay.status_code, replay.payload
+            key = idempotency_key or f"leave-submit:{leave_request_id}:{actor_employee_id}"
+            fingerprint = f"submit:{leave_request_id}:{actor_role}:{actor_employee_id}"
+            replay = self.idempotency.replay_or_conflict(key, fingerprint)
+            if replay is not None:
+                self._finalize_observation("submit_request", trace, started, True, {"status": replay.status_code, "replayed": True})
+                return replay.status_code, replay.payload
 
-        if leave.status == LeaveStatus.SUBMITTED:
+            if leave.status == LeaveStatus.SUBMITTED:
+                payload = leave.to_dict()
+                self.idempotency.record(key, fingerprint, 200, payload)
+                self._finalize_observation("submit_request", trace, started, True, {"status": 200, "replayed": True})
+                return 200, payload
+            if leave.status != LeaveStatus.DRAFT:
+                self._fail(409, "INVALID_TRANSITION", "Only Draft requests can be submitted", trace)
+            if self._overlap_exists(leave.employee_id, leave.start_date, leave.end_date, exclude_id=leave.leave_request_id):
+                self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
+
+            ts = self._now()
+            leave.status = LeaveStatus.SUBMITTED
+            leave.submitted_at = ts
+            leave.updated_at = ts
             payload = leave.to_dict()
+            self._emit_event("LeaveRequestSubmitted", {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
             self.idempotency.record(key, fingerprint, 200, payload)
-            self._finalize_observation("submit_request", trace, started, True, {"status": 200, "replayed": True})
-            return 200, payload
-        if leave.status != LeaveStatus.DRAFT:
-            self._fail(409, "INVALID_TRANSITION", "Only Draft requests can be submitted", trace)
-        if self._overlap_exists(leave.employee_id, leave.start_date, leave.end_date, exclude_id=leave.leave_request_id):
-            self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
-
-        ts = self._now()
-        leave.status = LeaveStatus.SUBMITTED
-        leave.submitted_at = ts
-        leave.updated_at = ts
-        payload = leave.to_dict()
-        self._emit_event("LeaveRequestSubmitted", {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
-        self.idempotency.record(key, fingerprint, 200, payload)
         self.observability.logger.audit(
             "leave_request_submitted",
             trace_id=trace,
@@ -294,48 +298,49 @@ class LeaveService:
         trace = self._trace(trace_id)
         started = perf_counter()
         role = Role(actor_role)
-        leave = self.requests.get(leave_request_id)
-        if not leave:
-            self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
-        self._ensure_decision_scope(role, actor_employee_id, leave, trace)
+        with self._lock:
+            leave = self.requests.get(leave_request_id)
+            if not leave:
+                self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
+            self._ensure_decision_scope(role, actor_employee_id, leave, trace)
 
-        key = idempotency_key or f"leave-decision:{leave_request_id}:{action}:{actor_employee_id}"
-        fingerprint = f"{action}:{leave_request_id}:{actor_role}:{actor_employee_id}:{reason or ''}"
-        replay = self.idempotency.replay_or_conflict(key, fingerprint)
-        if replay is not None:
-            self._finalize_observation("decide_request", trace, started, True, {"status": replay.status_code, "replayed": True, "action": action})
-            return replay.status_code, replay.payload
+            key = idempotency_key or f"leave-decision:{leave_request_id}:{action}:{actor_employee_id}"
+            fingerprint = f"{action}:{leave_request_id}:{actor_role}:{actor_employee_id}:{reason or ''}"
+            replay = self.idempotency.replay_or_conflict(key, fingerprint)
+            if replay is not None:
+                self._finalize_observation("decide_request", trace, started, True, {"status": replay.status_code, "replayed": True, "action": action})
+                return replay.status_code, replay.payload
 
-        if action == "approve" and leave.status == LeaveStatus.APPROVED:
+            if action == "approve" and leave.status == LeaveStatus.APPROVED:
+                payload = leave.to_dict()
+                self.idempotency.record(key, fingerprint, 200, payload)
+                self._finalize_observation("decide_request", trace, started, True, {"status": 200, "replayed": True, "action": action})
+                return 200, payload
+            if action == "reject" and leave.status == LeaveStatus.REJECTED:
+                payload = leave.to_dict()
+                self.idempotency.record(key, fingerprint, 200, payload)
+                self._finalize_observation("decide_request", trace, started, True, {"status": 200, "replayed": True, "action": action})
+                return 200, payload
+            if leave.status != LeaveStatus.SUBMITTED:
+                self._fail(409, "INVALID_TRANSITION", "Only Submitted requests can be decided", trace)
+
+            ts = self._now()
+            if action == "approve":
+                leave.status = LeaveStatus.APPROVED
+                event = "LeaveRequestApproved"
+            elif action == "reject":
+                leave.status = LeaveStatus.REJECTED
+                if reason:
+                    leave.reason = f"{leave.reason or ''}\n[Rejection] {reason}".strip()
+                event = "LeaveRequestRejected"
+            else:
+                self._fail(400, "BAD_REQUEST", "Unknown action", trace)
+            leave.approver_employee_id = actor_employee_id
+            leave.decision_at = ts
+            leave.updated_at = ts
             payload = leave.to_dict()
+            self._emit_event(event, {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
             self.idempotency.record(key, fingerprint, 200, payload)
-            self._finalize_observation("decide_request", trace, started, True, {"status": 200, "replayed": True, "action": action})
-            return 200, payload
-        if action == "reject" and leave.status == LeaveStatus.REJECTED:
-            payload = leave.to_dict()
-            self.idempotency.record(key, fingerprint, 200, payload)
-            self._finalize_observation("decide_request", trace, started, True, {"status": 200, "replayed": True, "action": action})
-            return 200, payload
-        if leave.status != LeaveStatus.SUBMITTED:
-            self._fail(409, "INVALID_TRANSITION", "Only Submitted requests can be decided", trace)
-
-        ts = self._now()
-        if action == "approve":
-            leave.status = LeaveStatus.APPROVED
-            event = "LeaveRequestApproved"
-        elif action == "reject":
-            leave.status = LeaveStatus.REJECTED
-            if reason:
-                leave.reason = f"{leave.reason or ''}\n[Rejection] {reason}".strip()
-            event = "LeaveRequestRejected"
-        else:
-            self._fail(400, "BAD_REQUEST", "Unknown action", trace)
-        leave.approver_employee_id = actor_employee_id
-        leave.decision_at = ts
-        leave.updated_at = ts
-        payload = leave.to_dict()
-        self._emit_event(event, {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
-        self.idempotency.record(key, fingerprint, 200, payload)
         self.observability.logger.audit(
             f"leave_request_{action}",
             trace_id=trace,
@@ -351,48 +356,49 @@ class LeaveService:
         trace = self._trace(trace_id)
         started = perf_counter()
         role = Role(actor_role)
-        leave = self.requests.get(leave_request_id)
-        if not leave:
-            self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
-        if not self._can_access(role, actor_employee_id, leave):
-            self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace)
-        if leave.status in {LeaveStatus.APPROVED, LeaveStatus.REJECTED, LeaveStatus.CANCELLED}:
-            self._fail(409, "INVALID_TRANSITION", "Finalized leave cannot be modified", trace)
-        if leave.status == LeaveStatus.SUBMITTED and set(patch) != {"status"}:
-            self._fail(409, "INVALID_TRANSITION", "Submitted leave can only be cancelled", trace)
+        with self._lock:
+            leave = self.requests.get(leave_request_id)
+            if not leave:
+                self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
+            if not self._can_access(role, actor_employee_id, leave):
+                self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace)
+            if leave.status in {LeaveStatus.APPROVED, LeaveStatus.REJECTED, LeaveStatus.CANCELLED}:
+                self._fail(409, "INVALID_TRANSITION", "Finalized leave cannot be modified", trace)
+            if leave.status == LeaveStatus.SUBMITTED and set(patch) != {"status"}:
+                self._fail(409, "INVALID_TRANSITION", "Submitted leave can only be cancelled", trace)
 
-        if patch.get("status") == LeaveStatus.CANCELLED.value:
-            leave.status = LeaveStatus.CANCELLED
+            if patch.get("status") == LeaveStatus.CANCELLED.value:
+                leave.status = LeaveStatus.CANCELLED
+                leave.updated_at = self._now()
+                self._emit_event("LeaveRequestCancelled", {"leave_request_id": leave.leave_request_id, "at": leave.updated_at.isoformat()}, workflow="leave_request", trace_id=trace)
+                self.observability.logger.audit(
+                    "leave_request_cancelled",
+                    trace_id=trace,
+                    actor=actor_employee_id,
+                    entity="LeaveRequest",
+                    entity_id=leave.leave_request_id,
+                    context={"employee_id": leave.employee_id},
+                )
+                self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": True})
+                return 200, leave.to_dict()
+
+            start = date.fromisoformat(patch.get("start_date")) if patch.get("start_date") else leave.start_date
+            end = date.fromisoformat(patch.get("end_date")) if patch.get("end_date") else leave.end_date
+            if end < start:
+                self._fail(422, "VALIDATION_ERROR", "end_date must be >= start_date", trace)
+            if self._overlap_exists(leave.employee_id, start, end, exclude_id=leave.leave_request_id):
+                self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
+
+            if "leave_type" in patch:
+                leave.leave_type = LeaveType(patch["leave_type"])
+            leave.start_date = start
+            leave.end_date = end
+            if "reason" in patch:
+                leave.reason = patch["reason"]
+            if "approver_employee_id" in patch:
+                leave.approver_employee_id = patch["approver_employee_id"]
+            leave.total_days = self._total_days(start, end)
             leave.updated_at = self._now()
-            self._emit_event("LeaveRequestCancelled", {"leave_request_id": leave.leave_request_id, "at": leave.updated_at.isoformat()}, workflow="leave_request", trace_id=trace)
-            self.observability.logger.audit(
-                "leave_request_cancelled",
-                trace_id=trace,
-                actor=actor_employee_id,
-                entity="LeaveRequest",
-                entity_id=leave.leave_request_id,
-                context={"employee_id": leave.employee_id},
-            )
-            self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": True})
-            return 200, leave.to_dict()
-
-        start = date.fromisoformat(patch.get("start_date")) if patch.get("start_date") else leave.start_date
-        end = date.fromisoformat(patch.get("end_date")) if patch.get("end_date") else leave.end_date
-        if end < start:
-            self._fail(422, "VALIDATION_ERROR", "end_date must be >= start_date", trace)
-        if self._overlap_exists(leave.employee_id, start, end, exclude_id=leave.leave_request_id):
-            self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
-
-        if "leave_type" in patch:
-            leave.leave_type = LeaveType(patch["leave_type"])
-        leave.start_date = start
-        leave.end_date = end
-        if "reason" in patch:
-            leave.reason = patch["reason"]
-        if "approver_employee_id" in patch:
-            leave.approver_employee_id = patch["approver_employee_id"]
-        leave.total_days = self._total_days(start, end)
-        leave.updated_at = self._now()
         self.observability.logger.info(
             "leave.request_patched",
             trace_id=trace,
@@ -403,33 +409,36 @@ class LeaveService:
 
     def get_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None) -> tuple[int, dict]:
         role = Role(actor_role)
-        leave = self.requests.get(leave_request_id)
-        if not leave:
-            self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace_id)
-        if not self._can_access(role, actor_employee_id, leave):
-            self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace_id)
-        return 200, leave.to_dict()
+        with self._lock:
+            leave = self.requests.get(leave_request_id)
+            if not leave:
+                self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace_id)
+            if not self._can_access(role, actor_employee_id, leave):
+                self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace_id)
+            return 200, leave.to_dict()
 
     def list_requests(self, actor_role: str, actor_employee_id: str, employee_id: str | None = None, status: str | None = None) -> tuple[int, dict]:
         role = Role(actor_role)
         rows = []
-        for leave in self.requests.values():
-            if employee_id and leave.employee_id != employee_id:
-                continue
-            if status and leave.status.value != status:
-                continue
-            if self._can_access(role, actor_employee_id, leave):
-                rows.append(leave.to_dict())
+        with self._lock:
+            for leave in self.requests.values():
+                if employee_id and leave.employee_id != employee_id:
+                    continue
+                if status and leave.status.value != status:
+                    continue
+                if self._can_access(role, actor_employee_id, leave):
+                    rows.append(leave.to_dict())
         rows.sort(key=lambda item: (item["created_at"], item["leave_request_id"]))
         return 200, {"data": rows}
 
     def health_snapshot(self) -> dict:
-        return self.observability.health_status(
-            checks={
-                "requests": len(self.requests),
-                "dead_letters": len(self.dead_letters.entries),
-            }
-        )
+        with self._lock:
+            return self.observability.health_status(
+                checks={
+                    "requests": len(self.requests),
+                    "dead_letters": len(self.dead_letters.entries),
+                }
+            )
 
 
 def encode_token(role: str, employee_id: str, department_id: str | None = None) -> str:

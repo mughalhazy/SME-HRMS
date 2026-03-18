@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import Enum
+from threading import RLock
 from time import perf_counter
 from typing import Any
 from uuid import uuid4
@@ -102,6 +103,7 @@ class PayrollService:
         self.error_logger = CentralErrorLogger("payroll-service")
         self.idempotency = IdempotencyStore()
         self.observability = Observability("payroll-service")
+        self._lock = RLock()
 
     def _trace(self, trace_id: str | None = None) -> str:
         return self.observability.trace_id(trace_id)
@@ -185,52 +187,52 @@ class PayrollService:
         try:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
+            with self._lock:
+                employee_id = payload.get("employee_id")
+                pay_period_start = date.fromisoformat(payload["pay_period_start"])
+                pay_period_end = date.fromisoformat(payload["pay_period_end"])
+                if pay_period_end < pay_period_start:
+                    raise ServiceError("VALIDATION_ERROR", "pay_period_end must be on or after pay_period_start", 422)
 
-            employee_id = payload.get("employee_id")
-            pay_period_start = date.fromisoformat(payload["pay_period_start"])
-            pay_period_end = date.fromisoformat(payload["pay_period_end"])
-            if pay_period_end < pay_period_start:
-                raise ServiceError("VALIDATION_ERROR", "pay_period_end must be on or after pay_period_start", 422)
+                key = (employee_id, pay_period_start, pay_period_end)
+                fingerprint = json.dumps(payload, sort_keys=True)
+                replay_key = idempotency_key or f"payroll-record:{employee_id}:{pay_period_start.isoformat()}:{pay_period_end.isoformat()}"
+                replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
+                if replay is not None:
+                    self._finalize_observation("create_payroll_record", trace, started, True, {"status": replay.status_code, "replayed": True})
+                    return replay.status_code, replay.payload
 
-            key = (employee_id, pay_period_start, pay_period_end)
-            fingerprint = json.dumps(payload, sort_keys=True)
-            replay_key = idempotency_key or f"payroll-record:{employee_id}:{pay_period_start.isoformat()}:{pay_period_end.isoformat()}"
-            replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
-            if replay is not None:
-                self._finalize_observation("create_payroll_record", trace, started, True, {"status": replay.status_code, "replayed": True})
-                return replay.status_code, replay.payload
+                if key in self.period_index:
+                    record = self.records[self.period_index[key]]
+                    self._finalize_observation("create_payroll_record", trace, started, True, {"status": 200, "replayed": True})
+                    return self._record_idempotent_result(replay_key, fingerprint, 200, record.to_dict())
 
-            if key in self.period_index:
-                record = self.records[self.period_index[key]]
-                self._finalize_observation("create_payroll_record", trace, started, True, {"status": 200, "replayed": True})
-                return self._record_idempotent_result(replay_key, fingerprint, 200, record.to_dict())
-
-            base_salary = self._money(payload.get("base_salary"), "base_salary")
-            allowances = self._money(payload.get("allowances"), "allowances")
-            deductions = self._money(payload.get("deductions"), "deductions")
-            overtime_pay = self._money(payload.get("overtime_pay"), "overtime_pay")
-            gross, net = self._calc(base_salary, allowances, overtime_pay, deductions)
-            ts = self._now()
-            record = PayrollRecord(
-                payroll_record_id=str(uuid4()),
-                employee_id=employee_id,
-                pay_period_start=pay_period_start,
-                pay_period_end=pay_period_end,
-                base_salary=base_salary,
-                allowances=allowances,
-                deductions=deductions,
-                overtime_pay=overtime_pay,
-                gross_pay=gross,
-                net_pay=net,
-                currency=str(payload.get("currency", "USD")).upper(),
-                payment_date=None,
-                status=PayrollStatus.DRAFT,
-                created_at=ts,
-                updated_at=ts,
-            )
-            self.records[record.payroll_record_id] = record
-            self.period_index[key] = record.payroll_record_id
-            self.events.append({"type": "PayrollDrafted", "payroll_record_id": record.payroll_record_id, "at": ts.isoformat()})
+                base_salary = self._money(payload.get("base_salary"), "base_salary")
+                allowances = self._money(payload.get("allowances"), "allowances")
+                deductions = self._money(payload.get("deductions"), "deductions")
+                overtime_pay = self._money(payload.get("overtime_pay"), "overtime_pay")
+                gross, net = self._calc(base_salary, allowances, overtime_pay, deductions)
+                ts = self._now()
+                record = PayrollRecord(
+                    payroll_record_id=str(uuid4()),
+                    employee_id=employee_id,
+                    pay_period_start=pay_period_start,
+                    pay_period_end=pay_period_end,
+                    base_salary=base_salary,
+                    allowances=allowances,
+                    deductions=deductions,
+                    overtime_pay=overtime_pay,
+                    gross_pay=gross,
+                    net_pay=net,
+                    currency=str(payload.get("currency", "USD")).upper(),
+                    payment_date=None,
+                    status=PayrollStatus.DRAFT,
+                    created_at=ts,
+                    updated_at=ts,
+                )
+                self.records[record.payroll_record_id] = record
+                self.period_index[key] = record.payroll_record_id
+                self.events.append({"type": "PayrollDrafted", "payroll_record_id": record.payroll_record_id, "at": ts.isoformat()})
             self.observability.logger.audit(
                 "payroll_record_drafted",
                 trace_id=trace,
@@ -252,58 +254,58 @@ class PayrollService:
         try:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
+            with self._lock:
+                start = date.fromisoformat(period_start)
+                end = date.fromisoformat(period_end)
+                if end < start:
+                    raise ServiceError("VALIDATION_ERROR", "period_end must be on or after period_start", 422)
 
-            start = date.fromisoformat(period_start)
-            end = date.fromisoformat(period_end)
-            if end < start:
-                raise ServiceError("VALIDATION_ERROR", "period_end must be on or after period_start", 422)
+                fingerprint = json.dumps({"period_start": period_start, "period_end": period_end, "records": records or []}, sort_keys=True)
+                replay_key = idempotency_key or f"payroll-run:{period_start}:{period_end}"
+                replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
+                if replay is not None:
+                    self._finalize_observation("run_payroll", trace, started, True, {"status": replay.status_code, "replayed": True})
+                    return replay.status_code, replay.payload
 
-            fingerprint = json.dumps({"period_start": period_start, "period_end": period_end, "records": records or []}, sort_keys=True)
-            replay_key = idempotency_key or f"payroll-run:{period_start}:{period_end}"
-            replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
-            if replay is not None:
-                self._finalize_observation("run_payroll", trace, started, True, {"status": replay.status_code, "replayed": True})
-                return replay.status_code, replay.payload
+                processed_ids: set[str] = set()
+                failures: list[dict[str, Any]] = []
+                for item in records or []:
+                    if item["pay_period_start"] != period_start or item["pay_period_end"] != period_end:
+                        dead_letter = self.dead_letters.push("payroll_processing", "PayrollRecordRejected", item, "record period does not match run period")
+                        failures.append({"employee_id": item.get("employee_id"), "dead_letter_id": dead_letter.dead_letter_id, "reason": dead_letter.reason})
+                        continue
+                    try:
+                        _, created = self.create_payroll_record(item, authorization, trace_id=trace)
+                        record_id = created["payroll_record_id"]
+                    except ServiceError as exc:
+                        self.error_logger.log("run_payroll", exc, trace_id=trace, details={"employee_id": item.get("employee_id")})
+                        dead_letter = self.dead_letters.push("payroll_processing", "PayrollRecordFailed", item, exc.message)
+                        failures.append({"employee_id": item.get("employee_id"), "dead_letter_id": dead_letter.dead_letter_id, "reason": exc.message})
+                        continue
+                    record = self.records[record_id]
+                    if record.status != PayrollStatus.PAID:
+                        record.status = PayrollStatus.PROCESSED
+                        record.updated_at = self._now()
+                        processed_ids.add(record_id)
+                        self.events.append({"type": "PayrollProcessed", "payroll_record_id": record_id, "at": record.updated_at.isoformat()})
 
-            processed_ids: set[str] = set()
-            failures: list[dict[str, Any]] = []
-            for item in records or []:
-                if item["pay_period_start"] != period_start or item["pay_period_end"] != period_end:
-                    dead_letter = self.dead_letters.push("payroll_processing", "PayrollRecordRejected", item, "record period does not match run period")
-                    failures.append({"employee_id": item.get("employee_id"), "dead_letter_id": dead_letter.dead_letter_id, "reason": dead_letter.reason})
-                    continue
-                try:
-                    _, created = self.create_payroll_record(item, authorization, trace_id=trace)
-                    record_id = created["payroll_record_id"]
-                except ServiceError as exc:
-                    self.error_logger.log("run_payroll", exc, trace_id=trace, details={"employee_id": item.get("employee_id")})
-                    dead_letter = self.dead_letters.push("payroll_processing", "PayrollRecordFailed", item, exc.message)
-                    failures.append({"employee_id": item.get("employee_id"), "dead_letter_id": dead_letter.dead_letter_id, "reason": exc.message})
-                    continue
-                record = self.records[record_id]
-                if record.status != PayrollStatus.PAID:
-                    record.status = PayrollStatus.PROCESSED
-                    record.updated_at = self._now()
-                    processed_ids.add(record_id)
-                    self.events.append({"type": "PayrollProcessed", "payroll_record_id": record_id, "at": record.updated_at.isoformat()})
+                for record in self.records.values():
+                    if record.pay_period_start == start and record.pay_period_end == end and record.status == PayrollStatus.DRAFT:
+                        record.status = PayrollStatus.PROCESSED
+                        record.updated_at = self._now()
+                        processed_ids.add(record.payroll_record_id)
+                        self.events.append({"type": "PayrollProcessed", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
 
-            for record in self.records.values():
-                if record.pay_period_start == start and record.pay_period_end == end and record.status == PayrollStatus.DRAFT:
-                    record.status = PayrollStatus.PROCESSED
-                    record.updated_at = self._now()
-                    processed_ids.add(record.payroll_record_id)
-                    self.events.append({"type": "PayrollProcessed", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
-
-            response = {
-                "data": {
-                    "period_start": period_start,
-                    "period_end": period_end,
-                    "processed_count": len(processed_ids),
-                    "record_ids": sorted(processed_ids),
-                    "failed_count": len(failures),
-                    "failures": failures,
+                response = {
+                    "data": {
+                        "period_start": period_start,
+                        "period_end": period_end,
+                        "processed_count": len(processed_ids),
+                        "record_ids": sorted(processed_ids),
+                        "failed_count": len(failures),
+                        "failures": failures,
+                    }
                 }
-            }
             self.observability.logger.audit(
                 "payroll_run_processed",
                 trace_id=trace,
@@ -365,21 +367,22 @@ class PayrollService:
         started = perf_counter()
         ctx = self.decode_bearer_token(authorization)
         self._require_admin(ctx)
-        record = self.records.get(payroll_record_id)
-        if not record:
-            raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
-        if record.status in {PayrollStatus.PAID, PayrollStatus.CANCELLED}:
-            raise ServiceError("CONFLICT", "Cannot modify paid or cancelled records", 409)
+        with self._lock:
+            record = self.records.get(payroll_record_id)
+            if not record:
+                raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
+            if record.status in {PayrollStatus.PAID, PayrollStatus.CANCELLED}:
+                raise ServiceError("CONFLICT", "Cannot modify paid or cancelled records", 409)
 
-        if "allowances" in payload:
-            record.allowances = self._money(payload["allowances"], "allowances")
-        if "deductions" in payload:
-            record.deductions = self._money(payload["deductions"], "deductions")
-        if "overtime_pay" in payload:
-            record.overtime_pay = self._money(payload["overtime_pay"], "overtime_pay")
+            if "allowances" in payload:
+                record.allowances = self._money(payload["allowances"], "allowances")
+            if "deductions" in payload:
+                record.deductions = self._money(payload["deductions"], "deductions")
+            if "overtime_pay" in payload:
+                record.overtime_pay = self._money(payload["overtime_pay"], "overtime_pay")
 
-        record.gross_pay, record.net_pay = self._calc(record.base_salary, record.allowances, record.overtime_pay, record.deductions)
-        record.updated_at = self._now()
+            record.gross_pay, record.net_pay = self._calc(record.base_salary, record.allowances, record.overtime_pay, record.deductions)
+            record.updated_at = self._now()
         self.observability.logger.audit(
             "payroll_record_adjusted",
             trace_id=trace,
@@ -396,27 +399,28 @@ class PayrollService:
         started = perf_counter()
         ctx = self.decode_bearer_token(authorization)
         self._require_admin(ctx)
-        record = self.records.get(payroll_record_id)
-        if not record:
-            raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
+        with self._lock:
+            record = self.records.get(payroll_record_id)
+            if not record:
+                raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
 
-        fingerprint = json.dumps({"payroll_record_id": payroll_record_id, "payment_date": payment_date}, sort_keys=True)
-        replay_key = idempotency_key or f"payroll-paid:{payroll_record_id}:{payment_date or 'default'}"
-        replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
-        if replay is not None:
-            self._finalize_observation("mark_paid", trace, started, True, {"status": replay.status_code, "replayed": True})
-            return replay.status_code, replay.payload
+            fingerprint = json.dumps({"payroll_record_id": payroll_record_id, "payment_date": payment_date}, sort_keys=True)
+            replay_key = idempotency_key or f"payroll-paid:{payroll_record_id}:{payment_date or 'default'}"
+            replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
+            if replay is not None:
+                self._finalize_observation("mark_paid", trace, started, True, {"status": replay.status_code, "replayed": True})
+                return replay.status_code, replay.payload
 
-        if record.status == PayrollStatus.PAID:
-            self._finalize_observation("mark_paid", trace, started, True, {"status": 200, "replayed": True})
-            return self._record_idempotent_result(replay_key, fingerprint, 200, record.to_dict())
-        if record.status != PayrollStatus.PROCESSED:
-            raise ServiceError("CONFLICT", "Only processed records can be marked paid", 409)
+            if record.status == PayrollStatus.PAID:
+                self._finalize_observation("mark_paid", trace, started, True, {"status": 200, "replayed": True})
+                return self._record_idempotent_result(replay_key, fingerprint, 200, record.to_dict())
+            if record.status != PayrollStatus.PROCESSED:
+                raise ServiceError("CONFLICT", "Only processed records can be marked paid", 409)
 
-        record.payment_date = date.fromisoformat(payment_date) if payment_date else date.today()
-        record.status = PayrollStatus.PAID
-        record.updated_at = self._now()
-        self.events.append({"type": "PayrollPaid", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
+            record.payment_date = date.fromisoformat(payment_date) if payment_date else date.today()
+            record.status = PayrollStatus.PAID
+            record.updated_at = self._now()
+            self.events.append({"type": "PayrollPaid", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
         self.observability.logger.audit(
             "payroll_record_paid",
             trace_id=trace,
@@ -431,19 +435,21 @@ class PayrollService:
     def replay_dead_letters(self, authorization: str | None) -> tuple[int, dict[str, Any]]:
         ctx = self.decode_bearer_token(authorization)
         self._require_admin(ctx)
-        recovered = self.dead_letters.recover(
-            lambda entry: entry.workflow == "payroll_processing",
-            lambda entry: entry.payload.get("pay_period_start") and entry.payload.get("pay_period_end"),
-        )
+        with self._lock:
+            recovered = self.dead_letters.recover(
+                lambda entry: entry.workflow == "payroll_processing",
+                lambda entry: entry.payload.get("pay_period_start") and entry.payload.get("pay_period_end"),
+            )
         return 200, {"data": {"recovered_count": len(recovered), "recovered_dead_letters": [entry.dead_letter_id for entry in recovered]}}
 
     def get_payroll_record(self, payroll_record_id: str, authorization: str | None) -> tuple[int, dict[str, Any]]:
         ctx = self.decode_bearer_token(authorization)
-        record = self.records.get(payroll_record_id)
-        if not record:
-            raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
-        self._assert_read_scope(ctx, record)
-        return 200, {"data": record.to_dict()}
+        with self._lock:
+            record = self.records.get(payroll_record_id)
+            if not record:
+                raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
+            self._assert_read_scope(ctx, record)
+            return 200, {"data": record.to_dict()}
 
     def list_payroll_records(
         self,
@@ -463,25 +469,26 @@ class PayrollService:
         if status is not None and status not in {item.value for item in PayrollStatus}:
             raise ServiceError("VALIDATION_ERROR", "status is invalid", 422)
 
-        records = sorted(self.records.values(), key=lambda r: (r.created_at, r.payroll_record_id))
-        if employee_id:
-            records = [record for record in records if record.employee_id == employee_id]
-        if period_start:
-            start = date.fromisoformat(period_start)
-            records = [record for record in records if record.pay_period_start >= start]
-        if period_end:
-            end = date.fromisoformat(period_end)
-            records = [record for record in records if record.pay_period_end <= end]
-        if status:
-            records = [record for record in records if record.status.value == status]
+        with self._lock:
+            records = sorted(self.records.values(), key=lambda r: (r.created_at, r.payroll_record_id))
+            if employee_id:
+                records = [record for record in records if record.employee_id == employee_id]
+            if period_start:
+                start = date.fromisoformat(period_start)
+                records = [record for record in records if record.pay_period_start >= start]
+            if period_end:
+                end = date.fromisoformat(period_end)
+                records = [record for record in records if record.pay_period_end <= end]
+            if status:
+                records = [record for record in records if record.status.value == status]
 
-        scoped: list[PayrollRecord] = []
-        for record in records:
-            try:
-                self._assert_read_scope(ctx, record)
-            except ServiceError:
-                continue
-            scoped.append(record)
+            scoped: list[PayrollRecord] = []
+            for record in records:
+                try:
+                    self._assert_read_scope(ctx, record)
+                except ServiceError:
+                    continue
+                scoped.append(record)
 
         start_index = 0
         if cursor_id:
@@ -504,9 +511,10 @@ class PayrollService:
         }
 
     def health_snapshot(self) -> dict[str, Any]:
-        return self.observability.health_status(
-            checks={
-                "records": len(self.records),
-                "dead_letters": len(self.dead_letters.entries),
-            }
-        )
+        with self._lock:
+            return self.observability.health_status(
+                checks={
+                    "records": len(self.records),
+                    "dead_letters": len(self.dead_letters.entries),
+                }
+            )
