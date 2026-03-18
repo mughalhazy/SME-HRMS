@@ -54,7 +54,7 @@ export function StatCard({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-2xl border border-slate-200 bg-white p-4 shadow-sm', className)}>
+    <div className={cn('rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]', className)}>
       <div className="w-fit rounded-xl bg-slate-100 p-2 text-slate-700">
         <Icon className="h-4 w-4" />
       </div>

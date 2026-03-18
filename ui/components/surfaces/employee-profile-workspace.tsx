@@ -6,7 +6,8 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Mail, Phone, UserRoundSearch } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Select } from '@/components/ui/input'
 import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
 import { PageGrid } from '@/components/ui/page'
 import { getEmployeeFullName, listEmployees } from '@/lib/employees/api'
@@ -38,7 +39,7 @@ export function EmployeeProfileWorkspace() {
 
   return (
     <PageGrid className="xl:grid-cols-[360px_minmax(0,1fr)]">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]">
         <div className="mb-4 flex items-start gap-3">
           <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
             <UserRoundSearch className="h-5 w-5" />
@@ -66,8 +67,7 @@ export function EmployeeProfileWorkspace() {
           <>
             <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
               Select employee
-              <select
-                className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              <Select
                 value={selectedEmployee?.employee_id ?? ''}
                 onChange={(event) => setSelectedEmployeeId(event.target.value)}
               >
@@ -76,7 +76,7 @@ export function EmployeeProfileWorkspace() {
                     {getEmployeeFullName(employee)} · {employee.employee_number}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <div className="mt-5 space-y-3">
@@ -87,9 +87,11 @@ export function EmployeeProfileWorkspace() {
                     key={employee.employee_id}
                     type="button"
                     onClick={() => setSelectedEmployeeId(employee.employee_id)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-                      active ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'
-                    }`}
+                    className={buttonVariants({
+                      variant: active ? 'default' : 'outline',
+                      size: 'lg',
+                      className: 'h-auto w-full flex-col items-start rounded-[var(--radius-surface)] px-4 py-3 text-left whitespace-normal',
+                    })}
                   >
                     <p className="font-semibold">{getEmployeeFullName(employee)}</p>
                     <p className={`text-sm ${active ? 'text-slate-200' : 'text-slate-500'}`}>{employee.department_id} · {employee.role_id}</p>
@@ -102,7 +104,7 @@ export function EmployeeProfileWorkspace() {
       </section>
 
       {selectedEmployee ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Employee profile</p>
@@ -128,7 +130,7 @@ export function EmployeeProfileWorkspace() {
             <ProfileCard label="Manager employee ID" value={selectedEmployee.manager_employee_id || 'Unassigned'} />
           </div>
 
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+          <div className="mt-6 rounded-[var(--radius-surface)] bg-[var(--surface-subtle)] p-4 text-sm text-slate-600">
             This surface keeps profile discovery lightweight while the full employee route remains the source of truth for edit and deep-detail workflows.
           </div>
         </section>
@@ -145,7 +147,7 @@ export function EmployeeProfileWorkspace() {
 
 function ProfileCard({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className="mt-3 inline-flex items-center gap-2 text-base font-semibold text-slate-950">
         {icon}
