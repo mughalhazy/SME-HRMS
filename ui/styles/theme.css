@@ -18,6 +18,10 @@
   --success: #0f766e;
   --success-soft: #dbfaf3;
   --danger: #b42318;
+  --radius-control: 0.875rem;
+  --radius-surface: 1.25rem;
+  --shadow-control: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --shadow-surface: 0 18px 40px -32px rgba(15, 23, 42, 0.35);
 }
 
 .dark {
@@ -39,4 +43,6 @@
   --success: #67e8c7;
   --success-soft: #173b39;
   --danger: #fda29b;
+  --shadow-control: 0 1px 2px rgba(8, 15, 32, 0.35);
+  --shadow-surface: 0 18px 40px -32px rgba(2, 6, 23, 0.65);
 }

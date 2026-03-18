@@ -72,7 +72,7 @@ export function JobPostingsPage() {
             <StatCard title="On-hold roles" value={String(metrics.onHold)} hint="Requires staffing decision" icon={CircleGauge} />
           </PageGrid>
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <section className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
             <SectionHeading
               title="Open requisitions"
               description="Requisition status, department context, and opening volume stay in a single scan path."

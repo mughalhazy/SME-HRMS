@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { AlertTriangle, LoaderCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Input, Select, inputClassName } from '@/components/ui/input'
 import { ApiError } from '@/lib/api/client'
 import {
   EMPLOYEE_STATUSES,
@@ -101,9 +101,6 @@ function Field({
   )
 }
 
-const inputClassName =
-  'h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 aria-[invalid=true]:border-rose-300 aria-[invalid=true]:ring-rose-100'
-
 export function EmployeeForm({
   mode,
   initialValues,
@@ -157,7 +154,7 @@ export function EmployeeForm({
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]">
       <div className="mb-5 flex flex-col gap-2">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Employee create / edit</p>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">{heading}</h1>
@@ -241,7 +238,7 @@ export function EmployeeForm({
         </Field>
 
         <Field label="Employment type" htmlFor="employment_type" error={errors.employment_type}>
-          <select
+          <Select
             id="employment_type"
             className={inputClassName}
             value={values.employment_type}
@@ -253,11 +250,11 @@ export function EmployeeForm({
                 {type}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field label="Status" htmlFor="status" error={errors.status} hint={mode === 'edit' ? 'Status is controlled by lifecycle workflows on the detail view.' : undefined}>
-          <select
+          <Select
             id="status"
             className={inputClassName}
             value={values.status}
@@ -270,7 +267,7 @@ export function EmployeeForm({
                 {status}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field label="Department ID" htmlFor="department_id" error={errors.department_id}>
