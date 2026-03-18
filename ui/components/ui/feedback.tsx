@@ -16,7 +16,7 @@ export function SurfaceSkeleton({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-2xl border border-slate-200 bg-white p-5 shadow-sm', className)}>
+    <div className={cn('rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]', className)}>
       <div className="space-y-3">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-8 w-72 max-w-full" />
@@ -35,7 +35,7 @@ export function StatSkeletonGrid({ count = 3 }: { count?: number }) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div key={index} className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]">
           <Skeleton className="h-10 w-10 rounded-2xl" />
           <Skeleton className="mt-4 h-4 w-28" />
           <Skeleton className="mt-3 h-8 w-20" />
@@ -48,7 +48,7 @@ export function StatSkeletonGrid({ count = 3 }: { count?: number }) {
 
 export function TableSkeleton({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
       <div className="border-b border-slate-200 px-5 py-3.5">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="mt-2 h-4 w-72 max-w-full" />
@@ -87,7 +87,7 @@ export function ErrorState({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-2xl border border-rose-200 bg-rose-50/70 p-5 shadow-sm', className)} role="alert">
+    <div className={cn('rounded-[var(--radius-surface)] border border-rose-200 bg-rose-50/70 p-5 shadow-[var(--shadow-surface)]', className)} role="alert">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-white p-2 text-rose-600 shadow-sm">
@@ -123,7 +123,7 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-6 text-center shadow-sm', className)}>
+    <div className={cn('rounded-[var(--radius-surface)] border border-dashed border-slate-300 bg-slate-50/80 p-6 text-center shadow-[var(--shadow-surface)]', className)}>
       <div className="mx-auto flex max-w-md flex-col items-center gap-4">
         <div className="rounded-2xl bg-white p-3 text-slate-700 shadow-sm ring-1 ring-slate-200">
           <Icon className="h-5 w-5" />

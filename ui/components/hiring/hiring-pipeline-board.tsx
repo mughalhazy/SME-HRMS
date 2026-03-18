@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Input, Select } from '@/components/ui/input'
 import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
 import { PageStack } from '@/components/ui/page'
 import { apiRequest } from '@/lib/api/client'
@@ -560,7 +561,7 @@ export function HiringPipelineBoard() {
                               <div className="grid gap-2">
                                 <label className="grid gap-1 text-xs font-medium text-slate-700">
                                   Interview type
-                                  <select
+                                  <Select
                                     value={draft.interviewType}
                                     onChange={(event) =>
                                       setDrafts((current) => ({
@@ -571,18 +572,18 @@ export function HiringPipelineBoard() {
                                         },
                                       }))
                                     }
-                                    className="h-10 rounded-xl border border-violet-200 bg-white px-3 text-sm text-slate-900 outline-none ring-0"
+                                    className="border-violet-200"
                                   >
                                     <option value="PhoneScreen">Phone screen</option>
                                     <option value="Technical">Technical</option>
                                     <option value="Behavioral">Behavioral</option>
                                     <option value="Panel">Panel</option>
                                     <option value="Final">Final</option>
-                                  </select>
+                                  </Select>
                                 </label>
                                 <label className="grid gap-1 text-xs font-medium text-slate-700">
                                   Date and time
-                                  <input
+                                  <Input
                                     type="datetime-local"
                                     value={draft.scheduledAt}
                                     onChange={(event) =>
@@ -594,12 +595,12 @@ export function HiringPipelineBoard() {
                                         },
                                       }))
                                     }
-                                    className="h-10 rounded-xl border border-violet-200 bg-white px-3 text-sm text-slate-900 outline-none ring-0"
+                                    className="border-violet-200"
                                   />
                                 </label>
                                 <label className="grid gap-1 text-xs font-medium text-slate-700">
                                   Location or meeting link
-                                  <input
+                                  <Input
                                     type="text"
                                     placeholder="Google Meet / Zoom / HQ Room 4"
                                     value={draft.location}
@@ -612,7 +613,7 @@ export function HiringPipelineBoard() {
                                         },
                                       }))
                                     }
-                                    className="h-10 rounded-xl border border-violet-200 bg-white px-3 text-sm text-slate-900 outline-none ring-0"
+                                    className="border-violet-200"
                                   />
                                 </label>
                                 <Button className="mt-1 w-full" onClick={() => handleScheduleInterview(candidate.id)} disabled={interviewMutation.isPending}>
