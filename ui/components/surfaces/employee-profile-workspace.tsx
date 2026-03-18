@@ -8,6 +8,7 @@ import { ArrowRight, Mail, Phone, UserRoundSearch } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
+import { PageGrid } from '@/components/ui/page'
 import { getEmployeeFullName, listEmployees } from '@/lib/employees/api'
 
 function formatDate(value: string) {
@@ -36,7 +37,7 @@ export function EmployeeProfileWorkspace() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <PageGrid className="xl:grid-cols-[360px_minmax(0,1fr)]">
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-start gap-3">
           <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
@@ -138,7 +139,7 @@ export function EmployeeProfileWorkspace() {
           message="Choose an employee from the launcher to preview profile details here."
         />
       )}
-    </div>
+    </PageGrid>
   )
 }
 

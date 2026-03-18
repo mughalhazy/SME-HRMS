@@ -16,6 +16,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
+import { PageStack } from '@/components/ui/page'
 import { apiRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -366,7 +367,7 @@ export function HiringPipelineBoard() {
   const errorMessage = candidatesQuery.error?.message ?? interviewsQuery.error?.message
 
   return (
-    <div className="flex flex-col gap-6 rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_48%,_#ffffff_100%)] p-4 text-slate-950 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-6">
+    <PageStack className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_48%,_#ffffff_100%)] p-6 text-slate-950 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
         <section className="overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.7fr_1fr] lg:px-8">
             <div className="space-y-4">
@@ -636,7 +637,7 @@ export function HiringPipelineBoard() {
             })}
           </section>
         )}
-    </div>
+    </PageStack>
   )
 }
 

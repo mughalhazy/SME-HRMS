@@ -7,7 +7,7 @@ import { ArrowRight, BriefcaseBusiness, CircleGauge, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, StatSkeletonGrid, SurfaceSkeleton } from '@/components/ui/feedback'
-import { PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
+import { PageGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { apiRequest } from '@/lib/api/client'
 
@@ -66,11 +66,11 @@ export function JobPostingsPage() {
         />
       ) : (
         <>
-          <section className="grid gap-3 md:grid-cols-3">
+          <PageGrid className="md:grid-cols-3">
             <StatCard title="Open postings" value={String(metrics.openPostings)} hint="Ready for sourcing" icon={BriefcaseBusiness} />
             <StatCard title="Total openings" value={String(metrics.totalOpenings)} hint="Across all active requisitions" icon={Users} />
             <StatCard title="On-hold roles" value={String(metrics.onHold)} hint="Requires staffing decision" icon={CircleGauge} />
-          </section>
+          </PageGrid>
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <SectionHeading

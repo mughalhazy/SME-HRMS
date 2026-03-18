@@ -17,6 +17,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/feedback'
+import { PageGrid, PageStack } from '@/components/ui/page'
 import {
   type AttendanceRecord,
   type PayrollRecord,
@@ -307,7 +308,7 @@ export function AttendancePayrollWorkspace() {
   })
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageStack>
       <section className="rounded-[32px] border border-slate-200/80 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-6 shadow-[0_32px_120px_-48px_rgba(15,23,42,0.22)] lg:p-8">
 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -329,7 +330,7 @@ export function AttendancePayrollWorkspace() {
           </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+      <PageGrid className="xl:grid-cols-[1.2fr_1fr]">
           <SurfaceCard title="Attendance dashboard" subtitle="Clock in/out, live status, and clean history for the selected employee." icon={Clock3}>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -625,7 +626,7 @@ export function AttendancePayrollWorkspace() {
               </div>
             </div>
           </SurfaceCard>
-        </div>
-      </div>
+      </PageGrid>
+    </PageStack>
   )
 }

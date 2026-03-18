@@ -8,7 +8,7 @@ import { ArrowLeft, Mail, Phone, ShieldCheck, UserRound } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
-import { PageStack } from '@/components/ui/page'
+import { PageGrid, PageStack } from '@/components/ui/page'
 import { getEmployee, getEmployeeFullName } from '@/lib/employees/api'
 
 function formatDate(value: string) {
@@ -84,7 +84,7 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr,1fr]">
+      <PageGrid className="xl:grid-cols-[1.4fr,1fr]">
         <DetailCard title="Identity and employment details">
           <DetailRow label="Email" value={employee.email} />
           <DetailRow label="Phone" value={employee.phone || 'Not provided'} />
@@ -96,7 +96,7 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
           <DetailRow label="Manager employee ID" value={employee.manager_employee_id || 'Unassigned'} />
         </DetailCard>
 
-        <div className="grid gap-6">
+        <PageGrid>
           <DetailCard title="Contact quick actions">
             <DetailRow
               label="Primary contact"
@@ -128,8 +128,8 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
             <DetailRow label="Primary owner" value="employee-service" />
             <DetailRow label="Workspace status" value={<span className="inline-flex items-center gap-2"><UserRound className="h-4 w-4 text-slate-400" />Ready for edits</span>} />
           </DetailCard>
-        </div>
-      </div>
+        </PageGrid>
+      </PageGrid>
     </PageStack>
   )
 }
