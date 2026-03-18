@@ -427,7 +427,7 @@ export function HiringPipelineBoard() {
             icon={Users}
             title="No candidates in pipeline"
             message="Candidate cards will appear here once new applications are created. Refresh the board or create a new candidate from the hiring workflow."
-            action={<Button variant="outline" onClick={() => { void candidatesQuery.refetch(); void interviewsQuery.refetch() }}>Refresh board</Button>}
+            action={<Button variant="outline" onClick={() => { void candidatesQuery.refetch(); void interviewsQuery.refetch() }} disabled={candidatesQuery.isFetching || interviewsQuery.isFetching}>Refresh board</Button>}
           />
         ) : (
           <section className="grid gap-4 xl:grid-cols-4">

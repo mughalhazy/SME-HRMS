@@ -54,7 +54,7 @@ function TabsTrigger({ value, className, children, ...props }: React.ButtonHTMLA
   return (
     <button
       className={cn(
-        'inline-flex min-w-[9rem] items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors',
+        'inline-flex min-w-[9rem] items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow,transform,opacity] duration-150 ease-out hover:-translate-y-px active:translate-y-0 active:scale-[0.98] active:opacity-90',
         selectedValue === value
           ? 'bg-[var(--surface)] text-[var(--foreground)] shadow-sm'
           : 'text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]',
@@ -77,7 +77,7 @@ function TabsContent({ value, className, children, ...props }: React.HTMLAttribu
   }
 
   return (
-    <div className={cn('space-y-6', className)} {...props}>
+    <div className={cn('animate-[surface-enter_180ms_ease-out] space-y-6', className)} {...props}>
       {children}
     </div>
   )
