@@ -1,5 +1,8 @@
+import { mockApiRequest } from '@/lib/api/mock'
+
 const env = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env
 const API_BASE_URL = env?.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+export const USE_MOCK = (env?.NEXT_PUBLIC_USE_MOCK ?? env?.USE_MOCK ?? 'true').toLowerCase() === 'true'
 
 export type ApiErrorDetail = {
   field?: string
@@ -62,6 +65,19 @@ function parseJsonSafely(text: string): unknown {
 }
 
 export async function apiRequest<T>(path: string, init?: ApiRequestOptions): Promise<T> {
+  if (USE_MOCK) {
+    try {
+      return await mockApiRequest<T>(path, init)
+    } catch (error) {
+      throw error instanceof ApiError
+        ? error
+        : new ApiError(error instanceof Error ? error.message : 'Mock API request failed', {
+            status: 503,
+            payload: error,
+          })
+    }
+  }
+
   const hasJsonBody = !(init?.body instanceof FormData)
 
   const response = await fetch(buildApiUrl(path), {

@@ -1,50 +1,62 @@
 'use client'
 
-import { CalendarClock, CheckCircle2, Clock3, ShieldCheck } from 'lucide-react'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CalendarClock, CheckCircle2, Clock3, LoaderCircle, ShieldCheck } from 'lucide-react'
 
-const leaveRows = [
-  {
-    leaveRequestId: 'lev-1024',
-    employeeName: 'Jordan Kim',
-    departmentName: 'Operations',
-    leaveType: 'Annual Leave',
-    startDate: '2026-03-22',
-    endDate: '2026-03-25',
-    totalDays: 4,
-    approverName: 'Sara Wong',
-    status: 'Submitted',
-  },
-  {
-    leaveRequestId: 'lev-1023',
-    employeeName: 'Amina Yusuf',
-    departmentName: 'Finance',
-    leaveType: 'Sick Leave',
-    startDate: '2026-03-18',
-    endDate: '2026-03-19',
-    totalDays: 2,
-    approverName: 'Marco Diaz',
-    status: 'Approved',
-  },
-  {
-    leaveRequestId: 'lev-1022',
-    employeeName: 'Helen Brooks',
-    departmentName: 'Engineering',
-    leaveType: 'Parental Leave',
-    startDate: '2026-04-01',
-    endDate: '2026-05-12',
-    totalDays: 30,
-    approverName: 'People Ops Council',
-    status: 'Submitted',
-  },
-]
+import { apiRequest } from '@/lib/api/client'
 
-const coverageSignals = [
-  { label: 'Pending approvals', value: '2', hint: 'Actionable now', icon: Clock3 },
-  { label: 'Approved this week', value: '7', hint: 'No blockers detected', icon: CheckCircle2 },
-  { label: 'Coverage reviewed', value: '100%', hint: 'Manager check recorded', icon: ShieldCheck },
-]
+type LeaveRow = {
+  leave_request_id: string
+  employee_name: string
+  department_name: string
+  leave_type: string
+  start_date: string
+  end_date: string
+  total_days: number
+  approver_name?: string
+  status: string
+}
+
+const coverageIcons = {
+  pending: Clock3,
+  approved: CheckCircle2,
+  reviewed: ShieldCheck,
+} as const
+
+type CoverageSignalKey = keyof typeof coverageIcons
 
 export function LeaveRequestsPage() {
+  const query = useQuery({
+    queryKey: ['leave-requests'],
+    queryFn: () => apiRequest<{ data: LeaveRow[] }>('/api/v1/leave/requests'),
+  })
+
+  const leaveRows = query.data?.data ?? []
+  const coverageSignals = useMemo<{ key: CoverageSignalKey; label: string; value: string; hint: string }[]>(
+    () => [
+      {
+        key: 'pending',
+        label: 'Pending approvals',
+        value: String(leaveRows.filter((row) => row.status === 'Submitted').length),
+        hint: 'Actionable now',
+      },
+      {
+        key: 'approved',
+        label: 'Approved this week',
+        value: String(leaveRows.filter((row) => row.status === 'Approved').length),
+        hint: 'No blockers detected',
+      },
+      {
+        key: 'reviewed',
+        label: 'Coverage reviewed',
+        value: leaveRows.length ? '100%' : '0%',
+        hint: 'Manager check recorded',
+      },
+    ],
+    [leaveRows],
+  )
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -64,16 +76,19 @@ export function LeaveRequestsPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        {coverageSignals.map((signal) => (
-          <div key={signal.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="rounded-2xl bg-slate-100 p-2 text-slate-700 w-fit">
-              <signal.icon className="h-4 w-4" />
+        {coverageSignals.map((signal) => {
+          const Icon = coverageIcons[signal.key]
+          return (
+            <div key={signal.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="w-fit rounded-2xl bg-slate-100 p-2 text-slate-700">
+                <Icon className="h-4 w-4" />
+              </div>
+              <p className="mt-4 text-sm font-medium text-slate-500">{signal.label}</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-950">{signal.value}</p>
+              <p className="mt-1 text-sm text-slate-600">{signal.hint}</p>
             </div>
-            <p className="mt-4 text-sm font-medium text-slate-500">{signal.label}</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">{signal.value}</p>
-            <p className="mt-1 text-sm text-slate-600">{signal.hint}</p>
-          </div>
-        ))}
+          )
+        })}
       </section>
 
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -84,37 +99,46 @@ export function LeaveRequestsPage() {
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Canonical surface: leave_requests</span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-6 py-3 font-medium">Employee</th>
-                <th className="px-6 py-3 font-medium">Leave</th>
-                <th className="px-6 py-3 font-medium">Dates</th>
-                <th className="px-6 py-3 font-medium">Approver</th>
-                <th className="px-6 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {leaveRows.map((row) => (
-                <tr key={row.leaveRequestId} className="hover:bg-slate-50">
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-slate-950">{row.employeeName}</p>
-                    <p className="text-slate-500">{row.departmentName}</p>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">{row.leaveType} · {row.totalDays} days</td>
-                  <td className="px-6 py-4 text-slate-600">{row.startDate} → {row.endDate}</td>
-                  <td className="px-6 py-4 text-slate-600">{row.approverName}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${row.status === 'Submitted' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                      {row.status}
-                    </span>
-                  </td>
+
+        {query.isLoading ? (
+          <div className="px-6 py-10 text-sm text-slate-500 inline-flex items-center gap-2">
+            <LoaderCircle className="h-4 w-4 animate-spin" /> Loading leave requests…
+          </div>
+        ) : query.isError ? (
+          <div className="px-6 py-10 text-sm text-rose-600">{query.error.message}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-6 py-3 font-medium">Employee</th>
+                  <th className="px-6 py-3 font-medium">Leave</th>
+                  <th className="px-6 py-3 font-medium">Dates</th>
+                  <th className="px-6 py-3 font-medium">Approver</th>
+                  <th className="px-6 py-3 font-medium">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {leaveRows.map((row) => (
+                  <tr key={row.leave_request_id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4">
+                      <p className="font-medium text-slate-950">{row.employee_name}</p>
+                      <p className="text-slate-500">{row.department_name}</p>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{row.leave_type} · {row.total_days} days</td>
+                    <td className="px-6 py-4 text-slate-600">{row.start_date} → {row.end_date}</td>
+                    <td className="px-6 py-4 text-slate-600">{row.approver_name ?? 'Pending assignment'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${row.status === 'Submitted' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   )
