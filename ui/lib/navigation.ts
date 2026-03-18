@@ -1,20 +1,26 @@
+export type NavigationSectionKey = 'overview' | 'people' | 'operations' | 'talent'
+
 export type NavigationItem = {
   key:
     | 'dashboard'
-    | 'employee_list'
+    | 'employees'
+    | 'departments'
+    | 'roles'
     | 'employee_profile'
-    | 'attendance_dashboard'
-    | 'leave_requests'
-    | 'payroll_dashboard'
-    | 'job_postings'
-    | 'candidate_pipeline'
-    | 'performance_reviews'
+    | 'attendance'
+    | 'leave'
+    | 'payroll'
+    | 'jobs'
+    | 'candidates'
+    | 'performance'
   href: string
   label: string
   shortLabel: string
   description: string
+  section: NavigationSectionKey
   capabilityIds: string[]
   readModels: ReadModelKey[]
+  showInSidebar?: boolean
 }
 
 export type ReadModelKey =
@@ -38,13 +44,21 @@ export function getReadModelLabel(readModel: ReadModelKey) {
   return readModelLabels[readModel]
 }
 
+export const navigationSections: { key: NavigationSectionKey; title: string }[] = [
+  { key: 'overview', title: 'Overview' },
+  { key: 'people', title: 'People' },
+  { key: 'operations', title: 'Operations' },
+  { key: 'talent', title: 'Talent' },
+]
+
 export const navigationItems: NavigationItem[] = [
   {
     key: 'dashboard',
     href: '/',
     label: 'Dashboard',
     shortLabel: 'Dashboard',
-    description: 'Cross-functional operational overview.',
+    description: 'Cross-functional overview of workforce, attendance, leave, payroll, and hiring.',
+    section: 'overview',
     capabilityIds: ['CAP-EMP-001', 'CAP-ATT-001', 'CAP-LEV-001', 'CAP-PAY-001', 'CAP-HIR-001', 'CAP-PRF-001'],
     readModels: [
       'employee_directory_view',
@@ -56,11 +70,32 @@ export const navigationItems: NavigationItem[] = [
     ],
   },
   {
-    key: 'employee_list',
+    key: 'employees',
     href: '/employees',
-    label: 'Employee List',
+    label: 'Employees',
     shortLabel: 'Employees',
-    description: 'Directory of employees, departments, and roles.',
+    description: 'Directory of employees with search, filters, and records management.',
+    section: 'people',
+    capabilityIds: ['CAP-EMP-001'],
+    readModels: ['employee_directory_view'],
+  },
+  {
+    key: 'departments',
+    href: '/departments',
+    label: 'Departments',
+    shortLabel: 'Departments',
+    description: 'Department coverage, headcount, and staffing distribution.',
+    section: 'people',
+    capabilityIds: ['CAP-EMP-001'],
+    readModels: ['employee_directory_view'],
+  },
+  {
+    key: 'roles',
+    href: '/roles',
+    label: 'Roles',
+    shortLabel: 'Roles',
+    description: 'Role distribution, occupancy, and hiring concentration across the org.',
+    section: 'people',
     capabilityIds: ['CAP-EMP-001'],
     readModels: ['employee_directory_view'],
   },
@@ -68,8 +103,9 @@ export const navigationItems: NavigationItem[] = [
     key: 'employee_profile',
     href: '/employee-profile',
     label: 'Employee Profile',
-    shortLabel: 'Profiles',
-    description: '360° employee detail surface for HR operations.',
+    shortLabel: 'Profile',
+    description: 'Detailed employee record workspace for cross-functional HR workflows.',
+    section: 'people',
     capabilityIds: ['CAP-EMP-002', 'CAP-ATT-001', 'CAP-LEV-001', 'CAP-PAY-001', 'CAP-PRF-001'],
     readModels: [
       'employee_directory_view',
@@ -78,59 +114,68 @@ export const navigationItems: NavigationItem[] = [
       'payroll_summary_view',
       'performance_review_view',
     ],
+    showInSidebar: false,
   },
   {
-    key: 'attendance_dashboard',
+    key: 'attendance',
     href: '/attendance',
-    label: 'Attendance Dashboard',
+    label: 'Attendance',
     shortLabel: 'Attendance',
-    description: 'Attendance trends, states, and exceptions.',
+    description: 'Attendance trends, exceptions, and day-to-day workforce visibility.',
+    section: 'operations',
     capabilityIds: ['CAP-ATT-001', 'CAP-ATT-002'],
     readModels: ['attendance_dashboard_view'],
   },
   {
-    key: 'leave_requests',
+    key: 'leave',
     href: '/leave-requests',
-    label: 'Leave Requests',
+    label: 'Leave',
     shortLabel: 'Leave',
-    description: 'Submission, approvals, and team coverage view.',
+    description: 'Requests, approvals, and team coverage for planned time away.',
+    section: 'operations',
     capabilityIds: ['CAP-LEV-001', 'CAP-LEV-002'],
     readModels: ['leave_requests_view'],
   },
   {
-    key: 'payroll_dashboard',
+    key: 'payroll',
     href: '/payroll',
-    label: 'Payroll Dashboard',
+    label: 'Payroll',
     shortLabel: 'Payroll',
-    description: 'Payroll periods, status, and payout summaries.',
+    description: 'Pay periods, processing state, and payout summaries.',
+    section: 'operations',
     capabilityIds: ['CAP-PAY-001', 'CAP-PAY-002'],
     readModels: ['payroll_summary_view'],
   },
   {
-    key: 'job_postings',
+    key: 'jobs',
     href: '/job-postings',
-    label: 'Job Postings',
+    label: 'Jobs',
     shortLabel: 'Jobs',
-    description: 'Open requisitions by department and role.',
+    description: 'Open requisitions, openings, and posting health across teams.',
+    section: 'talent',
     capabilityIds: ['CAP-HIR-001'],
     readModels: ['candidate_pipeline_view'],
   },
   {
-    key: 'candidate_pipeline',
+    key: 'candidates',
     href: '/candidate-pipeline',
-    label: 'Candidate Pipeline',
-    shortLabel: 'Pipeline',
-    description: 'Applications and interview pipeline progression.',
+    label: 'Candidates',
+    shortLabel: 'Candidates',
+    description: 'Applications and interview pipeline progression for active hiring.',
+    section: 'talent',
     capabilityIds: ['CAP-HIR-002'],
     readModels: ['candidate_pipeline_view'],
   },
   {
-    key: 'performance_reviews',
+    key: 'performance',
     href: '/performance-reviews',
-    label: 'Performance Reviews',
-    shortLabel: 'Reviews',
-    description: 'Review cycle health and completion status.',
+    label: 'Performance',
+    shortLabel: 'Performance',
+    description: 'Review cycle completion and performance management health.',
+    section: 'talent',
     capabilityIds: ['CAP-PRF-001'],
     readModels: ['performance_review_view'],
   },
 ]
+
+export const sidebarNavigationItems = navigationItems.filter((item) => item.showInSidebar !== false)

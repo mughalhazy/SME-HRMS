@@ -9,14 +9,16 @@ import { cn } from '@/lib/utils'
 
 const navIcons = {
   dashboard: LayoutGrid,
-  employee_list: Users,
+  employees: Users,
+  departments: Building2,
+  roles: Bell,
   employee_profile: Building2,
-  attendance_dashboard: CalendarDays,
-  leave_requests: ClipboardList,
-  payroll_dashboard: Wallet,
-  job_postings: BriefcaseBusiness,
-  candidate_pipeline: TrendingUp,
-  performance_reviews: Bell,
+  attendance: CalendarDays,
+  leave: ClipboardList,
+  payroll: Wallet,
+  jobs: BriefcaseBusiness,
+  candidates: TrendingUp,
+  performance: Bell,
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
