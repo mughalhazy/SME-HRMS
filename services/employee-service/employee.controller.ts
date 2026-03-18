@@ -1,19 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import { Request, Response } from 'express';
 import { EMPLOYEE_STATUSES } from './employee.model';
 import { ConflictError, EmployeeService, NotFoundError } from './employee.service';
 import { ValidationError } from './employee.validation';
 import { AuthContext } from './rbac.middleware';
-
-function getTraceId(req: Request): string {
-  const incomingTraceId = req.headers['x-trace-id'];
-
-  if (typeof incomingTraceId === 'string' && incomingTraceId.length > 0) {
-    return incomingTraceId;
-  }
-
-  return randomUUID().replace(/-/g, '').slice(0, 16);
-}
+import { ApiError, sendApiError } from '../../middleware/error-handler';
 
 function sendError(
   req: Request,
@@ -23,14 +13,7 @@ function sendError(
   message: string,
   details?: Array<{ field: string; reason: string }>,
 ): void {
-  res.status(status).json({
-    error: {
-      code,
-      message,
-      details: details ?? [],
-      traceId: getTraceId(req),
-    },
-  });
+  sendApiError(req, res, new ApiError(status, code, message, details ?? []));
 }
 
 function getAuth(req: Request): AuthContext {

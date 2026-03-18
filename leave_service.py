@@ -7,6 +7,8 @@ from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
 from enum import Enum
 
+from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore
+
 
 class Role(str, Enum):
     ADMIN = "Admin"
@@ -80,7 +82,7 @@ class LeaveServiceError(Exception):
             "error": {
                 "code": code,
                 "message": message,
-                "details": details,
+                "details": details or [],
                 "traceId": trace_id,
             }
         }
@@ -91,6 +93,9 @@ class LeaveService:
     def __init__(self):
         self.requests: dict[str, LeaveRequest] = {}
         self.events: list[dict] = []
+        self.error_logger = CentralErrorLogger("leave-service")
+        self.dead_letters = DeadLetterQueue()
+        self.idempotency = IdempotencyStore()
         self.employees: dict[str, EmployeeRecord] = {
             "emp-admin": EmployeeRecord("emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
             "emp-manager": EmployeeRecord("emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE),
@@ -105,7 +110,10 @@ class LeaveService:
         return trace_id or uuid.uuid4().hex
 
     def _fail(self, status_code: int, code: str, message: str, trace_id: str | None, details: list[dict] | None = None):
-        raise LeaveServiceError(status_code, code, message, self._trace(trace_id), details)
+        trace = self._trace(trace_id)
+        error = LeaveServiceError(status_code, code, message, trace, details)
+        self.error_logger.log(code, error, trace_id=trace, details={"details": details or []})
+        raise error
 
     def _total_days(self, start: date, end: date) -> float:
         return float((end - start).days + 1)
@@ -155,6 +163,27 @@ class LeaveService:
                 return True
         return False
 
+    def _emit_event(self, event: str, payload: dict, *, workflow: str, trace_id: str | None = None, simulate_failure: bool = False) -> None:
+        try:
+            if simulate_failure:
+                raise RuntimeError(f"simulated failure while emitting {event}")
+            self.events.append({"event": event, **payload})
+        except Exception as exc:  # noqa: BLE001
+            trace = self._trace(trace_id)
+            self.error_logger.log(event, exc, trace_id=trace, details={"workflow": workflow})
+            self.dead_letters.push(workflow, event, payload, str(exc), trace_id=trace)
+
+    def replay_dead_letters(self) -> list[dict]:
+        recovered = self.dead_letters.recover(
+            lambda entry: entry.workflow == "leave_request",
+            lambda entry: True,
+        )
+        for entry in recovered:
+            payload = dict(entry.payload)
+            payload.pop("simulate_failure", None)
+            self.events.append({"event": entry.operation, **payload, "recovered_from_dead_letter": True})
+        return [entry.__dict__ for entry in recovered]
+
     def create_request(
         self,
         actor_role: str,
@@ -194,12 +223,23 @@ class LeaveService:
         self.requests[leave.leave_request_id] = leave
         return 201, leave.to_dict()
 
-    def submit_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None) -> tuple[int, dict]:
+    def submit_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None, idempotency_key: str | None = None, simulate_event_failure: bool = False) -> tuple[int, dict]:
         role = Role(actor_role)
         leave = self.requests.get(leave_request_id)
         if not leave:
             self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace_id)
         self._ensure_lifecycle_scope(role, actor_employee_id, leave.employee_id, trace_id)
+
+        key = idempotency_key or f"leave-submit:{leave_request_id}:{actor_employee_id}"
+        fingerprint = f"submit:{leave_request_id}:{actor_role}:{actor_employee_id}"
+        replay = self.idempotency.replay_or_conflict(key, fingerprint)
+        if replay is not None:
+            return replay.status_code, replay.payload
+
+        if leave.status == LeaveStatus.SUBMITTED:
+            payload = leave.to_dict()
+            self.idempotency.record(key, fingerprint, 200, payload)
+            return 200, payload
         if leave.status != LeaveStatus.DRAFT:
             self._fail(409, "INVALID_TRANSITION", "Only Draft requests can be submitted", trace_id)
         if self._overlap_exists(leave.employee_id, leave.start_date, leave.end_date, exclude_id=leave.leave_request_id):
@@ -209,15 +249,32 @@ class LeaveService:
         leave.status = LeaveStatus.SUBMITTED
         leave.submitted_at = ts
         leave.updated_at = ts
-        self.events.append({"event": "LeaveRequestSubmitted", "leave_request_id": leave.leave_request_id, "at": ts.isoformat()})
-        return 200, leave.to_dict()
+        payload = leave.to_dict()
+        self._emit_event("LeaveRequestSubmitted", {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace_id, simulate_failure=simulate_event_failure)
+        self.idempotency.record(key, fingerprint, 200, payload)
+        return 200, payload
 
-    def decide_request(self, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, reason: str | None = None, trace_id: str | None = None) -> tuple[int, dict]:
+    def decide_request(self, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, reason: str | None = None, trace_id: str | None = None, idempotency_key: str | None = None, simulate_event_failure: bool = False) -> tuple[int, dict]:
         role = Role(actor_role)
         leave = self.requests.get(leave_request_id)
         if not leave:
             self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace_id)
         self._ensure_decision_scope(role, actor_employee_id, leave, trace_id)
+
+        key = idempotency_key or f"leave-decision:{leave_request_id}:{action}:{actor_employee_id}"
+        fingerprint = f"{action}:{leave_request_id}:{actor_role}:{actor_employee_id}:{reason or ''}"
+        replay = self.idempotency.replay_or_conflict(key, fingerprint)
+        if replay is not None:
+            return replay.status_code, replay.payload
+
+        if action == "approve" and leave.status == LeaveStatus.APPROVED:
+            payload = leave.to_dict()
+            self.idempotency.record(key, fingerprint, 200, payload)
+            return 200, payload
+        if action == "reject" and leave.status == LeaveStatus.REJECTED:
+            payload = leave.to_dict()
+            self.idempotency.record(key, fingerprint, 200, payload)
+            return 200, payload
         if leave.status != LeaveStatus.SUBMITTED:
             self._fail(409, "INVALID_TRANSITION", "Only Submitted requests can be decided", trace_id)
 
@@ -235,8 +292,10 @@ class LeaveService:
         leave.approver_employee_id = actor_employee_id
         leave.decision_at = ts
         leave.updated_at = ts
-        self.events.append({"event": event, "leave_request_id": leave.leave_request_id, "at": ts.isoformat()})
-        return 200, leave.to_dict()
+        payload = leave.to_dict()
+        self._emit_event(event, {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace_id, simulate_failure=simulate_event_failure)
+        self.idempotency.record(key, fingerprint, 200, payload)
+        return 200, payload
 
     def patch_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, patch: dict, trace_id: str | None = None) -> tuple[int, dict]:
         role = Role(actor_role)
@@ -253,7 +312,7 @@ class LeaveService:
         if patch.get("status") == LeaveStatus.CANCELLED.value:
             leave.status = LeaveStatus.CANCELLED
             leave.updated_at = self._now()
-            self.events.append({"event": "LeaveRequestCancelled", "leave_request_id": leave.leave_request_id, "at": leave.updated_at.isoformat()})
+            self._emit_event("LeaveRequestCancelled", {"leave_request_id": leave.leave_request_id, "at": leave.updated_at.isoformat()}, workflow="leave_request", trace_id=trace_id)
             return 200, leave.to_dict()
 
         start = date.fromisoformat(patch.get("start_date")) if patch.get("start_date") else leave.start_date
@@ -284,46 +343,20 @@ class LeaveService:
             self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace_id)
         return 200, leave.to_dict()
 
-    def list_requests(
-        self,
-        actor_role: str,
-        actor_employee_id: str,
-        employee_id: str | None = None,
-        status: str | None = None,
-        from_date: date | None = None,
-        to_date: date | None = None,
-        limit: int = 25,
-        cursor: str | None = None,
-    ) -> tuple[int, dict]:
+    def list_requests(self, actor_role: str, actor_employee_id: str, employee_id: str | None = None, status: str | None = None) -> tuple[int, dict]:
         role = Role(actor_role)
-        status_enum = LeaveStatus(status) if status else None
-        items = [r for r in self.requests.values() if self._can_access(role, actor_employee_id, r)]
-
-        filtered: list[LeaveRequest] = []
-        for item in items:
-            if employee_id and item.employee_id != employee_id:
+        rows = []
+        for leave in self.requests.values():
+            if employee_id and leave.employee_id != employee_id:
                 continue
-            if status_enum and item.status != status_enum:
+            if status and leave.status.value != status:
                 continue
-            if from_date and item.end_date < from_date:
-                continue
-            if to_date and item.start_date > to_date:
-                continue
-            filtered.append(item)
+            if self._can_access(role, actor_employee_id, leave):
+                rows.append(leave.to_dict())
+        rows.sort(key=lambda item: (item["created_at"], item["leave_request_id"]))
+        return 200, {"data": rows}
 
-        filtered.sort(key=lambda x: (x.updated_at, x.leave_request_id))
-        if cursor:
-            marker = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
-            marker_key = (datetime.fromisoformat(marker["updated_at"]), marker["leave_request_id"])
-            filtered = [x for x in filtered if (x.updated_at, x.leave_request_id) > marker_key]
 
-        limit = min(max(limit, 1), 100)
-        batch = filtered[:limit]
-        has_next = len(filtered) > limit
-        next_cursor = None
-        if has_next and batch:
-            next_cursor = base64.urlsafe_b64encode(
-                json.dumps({"updated_at": batch[-1].updated_at.isoformat(), "leave_request_id": batch[-1].leave_request_id}).encode()
-            ).decode()
-
-        return 200, {"data": [x.to_dict() for x in batch], "page": {"nextCursor": next_cursor, "hasNext": has_next, "limit": limit}}
+def encode_token(role: str, employee_id: str, department_id: str | None = None) -> str:
+    payload = {"role": role, "employee_id": employee_id, "department_id": department_id}
+    return base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")

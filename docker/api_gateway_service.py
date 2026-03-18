@@ -6,11 +6,16 @@ import os
 import socket
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse
+from uuid import uuid4
+
+from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, run_with_retry
 
 
 PORT = int(os.getenv("PORT", "8000"))
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(message)s")
 LOGGER = logging.getLogger("api-gateway")
+ERROR_LOGGER = CentralErrorLogger("api-gateway")
 
 ROUTES = {
     "employee-service": os.getenv("EMPLOYEE_SERVICE_URL", "http://employee-service:8001"),
@@ -21,40 +26,72 @@ ROUTES = {
     "auth-service": os.getenv("AUTH_SERVICE_URL", "http://auth-service:8006"),
     "notification-service": os.getenv("NOTIFICATION_SERVICE_URL", "http://notification-service:8007"),
 }
+BREAKERS = {service: CircuitBreaker(failure_threshold=2, recovery_timeout=1.0) for service in ROUTES}
 
 
 def _check_socket(host: str, port: int) -> bool:
+    with socket.create_connection((host, port), timeout=0.5):
+        return True
+
+
+def _error_payload(code: str, message: str, trace_id: str, details: list[dict] | None = None) -> dict[str, object]:
+    return {
+        "error": {
+            "code": code,
+            "message": message,
+            "details": details or [],
+            "traceId": trace_id,
+        }
+    }
+
+
+def _check_service_health(service: str, url: str, trace_id: str) -> dict[str, object]:
+    parsed = urlparse(url)
+    host = parsed.hostname or "localhost"
+    port = parsed.port or 80
+    breaker = BREAKERS[service]
+
     try:
-        with socket.create_connection((host, port), timeout=1):
-            return True
-    except OSError:
-        return False
+        breaker.call(
+            lambda: run_with_retry(
+                lambda: _check_socket(host, port),
+                attempts=3,
+                base_delay=0.05,
+                timeout_seconds=0.5,
+                retryable=lambda exc: isinstance(exc, OSError),
+            )
+        )
+        return {"status": "ok", "target": url}
+    except CircuitBreakerOpenError as exc:
+        ERROR_LOGGER.log("ready-check", exc, trace_id=trace_id, details={"service": service, "url": url, "degraded": True})
+        return {"status": "degraded", "target": url, "reason": "circuit_open"}
+    except Exception as exc:  # noqa: BLE001
+        ERROR_LOGGER.log("ready-check", exc, trace_id=trace_id, details={"service": service, "url": url})
+        return {"status": "degraded", "target": url, "reason": type(exc).__name__}
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         started = time.perf_counter()
+        trace_id = self.headers.get("X-Trace-Id", uuid4().hex)
         try:
             if self.path == "/health":
-                self._send_json({"service": "api-gateway", "status": "ok", "routes": ROUTES})
+                self._send_json({"service": "api-gateway", "status": "ok", "routes": ROUTES, "traceId": trace_id})
                 return
 
             if self.path == "/ready":
-                checks: dict[str, bool] = {}
-                for svc, url in ROUTES.items():
-                    hostport = url.replace("http://", "").split("/")[0]
-                    host, port = hostport.split(":")
-                    checks[svc] = _check_socket(host, int(port))
-                self._send_json({"service": "api-gateway", "status": "ok" if all(checks.values()) else "degraded", "connectivity": checks})
+                checks = {svc: _check_service_health(svc, url, trace_id) for svc, url in ROUTES.items()}
+                overall_status = "ok" if all(item["status"] == "ok" for item in checks.values()) else "degraded"
+                self._send_json({"service": "api-gateway", "status": overall_status, "connectivity": checks, "traceId": trace_id})
                 return
 
-            self._send_json({"service": "api-gateway", "message": "route placeholder"})
-        except Exception:
-            LOGGER.exception("Unhandled gateway error path=%s", self.path)
-            self._send_json({"error": {"code": "INTERNAL_ERROR", "message": "Unexpected server failure", "details": [], "traceId": "gateway"}}, status=500)
+            self._send_json({"service": "api-gateway", "message": "route placeholder", "traceId": trace_id})
+        except Exception:  # noqa: BLE001
+            LOGGER.exception("Unhandled gateway error path=%s trace_id=%s", self.path, trace_id)
+            self._send_json(_error_payload("INTERNAL_SERVER_ERROR", "Unexpected server failure", trace_id), status=500)
         finally:
             duration_ms = int((time.perf_counter() - started) * 1000)
-            LOGGER.info("request path=%s method=GET status=%s duration_ms=%s", self.path, getattr(self, "_last_status", 500), duration_ms)
+            LOGGER.info("request path=%s method=GET status=%s duration_ms=%s trace_id=%s", self.path, getattr(self, "_last_status", 500), duration_ms, trace_id)
 
     def log_message(self, format: str, *args) -> None:
         return
