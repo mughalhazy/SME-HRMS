@@ -26,6 +26,9 @@ export class StructuredLogger {
       context,
     };
     this.records.push(record);
+    if (this.records.length > 500) {
+      this.records.shift();
+    }
     process.stdout.write(`${JSON.stringify(record)}\n`);
     return record;
   }

@@ -13,7 +13,8 @@ export type RequestMetric = {
 export class ServiceMetrics {
   private requestCount = 0;
   private errorCount = 0;
-  private readonly latencies: number[] = [];
+  private latencyTotalMs = 0;
+  private maxLatencyMs = 0;
   private readonly recentRequests: RequestMetric[] = [];
 
   constructor(private readonly serviceName: string) {}
@@ -23,7 +24,8 @@ export class ServiceMetrics {
     if (!metric.success) {
       this.errorCount += 1;
     }
-    this.latencies.push(metric.latencyMs);
+    this.latencyTotalMs += metric.latencyMs;
+    this.maxLatencyMs = Math.max(this.maxLatencyMs, metric.latencyMs);
     this.recentRequests.push(metric);
     if (this.recentRequests.length > 50) {
       this.recentRequests.shift();
@@ -31,9 +33,9 @@ export class ServiceMetrics {
   }
 
   snapshot(): Record<string, unknown> {
-    const averageLatencyMs = this.latencies.length === 0
+    const averageLatencyMs = this.requestCount === 0
       ? 0
-      : this.latencies.reduce((sum, value) => sum + value, 0) / this.latencies.length;
+      : this.latencyTotalMs / this.requestCount;
 
     return {
       service: this.serviceName,
@@ -42,7 +44,7 @@ export class ServiceMetrics {
       errorRate: this.requestCount === 0 ? 0 : Number((this.errorCount / this.requestCount).toFixed(4)),
       latencyMs: {
         average: Number(averageLatencyMs.toFixed(3)),
-        max: Number((Math.max(0, ...this.latencies)).toFixed(3)),
+        max: Number(this.maxLatencyMs.toFixed(3)),
       },
       recentRequests: this.recentRequests,
     };
