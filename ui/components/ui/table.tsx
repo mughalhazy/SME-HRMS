@@ -19,7 +19,15 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
-  return <tr className={cn('h-14 border-b border-[var(--border)] transition-colors duration-150 hover:bg-[var(--accent)]/60', className)} {...props} />
+  return (
+    <tr
+      className={cn(
+        'h-14 border-b border-[var(--border)] transition-[background-color,box-shadow,transform] duration-150 ease-out hover:bg-[var(--accent)]/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]',
+        className,
+      )}
+      {...props}
+    />
+  )
 }
 
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {

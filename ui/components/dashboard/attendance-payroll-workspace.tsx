@@ -375,7 +375,7 @@ export function AttendancePayrollWorkspace() {
 
                 <div className="flex flex-wrap items-center gap-3">
                   <SyncBadge mode={attendanceQuery.data?.syncMode ?? 'demo'} source={attendanceQuery.data?.syncSource ?? 'not loaded'} />
-                  <Button variant="outline" onClick={() => attendanceQuery.refetch()}>
+                  <Button variant="outline" onClick={() => attendanceQuery.refetch()} disabled={attendanceQuery.isFetching}>
                     <RefreshCw className={cn('size-4', attendanceQuery.isFetching && 'animate-spin')} />
                     Refresh
                   </Button>
@@ -491,7 +491,7 @@ export function AttendancePayrollWorkspace() {
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <SyncBadge mode={payrollQuery.data?.syncMode ?? 'demo'} source={payrollQuery.data?.syncSource ?? 'not loaded'} />
-                  <Button variant="outline" onClick={() => payrollQuery.refetch()}>
+                  <Button variant="outline" onClick={() => payrollQuery.refetch()} disabled={payrollQuery.isFetching}>
                     <RefreshCw className={cn('size-4', payrollQuery.isFetching && 'animate-spin')} />
                     Refresh
                   </Button>

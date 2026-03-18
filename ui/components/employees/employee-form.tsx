@@ -173,7 +173,15 @@ export function EmployeeForm({
         </div>
       ) : null}
 
-      <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit} noValidate>
+      <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
+        {isSubmitting ? (
+          <div className="md:col-span-2 inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-600 animate-[surface-enter_180ms_ease-out]">
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+            Saving changes…
+          </div>
+        ) : null}
+
+        <fieldset className="contents" disabled={isSubmitting}>
         <Field label="Employee number" htmlFor="employee_number" error={errors.employee_number} hint={mode === 'edit' ? 'Employee number cannot be changed after creation.' : 'Use the canonical employee identifier.'}>
           <Input
             id="employee_number"
@@ -311,6 +319,7 @@ export function EmployeeForm({
             {isSubmitting ? 'Saving…' : mode === 'create' ? 'Create employee' : 'Save changes'}
           </Button>
         </div>
+        </fieldset>
       </form>
     </section>
   )

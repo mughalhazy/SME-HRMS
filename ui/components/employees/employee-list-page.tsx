@@ -88,7 +88,7 @@ export function EmployeeListPage() {
         }
         actions={
           <>
-            <Button variant="outline" onClick={() => query.refetch()}>
+            <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>
               <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
