@@ -102,49 +102,51 @@ export function EmployeeListPage() {
         }
       />
 
-      <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-[1.5fr,1fr,1fr]">
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Search
-          <span className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              className="pl-10"
-              placeholder="Name, email, employee number, role..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </span>
-        </label>
-
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Status filter
-          <select
-            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-            value={status}
-            onChange={(event) => setStatus(event.target.value as (typeof EMPLOYEE_STATUSES)[number] | 'all')}
-          >
-            <option value="all">All statuses</option>
-            {EMPLOYEE_STATUSES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Department filter
-          <Input placeholder="dep-hr" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)} />
-        </label>
-      </section>
-
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4 text-sm text-slate-600">
-          <span>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+            <span>
             Showing <strong className="text-slate-950">{filteredEmployees.length}</strong> of{' '}
             <strong className="text-slate-950">{employees.length}</strong> loaded employees.
-          </span>
-          {query.isFetching ? <InlineLoading label="Syncing directory…" /> : null}
+            </span>
+            {query.isFetching ? <InlineLoading label="Syncing directory…" /> : null}
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_220px_220px]">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+              <span>Search</span>
+              <span className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  className="pl-10"
+                  placeholder="Name, email, employee number, role..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+              <span>Status</span>
+              <select
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                value={status}
+                onChange={(event) => setStatus(event.target.value as (typeof EMPLOYEE_STATUSES)[number] | 'all')}
+              >
+                <option value="all">All statuses</option>
+                {EMPLOYEE_STATUSES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+              <span>Department</span>
+              <Input placeholder="dep-hr" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)} />
+            </label>
+          </div>
         </div>
 
         {query.isLoading ? (
@@ -187,8 +189,8 @@ export function EmployeeListPage() {
                   <TableRow key={employee.employee_id}>
                     <TableCell className="align-top">
                       <div className="font-medium text-slate-950">{getEmployeeFullName(employee)}</div>
-                      <div className="text-slate-500">{employee.employee_number}</div>
-                      <div className="text-slate-500">{employee.email}</div>
+                      <div className="text-sm text-slate-500">{employee.employee_number}</div>
+                      <div className="text-sm text-slate-500">{employee.email}</div>
                     </TableCell>
                     <TableCell className="align-top">
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusBadge(employee.status)}`}>
@@ -199,8 +201,8 @@ export function EmployeeListPage() {
                     <TableCell className="align-top text-slate-600">{employee.role_id}</TableCell>
                     <TableCell className="align-top text-slate-600">{formatDate(employee.hire_date)}</TableCell>
                     <TableCell className="align-top">
-                      <div className="flex flex-wrap gap-2">
-                        <Button asChild variant="outline" size="sm">
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button asChild variant="ghost" size="sm">
                           <Link href={`/employees/${employee.employee_id}`}>View</Link>
                         </Button>
                         <Button asChild size="sm">
@@ -216,7 +218,7 @@ export function EmployeeListPage() {
               </TableBody>
             </Table>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3.5">
               <p className="text-sm text-slate-500">Cursor pagination keeps the table responsive as the dataset grows.</p>
               <Button onClick={() => query.fetchNextPage()} disabled={!query.hasNextPage || query.isFetchingNextPage}>
                 {query.isFetchingNextPage ? 'Loading…' : query.hasNextPage ? 'Load more' : 'No more results'}

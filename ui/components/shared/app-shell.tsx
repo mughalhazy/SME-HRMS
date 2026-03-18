@@ -35,17 +35,17 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="border-b border-slate-200 bg-white px-5 py-6 xl:border-b-0 xl:border-r xl:px-6 xl:py-8">
-          <div className="space-y-6 xl:space-y-8">
-            <div className="space-y-3">
+      <div className="mx-auto grid min-h-screen max-w-[1520px] grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="border-b border-slate-200 bg-white px-5 py-5 xl:border-b-0 xl:border-r xl:px-5 xl:py-6">
+          <div className="space-y-6">
+            <div className="space-y-2.5">
               <Badge variant="success" className="w-fit">Enterprise UI</Badge>
               <Link href="/" className="flex items-center gap-3 text-slate-950">
-                <span className="rounded-2xl bg-slate-950 p-3 text-white shadow-sm">
+                <span className="rounded-xl bg-slate-950 p-2.5 text-white shadow-sm">
                   <BriefcaseBusiness className="h-5 w-5" />
                 </span>
                 <div>
-                  <p className="text-lg font-semibold tracking-tight">SME HRMS</p>
+                  <p className="text-base font-semibold tracking-tight">SME HRMS</p>
                   <p className="text-sm text-slate-500">Canonical frontend workspace</p>
                 </div>
               </Link>
@@ -64,7 +64,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
                     key={item.key}
                     href={item.href}
                     className={cn(
-                      'flex items-start gap-3 rounded-2xl border px-4 py-3 transition-colors',
+                      'flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors',
                       active
                         ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
                         : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-100',
@@ -88,27 +88,29 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
 
         <div className="flex min-w-0 flex-col">
           <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
-            <div className="flex flex-col gap-4 px-5 py-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 lg:px-7">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-500">Frontend quality control workspace</p>
-                  <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">{activeItem.label}</h1>
-                  <p className="max-w-3xl text-sm leading-6 text-slate-600">{activeItem.description}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Frontend quality control workspace</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-lg font-semibold tracking-tight text-slate-950">{activeItem.label}</h1>
+                    <p className="text-sm text-slate-600">{activeItem.description}</p>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {activeItem.readModels.map((model) => (
                     <Badge key={model} variant="outline">{model}</Badge>
                   ))}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+              <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-0.5">
                 {navigationItems.map((item) => (
                   <Link
                     key={`${item.key}-chip`}
                     href={item.href}
                     className={cn(
-                      'inline-flex whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                      'inline-flex whitespace-nowrap rounded-full border px-3 py-1 text-sm font-medium transition-colors',
                       isPathActive(currentPath, item.href)
                         ? 'border-slate-900 bg-slate-900 text-white'
                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950',
@@ -121,7 +123,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
             </div>
           </header>
 
-          <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+          <main className="mx-auto flex w-full max-w-[1180px] flex-1 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7">{children}</main>
         </div>
       </div>
     </div>

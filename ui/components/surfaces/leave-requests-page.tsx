@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, CheckCircle2, Clock3, ShieldCheck } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Clock3, RefreshCw, ShieldCheck } from 'lucide-react'
 
 import { EmptyState, ErrorState, StatSkeletonGrid, TableSkeleton } from '@/components/ui/feedback'
 import { PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
@@ -73,10 +73,10 @@ export function LeaveRequestsPage() {
           </>
         }
         actions={
-          <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
-            <CalendarClock className="h-4 w-4" />
-            Approval-first layout
-          </div>
+          <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>
+            <RefreshCw className={`h-4 w-4 ${query.isFetching ? 'animate-spin' : ''}`} />
+            Refresh queue
+          </Button>
         }
       />
 
@@ -89,14 +89,14 @@ export function LeaveRequestsPage() {
         <ErrorState title="Unable to load leave requests" message={query.error.message} onRetry={() => query.refetch()} />
       ) : (
         <>
-          <section className="grid gap-4 md:grid-cols-3">
+          <section className="grid gap-3 md:grid-cols-3">
             {coverageSignals.map((signal) => {
               const Icon = coverageIcons[signal.key]
               return <StatCard key={signal.label} title={signal.label} value={signal.value} hint={signal.hint} icon={Icon} />
             })}
           </section>
 
-          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <SectionHeading
               title="Approval queue"
               description="Most urgent requests stay at the top with department and approver context visible."
@@ -104,14 +104,14 @@ export function LeaveRequestsPage() {
             />
 
             {leaveRows.length === 0 ? (
-              <div className="p-6">
-                <EmptyState
-                  icon={CalendarClock}
-                  title="No leave requests yet"
-                  message="Leave requests will appear here once employees begin submitting time-off requests."
-                  action={<Button variant="outline" onClick={() => query.refetch()}>Refresh queue</Button>}
-                />
-              </div>
+                <div className="p-5">
+                  <EmptyState
+                    icon={CalendarClock}
+                    title="No leave requests yet"
+                    message="Leave requests will appear here once employees begin submitting time-off requests."
+                    action={<Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>Refresh queue</Button>}
+                  />
+                </div>
             ) : (
               <Table>
                 <TableHeader>

@@ -7,7 +7,8 @@ import { ArrowRight, BriefcaseBusiness, CircleGauge, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, StatSkeletonGrid, SurfaceSkeleton } from '@/components/ui/feedback'
-import { PageHero, PageStack, StatCard } from '@/components/ui/page'
+import { PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { apiRequest } from '@/lib/api/client'
 
 type JobRow = {
@@ -65,15 +66,19 @@ export function JobPostingsPage() {
         />
       ) : (
         <>
-          <section className="grid gap-4 md:grid-cols-3">
+          <section className="grid gap-3 md:grid-cols-3">
             <StatCard title="Open postings" value={String(metrics.openPostings)} hint="Ready for sourcing" icon={BriefcaseBusiness} />
             <StatCard title="Total openings" value={String(metrics.totalOpenings)} hint="Across all active requisitions" icon={Users} />
             <StatCard title="On-hold roles" value={String(metrics.onHold)} hint="Requires staffing decision" icon={CircleGauge} />
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-3">
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <SectionHeading
+              title="Open requisitions"
+              description="Requisition status, department context, and opening volume stay in a single scan path."
+            />
             {jobs.length === 0 ? (
-              <div className="xl:col-span-3">
+              <div className="p-5">
                 <EmptyState
                   icon={BriefcaseBusiness}
                   title="No job postings yet"
@@ -89,26 +94,37 @@ export function JobPostingsPage() {
                 />
               </div>
             ) : (
-              jobs.map((job) => (
-                <article
-                  key={job.job_posting_id}
-                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${job.status === 'Open' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {job.status}
-                    </span>
-                    <span className="text-xs font-medium text-slate-500">{job.job_posting_id}</span>
-                  </div>
-                  <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{job.title}</h3>
-                  <dl className="mt-4 grid gap-3 text-sm text-slate-600">
-                    <div className="flex items-center justify-between gap-4"><dt>Department</dt><dd>{job.department_id}</dd></div>
-                    <div className="flex items-center justify-between gap-4"><dt>Employment type</dt><dd>{job.employment_type}</dd></div>
-                    <div className="flex items-center justify-between gap-4"><dt>Openings</dt><dd>{job.openings_count}</dd></div>
-                    <div className="flex items-center justify-between gap-4"><dt>Posting date</dt><dd>{job.posting_date}</dd></div>
-                  </dl>
-                </article>
-              ))
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Employment</TableHead>
+                    <TableHead>Openings</TableHead>
+                    <TableHead>Posting date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {jobs.map((job) => (
+                    <TableRow key={job.job_posting_id}>
+                      <TableCell>
+                        <div className="font-medium text-slate-950">{job.title}</div>
+                        <div className="text-sm text-slate-500">{job.job_posting_id}</div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${job.status === 'Open' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                          {job.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-slate-600">{job.department_id}</TableCell>
+                      <TableCell className="text-slate-600">{job.employment_type}</TableCell>
+                      <TableCell className="text-slate-600">{job.openings_count}</TableCell>
+                      <TableCell className="text-slate-600">{job.posting_date}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </section>
         </>
