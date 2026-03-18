@@ -3,11 +3,9 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  ArrowRight,
   CheckCircle2,
   ChevronRight,
   Clock3,
-  CreditCard,
   LoaderCircle,
   Plus,
   RefreshCcw,
@@ -16,8 +14,9 @@ import {
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/input'
-import { PageGrid, PageStack } from '@/components/ui/page'
-import { apiRequest, buildApiUrl, buildHeaders } from '@/lib/api/client'
+import { PageStack } from '@/components/ui/page'
+import { apiRequest, buildHeaders } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
 
 type EmployeeRow = {
   employee_id: string
@@ -216,7 +215,7 @@ const defaultForms: Record<ActionKey, Record<string, string>> = {
 
 export function EnterpriseDashboard() {
   const queryClient = useQueryClient()
-  const [token, setToken] = useState('')
+  const [token] = useState('')
   const [activeAction, setActiveAction] = useState<ActionKey | null>(null)
   const [forms, setForms] = useState(defaultForms)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
@@ -303,173 +302,136 @@ export function EnterpriseDashboard() {
     }
   }, [data?.payroll, dashboardQuery.isError])
 
-  const jobsSummary = useMemo(() => {
-    const rows = data?.jobs ?? []
-    return {
-      total: rows.length,
-      open: rows.filter((row) => row.status === 'Open').length,
-      recent: rows.slice(0, 4),
-    }
-  }, [data?.jobs])
-
-  const cards = [
-    {
-      key: 'employees',
-      title: 'Employee count',
-      value: formatCompact(employeesSummary.total),
-      subtitle: `${employeesSummary.active} active • ${employeesSummary.newHires} joined this month`,
-      tone: 'slate',
-      icon: Users,
-      state: employeesSummary.state,
-      items: employeesSummary.recent.map((row) => ({
-        primary: employeeName(row),
-        secondary: row.department_name ?? 'Department pending',
-        meta: statusForEmployee(row) ?? 'Unknown',
-      })),
-    },
-    {
-      key: 'attendance',
-      title: 'Attendance summary',
-      value: formatCompact(attendanceSummary.total),
-      subtitle: `${attendanceSummary.present} present • ${attendanceSummary.late} late • ${attendanceSummary.absent} absent`,
-      tone: 'emerald',
-      icon: Clock3,
-      state: attendanceSummary.state,
-      items: attendanceSummary.recent.map((row) => ({
-        primary: row.employee_name ?? 'Unknown employee',
-        secondary: row.check_in_time ? `Checked in ${formatTime(row.check_in_time)}` : 'No check-in recorded',
-        meta: row.attendance_status ?? 'Unknown',
-      })),
-    },
-    {
-      key: 'leave',
-      title: 'Leave requests',
-      value: formatCompact(leaveSummary.pending),
-      subtitle: `${leaveSummary.approved} approved • ${leaveSummary.total} tracked`,
-      tone: 'amber',
-      icon: CheckCircle2,
-      state: leaveSummary.state,
-      items: leaveSummary.recent.map((row) => ({
-        primary: row.employee_name ?? 'Unknown employee',
-        secondary: `${row.leave_type ?? 'Leave'} • ${formatDateRange(row.start_date, row.end_date)}`,
-        meta: row.status ?? 'Unknown',
-      })),
-    },
-    {
-      key: 'payroll',
-      title: 'Payroll status',
-      value: payrollSummary.netPay,
-      subtitle: `${payrollSummary.processed} processed • ${payrollSummary.paid} paid • ${payrollSummary.draft} draft`,
-      tone: 'violet',
-      icon: CreditCard,
-      state: payrollSummary.state,
-      items: payrollSummary.recent.map((row) => ({
-        primary: row.employee_name ?? row.employee_id ?? 'Unknown employee',
-        secondary: formatDateRange(row.pay_period_start, row.pay_period_end),
-        meta: row.status ?? 'Unknown',
-      })),
-    },
-  ] as const
-
   return (
-    <PageStack className="text-slate-950">
-        <section className="rounded-lg border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-7 sm:py-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                <span className="font-medium text-slate-700">Dashboard</span>
-                <span>Enterprise view</span>
-                {data?.fetchedAt ? <span>Updated {formatDateTime(data.fetchedAt)}</span> : null}
-              </div>
-              <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Clean signal across people, time, leave, and payroll.</h1>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-                  Built against the canonical dashboard read-model surfaces, with compact summaries and quick actions mapped to the underlying service flows.
-                </p>
-              </div>
-            </div>
+    <PageStack className="gap-0 text-slate-950">
+      <section className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Dashboard</h1>
+          <p className="max-w-3xl text-sm text-slate-600">
+            Canonical summaries for employees, attendance, leave, and payroll with a clean separation between live signals and actions.
+          </p>
+        </div>
 
-            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:min-w-[320px]">
-              <label className="space-y-2 text-sm font-medium text-slate-700">
-                <span>Bearer token</span>
-                <Input
-                  value={token}
-                  onChange={(event) => setToken(event.target.value)}
-                  placeholder="Optional for authenticated reads/actions"
-                 
-                />
-              </label>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button onClick={() => void dashboardQuery.refetch()} disabled={dashboardQuery.isFetching}>
-                  {dashboardQuery.isFetching ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCcw className="size-4" />}
-                  Refresh data
-                </Button>
-                <a
-                  href={buildApiUrl('/api/v1/employees')}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
-                >
-                  Open API <ArrowRight className="size-4" />
-                </a>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <Button onClick={() => void dashboardQuery.refetch()} disabled={dashboardQuery.isFetching}>
+            {dashboardQuery.isFetching ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCcw className="size-4" />}
+            Refresh
+          </Button>
+        </div>
+      </section>
+
+      {actionMessage ? (
+        <section className="mb-6 rounded-lg border border-gray-200 bg-white p-5 text-sm text-slate-700">
+          {actionMessage}
         </section>
+      ) : null}
 
-        {actionMessage ? (
-          <section className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-            {actionMessage}
+      <div className="flex flex-col xl:flex-row">
+        <main className="min-w-0 flex-1">
+          <section className="mb-6 grid gap-6 md:grid-cols-3">
+            <KpiCard
+              title="Employee Count"
+              value={formatCompact(employeesSummary.total)}
+              details={`${employeesSummary.active} active • ${employeesSummary.newHires} new this month`}
+              icon={<Users className="size-5" />}
+            />
+            <KpiCard
+              title="Attendance Summary"
+              value={formatCompact(attendanceSummary.total)}
+              details={`${attendanceSummary.present} present • ${attendanceSummary.late} late • ${attendanceSummary.absent} absent`}
+              icon={<Clock3 className="size-5" />}
+            />
+            <KpiCard
+              title="Leave Summary"
+              value={formatCompact(leaveSummary.pending)}
+              details={`${leaveSummary.approved} approved • ${leaveSummary.total} tracked`}
+              icon={<CheckCircle2 className="size-5" />}
+            />
           </section>
-        ) : null}
 
-        <PageGrid className="xl:grid-cols-[minmax(0,1fr)_320px]">
-          <PageGrid className="md:grid-cols-2">
-            {cards.map((card) => (
-              <article key={card.key} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-500">{card.title}</p>
-                    <div className="space-y-1">
-                      <h2 className="text-3xl font-semibold tracking-tight">{card.value}</h2>
-                      <p className="text-sm text-slate-600">{card.subtitle}</p>
+          <section className="mb-6 grid gap-6 lg:grid-cols-3">
+            <StructuredCard
+              className="lg:col-span-2"
+              title="Attendance activity"
+              value={formatCompact(attendanceSummary.total)}
+              details={data?.fetchedAt ? `Updated ${formatDateTime(data.fetchedAt)}` : 'Today'}
+            >
+              {attendanceSummary.state === 'error' ? (
+                <EmptyState message="Unable to load attendance activity." />
+              ) : attendanceSummary.recent.length === 0 ? (
+                <EmptyState message="No attendance records returned for today." />
+              ) : (
+                <SignalList
+                  items={attendanceSummary.recent.map((row) => ({
+                    primary: row.employee_name ?? 'Unknown employee',
+                    secondary: row.check_in_time ? `Checked in ${formatTime(row.check_in_time)}` : 'No check-in recorded',
+                    meta: row.attendance_status ?? 'Unknown',
+                  }))}
+                />
+              )}
+            </StructuredCard>
+
+            <StructuredCard title="Leave requests summary" value={formatCompact(leaveSummary.pending)} details={`${leaveSummary.total} total requests`}>
+              {leaveSummary.state === 'error' ? (
+                <EmptyState message="Unable to load leave requests." />
+              ) : (
+                <div className="space-y-2">
+                  <SummaryRow label="Pending" value={String(leaveSummary.pending)} />
+                  <SummaryRow label="Approved" value={String(leaveSummary.approved)} />
+                  <SummaryRow label="Tracked" value={String(leaveSummary.total)} />
+                  {leaveSummary.pendingRows.length > 0 ? (
+                    <div className="pt-2">
+                      <p className="text-xs text-gray-400">Next request</p>
+                      <p className="text-sm text-slate-900">{leaveSummary.pendingRows[0]?.employee_name ?? 'Unknown employee'}</p>
+                      <p className="text-xs text-gray-400">
+                        {leaveSummary.pendingRows[0]
+                          ? formatDateRange(leaveSummary.pendingRows[0].start_date, leaveSummary.pendingRows[0].end_date)
+                          : 'No pending request'}
+                      </p>
                     </div>
-                  </div>
-                  <div className={iconToneClass(card.tone)}>
-                    <card.icon className="size-5" />
-                  </div>
+                  ) : null}
                 </div>
+              )}
+            </StructuredCard>
+          </section>
 
-                <div className="mt-4 border-t border-slate-200 pt-4">
-                  {card.state === 'error' ? (
-                    <EmptyState message="Unable to load this widget from the API." />
-                  ) : card.items.length === 0 ? (
-                    <EmptyState message="No records returned for this widget yet." />
-                  ) : (
-                    <ul className="space-y-3">
-                      {card.items.map((item, index) => (
-                        <li key={`${card.key}-${index}`} className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-slate-900">{item.primary}</p>
-                            <p className="truncate text-sm text-slate-500">{item.secondary}</p>
-                          </div>
-                          <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                            {item.meta}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+          <section className="mb-6 grid gap-6 lg:grid-cols-3">
+            <StructuredCard className="lg:col-span-2" title="Payroll summary" value={payrollSummary.netPay} details={`${payrollSummary.total} payroll records`}>
+              {payrollSummary.state === 'error' ? (
+                <EmptyState message="Unable to load payroll summary." />
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <CompactMetric label="Processed" value={String(payrollSummary.processed)} />
+                  <CompactMetric label="Paid" value={String(payrollSummary.paid)} />
+                  <CompactMetric label="Draft" value={String(payrollSummary.draft)} />
                 </div>
-              </article>
-            ))}
-          </PageGrid>
+              )}
+            </StructuredCard>
 
-          <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-500">Quick actions</p>
-              <h2 className="text-2xl font-semibold tracking-tight">Move work forward fast.</h2>
-              <p className="text-sm leading-6 text-slate-600">Each action targets the canonical API flow for the owning service, without leaving the dashboard.</p>
+            <StructuredCard title="Recent payroll records" value={formatCompact(payrollSummary.recent.length)} details="Most recent records">
+              {payrollSummary.state === 'error' ? (
+                <EmptyState message="Unable to load payroll records." />
+              ) : payrollSummary.recent.length === 0 ? (
+                <EmptyState message="No payroll records returned yet." />
+              ) : (
+                <SignalList
+                  items={payrollSummary.recent.map((row) => ({
+                    primary: row.employee_name ?? row.employee_id ?? 'Unknown employee',
+                    secondary: formatDateRange(row.pay_period_start, row.pay_period_end),
+                    meta: row.status ?? 'Unknown',
+                  }))}
+                />
+              )}
+            </StructuredCard>
+          </section>
+        </main>
+
+        <aside className="w-full xl:ml-6 xl:w-80">
+          <div className="rounded-lg border border-gray-200 bg-white p-5">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">Quick actions</p>
+              <p className="text-2xl font-semibold text-slate-950">Action panel</p>
+              <p className="text-xs text-gray-400">Launch core HR workflows without mixing actions into dashboard data cards.</p>
             </div>
 
             <div className="mt-5 space-y-3">
@@ -493,30 +455,20 @@ export function EnterpriseDashboard() {
                   className={buttonVariants({
                     variant: 'outline',
                     size: 'lg',
-                    className: 'h-auto w-full justify-between rounded-[var(--radius-surface)] px-4 py-3 text-left whitespace-normal',
+                    className: 'h-auto w-full justify-between rounded-lg border-gray-200 px-4 py-3 text-left whitespace-normal',
                   })}
                 >
-                  <div>
+                  <div className="space-y-1">
                     <p className="text-sm font-semibold text-slate-900">{action.title}</p>
-                    <p className="mt-1 text-sm font-normal text-slate-500">{action.description}</p>
+                    <p className="text-xs text-gray-400">{action.description}</p>
                   </div>
                   <ChevronRight className="size-4 text-slate-400" />
                 </button>
               ))}
             </div>
-
-            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-500">Read model coverage</p>
-              <div className="mt-3 grid gap-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between"><span>Employees</span><span>{employeesSummary.total}</span></div>
-                <div className="flex items-center justify-between"><span>Attendance today</span><span>{attendanceSummary.total}</span></div>
-                <div className="flex items-center justify-between"><span>Pending leave</span><span>{leaveSummary.pending}</span></div>
-                <div className="flex items-center justify-between"><span>Payroll records</span><span>{payrollSummary.total}</span></div>
-                <div className="flex items-center justify-between"><span>Open jobs</span><span>{jobsSummary.open}</span></div>
-              </div>
-            </div>
-          </aside>
-        </PageGrid>
+          </div>
+        </aside>
+      </div>
 
       {activeAction ? (
         <ActionDialog
@@ -538,6 +490,94 @@ export function EnterpriseDashboard() {
         />
       ) : null}
     </PageStack>
+  )
+}
+
+function KpiCard({
+  title,
+  value,
+  details,
+  icon,
+}: {
+  title: string
+  value: string
+  details: string
+  icon: React.ReactNode
+}) {
+  return (
+    <article className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-5">
+      <div className="flex items-start justify-between gap-4 space-y-2">
+        <div className="space-y-2">
+          <p className="text-sm text-gray-500">{title}</p>
+          <p className="text-2xl font-semibold text-slate-950">{value}</p>
+          <p className="text-xs text-gray-400">{details}</p>
+        </div>
+        <div className="rounded-lg bg-slate-100 p-2 text-slate-600">{icon}</div>
+      </div>
+    </article>
+  )
+}
+
+function StructuredCard({
+  title,
+  value,
+  details,
+  className,
+  children,
+}: {
+  title: string
+  value: string
+  details: string
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <article className={cn('rounded-lg border border-gray-200 bg-white p-5', className)}>
+      <div className="mb-6 space-y-2">
+        <p className="text-sm text-gray-500">{title}</p>
+        <p className="text-2xl font-semibold text-slate-950">{value}</p>
+        <p className="text-xs text-gray-400">{details}</p>
+      </div>
+      <div className="space-y-2">{children}</div>
+    </article>
+  )
+}
+
+function SignalList({
+  items,
+}: {
+  items: Array<{ primary: string; secondary: string; meta: string }>
+}) {
+  return (
+    <ul className="space-y-2">
+      {items.map((item, index) => (
+        <li key={`${item.primary}-${index}`} className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 px-3 py-3">
+          <div className="min-w-0 space-y-1">
+            <p className="truncate text-sm font-medium text-slate-900">{item.primary}</p>
+            <p className="truncate text-xs text-gray-400">{item.secondary}</p>
+          </div>
+          <span className="whitespace-nowrap text-xs text-gray-400">{item.meta}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3">
+      <span className="text-sm text-slate-600">{label}</span>
+      <span className="text-sm font-semibold text-slate-950">{value}</span>
+    </div>
+  )
+}
+
+function CompactMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-slate-50 px-4 py-4">
+      <p className="text-sm text-gray-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+    </div>
   )
 }
 
@@ -786,17 +826,6 @@ function extractRows<T>(payload: QueryEnvelope<T>): T[] {
 
   const arrayValue = Object.values(payload).find((value) => Array.isArray(value))
   return Array.isArray(arrayValue) ? (arrayValue as T[]) : []
-}
-
-function iconToneClass(tone: 'slate' | 'emerald' | 'amber' | 'violet') {
-  const tones = {
-    slate: 'inline-flex size-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700',
-    emerald: 'inline-flex size-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700',
-    amber: 'inline-flex size-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700',
-    violet: 'inline-flex size-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-700',
-  }
-
-  return tones[tone]
 }
 
 function formatCompact(value: number) {
