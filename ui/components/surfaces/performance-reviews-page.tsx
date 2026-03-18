@@ -1,6 +1,6 @@
 import { CheckCheck, MessageSquareText, Target, TrendingUp } from 'lucide-react'
 
-import { PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
+import { PageGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const reviewRows = [
@@ -42,12 +42,12 @@ export function PerformanceReviewsPage() {
         description="The page keeps the review state visible first so HR can quickly see which reviews are drafted, submitted, or acknowledged without digging into noisy detail views."
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <PageGrid className="md:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Submitted" value="12" hint="Ready for acknowledgment" icon={CheckCheck} />
         <StatCard title="Drafts" value="3" hint="Manager follow-up needed" icon={MessageSquareText} />
         <StatCard title="High ratings" value="5" hint="Talent retention watchlist" icon={TrendingUp} />
         <StatCard title="Goal alignment" value="94%" hint="Cycle tracking on course" icon={Target} />
-      </section>
+      </PageGrid>
 
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <SectionHeading title="Review queue" description="One row per review with reviewer, department, period, and rating context." />

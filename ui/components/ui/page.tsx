@@ -3,7 +3,11 @@ import type { ComponentType, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export function PageStack({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex flex-col gap-4', className)} {...props} />
+  return <div className={cn('flex flex-col gap-6', className)} {...props} />
+}
+
+export function PageGrid({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('grid gap-6', className)} {...props} />
 }
 
 export function PageHero({

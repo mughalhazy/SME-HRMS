@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { PageGrid, PageStack } from '@/components/ui/page'
 import { apiRequest, buildApiUrl, buildHeaders } from '@/lib/api/client'
 
 type EmployeeRow = {
@@ -370,8 +371,7 @@ export function EnterpriseDashboard() {
   ] as const
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+    <PageStack className="text-slate-950">
         <section className="rounded-[28px] border border-slate-200/80 bg-white px-5 py-5 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.35)] sm:px-7 sm:py-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
@@ -422,8 +422,8 @@ export function EnterpriseDashboard() {
           </section>
         ) : null}
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="grid gap-4 md:grid-cols-2">
+        <PageGrid className="xl:grid-cols-[minmax(0,1fr)_320px]">
+          <PageGrid className="md:grid-cols-2">
             {cards.map((card) => (
               <article key={card.key} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
@@ -462,7 +462,7 @@ export function EnterpriseDashboard() {
                 </div>
               </article>
             ))}
-          </div>
+          </PageGrid>
 
           <aside className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="space-y-1">
@@ -511,8 +511,7 @@ export function EnterpriseDashboard() {
               </div>
             </div>
           </aside>
-        </section>
-      </div>
+        </PageGrid>
 
       {activeAction ? (
         <ActionDialog
@@ -533,7 +532,7 @@ export function EnterpriseDashboard() {
           onSubmit={() => actionMutation.mutate(activeAction)}
         />
       ) : null}
-    </main>
+    </PageStack>
   )
 }
 

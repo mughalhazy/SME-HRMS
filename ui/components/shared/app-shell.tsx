@@ -35,7 +35,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto grid min-h-screen max-w-[1520px] grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]">
+      <div className="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="border-b border-slate-200 bg-white px-5 py-5 xl:border-b-0 xl:border-r xl:px-5 xl:py-6">
           <div className="space-y-6">
             <div className="space-y-2.5">
@@ -123,7 +123,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
             </div>
           </header>
 
-          <main className="mx-auto flex w-full max-w-[1180px] flex-1 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7">{children}</main>
+          <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-6 py-6">{children}</main>
         </div>
       </div>
     </div>
