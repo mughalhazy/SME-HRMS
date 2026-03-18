@@ -77,7 +77,7 @@ type StageDefinition = {
   id: BoardStage
   title: string
   description: string
-  accent: string
+  panelClassName: string
   badgeClassName: string
 }
 
@@ -86,28 +86,28 @@ const STAGES: StageDefinition[] = [
     id: 'Applied',
     title: 'Applied',
     description: 'New applicants and recruiter screening stay here before interviews.',
-    accent: 'from-sky-500/20 via-sky-500/5 to-white',
+    panelClassName: 'border-sky-200 bg-sky-50',
     badgeClassName: 'bg-sky-100 text-sky-700 border-sky-200',
   },
   {
     id: 'Interview',
     title: 'Interview',
     description: 'Active interview loop with scheduling, panels, and next-step coordination.',
-    accent: 'from-violet-500/20 via-violet-500/5 to-white',
+    panelClassName: 'border-violet-200 bg-violet-50',
     badgeClassName: 'bg-violet-100 text-violet-700 border-violet-200',
   },
   {
     id: 'Offer',
     title: 'Offer',
     description: 'Finalists with extended offers awaiting closeout and acceptance.',
-    accent: 'from-amber-500/20 via-amber-500/5 to-white',
+    panelClassName: 'border-amber-200 bg-amber-50',
     badgeClassName: 'bg-amber-100 text-amber-700 border-amber-200',
   },
   {
     id: 'Hired',
     title: 'Hired',
     description: 'Accepted candidates ready for employee onboarding handoff.',
-    accent: 'from-emerald-500/20 via-emerald-500/5 to-white',
+    panelClassName: 'border-emerald-200 bg-emerald-50',
     badgeClassName: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   },
 ]
@@ -368,11 +368,11 @@ export function HiringPipelineBoard() {
   const errorMessage = candidatesQuery.error?.message ?? interviewsQuery.error?.message
 
   return (
-    <PageStack className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_48%,_#ffffff_100%)] p-6 text-slate-950 shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-        <section className="overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur">
+    <PageStack className="rounded-lg border border-slate-200 bg-white p-6 text-slate-950">
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.7fr_1fr] lg:px-8">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-sm font-medium text-violet-700">
+              <div className="inline-flex items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-1 text-sm font-medium text-violet-700">
                 <Sparkles className="h-4 w-4" />
                 CAP-HIR-002 · Candidate pipeline and interviews
               </div>
@@ -397,10 +397,10 @@ export function HiringPipelineBoard() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur md:p-5">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 md:p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-slate-900 p-2 text-white">
+              <div className="mt-0.5 rounded-md bg-slate-900 p-2 text-white">
                 <CircleDotDashed className="h-4 w-4" />
               </div>
               <div>
@@ -411,9 +411,9 @@ export function HiringPipelineBoard() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Only adjacent stage moves are allowed</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">Interview scheduling is available inside Interview</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">UI columns are derived from canonical candidate status</span>
+              <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">Only adjacent stage moves are allowed</span>
+              <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">Interview scheduling is available inside Interview</span>
+              <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">UI columns are derived from canonical candidate status</span>
             </div>
           </div>
         </section>
@@ -441,10 +441,10 @@ export function HiringPipelineBoard() {
                 <div
                   key={stage.id}
                   className={cn(
-                    'min-h-[540px] rounded-[26px] border bg-white/90 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all',
-                    isHovered && canDrop && 'border-slate-950 shadow-[0_22px_60px_rgba(15,23,42,0.16)]',
-                    isHovered && !canDrop && draggedStage && 'border-rose-300 bg-rose-50/60',
-                    !isHovered && 'border-slate-200/80',
+                    'min-h-[540px] rounded-lg border bg-white p-4 transition-colors',
+                    isHovered && canDrop && 'border-slate-950 bg-slate-50',
+                    isHovered && !canDrop && draggedStage && 'border-rose-300 bg-rose-50',
+                    !isHovered && 'border-slate-200',
                   )}
                   onDragOver={(event) => {
                     event.preventDefault()
@@ -461,13 +461,13 @@ export function HiringPipelineBoard() {
                     }
                   }}
                 >
-                  <div className={cn('mb-4 rounded-3xl border border-white/70 bg-gradient-to-br p-4', stage.accent)}>
+                  <div className={cn('mb-4 rounded-lg border p-4', stage.panelClassName)}>
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <h3 className="text-lg font-semibold text-slate-950">{stage.title}</h3>
                         <p className="mt-1 text-sm leading-6 text-slate-600">{stage.description}</p>
                       </div>
-                      <span className={cn('inline-flex min-w-11 items-center justify-center rounded-full border px-3 py-1 text-sm font-semibold', stage.badgeClassName)}>
+                      <span className={cn('inline-flex min-w-11 items-center justify-center rounded-md border px-3 py-1 text-sm font-semibold', stage.badgeClassName)}>
                         {candidatesByStage[stage.id].length}
                       </span>
                     </div>
@@ -498,8 +498,8 @@ export function HiringPipelineBoard() {
                             setHoverStage(null)
                           }}
                           className={cn(
-                            'rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm transition duration-200',
-                            isDragging && 'rotate-[1deg] scale-[0.99] border-slate-900 shadow-lg opacity-70',
+                            'rounded-lg border border-slate-200 bg-white p-4 transition duration-200',
+                            isDragging && 'rotate-[1deg] scale-[0.99] border-slate-900 opacity-70',
                           )}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -515,15 +515,15 @@ export function HiringPipelineBoard() {
                                 <p className="text-sm text-slate-600">{candidate.role}</p>
                               </div>
                             </div>
-                            <div className="rounded-full bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">
+                            <div className="rounded-md bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">
                               {candidate.score}
                             </div>
                           </div>
 
                           <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1">{candidate.source}</span>
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1">Applied {candidate.appliedDate}</span>
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1">{candidate.email}</span>
+                            <span className="rounded-md bg-slate-100 px-2.5 py-1">{candidate.source}</span>
+                            <span className="rounded-md bg-slate-100 px-2.5 py-1">Applied {candidate.appliedDate}</span>
+                            <span className="rounded-md bg-slate-100 px-2.5 py-1">{candidate.email}</span>
                           </div>
 
                           <p className="mt-3 text-sm leading-6 text-slate-600">{candidate.summary}</p>
@@ -553,7 +553,7 @@ export function HiringPipelineBoard() {
                           </div>
 
                           {candidateStage === 'Interview' ? (
-                            <div className="mt-4 rounded-[22px] border border-violet-200 bg-violet-50/70 p-3">
+                            <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 p-3">
                               <div className="mb-3">
                                 <h5 className="text-sm font-semibold text-violet-950">Schedule interview</h5>
                                 <p className="text-xs text-violet-800">Keep the interview plan on the card so the board and schedule stay synchronized.</p>
@@ -628,7 +628,7 @@ export function HiringPipelineBoard() {
                     })}
 
                     {candidatesByStage[stage.id].length === 0 ? (
-                      <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500">
+                      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
                         No candidates in {stage.title}. Drop a card here to progress the workflow.
                       </div>
                     ) : null}
@@ -651,7 +651,7 @@ type MetricCardProps = {
 
 function MetricCard({ icon: Icon, label, value, detail }: MetricCardProps) {
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">{label}</p>

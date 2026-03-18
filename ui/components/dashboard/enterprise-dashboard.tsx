@@ -377,7 +377,7 @@ export function EnterpriseDashboard() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                <span className="rounded-full border border-slate-200 px-3 py-1 font-medium">Dashboard</span>
+                <span className="font-medium text-slate-700">Dashboard</span>
                 <span>Enterprise view</span>
                 {data?.fetchedAt ? <span>Updated {formatDateTime(data.fetchedAt)}</span> : null}
               </div>
@@ -453,7 +453,7 @@ export function EnterpriseDashboard() {
                             <p className="truncate text-sm font-medium text-slate-900">{item.primary}</p>
                             <p className="truncate text-sm text-slate-500">{item.secondary}</p>
                           </div>
-                          <span className="whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                          <span className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                             {item.meta}
                           </span>
                         </li>

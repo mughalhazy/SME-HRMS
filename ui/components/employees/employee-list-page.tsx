@@ -82,7 +82,7 @@ export function EmployeeListPage() {
         title="Directory with search, filters, and fast paging"
         description={
           <>
-            Built on the canonical <code className="rounded bg-slate-100 px-1 py-0.5">employee_directory_view</code>
+            Built on the canonical <code className="rounded bg-slate-100 px-1 py-0.5">Employee Directory</code>
             read model with cursor-based loading for larger tables.
           </>
         }

@@ -68,7 +68,7 @@ export function LeaveRequestsPage() {
         title="Keep approvals clear, fast, and low-risk"
         description={
           <>
-            This surface is aligned to <code className="rounded bg-slate-100 px-1 py-0.5">leave_requests_view</code> with the approval queue,
+            This surface is aligned to <code className="rounded bg-slate-100 px-1 py-0.5">Leave</code> with the approval queue,
             department context, and coverage clarity surfaced first.
           </>
         }
@@ -100,7 +100,7 @@ export function LeaveRequestsPage() {
             <SectionHeading
               title="Approval queue"
               description="Most urgent requests stay at the top with department and approver context visible."
-              badge={<span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Canonical surface: leave_requests</span>}
+              badge={<span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Canonical surface: Leave</span>}
             />
 
             {leaveRows.length === 0 ? (
