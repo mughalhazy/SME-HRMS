@@ -84,3 +84,39 @@ export function validationMiddleware<T>(
     }
   };
 }
+
+
+function getBodySizeBytes(body: unknown): number {
+  if (body === undefined || body === null) {
+    return 0;
+  }
+
+  return Buffer.byteLength(JSON.stringify(body), 'utf8');
+}
+
+export function createPayloadLimitMiddleware(maxBytes: number): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const contentLength = Number(req.headers['content-length'] ?? 0);
+    const measuredBodySize = getBodySizeBytes(req.body);
+    const actualSize = Math.max(Number.isFinite(contentLength) ? contentLength : 0, measuredBodySize);
+
+    if (actualSize > maxBytes) {
+      res.status(413).json({
+        error: {
+          code: 'PAYLOAD_TOO_LARGE',
+          message: 'Request payload exceeds the allowed size.',
+          details: [
+            {
+              field: 'body',
+              reason: `must not exceed ${maxBytes} bytes`,
+            },
+          ],
+          traceId: getTraceId(req),
+        },
+      });
+      return;
+    }
+
+    next();
+  };
+}

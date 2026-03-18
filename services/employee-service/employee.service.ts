@@ -50,7 +50,7 @@ export class EmployeeService {
     return employee;
   }
 
-  listEmployees(filters: EmployeeFilters): Employee[] {
+  listEmployees(filters: EmployeeFilters) {
     return this.repository.list(filters);
   }
 

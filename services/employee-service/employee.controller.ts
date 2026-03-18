@@ -77,48 +77,59 @@ export class EmployeeController {
   };
 
   listEmployees = (req: Request, res: Response): void => {
-    const auth = getAuth(req);
-    const status = req.query.status;
+    try {
+      const auth = getAuth(req);
+      const status = req.query.status;
 
-    if (status && typeof status === 'string' && !EMPLOYEE_STATUSES.includes(status as never)) {
-      sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
-        { field: 'status', reason: `must be one of: ${EMPLOYEE_STATUSES.join(', ')}` },
-      ]);
-      return;
-    }
+      if (status && typeof status === 'string' && !EMPLOYEE_STATUSES.includes(status as never)) {
+        sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
+          { field: 'status', reason: `must be one of: ${EMPLOYEE_STATUSES.join(', ')}` },
+        ]);
+        return;
+      }
 
-    const rawLimit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 25;
-    if (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 100) {
-      sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
-        { field: 'limit', reason: 'must be an integer between 1 and 100' },
-      ]);
-      return;
-    }
+      const rawLimit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
+      if (rawLimit !== undefined && (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 100)) {
+        sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
+          { field: 'limit', reason: 'must be an integer between 1 and 100' },
+        ]);
+        return;
+      }
 
-    let departmentFilter = typeof req.query.department_id === 'string' ? req.query.department_id : undefined;
-    if (auth.role === 'Employee') {
-      departmentFilter = undefined;
-    }
-    if (auth.role === 'Manager' && auth.department_id) {
-      departmentFilter = auth.department_id;
-    }
+      const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+      let departmentFilter = typeof req.query.department_id === 'string' ? req.query.department_id : undefined;
+      let employeeFilter: string | undefined;
+      if (auth.role === 'Employee') {
+        departmentFilter = undefined;
+        employeeFilter = auth.employee_id;
+      }
+      if (auth.role === 'Manager' && auth.department_id) {
+        departmentFilter = auth.department_id;
+      }
 
-    const employees = this.employeeService
-      .listEmployees({
+      const page = this.employeeService.listEmployees({
+        employee_id: employeeFilter,
         department_id: departmentFilter,
         status: typeof status === 'string' ? (status as never) : undefined,
-      })
-      .filter((employee) => auth.role !== 'Employee' || auth.employee_id === employee.employee_id)
-      .slice(0, rawLimit);
-
-    res.status(200).json({
-      data: employees,
-      page: {
-        nextCursor: null,
-        hasNext: false,
         limit: rawLimit,
-      },
-    });
+        cursor,
+      });
+
+      const employees = page.data;
+      const hasNext = page.page.hasNext;
+      const nextCursor = page.page.nextCursor;
+
+      res.status(200).json({
+        data: employees,
+        page: {
+          nextCursor,
+          hasNext,
+          limit: page.page.limit,
+        },
+      });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
   };
 
   updateEmployee = (req: Request, res: Response): void => {
@@ -199,6 +210,25 @@ export class EmployeeController {
   private handleError(req: Request, res: Response, error: unknown): void {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') {
       sendError(req, res, 401, 'TOKEN_INVALID', 'Missing or invalid bearer token');
+      return;
+    }
+
+    if (error instanceof Error && error.message === 'INVALID_CURSOR') {
+      sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
+        { field: 'cursor', reason: 'must be a valid opaque cursor' },
+      ]);
+      return;
+    }
+
+    if (error instanceof Error && error.message === 'INVALID_PAGINATION_LIMIT') {
+      sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
+        { field: 'limit', reason: 'must be an integer between 1 and 100' },
+      ]);
+      return;
+    }
+
+    if (error instanceof Error && error.message === 'DB_CONNECTION_POOL_EXHAUSTED') {
+      sendError(req, res, 503, 'SERVICE_UNAVAILABLE', 'Temporary database overload. Please retry later.');
       return;
     }
 

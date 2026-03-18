@@ -47,6 +47,9 @@ export interface UpdateEmployeeInput {
 }
 
 export interface EmployeeFilters {
+  employee_id?: string;
   department_id?: string;
   status?: EmployeeStatus;
+  limit?: number;
+  cursor?: string;
 }
