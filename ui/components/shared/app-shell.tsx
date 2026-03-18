@@ -22,6 +22,25 @@ const navIcons = {
   performance_reviews: Sparkles,
 }
 
+const navigationSections = [
+  {
+    title: 'Overview',
+    items: ['dashboard'],
+  },
+  {
+    title: 'People',
+    items: ['employee_list', 'employee_profile'],
+  },
+  {
+    title: 'Operations',
+    items: ['attendance_dashboard', 'leave_requests', 'payroll_dashboard'],
+  },
+  {
+    title: 'Talent',
+    items: ['job_postings', 'candidate_pipeline', 'performance_reviews'],
+  },
+] as const
+
 function isPathActive(currentPath: string | undefined, href: string) {
   if (!currentPath) {
     return false
@@ -61,6 +80,19 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
 
   const activeItem = useMemo(() => navigationItems.find((item) => isPathActive(activePath, item.href)) ?? navigationItems[0], [activePath])
 
+  const groupedNavigation = useMemo(
+    () =>
+      navigationSections
+        .map((section) => ({
+          title: section.title,
+          items: section.items
+            .map((key) => navigationItems.find((item) => item.key === key))
+            .filter((item): item is (typeof navigationItems)[number] => Boolean(item)),
+        }))
+        .filter((section) => section.items.length > 0),
+    [],
+  )
+
   const onNavigationStart = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (!shouldHandleNavigation(event, href, routePathname)) {
       return
@@ -79,13 +111,13 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
         )}
       />
 
-      <div className="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="border-b border-slate-200 bg-slate-100 px-5 py-5 xl:border-b-0 xl:border-r xl:px-5 xl:py-6">
+      <div className="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 xl:grid-cols-[252px_minmax(0,1fr)]">
+        <aside className="border-b border-gray-200 bg-white px-4 py-5 xl:border-b-0 xl:border-r xl:px-4 xl:py-6">
           <div className="space-y-6">
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <Badge variant="success" className="w-fit">Enterprise UI</Badge>
-              <Link href="/" onClick={onNavigationStart('/')} className="group flex items-center gap-3 text-slate-950 transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]">
-                <span className="rounded-xl bg-slate-950 p-2.5 text-white shadow-sm transition-transform duration-150 group-hover:scale-[1.02] group-active:scale-[0.98]">
+              <Link href="/" onClick={onNavigationStart('/')} className="group flex items-center gap-3 text-slate-950 transition-colors duration-150 hover:text-black">
+                <span className="rounded-lg border border-gray-200 bg-gray-50 p-2 text-slate-700 transition-colors duration-150 group-hover:bg-gray-100 group-hover:text-slate-900">
                   <BriefcaseBusiness className="h-5 w-5" />
                 </span>
                 <div>
@@ -98,38 +130,43 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
               </p>
             </div>
 
-            <nav aria-label="Primary navigation" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-              {navigationItems.map((item) => {
-                const Icon = navIcons[item.key]
-                const active = isPathActive(activePath, item.href)
-                const isPending = pendingHref === item.href
+            <nav aria-label="Primary navigation" className="space-y-1">
+              {groupedNavigation.map((section, sectionIndex) => (
+                <div key={section.title} className={cn(sectionIndex > 0 && 'mt-6')}>
+                  <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{section.title}</p>
+                  <div className="space-y-1">
+                    {section.items.map((item) => {
+                      const Icon = navIcons[item.key]
+                      const active = isPathActive(activePath, item.href)
+                      const isPending = pendingHref === item.href
 
-                return (
-                  <Link
-                    key={item.key}
-                    href={item.href}
-                    onClick={onNavigationStart(item.href)}
-                    aria-busy={isPending}
-                    className={cn(
-                      'flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-150 ease-out hover:-translate-y-px active:translate-y-0 active:scale-[0.99]',
-                      active
-                        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-100',
-                      isPending && 'opacity-85',
-                    )}
-                  >
-                    <span className={cn('mt-0.5 rounded-xl p-2 transition-transform duration-150', active ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-700')}>
-                      {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
-                    </span>
-                    <span className="min-w-0 space-y-1">
-                      <span className="block text-sm font-semibold">{item.label}</span>
-                      <span className={cn('block text-xs leading-5', active ? 'text-slate-200' : 'text-slate-500')}>
-                        {isPending ? 'Opening…' : item.description}
-                      </span>
-                    </span>
-                  </Link>
-                )
-              })}
+                      return (
+                        <Link
+                          key={item.key}
+                          href={item.href}
+                          onClick={onNavigationStart(item.href)}
+                          aria-busy={isPending}
+                          className={cn(
+                            'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-[background-color,color,opacity] duration-150 ease-out',
+                            active ? 'bg-gray-200 font-semibold text-black' : 'font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900',
+                            isPending && 'opacity-85',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'flex h-4 w-4 shrink-0 items-center justify-center',
+                              active ? 'text-gray-900' : 'text-gray-500',
+                            )}
+                          >
+                            {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </nav>
           </div>
         </aside>
