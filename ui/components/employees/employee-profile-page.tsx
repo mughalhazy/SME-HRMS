@@ -45,6 +45,10 @@ export function EmployeeProfilePage({ employeeId }: { employeeId: string }) {
     return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-sm text-rose-600">{query.error.message}</div>
   }
 
+  if (!query.data) {
+    return null
+  }
+
   const employee = query.data.data
 
   return (
