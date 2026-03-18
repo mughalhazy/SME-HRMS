@@ -1,40 +1,40 @@
+'use client'
+
 import type { ComponentType } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BriefcaseBusiness, CircleGauge, Users } from 'lucide-react'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowRight, BriefcaseBusiness, CircleGauge, LoaderCircle, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { apiRequest } from '@/lib/api/client'
 
-const jobs = [
-  {
-    jobPostingId: 'job-204',
-    title: 'Frontend Engineer',
-    departmentId: 'dep-eng',
-    employmentType: 'FullTime',
-    status: 'Open',
-    openings: 2,
-    postingDate: '2026-03-12',
-  },
-  {
-    jobPostingId: 'job-205',
-    title: 'People Operations Manager',
-    departmentId: 'dep-hr',
-    employmentType: 'FullTime',
-    status: 'Open',
-    openings: 1,
-    postingDate: '2026-03-14',
-  },
-  {
-    jobPostingId: 'job-198',
-    title: 'Payroll Analyst',
-    departmentId: 'dep-fin',
-    employmentType: 'Contract',
-    status: 'OnHold',
-    openings: 1,
-    postingDate: '2026-03-01',
-  },
-]
+type JobRow = {
+  job_posting_id: string
+  title: string
+  department_id: string
+  employment_type: string
+  status: string
+  openings_count: number
+  posting_date: string
+}
 
 export function JobPostingsPage() {
+  const query = useQuery({
+    queryKey: ['job-postings'],
+    queryFn: () => apiRequest<{ data: JobRow[] }>('/api/v1/hiring/job-postings?limit=20'),
+  })
+
+  const jobs = query.data?.data ?? []
+  const metrics = useMemo(
+    () => ({
+      openPostings: jobs.filter((job) => job.status === 'Open').length,
+      totalOpenings: jobs.reduce((sum, job) => sum + job.openings_count, 0),
+      onHold: jobs.filter((job) => job.status === 'OnHold').length,
+    }),
+    [jobs],
+  )
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -56,29 +56,37 @@ export function JobPostingsPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <SignalCard title="Open postings" value="2" hint="Ready for sourcing" icon={BriefcaseBusiness} />
-        <SignalCard title="Total openings" value="4" hint="Across all active requisitions" icon={Users} />
-        <SignalCard title="On-hold roles" value="1" hint="Requires staffing decision" icon={CircleGauge} />
+        <SignalCard title="Open postings" value={String(metrics.openPostings)} hint="Ready for sourcing" icon={BriefcaseBusiness} />
+        <SignalCard title="Total openings" value={String(metrics.totalOpenings)} hint="Across all active requisitions" icon={Users} />
+        <SignalCard title="On-hold roles" value={String(metrics.onHold)} hint="Requires staffing decision" icon={CircleGauge} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-3">
-        {jobs.map((job) => (
-          <article key={job.jobPostingId} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${job.status === 'Open' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                {job.status}
-              </span>
-              <span className="text-xs font-medium text-slate-500">{job.jobPostingId}</span>
-            </div>
-            <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{job.title}</h3>
-            <dl className="mt-4 grid gap-3 text-sm text-slate-600">
-              <div className="flex items-center justify-between gap-4"><dt>Department</dt><dd>{job.departmentId}</dd></div>
-              <div className="flex items-center justify-between gap-4"><dt>Employment type</dt><dd>{job.employmentType}</dd></div>
-              <div className="flex items-center justify-between gap-4"><dt>Openings</dt><dd>{job.openings}</dd></div>
-              <div className="flex items-center justify-between gap-4"><dt>Posting date</dt><dd>{job.postingDate}</dd></div>
-            </dl>
-          </article>
-        ))}
+        {query.isLoading ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm inline-flex items-center gap-2">
+            <LoaderCircle className="h-4 w-4 animate-spin" /> Loading job postings…
+          </div>
+        ) : query.isError ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 text-sm text-rose-600 shadow-sm">{query.error.message}</div>
+        ) : (
+          jobs.map((job) => (
+            <article key={job.job_posting_id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${job.status === 'Open' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {job.status}
+                </span>
+                <span className="text-xs font-medium text-slate-500">{job.job_posting_id}</span>
+              </div>
+              <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{job.title}</h3>
+              <dl className="mt-4 grid gap-3 text-sm text-slate-600">
+                <div className="flex items-center justify-between gap-4"><dt>Department</dt><dd>{job.department_id}</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt>Employment type</dt><dd>{job.employment_type}</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt>Openings</dt><dd>{job.openings_count}</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt>Posting date</dt><dd>{job.posting_date}</dd></div>
+              </dl>
+            </article>
+          ))
+        )}
       </section>
     </div>
   )
@@ -87,7 +95,7 @@ export function JobPostingsPage() {
 function SignalCard({ title, value, hint, icon: Icon }: { title: string; value: string; hint: string; icon: ComponentType<{ className?: string }> }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="rounded-2xl bg-slate-100 p-2 text-slate-700 w-fit">
+      <div className="w-fit rounded-2xl bg-slate-100 p-2 text-slate-700">
         <Icon className="h-4 w-4" />
       </div>
       <p className="mt-4 text-sm font-medium text-slate-500">{title}</p>

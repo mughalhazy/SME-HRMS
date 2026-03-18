@@ -1,4 +1,5 @@
-import { apiRequest, ApiError } from '@/lib/api/client'
+import { apiRequest, ApiError, USE_MOCK } from '@/lib/api/client'
+import { getMockDb } from '@/lib/api/mock/shared'
 
 const env = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env
 
@@ -224,6 +225,15 @@ function normalizePayrollRecord(record: Record<string, unknown>): PayrollRecord 
 }
 
 export function getEmployeeOptions() {
+  if (USE_MOCK) {
+    return getMockDb().employees.map((employee) => ({
+      id: employee.employee_id,
+      number: employee.employee_number,
+      name: employee.full_name,
+      department: employee.department_name,
+    }))
+  }
+
   return EMPLOYEES
 }
 
