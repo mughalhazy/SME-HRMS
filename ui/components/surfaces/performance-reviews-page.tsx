@@ -49,7 +49,7 @@ export function PerformanceReviewsPage() {
         <StatCard title="Goal alignment" value="94%" hint="Cycle tracking on course" icon={Target} />
       </PageGrid>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <SectionHeading title="Review queue" description="One row per review with reviewer, department, period, and rating context." />
         <Table>
           <TableHeader>

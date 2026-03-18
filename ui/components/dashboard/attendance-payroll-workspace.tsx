@@ -95,7 +95,7 @@ function SurfaceCard({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]">
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <div className="mb-2 inline-flex rounded-full bg-slate-100 p-2 text-slate-700">
@@ -112,7 +112,7 @@ function SurfaceCard({
 
 function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4">
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
       <p className="mt-1 text-sm text-slate-600">{hint}</p>

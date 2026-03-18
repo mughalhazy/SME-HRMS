@@ -3,7 +3,7 @@ import type { ComponentType, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export function PageStack({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex flex-col gap-6', className)} {...props} />
+  return <div className={cn('flex flex-col gap-8', className)} {...props} />
 }
 
 export function PageGrid({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -26,7 +26,7 @@ export function PageHero({
   className?: string
 }) {
   return (
-    <section className={cn('border-b border-slate-200 pb-4', className)}>
+    <section className={cn('border-b border-slate-200 pb-6', className)}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{eyebrow}</p>
@@ -54,8 +54,8 @@ export function StatCard({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]', className)}>
-      <div className="w-fit rounded-xl bg-slate-100 p-2 text-slate-700">
+    <div className={cn('rounded-lg border border-slate-200 bg-white p-4 shadow-sm', className)}>
+      <div className="w-fit rounded-lg bg-slate-100 p-2 text-slate-700">
         <Icon className="h-4 w-4" />
       </div>
       <p className="mt-3 text-sm font-medium text-slate-500">{title}</p>
@@ -75,7 +75,7 @@ export function SectionHeading({
   badge?: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h3 className="font-semibold text-slate-950">{title}</h3>
         <div className="text-sm text-slate-600">{description}</div>

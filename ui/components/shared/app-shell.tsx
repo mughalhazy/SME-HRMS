@@ -80,7 +80,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
       />
 
       <div className="mx-auto grid min-h-screen max-w-screen-2xl grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="border-b border-slate-200 bg-white px-5 py-5 xl:border-b-0 xl:border-r xl:px-5 xl:py-6">
+        <aside className="border-b border-slate-200 bg-slate-100 px-5 py-5 xl:border-b-0 xl:border-r xl:px-5 xl:py-6">
           <div className="space-y-6">
             <div className="space-y-2.5">
               <Badge variant="success" className="w-fit">Enterprise UI</Badge>
@@ -135,7 +135,7 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
         </aside>
 
         <div className="flex min-w-0 flex-col">
-          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white backdrop-blur">
             <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 lg:px-7">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
@@ -187,8 +187,12 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
             </div>
           </header>
 
-          <main key={routePathname} className="mx-auto flex w-full max-w-7xl flex-1 animate-[page-enter_180ms_ease-out] flex-col gap-6 px-6 py-6">
-            {children}
+          <main key={routePathname} className="flex-1 px-4 py-6 sm:px-6 lg:px-7">
+            <div className="mx-auto flex w-full max-w-7xl animate-[page-enter_180ms_ease-out] flex-col">
+              <div className="flex flex-1 flex-col gap-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                {children}
+              </div>
+            </div>
           </main>
         </div>
       </div>
