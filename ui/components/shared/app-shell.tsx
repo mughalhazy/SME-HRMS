@@ -197,22 +197,25 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-0.5">
+            </div>
+          </header>
+
+          <div className="border-b border-gray-200 bg-white px-6 lg:px-7">
+            <div className="mx-auto flex w-full max-w-7xl overflow-x-auto">
+              <nav aria-label="Secondary navigation" className="flex min-w-max items-center gap-6">
                 {navigationItems.map((item) => {
                   const active = isPathActive(activePath, item.href)
                   const isPending = pendingHref === item.href
 
                   return (
                     <Link
-                      key={`${item.key}-chip`}
+                      key={`${item.key}-tab`}
                       href={item.href}
                       onClick={onNavigationStart(item.href)}
                       aria-busy={isPending}
                       className={cn(
-                        'inline-flex whitespace-nowrap rounded-full border px-3 py-1 text-sm font-medium transition-[background-color,border-color,color,transform,opacity] duration-150 ease-out hover:-translate-y-px active:translate-y-0 active:scale-[0.98]',
-                        active
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950',
+                        'inline-flex whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm text-gray-600 transition-[border-color,color,opacity] duration-150 ease-out hover:bg-transparent hover:text-gray-900',
+                        active && 'border-black text-black',
                         isPending && 'opacity-85',
                       )}
                     >
@@ -220,9 +223,9 @@ export function AppShell({ children, currentPath = '/' }: { children: ReactNode;
                     </Link>
                   )
                 })}
-              </div>
+              </nav>
             </div>
-          </header>
+          </div>
 
           <main key={routePathname} className="flex-1 px-4 py-6 sm:px-6 lg:px-7">
             <div className="mx-auto flex w-full max-w-7xl animate-[page-enter_180ms_ease-out] flex-col">
