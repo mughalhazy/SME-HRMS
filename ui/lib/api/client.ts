@@ -13,32 +13,37 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+type ApiRequestOptions = RequestInit & {
+  headers?: HeadersInit
+}
+
+export function buildApiUrl(path: string) {
+  return `${API_BASE_URL}${path}`
+}
+
+export function buildHeaders({ token, headers }: { token?: string; headers?: HeadersInit } = {}): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(headers ?? {}),
+  }
+}
+
+export async function apiRequest<T>(path: string, init?: ApiRequestOptions): Promise<T> {
+  const response = await fetch(buildApiUrl(path), {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers: buildHeaders({ headers: init?.headers }),
   })
 
   const text = await response.text()
-  let payload: unknown = null
-
-  if (text) {
-    try {
-      payload = JSON.parse(text) as unknown
-    } catch {
-      payload = text
-    }
-  }
 
   if (!response.ok) {
-    throw new ApiError(`API request failed with status ${response.status}`, {
-      status: response.status,
-      payload,
-    })
+    throw new Error(text || `API request failed with status ${response.status}`)
   }
 
-  return payload as T
+  if (!text) {
+    return undefined as T
+  }
+
+  return JSON.parse(text) as T
 }
