@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import { HealthController } from '../../health/health.controller';
+import { createLoggerMiddleware } from '../../middleware/logger';
+import { requestIdMiddleware } from '../../middleware/request-id';
+import { createMetricsMiddleware } from '../../metrics/metrics';
 import { EmployeeController } from './employee.controller';
 import { EmployeeRepository } from './employee.repository';
 import { EmployeeService } from './employee.service';
@@ -8,8 +12,17 @@ export function createEmployeeRouter(): Router {
   const repository = new EmployeeRepository();
   const service = new EmployeeService(repository);
   const controller = new EmployeeController(service);
+  const healthController = new HealthController('employee-service');
 
   const router = Router();
+
+  router.use(requestIdMiddleware);
+  router.use(createLoggerMiddleware('employee-service'));
+  router.use(createMetricsMiddleware('employee-service'));
+
+  router.get('/health', healthController.getHealth);
+  router.get('/ready', healthController.getReady);
+  router.get('/metrics', healthController.getMetrics);
 
   router.use('/api/v1/employees', authenticate);
 

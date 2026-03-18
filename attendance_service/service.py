@@ -12,6 +12,7 @@ from attendance_service.models import (
     AttendanceStatus,
     RecordState,
 )
+from resilience import Observability
 
 
 class AttendanceServiceError(Exception):
@@ -61,6 +62,7 @@ class AttendanceService:
         self._records: Dict[UUID, AttendanceRecord] = {}
         self._employee_date_index: Dict[tuple[UUID, date], UUID] = {}
         self.events: List[dict] = []
+        self.observability = Observability("attendance-service")
 
     def create_record(
         self,
@@ -109,6 +111,10 @@ class AttendanceService:
                 "attendance_date": record.attendance_date.isoformat(),
             }
         )
+        self.observability.logger.info(
+            "attendance.captured",
+            context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
+        )
 
         self._auto_validate(record)
         return record
@@ -137,6 +143,10 @@ class AttendanceService:
         record.recalculate_total_hours()
         record.lifecycle_state = RecordState.CAPTURED
         self._auto_validate(record)
+        self.observability.logger.info(
+            "attendance.updated",
+            context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
+        )
         return record
 
     def approve_record(self, actor: Actor, attendance_id: UUID) -> AttendanceRecord:
@@ -149,6 +159,10 @@ class AttendanceService:
         record.lifecycle_state = RecordState.APPROVED
         record.updated_at = datetime.utcnow()
         self.events.append({"type": "AttendanceApproved", "attendance_id": str(record.attendance_id)})
+        self.observability.logger.info(
+            "attendance.approved",
+            context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
+        )
         return record
 
     def get_record(self, actor: Actor, attendance_id: UUID) -> AttendanceRecord:
@@ -201,6 +215,10 @@ class AttendanceService:
                 "to": to_date.isoformat(),
             }
         )
+        self.observability.logger.info(
+            "attendance.period_locked",
+            context={"period_id": period_id, "locked_count": len(locked_ids)},
+        )
         return {"periodId": period_id, "lockedCount": len(locked_ids)}
 
     def get_summary(self, actor: Actor, *, employee_id: UUID, period_start: date, period_end: date) -> dict:
@@ -251,11 +269,23 @@ class AttendanceService:
                 "count": len(alert_records),
             }
         )
+        self.observability.logger.info(
+            "attendance.absence_alerts_generated",
+            context={"attendance_date": attendance_date.isoformat(), "count": len(alert_records)},
+        )
         return {
             "attendanceDate": attendance_date.isoformat(),
             "alerts": alert_records,
             "count": len(alert_records),
         }
+
+    def health_snapshot(self) -> dict:
+        return self.observability.health_status(
+            checks={
+                "employee_directory": self._employee_directory.__class__.__name__,
+                "records": len(self._records),
+            }
+        )
 
     def _get_record(self, attendance_id: UUID) -> AttendanceRecord:
         record = self._records.get(attendance_id)

@@ -1,5 +1,6 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
+import { getRequestId } from '../../middleware/request-id';
 
 export type AuthRole = 'Admin' | 'Manager' | 'Employee';
 
@@ -33,11 +34,7 @@ if (!TOKEN_SECRET || TOKEN_SECRET.length < 32) {
 }
 
 function getTraceId(req: Request): string {
-  const incomingTraceId = req.headers['x-trace-id'];
-  if (typeof incomingTraceId === 'string' && incomingTraceId.length > 0) {
-    return incomingTraceId;
-  }
-  return randomUUID().replace(/-/g, '').slice(0, 16);
+  return req.traceId ?? getRequestId(req);
 }
 
 function sendError(req: Request, res: Response, status: number, code: string, message: string): void {

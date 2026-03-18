@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Callable, TypeVar
@@ -12,6 +13,134 @@ from uuid import uuid4
 LOGGER = logging.getLogger("sme_hrms.resilience")
 
 T = TypeVar("T")
+
+
+def new_trace_id() -> str:
+    return uuid4().hex
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class StructuredLogger:
+    def __init__(self, service_name: str):
+        self.service_name = service_name
+        self.records: list[dict[str, Any]] = []
+
+    def log(
+        self,
+        level: str,
+        event: str,
+        *,
+        trace_id: str | None = None,
+        message: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        record = {
+            "timestamp": utc_now().isoformat(),
+            "level": level.upper(),
+            "service": self.service_name,
+            "event": event,
+            "trace_id": trace_id or new_trace_id(),
+            "message": message or event,
+            "context": context or {},
+        }
+        self.records.append(record)
+        LOGGER.log(getattr(logging, record["level"], logging.INFO), json.dumps(record, sort_keys=True))
+        return record
+
+    def info(self, event: str, *, trace_id: str | None = None, message: str | None = None, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self.log("INFO", event, trace_id=trace_id, message=message, context=context)
+
+    def error(self, event: str, *, trace_id: str | None = None, message: str | None = None, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self.log("ERROR", event, trace_id=trace_id, message=message, context=context)
+
+    def audit(self, action: str, *, trace_id: str | None = None, actor: str | None = None, entity: str | None = None, entity_id: str | None = None, outcome: str = "success", context: dict[str, Any] | None = None) -> dict[str, Any]:
+        audit_context = {"actor": actor, "entity": entity, "entity_id": entity_id, "outcome": outcome, **(context or {})}
+        return self.log("INFO", "audit", trace_id=trace_id, message=action, context=audit_context)
+
+
+@dataclass
+class RequestMetric:
+    trace_id: str
+    operation: str
+    latency_ms: float
+    success: bool
+    recorded_at: str
+    context: dict[str, Any] = field(default_factory=dict)
+
+
+class MetricsCollector:
+    def __init__(self, service_name: str):
+        self.service_name = service_name
+        self.request_count = 0
+        self.error_count = 0
+        self._latencies_ms: list[float] = []
+        self.request_metrics: list[RequestMetric] = []
+        self._lock = Lock()
+
+    def record_request(self, operation: str, *, trace_id: str, latency_ms: float, success: bool, context: dict[str, Any] | None = None) -> None:
+        with self._lock:
+            self.request_count += 1
+            if not success:
+                self.error_count += 1
+            self._latencies_ms.append(latency_ms)
+            self.request_metrics.append(
+                RequestMetric(
+                    trace_id=trace_id,
+                    operation=operation,
+                    latency_ms=round(latency_ms, 3),
+                    success=success,
+                    recorded_at=utc_now().isoformat(),
+                    context=context or {},
+                )
+            )
+
+    def snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            latency_avg = sum(self._latencies_ms) / len(self._latencies_ms) if self._latencies_ms else 0.0
+            latency_max = max(self._latencies_ms) if self._latencies_ms else 0.0
+            return {
+                "service": self.service_name,
+                "request_count": self.request_count,
+                "error_count": self.error_count,
+                "error_rate": round((self.error_count / self.request_count), 4) if self.request_count else 0.0,
+                "latency_ms": {
+                    "avg": round(latency_avg, 3),
+                    "max": round(latency_max, 3),
+                },
+                "recent_requests": [asdict(metric) for metric in self.request_metrics[-20:]],
+            }
+
+
+class Observability:
+    def __init__(self, service_name: str):
+        self.service_name = service_name
+        self.logger = StructuredLogger(service_name)
+        self.metrics = MetricsCollector(service_name)
+
+    def trace_id(self, incoming: str | None = None) -> str:
+        return incoming or new_trace_id()
+
+    def track(self, operation: str, *, trace_id: str, started_at: float, success: bool, context: dict[str, Any] | None = None) -> float:
+        latency_ms = (time.perf_counter() - started_at) * 1000
+        self.metrics.record_request(operation, trace_id=trace_id, latency_ms=latency_ms, success=success, context=context)
+        self.logger.info(
+            "request.completed",
+            trace_id=trace_id,
+            message=operation,
+            context={"success": success, "latency_ms": round(latency_ms, 3), **(context or {})},
+        )
+        return latency_ms
+
+    def health_status(self, *, checks: dict[str, Any] | None = None) -> dict[str, Any]:
+        return {
+            "service": self.service_name,
+            "status": "ok",
+            "checks": checks or {},
+            "metrics": self.metrics.snapshot(),
+        }
 
 
 class CircuitBreakerOpenError(RuntimeError):
@@ -37,27 +166,29 @@ class CentralErrorLogger:
     def __init__(self, service_name: str):
         self.service_name = service_name
         self.failures: list[LoggedFailure] = []
+        self.structured_logger = StructuredLogger(service_name)
 
     def log(self, operation: str, error: Exception, *, trace_id: str | None = None, details: dict[str, Any] | None = None) -> LoggedFailure:
-        trace = trace_id or uuid4().hex
+        trace = trace_id or new_trace_id()
         failure = LoggedFailure(
             service=self.service_name,
             operation=operation,
             error_type=type(error).__name__,
             message=str(error),
             trace_id=trace,
-            occurred_at=datetime.now(timezone.utc).isoformat(),
+            occurred_at=utc_now().isoformat(),
             details=details or {},
         )
         self.failures.append(failure)
-        LOGGER.error(
-            "service=%s operation=%s trace_id=%s error_type=%s message=%s details=%s",
-            failure.service,
-            failure.operation,
-            failure.trace_id,
-            failure.error_type,
-            failure.message,
-            failure.details,
+        self.structured_logger.error(
+            "error",
+            trace_id=trace,
+            message=operation,
+            context={
+                "error_type": failure.error_type,
+                "message": failure.message,
+                "details": failure.details,
+            },
         )
         return failure
 
@@ -86,8 +217,8 @@ class DeadLetterQueue:
             operation=operation,
             reason=reason,
             payload=payload,
-            trace_id=trace_id or uuid4().hex,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            trace_id=trace_id or new_trace_id(),
+            created_at=utc_now().isoformat(),
             retryable=retryable,
         )
         self.entries.append(entry)
@@ -99,7 +230,7 @@ class DeadLetterQueue:
             if entry.recovered_at is not None or not entry.retryable or not predicate(entry):
                 continue
             if retry(entry):
-                entry.recovered_at = datetime.now(timezone.utc).isoformat()
+                entry.recovered_at = utc_now().isoformat()
                 recovered.append(entry)
         return recovered
 

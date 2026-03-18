@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
 from datetime import date, datetime, timezone
+from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
-from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, run_with_retry
+from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, Observability, run_with_retry
 
 
 class HiringValidationError(ValueError):
@@ -101,12 +102,14 @@ class HiringService:
         self.events: list[dict[str, Any]] = []
         self.error_logger = CentralErrorLogger("hiring-service")
         self.dead_letters = DeadLetterQueue()
+        self.observability = Observability("hiring-service")
         self.integration_breakers = {
             "google-calendar": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
             "linkedin": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
         }
 
     def create_job_posting(self, payload: dict[str, Any]) -> dict[str, Any]:
+        started = perf_counter()
         self._require(payload, ["title", "department_id", "employment_type", "description", "openings_count", "posting_date"])
         self._validate_value(payload["employment_type"], self.EMPLOYMENT_TYPES, "employment_type")
         if payload["openings_count"] < 1:
@@ -138,6 +141,7 @@ class HiringService:
         self.job_postings[job_posting.job_posting_id] = job_posting
         if status == "Open":
             self._emit("JobPostingOpened", {"job_posting_id": job_posting.job_posting_id})
+        self.observability.track("create_job_posting", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "job_posting_id": job_posting.job_posting_id})
         return self._serialize(job_posting)
 
     def update_job_posting(self, job_posting_id: str, patch: dict[str, Any]) -> dict[str, Any]:
@@ -194,6 +198,7 @@ class HiringService:
         return [self._serialize(x) for x in rows]
 
     def create_candidate(self, payload: dict[str, Any]) -> dict[str, Any]:
+        started = perf_counter()
         self._require(payload, ["job_posting_id", "first_name", "last_name", "email", "application_date"])
         posting = self._require_job_posting(payload["job_posting_id"])
         if posting.status not in {"Open", "OnHold"}:
@@ -227,7 +232,17 @@ class HiringService:
         self._validate_value(candidate.status, self.CANDIDATE_STATUSES, "status")
         self.candidates[candidate.candidate_id] = candidate
         self._emit("CandidateApplied", {"candidate_id": candidate.candidate_id, "job_posting_id": candidate.job_posting_id})
+        self.observability.track("create_candidate", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "candidate_id": candidate.candidate_id})
         return self._serialize(candidate)
+
+    def health_snapshot(self) -> dict[str, Any]:
+        return self.observability.health_status(
+            checks={
+                "job_postings": len(self.job_postings),
+                "candidates": len(self.candidates),
+                "interviews": len(self.interviews),
+            }
+        )
 
     def update_candidate(self, candidate_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import date, datetime
+from time import perf_counter
 from typing import Any, Callable, Dict
 from uuid import UUID
 
 from attendance_service.models import AttendanceSource, AttendanceStatus
 from attendance_service.service import Actor, AttendanceService, AttendanceServiceError
+from resilience import new_trace_id
 
 
 def _parse_date(raw: str) -> date:
@@ -30,9 +32,14 @@ def error_envelope(trace_id: str, exc: AttendanceServiceError) -> dict:
 
 def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[..., tuple[int, dict]]:
     def wrapped(*args: Any, **kwargs: Any) -> tuple[int, dict]:
-        trace_id = kwargs.pop("trace_id", "generated-trace-id")
+        trace_id = kwargs.pop("trace_id", None) or new_trace_id()
+        service = args[0]
+        operation = getattr(handler, "__name__", "attendance.operation")
+        started = perf_counter()
         try:
-            return handler(*args, **kwargs)
+            status, payload = handler(*args, **kwargs)
+            service.observability.track(operation, trace_id=trace_id, started_at=started, success=True, context={"status": status})
+            return status, payload
         except AttendanceServiceError as exc:
             status_map = {
                 "FORBIDDEN": 403,
@@ -43,8 +50,22 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
                 "LOCK_REQUIRES_APPROVAL": 409,
             }
             status = status_map.get(exc.code, 422)
+            service.observability.logger.error(
+                "attendance.error",
+                trace_id=trace_id,
+                message=operation,
+                context={"code": exc.code, "details": exc.details},
+            )
+            service.observability.track(operation, trace_id=trace_id, started_at=started, success=False, context={"status": status, "code": exc.code})
             return status, error_envelope(trace_id, exc)
         except ValueError:
+            service.observability.logger.error(
+                "attendance.validation_error",
+                trace_id=trace_id,
+                message=operation,
+                context={},
+            )
+            service.observability.track(operation, trace_id=trace_id, started_at=started, success=False, context={"status": 422, "code": "VALIDATION_ERROR"})
             return (
                 422,
                 {

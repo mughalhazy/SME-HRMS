@@ -47,3 +47,16 @@ def test_employee_cannot_approve():
         svc.decide_request("approve", "Employee", "emp-001", created["leave_request_id"])
     assert ex.value.status_code == 403
     assert ex.value.payload["error"]["code"] == "FORBIDDEN"
+
+
+def test_leave_observability_captures_metrics_and_audit_logs():
+    svc = LeaveService()
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 4, 1), date(2026, 4, 2), trace_id="trace-create")
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"], trace_id="trace-submit")
+    svc.decide_request("approve", "Manager", "emp-manager", created["leave_request_id"], trace_id="trace-approve")
+
+    metrics = svc.observability.metrics.snapshot()
+    assert metrics["request_count"] >= 3
+    assert metrics["error_rate"] == 0.0
+    assert any(record["trace_id"] == "trace-approve" and record["message"] == "leave_request_approve" for record in svc.observability.logger.records)
+    assert svc.health_snapshot()["status"] == "ok"

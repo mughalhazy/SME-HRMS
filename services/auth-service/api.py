@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from time import perf_counter
 from uuid import uuid4
 
 from service import AuthService, AuthServiceError
@@ -19,12 +20,15 @@ _ERROR_STATUS_BY_CODE = {
 
 def post_auth_login(service: AuthService, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
     trace_id = trace_id or uuid4().hex
+    started = perf_counter()
     if not isinstance(payload, dict):
+        service.observability.track("post_auth_login", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
         return _error_response("VALIDATION_ERROR", "Request body must be an object", trace_id=trace_id)
 
     username = payload.get("username")
     password = payload.get("password")
     if not isinstance(username, str) or not isinstance(password, str):
+        service.observability.track("post_auth_login", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
         return _error_response(
             "VALIDATION_ERROR",
             "username and password are required",
@@ -34,19 +38,25 @@ def post_auth_login(service: AuthService, payload: dict, trace_id: str | None = 
 
     try:
         token_payload = service.login(username=username, password=password)
+        service.observability.track("post_auth_login", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
         return 200, {"data": token_payload}
     except AuthServiceError as exc:
+        service.observability.logger.error("auth.login_failed", trace_id=trace_id, context={"code": exc.code, "details": exc.details, "username": username})
+        service.observability.track("post_auth_login", trace_id=trace_id, started_at=started, success=False, context={"status": _ERROR_STATUS_BY_CODE.get(exc.code, 400), "code": exc.code})
         return _error_response(exc.code, exc.message, details=exc.details, trace_id=trace_id)
 
 
 def get_auth_me(service: AuthService, authorization_header: str | None, trace_id: str | None = None) -> tuple[int, dict]:
     trace_id = trace_id or uuid4().hex
+    started = perf_counter()
     if not authorization_header or not authorization_header.startswith("Bearer "):
+        service.observability.track("get_auth_me", trace_id=trace_id, started_at=started, success=False, context={"status": 401, "code": "TOKEN_INVALID"})
         return _error_response("TOKEN_INVALID", "Missing bearer token", trace_id=trace_id)
 
     token = authorization_header.split(" ", 1)[1]
     try:
         principal = service.authenticate_token(token)
+        service.observability.track("get_auth_me", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "role": principal.role})
         return (
             200,
             {
@@ -59,6 +69,8 @@ def get_auth_me(service: AuthService, authorization_header: str | None, trace_id
             },
         )
     except AuthServiceError as exc:
+        service.observability.logger.error("auth.me_failed", trace_id=trace_id, context={"code": exc.code, "details": exc.details})
+        service.observability.track("get_auth_me", trace_id=trace_id, started_at=started, success=False, context={"status": _ERROR_STATUS_BY_CODE.get(exc.code, 400), "code": exc.code})
         return _error_response(exc.code, exc.message, details=exc.details, trace_id=trace_id)
 
 

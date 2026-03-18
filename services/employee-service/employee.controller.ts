@@ -4,6 +4,7 @@ import { ConflictError, EmployeeService, NotFoundError } from './employee.servic
 import { ValidationError } from './employee.validation';
 import { AuthContext } from './rbac.middleware';
 import { ApiError, sendApiError } from '../../middleware/error-handler';
+import { getStructuredLogger } from '../../middleware/logger';
 
 function sendError(
   req: Request,
@@ -24,6 +25,8 @@ function getAuth(req: Request): AuthContext {
 }
 
 export class EmployeeController {
+  private readonly logger = getStructuredLogger('employee-service');
+
   constructor(private readonly employeeService: EmployeeService) {}
 
   private ensureManagerScope(req: Request, res: Response, auth: AuthContext, employeeId: string): boolean {
@@ -49,6 +52,11 @@ export class EmployeeController {
       }
 
       const employee = this.employeeService.createEmployee(req.body);
+      this.logger.audit('employee_created', req.traceId ?? 'missing-trace-id', {
+        actor: auth.employee_id ?? auth.role,
+        employee_id: employee.employee_id,
+        department_id: employee.department_id,
+      });
       res.status(201).json({ data: employee });
     } catch (error) {
       this.handleError(req, res, error);
@@ -120,6 +128,11 @@ export class EmployeeController {
         return;
       }
       const employee = this.employeeService.updateEmployee(req.params.employeeId, req.body);
+      this.logger.audit('employee_updated', req.traceId ?? 'missing-trace-id', {
+        actor: auth.employee_id ?? auth.role,
+        employee_id: employee.employee_id,
+        fields: Object.keys(req.body ?? {}).sort(),
+      });
       res.status(200).json({ data: employee });
     } catch (error) {
       this.handleError(req, res, error);
@@ -137,6 +150,11 @@ export class EmployeeController {
         return;
       }
       const employee = this.employeeService.assignDepartment(req.params.employeeId, req.body.department_id);
+      this.logger.audit('employee_department_assigned', req.traceId ?? 'missing-trace-id', {
+        actor: auth.employee_id ?? auth.role,
+        employee_id: employee.employee_id,
+        department_id: employee.department_id,
+      });
       res.status(200).json({ data: employee });
     } catch (error) {
       this.handleError(req, res, error);
@@ -150,6 +168,11 @@ export class EmployeeController {
         return;
       }
       const employee = this.employeeService.updateStatus(req.params.employeeId, req.body.status);
+      this.logger.audit('employee_status_updated', req.traceId ?? 'missing-trace-id', {
+        actor: auth.employee_id ?? auth.role,
+        employee_id: employee.employee_id,
+        status: employee.status,
+      });
       res.status(200).json({ data: employee });
     } catch (error) {
       this.handleError(req, res, error);
@@ -163,6 +186,10 @@ export class EmployeeController {
         return;
       }
       this.employeeService.deleteEmployee(req.params.employeeId);
+      this.logger.audit('employee_deleted', req.traceId ?? 'missing-trace-id', {
+        actor: auth.employee_id ?? auth.role,
+        employee_id: req.params.employeeId,
+      });
       res.status(204).send();
     } catch (error) {
       this.handleError(req, res, error);

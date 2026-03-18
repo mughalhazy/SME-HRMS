@@ -7,15 +7,15 @@ import socket
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
-from uuid import uuid4
 
-from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, run_with_retry
+from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, Observability, run_with_retry
 
 
 PORT = int(os.getenv("PORT", "8000"))
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(message)s")
 LOGGER = logging.getLogger("api-gateway")
 ERROR_LOGGER = CentralErrorLogger("api-gateway")
+OBSERVABILITY = Observability("api-gateway")
 
 ROUTES = {
     "employee-service": os.getenv("EMPLOYEE_SERVICE_URL", "http://employee-service:8001"),
@@ -73,10 +73,10 @@ def _check_service_health(service: str, url: str, trace_id: str) -> dict[str, ob
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         started = time.perf_counter()
-        trace_id = self.headers.get("X-Trace-Id", uuid4().hex)
+        trace_id = OBSERVABILITY.trace_id(self.headers.get("X-Trace-Id") or self.headers.get("X-Request-Id"))
         try:
             if self.path == "/health":
-                self._send_json({"service": "api-gateway", "status": "ok", "routes": ROUTES, "traceId": trace_id})
+                self._send_json({"service": "api-gateway", "status": "ok", "routes": ROUTES, "traceId": trace_id, "metrics": OBSERVABILITY.metrics.snapshot()})
                 return
 
             if self.path == "/ready":
@@ -88,9 +88,11 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"service": "api-gateway", "message": "route placeholder", "traceId": trace_id})
         except Exception:  # noqa: BLE001
             LOGGER.exception("Unhandled gateway error path=%s trace_id=%s", self.path, trace_id)
+            OBSERVABILITY.logger.error("request.error", trace_id=trace_id, message=self.path, context={"method": "GET"})
             self._send_json(_error_payload("INTERNAL_SERVER_ERROR", "Unexpected server failure", trace_id), status=500)
         finally:
             duration_ms = int((time.perf_counter() - started) * 1000)
+            OBSERVABILITY.track("api_gateway_request", trace_id=trace_id, started_at=started, success=getattr(self, "_last_status", 500) < 500, context={"path": self.path, "method": "GET", "status": getattr(self, "_last_status", 500)})
             LOGGER.info("request path=%s method=GET status=%s duration_ms=%s trace_id=%s", self.path, getattr(self, "_last_status", 500), duration_ms, trace_id)
 
     def log_message(self, format: str, *args) -> None:
@@ -101,6 +103,8 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self.send_header("X-Trace-Id", str(payload.get("traceId", "")))
+        self.send_header("X-Request-Id", str(payload.get("traceId", "")))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Cache-Control", "no-store")
