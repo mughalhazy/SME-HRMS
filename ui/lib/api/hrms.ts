@@ -243,7 +243,7 @@ export async function fetchAttendanceRecords(params: { employeeId: string; from:
       syncSource: 'attendance-service',
     }
   } catch (error) {
-    if (!(error instanceof ApiError)) {
+    if (!(error instanceof ApiError) && !(error instanceof TypeError)) {
       throw error
     }
 
@@ -255,7 +255,7 @@ export async function fetchAttendanceRecords(params: { employeeId: string; from:
     return {
       records: filtered,
       syncMode: 'demo',
-      syncSource: `fallback (${error.status ?? 'offline'})`,
+      syncSource: `fallback (${error instanceof ApiError ? error.status ?? 'offline' : 'offline'})`,
     }
   }
 }
@@ -282,7 +282,7 @@ export async function fetchPayrollRecords(params: { periodStart: string; periodE
       syncSource: 'payroll-service',
     }
   } catch (error) {
-    if (!(error instanceof ApiError)) {
+    if (!(error instanceof ApiError) && !(error instanceof TypeError)) {
       throw error
     }
 
@@ -296,7 +296,7 @@ export async function fetchPayrollRecords(params: { periodStart: string; periodE
     return {
       records: filtered,
       syncMode: 'demo',
-      syncSource: `fallback (${error.status ?? 'offline'})`,
+      syncSource: `fallback (${error instanceof ApiError ? error.status ?? 'offline' : 'offline'})`,
     }
   }
 }

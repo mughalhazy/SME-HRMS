@@ -5,7 +5,7 @@ export default async function EmployeeProfileRoute({ params }: { params: Promise
   const { employeeId } = await params
 
   return (
-    <AppShell>
+    <AppShell currentPath="/employee-profile">
       <EmployeeProfilePage employeeId={employeeId} />
     </AppShell>
   )
