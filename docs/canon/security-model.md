@@ -25,7 +25,7 @@ This document defines canonical authentication, authorization, scope enforcement
 | `CAP-PAY-002` | Payroll disbursement completion | Allow | Deny | Deny | Deny | Allow | Scoped |
 | `CAP-HIR-001` | Job posting management | Allow | Allow (department postings) | Read | Allow | Deny | Scoped |
 | `CAP-HIR-002` | Candidate pipeline and interview management | Allow | Allow (assigned requisitions) | Deny | Allow | Deny | Scoped |
-| `CAP-PRF-001` | Performance review lifecycle | Allow | Allow (team reviews) | Read own + acknowledge | Deny | Deny | Scoped |
+| `CAP-PRF-001` | Performance review lifecycle | Allow | Allow (team reviews) | Read own | Deny | Deny | Scoped |
 | `CAP-AUT-001` | Identity and access administration | Allow | Deny | Deny | Deny | Deny | Scoped |
 | `CAP-NOT-001` | Notification template and delivery operations | Allow | Read (team-visible outcomes only) | Read own inbox/preferences | Deny | Read | Scoped |
 | `CAP-NOT-002` | Notification preference management | Allow | Manage own + delegated team defaults where allowed | Manage own | Manage own | Manage own | Scoped |
@@ -35,7 +35,7 @@ This document defines canonical authentication, authorization, scope enforcement
 | Module / Resource | Admin | Manager | Employee | Recruiter | PayrollAdmin | Service |
 |---|---|---|---|---|---|---|
 | Employee / Department / Role | CRUD | CRU (scoped) | R directory, U own profile | R | R limited | scoped API access |
-| PerformanceReview | CRUDA | CRUA (scoped) | R own, acknowledge | Deny | Deny | scoped API access |
+| PerformanceReview | CRU+submit/finalize | CRU+submit/finalize (scoped) | R own | Deny | Deny | scoped API access |
 | AttendanceRecord | CRUD | CRUA (scoped) | CRU own | Deny | R | scoped API access |
 | LeaveRequest | CRUDA | CRUA (scoped) | CRU own, submit | Deny | R | scoped API access |
 | PayrollRecord | CRUD | R policy-scoped | R own | Deny | CRUD | scoped API access |

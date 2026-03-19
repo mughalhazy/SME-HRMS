@@ -40,9 +40,9 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `PATCH /api/v1/roles/{role_id}`
 - `GET /api/v1/roles?status=&limit=&cursor=`
 - `POST /api/v1/performance-reviews`
+- `GET /api/v1/performance-reviews/{performance_review_id}`
 - `PATCH /api/v1/performance-reviews/{performance_review_id}`
 - `POST /api/v1/performance-reviews/{performance_review_id}/submit`
-- `POST /api/v1/performance-reviews/{performance_review_id}/acknowledge`
 - `POST /api/v1/performance-reviews/{performance_review_id}/finalize`
 - `GET /api/v1/performance-reviews?employee_id=&reviewer_employee_id=&status=&limit=&cursor=`
 
@@ -64,7 +64,6 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `RoleCreated`
 - `RoleUpdated`
 - `PerformanceReviewSubmitted`
-- `PerformanceReviewAcknowledged`
 - `PerformanceReviewFinalized`
 
 ### Subscribes

@@ -20,7 +20,7 @@ const reviewRows = [
     departmentName: 'Finance',
     reviewPeriod: '2026-01-01 → 2026-03-31',
     overallRating: 'Meets Expectations',
-    status: 'Acknowledged',
+    status: 'Finalized',
   },
   {
     performanceReviewId: 'prf-4403',
@@ -39,11 +39,11 @@ export function PerformanceReviewsPage() {
       <PageHero
         eyebrow="Performance reviews"
         title="Review-cycle status with clear completion signals"
-        description="The page keeps the review state visible first so HR can quickly see which reviews are drafted, submitted, or acknowledged without digging into noisy detail views."
+        description="The page keeps the review state visible first so HR can quickly see which reviews are drafted, submitted, or finalized without digging into noisy detail views."
       />
 
       <PageGrid className="md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Submitted" value="12" hint="Ready for acknowledgment" icon={CheckCheck} />
+        <StatCard title="Submitted" value="12" hint="Ready for finalization" icon={CheckCheck} />
         <StatCard title="Drafts" value="3" hint="Manager follow-up needed" icon={MessageSquareText} />
         <StatCard title="High ratings" value="5" hint="Talent retention watchlist" icon={TrendingUp} />
         <StatCard title="Goal alignment" value="94%" hint="Cycle tracking on course" icon={Target} />
@@ -90,7 +90,7 @@ function statusClassName(status: string) {
   switch (status) {
     case 'Submitted':
       return 'bg-sky-100 text-sky-700'
-    case 'Acknowledged':
+    case 'Finalized':
       return 'bg-emerald-100 text-emerald-700'
     default:
       return 'bg-amber-100 text-amber-700'

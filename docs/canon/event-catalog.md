@@ -22,8 +22,7 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `RoleCreated` | `employee-service` | `Role` | Role created. |
 | `RoleUpdated` | `employee-service` | `Role` | Role metadata/status updated. |
 | `PerformanceReviewSubmitted` | `employee-service` | `PerformanceReview` | Review submitted by reviewer. |
-| `PerformanceReviewAcknowledged` | `employee-service` | `PerformanceReview` | Review acknowledged by employee. |
-| `PerformanceReviewFinalized` | `employee-service` | `PerformanceReview` | Review finalized after acknowledgement/closure. |
+| `PerformanceReviewFinalized` | `employee-service` | `PerformanceReview` | Review finalized from the submitted state. |
 | `AttendanceCaptured` | `attendance-service` | `AttendanceRecord` | Attendance record captured. |
 | `AttendanceValidated` | `attendance-service` | `AttendanceRecord` | Attendance validated. |
 | `AttendanceApproved` | `attendance-service` | `AttendanceRecord` | Attendance approved for payroll/reporting. |
@@ -112,15 +111,9 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Minimum payload:** `performance_review_id`, `employee_id`, `reviewer_employee_id`, `status`, `submitted_at`.
 - **Consumers:** `notification-service`, talent analytics.
 
-### `PerformanceReviewAcknowledged`
-- **Aggregate:** `PerformanceReview`
-- **Transition:** `Submitted -> Acknowledged`.
-- **Minimum payload:** `performance_review_id`, `employee_id`, `acknowledged_at`, `status`.
-- **Consumers:** `notification-service`, talent analytics.
-
 ### `PerformanceReviewFinalized`
 - **Aggregate:** `PerformanceReview`
-- **Transition:** `Acknowledged -> Finalized` or policy-driven direct finalization.
+- **Transition:** `Submitted -> Finalized`.
 - **Minimum payload:** `performance_review_id`, `employee_id`, `status`, `updated_at`.
 - **Consumers:** compensation planning, analytics, notification pipelines.
 

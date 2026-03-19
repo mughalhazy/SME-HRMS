@@ -147,9 +147,9 @@ Represents a structured performance assessment for a review cycle.
 | strengths | Text | No | Strength narrative. |
 | improvement_areas | Text | No | Development areas. |
 | goals_next_period | Text | No | Future goals. |
-| status | Enum | Yes | `Draft`, `Submitted`, `Acknowledged`, `Finalized`. |
+| status | Enum | Yes | `Draft`, `Submitted`, `Finalized`. |
 | submitted_at | DateTime | No | Reviewer submission timestamp. |
-| acknowledged_at | DateTime | No | Employee acknowledgement timestamp. |
+| finalized_at | DateTime | No | Review finalization timestamp. |
 | created_at | DateTime | Yes | Record creation timestamp. |
 | updated_at | DateTime | Yes | Record last update timestamp. |
 
@@ -161,7 +161,6 @@ Represents a structured performance assessment for a review cycle.
 ### Lifecycle states
 - `Draft`
 - `Submitted`
-- `Acknowledged`
 - `Finalized`
 
 ## AttendanceRecord
