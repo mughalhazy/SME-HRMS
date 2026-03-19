@@ -1,0 +1,309 @@
+# Event Catalog
+
+This catalog defines the canonical domain events emitted across SME-HRMS services. Every state transition referenced in the domain model and workflow catalog maps to one or more events in this registry.
+
+## Event conventions
+
+- Event names use `PastTense` business language.
+- Every event payload includes `event_id`, `event_name`, `occurred_at`, `producer_service`, and `trace_id` metadata.
+- Business payloads include the aggregate identifier and the minimum fields required for downstream consumers.
+- Events are immutable; corrections emit a new event rather than mutating a prior one.
+- Events are published after a successful state transition or side effect commit.
+
+## Registry summary
+
+| Event | Producer | Primary entity | Trigger |
+|---|---|---|---|
+| `EmployeeCreated` | `employee-service` | `Employee` | Employee onboarding record created. |
+| `EmployeeUpdated` | `employee-service` | `Employee` | Non-status employee attributes updated. |
+| `EmployeeStatusChanged` | `employee-service` | `Employee` | Employee lifecycle state changes. |
+| `DepartmentCreated` | `employee-service` | `Department` | Department created. |
+| `DepartmentUpdated` | `employee-service` | `Department` | Department metadata/status updated. |
+| `RoleCreated` | `employee-service` | `Role` | Role created. |
+| `RoleUpdated` | `employee-service` | `Role` | Role metadata/status updated. |
+| `PerformanceReviewSubmitted` | `employee-service` | `PerformanceReview` | Review submitted by reviewer. |
+| `PerformanceReviewFinalized` | `employee-service` | `PerformanceReview` | Review finalized after acknowledgement/closure. |
+| `AttendanceCaptured` | `attendance-service` | `AttendanceRecord` | Attendance record captured. |
+| `AttendanceValidated` | `attendance-service` | `AttendanceRecord` | Attendance validated. |
+| `AttendanceApproved` | `attendance-service` | `AttendanceRecord` | Attendance approved for payroll/reporting. |
+| `AttendanceLocked` | `attendance-service` | `AttendanceRecord` | Attendance record locked. |
+| `AttendancePeriodClosed` | `attendance-service` | `AttendanceRecord` | Payroll-safe attendance period closed. |
+| `LeaveRequestSubmitted` | `leave-service` | `LeaveRequest` | Leave submitted for approval. |
+| `LeaveRequestApproved` | `leave-service` | `LeaveRequest` | Leave approved. |
+| `LeaveRequestRejected` | `leave-service` | `LeaveRequest` | Leave rejected. |
+| `LeaveRequestCancelled` | `leave-service` | `LeaveRequest` | Leave cancelled. |
+| `PayrollDrafted` | `payroll-service` | `PayrollRecord` | Payroll draft created. |
+| `PayrollProcessed` | `payroll-service` | `PayrollRecord` | Payroll processed and finalized for payment. |
+| `PayrollPaid` | `payroll-service` | `PayrollRecord` | Payroll disbursement completed. |
+| `PayrollCancelled` | `payroll-service` | `PayrollRecord` | Payroll invalidated or reversed. |
+| `JobPostingOpened` | `hiring-service` | `JobPosting` | Job posting opened. |
+| `JobPostingClosed` | `hiring-service` | `JobPosting` | Job posting closed or filled. |
+| `CandidateApplied` | `hiring-service` | `Candidate` | Candidate application created. |
+| `CandidateStageChanged` | `hiring-service` | `Candidate` | Candidate moves between pipeline states. |
+| `InterviewScheduled` | `hiring-service` | `Interview` | Interview created in `Scheduled`. |
+| `InterviewCompleted` | `hiring-service` | `Interview` | Interview marked `Completed`. |
+| `InterviewCalendarSynced` | `hiring-service` | `Interview` | Interview synced to Google Calendar. |
+| `CandidateImported` | `hiring-service` | `Candidate` | Candidate imported from external source. |
+| `LinkedInCandidatesImported` | `hiring-service` | `Candidate` | Batch LinkedIn import completed. |
+| `CandidateHired` | `hiring-service` | `Candidate` | Candidate transitioned to `Hired`. |
+| `UserAuthenticated` | `auth-service` | `Session` | Successful login completed. |
+| `SessionRevoked` | `auth-service` | `Session` | Logout or forced revocation completed. |
+| `UserProvisioned` | `auth-service` | `UserAccount` | New user account provisioned or invited. |
+| `AuthorizationPolicyUpdated` | `auth-service` | `PermissionPolicy` | Policy or role binding model updated. |
+| `NotificationQueued` | `notification-service` | `NotificationMessage` | Notification accepted for delivery. |
+| `NotificationSent` | `notification-service` | `NotificationMessage` | Notification delivered successfully. |
+| `NotificationFailed` | `notification-service` | `NotificationMessage` | Notification failed after attempt(s). |
+
+## employee-service events
+
+### `EmployeeCreated`
+- **Aggregate:** `Employee`
+- **Transition:** `Employee` instantiated, typically in `Draft`.
+- **Minimum payload:** `employee_id`, `employee_number`, `department_id`, `role_id`, `status`, `hire_date`.
+- **Consumers:** `attendance-service`, `leave-service`, `payroll-service`, `auth-service`, `notification-service`.
+
+### `EmployeeUpdated`
+- **Aggregate:** `Employee`
+- **Transition:** material non-status fields changed.
+- **Minimum payload:** `employee_id`, `changed_fields`, `updated_at`.
+- **Consumers:** read-model rebuilders, audit pipelines.
+
+### `EmployeeStatusChanged`
+- **Aggregate:** `Employee`
+- **Transition:** one of `Draft -> Active`, `Active -> OnLeave`, `OnLeave -> Active`, `Active -> Suspended`, `Suspended -> Active`, `Active/OnLeave/Suspended -> Terminated`.
+- **Minimum payload:** `employee_id`, `from_status`, `to_status`, `effective_at`.
+- **Consumers:** `attendance-service`, `leave-service`, `payroll-service`, `auth-service`, `notification-service`.
+
+### `DepartmentCreated`
+- **Aggregate:** `Department`
+- **Transition:** department created.
+- **Minimum payload:** `department_id`, `code`, `status`.
+- **Consumers:** search/read-model pipelines.
+
+### `DepartmentUpdated`
+- **Aggregate:** `Department`
+- **Transition:** department metadata or status updated.
+- **Minimum payload:** `department_id`, `changed_fields`, `status`, `updated_at`.
+- **Consumers:** `hiring-service`, read-model pipelines.
+
+### `RoleCreated`
+- **Aggregate:** `Role`
+- **Transition:** role created.
+- **Minimum payload:** `role_id`, `title`, `status`.
+- **Consumers:** search/read-model pipelines.
+
+### `RoleUpdated`
+- **Aggregate:** `Role`
+- **Transition:** role metadata or status updated.
+- **Minimum payload:** `role_id`, `changed_fields`, `status`, `updated_at`.
+- **Consumers:** `hiring-service`, read-model pipelines.
+
+### `PerformanceReviewSubmitted`
+- **Aggregate:** `PerformanceReview`
+- **Transition:** `Draft -> Submitted`.
+- **Minimum payload:** `performance_review_id`, `employee_id`, `reviewer_employee_id`, `status`, `submitted_at`.
+- **Consumers:** `notification-service`, talent analytics.
+
+### `PerformanceReviewFinalized`
+- **Aggregate:** `PerformanceReview`
+- **Transition:** `Acknowledged -> Finalized` or policy-driven direct finalization.
+- **Minimum payload:** `performance_review_id`, `employee_id`, `status`, `updated_at`.
+- **Consumers:** compensation planning, analytics, notification pipelines.
+
+## attendance-service events
+
+### `AttendanceCaptured`
+- **Aggregate:** `AttendanceRecord`
+- **Transition:** record created or raw time data first persisted in `Captured`.
+- **Minimum payload:** `attendance_id`, `employee_id`, `attendance_date`, `attendance_status`, `record_state`.
+- **Consumers:** `notification-service`, dashboards.
+
+### `AttendanceValidated`
+- **Aggregate:** `AttendanceRecord`
+- **Transition:** `Captured -> Validated`.
+- **Minimum payload:** `attendance_id`, `employee_id`, `attendance_date`, `record_state`, `total_hours`.
+- **Consumers:** dashboards, policy analytics.
+
+### `AttendanceApproved`
+- **Aggregate:** `AttendanceRecord`
+- **Transition:** `Validated -> Approved`.
+- **Minimum payload:** `attendance_id`, `employee_id`, `attendance_date`, `record_state`.
+- **Consumers:** payroll summary builders.
+
+### `AttendanceLocked`
+- **Aggregate:** `AttendanceRecord`
+- **Transition:** `Approved -> Locked`.
+- **Minimum payload:** `attendance_id`, `employee_id`, `attendance_date`, `record_state`, `period_id`.
+- **Consumers:** payroll pipelines, audit.
+
+### `AttendancePeriodClosed`
+- **Aggregate:** attendance period projection
+- **Transition:** period-level closure after all records are locked.
+- **Minimum payload:** `period_id`, `period_start`, `period_end`, `employee_count`, `closed_at`.
+- **Consumers:** `payroll-service`.
+
+## leave-service events
+
+### `LeaveRequestSubmitted`
+- **Aggregate:** `LeaveRequest`
+- **Transition:** `Draft -> Submitted`.
+- **Minimum payload:** `leave_request_id`, `employee_id`, `approver_employee_id`, `start_date`, `end_date`, `status`, `submitted_at`.
+- **Consumers:** `notification-service`, leave dashboards.
+
+### `LeaveRequestApproved`
+- **Aggregate:** `LeaveRequest`
+- **Transition:** `Submitted -> Approved`.
+- **Minimum payload:** `leave_request_id`, `employee_id`, `approver_employee_id`, `total_days`, `leave_type`, `status`, `decision_at`.
+- **Consumers:** `payroll-service`, `notification-service`, availability projections.
+
+### `LeaveRequestRejected`
+- **Aggregate:** `LeaveRequest`
+- **Transition:** `Submitted -> Rejected`.
+- **Minimum payload:** `leave_request_id`, `employee_id`, `approver_employee_id`, `status`, `decision_at`.
+- **Consumers:** `notification-service`, dashboards.
+
+### `LeaveRequestCancelled`
+- **Aggregate:** `LeaveRequest`
+- **Transition:** `Draft/Submitted/Approved -> Cancelled` subject to policy.
+- **Minimum payload:** `leave_request_id`, `employee_id`, `status`, `updated_at`.
+- **Consumers:** payroll adjustment pipelines, notifications.
+
+## payroll-service events
+
+### `PayrollDrafted`
+- **Aggregate:** `PayrollRecord`
+- **Transition:** payroll record created in `Draft`.
+- **Minimum payload:** `payroll_record_id`, `employee_id`, `pay_period_start`, `pay_period_end`, `status`.
+- **Consumers:** payroll dashboards, audit.
+
+### `PayrollProcessed`
+- **Aggregate:** `PayrollRecord`
+- **Transition:** `Draft -> Processed`.
+- **Minimum payload:** `payroll_record_id`, `employee_id`, `pay_period_start`, `pay_period_end`, `gross_pay`, `net_pay`, `currency`, `status`.
+- **Consumers:** `notification-service`, finance integrations.
+
+### `PayrollPaid`
+- **Aggregate:** `PayrollRecord`
+- **Transition:** `Processed -> Paid`.
+- **Minimum payload:** `payroll_record_id`, `employee_id`, `payment_date`, `net_pay`, `currency`, `status`.
+- **Consumers:** `notification-service`, audit.
+
+### `PayrollCancelled`
+- **Aggregate:** `PayrollRecord`
+- **Transition:** `Draft/Processed -> Cancelled`.
+- **Minimum payload:** `payroll_record_id`, `employee_id`, `pay_period_start`, `pay_period_end`, `status`, `updated_at`.
+- **Consumers:** finance adjustment pipelines, audit.
+
+## hiring-service events
+
+### `JobPostingOpened`
+- **Aggregate:** `JobPosting`
+- **Transition:** `Draft/OnHold -> Open` or create directly in `Open`.
+- **Minimum payload:** `job_posting_id`, `department_id`, `role_id`, `openings_count`, `status`, `posting_date`.
+- **Consumers:** job-posting read models, recruitment notifications.
+
+### `JobPostingClosed`
+- **Aggregate:** `JobPosting`
+- **Transition:** `Open/OnHold -> Closed` or `Open -> Filled`.
+- **Minimum payload:** `job_posting_id`, `status`, `updated_at`.
+- **Consumers:** job-posting read models, analytics.
+
+### `CandidateApplied`
+- **Aggregate:** `Candidate`
+- **Transition:** candidate created in `Applied`.
+- **Minimum payload:** `candidate_id`, `job_posting_id`, `email`, `application_date`, `status`.
+- **Consumers:** candidate pipeline projections, recruiter notifications.
+
+### `CandidateStageChanged`
+- **Aggregate:** `Candidate`
+- **Transition:** any valid pipeline move among `Applied`, `Screening`, `Interviewing`, `Offered`, `Hired`, `Rejected`, `Withdrawn`.
+- **Minimum payload:** `candidate_id`, `job_posting_id`, `from_status`, `to_status`, `updated_at`.
+- **Consumers:** pipeline dashboards, notification routing.
+
+### `InterviewScheduled`
+- **Aggregate:** `Interview`
+- **Transition:** interview created in `Scheduled`.
+- **Minimum payload:** `interview_id`, `candidate_id`, `scheduled_start`, `scheduled_end`, `interviewer_employee_ids`, `status`.
+- **Consumers:** `notification-service`, hiring dashboards.
+
+### `InterviewCompleted`
+- **Aggregate:** `Interview`
+- **Transition:** `Scheduled -> Completed`.
+- **Minimum payload:** `interview_id`, `candidate_id`, `recommendation`, `status`, `updated_at`.
+- **Consumers:** hiring analytics, recruiter notifications.
+
+### `InterviewCalendarSynced`
+- **Aggregate:** `Interview`
+- **Transition:** external Google Calendar sync succeeds.
+- **Minimum payload:** `interview_id`, `candidate_id`, `provider`, `external_event_id`, `updated_at`.
+- **Consumers:** notification workflows, operational telemetry.
+
+### `CandidateImported`
+- **Aggregate:** `Candidate`
+- **Transition:** external-source candidate successfully created.
+- **Minimum payload:** `candidate_id`, `job_posting_id`, `provider`, `source_candidate_id`, `status`.
+- **Consumers:** hiring analytics, data lineage.
+
+### `LinkedInCandidatesImported`
+- **Aggregate:** import batch summary
+- **Transition:** LinkedIn batch import completed.
+- **Minimum payload:** `job_posting_id`, `provider`, `imported_count`, `skipped_count`, `occurred_at`.
+- **Consumers:** import monitoring and reconciliation.
+
+### `CandidateHired`
+- **Aggregate:** `Candidate`
+- **Transition:** `Offered -> Hired`.
+- **Minimum payload:** `candidate_id`, `job_posting_id`, `department_id` (if available in projection), `role_id` (if available in projection), `occurred_at`.
+- **Consumers:** `employee-service`, `notification-service`, analytics.
+
+## auth-service events
+
+### `UserAuthenticated`
+- **Aggregate:** `Session`
+- **Transition:** successful login creates or refreshes an active session.
+- **Minimum payload:** `session_id`, `user_id`, `client_type`, `expires_at`.
+- **Consumers:** security monitoring, audit, notification routing.
+
+### `SessionRevoked`
+- **Aggregate:** `Session`
+- **Transition:** active session revoked on logout, policy action, or compromise response.
+- **Minimum payload:** `session_id`, `user_id`, `revoked_at`, `reason`.
+- **Consumers:** `notification-service`, security monitoring.
+
+### `UserProvisioned`
+- **Aggregate:** `UserAccount`
+- **Transition:** new account created or invited.
+- **Minimum payload:** `user_id`, `employee_id`, `email`, `status`, `identity_provider`.
+- **Consumers:** `notification-service`, access reporting.
+
+### `AuthorizationPolicyUpdated`
+- **Aggregate:** `PermissionPolicy`
+- **Transition:** authorization policy, binding semantics, or effective policy version changes.
+- **Minimum payload:** `policy_id`, `capability_id`, `role_name`, `effect`, `version`.
+- **Consumers:** policy caches, access-control read models.
+
+## notification-service events
+
+### `NotificationQueued`
+- **Aggregate:** `NotificationMessage`
+- **Transition:** message accepted and queued.
+- **Minimum payload:** `message_id`, `subject_type`, `subject_id`, `channel`, `status`, `queued_at`.
+- **Consumers:** delivery dashboards.
+
+### `NotificationSent`
+- **Aggregate:** `NotificationMessage`
+- **Transition:** `Queued -> Sent`.
+- **Minimum payload:** `message_id`, `subject_type`, `subject_id`, `channel`, `status`, `sent_at`.
+- **Consumers:** audit, engagement analytics.
+
+### `NotificationFailed`
+- **Aggregate:** `NotificationMessage`
+- **Transition:** `Queued -> Failed` after provider attempt(s) or preference suppression logic.
+- **Minimum payload:** `message_id`, `subject_type`, `subject_id`, `channel`, `status`, `failure_reason`, `updated_at`.
+- **Consumers:** support dashboards, retry workflows.
+
+## Coverage checklist
+
+- Every event published or subscribed to in `docs/canon/service-map.md` is defined here.
+- Every state transition in `docs/canon/workflow-catalog.md` maps to at least one event in this document.
+- No workflow relies on an undefined event name.

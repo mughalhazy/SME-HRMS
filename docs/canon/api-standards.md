@@ -1,65 +1,80 @@
 # API Standards
 
-This document defines canonical standards for all HTTP APIs in this repository.
+This document defines canonical HTTP API standards for SME-HRMS services and the shared API gateway.
 
-## 1) REST Naming
+## 1) Base path and routing
 
-### Resource-oriented URLs
-- Use **nouns** for resource names, not verbs.
-- Use **plural** resource names.
-- Use lowercase and hyphens for path segments.
-- Keep nesting shallow (prefer 1-2 levels).
+### Route namespace
+- All public routes are versioned under `/api/v1`.
+- Service-specific route groups align to the API gateway registry:
+  - `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/performance-reviews`
+  - `/api/v1/attendance`
+  - `/api/v1/leave`
+  - `/api/v1/payroll`
+  - `/api/v1/hiring`
+  - `/api/v1/auth`
+  - `/api/v1/notifications`
 
-Examples:
-- `GET /employees`
-- `GET /employees/{employeeId}`
-- `POST /employees`
-- `PATCH /employees/{employeeId}`
-- `GET /departments/{departmentId}/employees`
-
-### HTTP methods
-- `GET`: Read (safe, idempotent)
-- `POST`: Create
-- `PUT`: Replace full resource (idempotent)
-- `PATCH`: Partial update
-- `DELETE`: Remove resource (idempotent)
-
-### Query parameters
-Use query parameters for filtering, sorting, field selection, and pagination.
+### Resource naming
+- Use nouns, not verbs, for resource paths.
+- Use lowercase kebab-case for path segments.
+- Use snake_case for query-parameter names to match the current canonical docs.
+- Keep nesting shallow; favor resource IDs over deeply nested paths.
 
 Examples:
-- `GET /employees?status=active&departmentId=dep_123`
-- `GET /employees?sort=-createdAt,name`
-- `GET /employees?fields=id,name,email`
+- `GET /api/v1/employees`
+- `GET /api/v1/employees/{employee_id}`
+- `GET /api/v1/leave/requests?employee_id=&status=`
+- `POST /api/v1/hiring/candidates/{candidate_id}/mark-hired`
 
-## 2) Status Codes
+## 2) HTTP methods
 
-Use standard HTTP status codes consistently.
+- `GET`: read-only retrieval.
+- `POST`: create a resource or invoke a state transition/action.
+- `PUT`: full replacement when supported.
+- `PATCH`: partial update.
+- `DELETE`: remove or revoke a resource where hard deletion is allowed.
 
-### Success
-- `200 OK`: Successful read/update/delete request returning a body.
-- `201 Created`: Resource created successfully.
-- `202 Accepted`: Accepted for asynchronous processing.
-- `204 No Content`: Successful request with no response body.
+### Action-style subresources
+State transitions that are not plain partial updates may use explicit action subpaths on a resource.
 
-### Client errors
-- `400 Bad Request`: Invalid request syntax/shape.
-- `401 Unauthorized`: Missing/invalid authentication credentials.
-- `403 Forbidden`: Authenticated but not allowed.
-- `404 Not Found`: Resource does not exist.
-- `409 Conflict`: State conflict (e.g., duplicate/constraint issue).
-- `422 Unprocessable Entity`: Validation errors.
-- `429 Too Many Requests`: Rate-limit exceeded.
+Examples:
+- `POST /api/v1/leave/requests/{leave_request_id}/submit`
+- `POST /api/v1/attendance/records/{attendance_id}/approve`
+- `POST /api/v1/payroll/records/{payroll_record_id}/mark-paid`
 
-### Server errors
-- `500 Internal Server Error`: Unexpected server failure.
-- `502 Bad Gateway`: Upstream dependency error.
-- `503 Service Unavailable`: Temporary downtime/overload.
-- `504 Gateway Timeout`: Upstream timeout.
+## 3) Request and response envelopes
 
-## 3) Error Format
+### Success envelope
+List endpoints return:
 
-All non-2xx responses MUST use this JSON envelope:
+```json
+{
+  "data": [],
+  "page": {
+    "next_cursor": null,
+    "has_next": false,
+    "limit": 25
+  },
+  "meta": {
+    "trace_id": "9f43a8f6ad2b4db9"
+  }
+}
+```
+
+Single-resource endpoints return:
+
+```json
+{
+  "data": {},
+  "meta": {
+    "trace_id": "9f43a8f6ad2b4db9"
+  }
+}
+```
+
+### Error envelope
+All non-2xx responses use:
 
 ```json
 {
@@ -72,84 +87,108 @@ All non-2xx responses MUST use this JSON envelope:
         "reason": "must be a valid email address"
       }
     ],
-    "traceId": "9f43a8f6ad2b4db9"
+    "trace_id": "9f43a8f6ad2b4db9"
   }
 }
 ```
 
-### Error fields
-- `error.code` (string, required): Stable machine-readable code.
-- `error.message` (string, required): Human-readable summary.
-- `error.details` (array, optional): Structured validation/domain details.
-- `error.traceId` (string, required): Correlation ID for support/log tracing.
+### Envelope rules
+- `trace_id` is required on all responses.
+- `details` is optional and reserved for structured validation or domain-conflict information.
+- APIs must not leak stack traces, SQL, provider secrets, or raw credential artifacts.
 
-### Rules
-- Do not leak internal stack traces or secrets.
-- Keep `code` values stable across releases.
-- Use `traceId` from incoming request context when available; otherwise generate one.
+## 4) Status codes
 
-## 4) Pagination
+### Success
+- `200 OK`: successful read/update/action with body.
+- `201 Created`: successful resource creation.
+- `202 Accepted`: accepted for asynchronous processing.
+- `204 No Content`: successful request with no body.
 
-Use cursor-based pagination for list endpoints.
+### Client errors
+- `400 Bad Request`: malformed request shape.
+- `401 Unauthorized`: missing or invalid authentication.
+- `403 Forbidden`: authenticated but not authorized.
+- `404 Not Found`: resource does not exist.
+- `409 Conflict`: unique or state conflict.
+- `422 Unprocessable Entity`: validation or business rule failure.
+- `429 Too Many Requests`: rate limit exceeded.
 
-### Request
-- `limit` (optional, default `25`, max `100`)
-- `cursor` (optional, opaque string)
+### Server and dependency errors
+- `500 Internal Server Error`: unexpected service failure.
+- `502 Bad Gateway`: upstream dependency returned an invalid response.
+- `503 Service Unavailable`: temporary outage or circuit open.
+- `504 Gateway Timeout`: upstream dependency timeout.
 
-Example:
-- `GET /employees?limit=25&cursor=eyJsYXN0SWQiOiJlbXBfMDAxIn0`
+## 5) Pagination, filtering, and sorting
 
-### Response
+### Pagination
+- Cursor pagination is the default for list endpoints.
+- Supported parameters:
+  - `limit` default `25`, max `100`
+  - `cursor` opaque continuation token
 
-```json
-{
-  "data": [
-    { "id": "emp_001", "name": "Ada Lovelace" }
-  ],
-  "page": {
-    "nextCursor": "eyJsYXN0SWQiOiJlbXBfMDAyIn0",
-    "hasNext": true,
-    "limit": 25
-  }
-}
-```
+### Filtering
+- Use exact, documented query parameters such as `status`, `department_id`, `employee_id`, `period_start`, `period_end`.
+- Use `_from` and `_to` suffixes for range boundaries.
 
-### Rules
-- Cursors are opaque and must not be parsed by clients.
+Examples:
+- `GET /api/v1/attendance/records?employee_id=...&attendance_date_from=2026-03-01&attendance_date_to=2026-03-31`
+- `GET /api/v1/payroll/records?employee_id=...&pay_period_start=2026-03-01&pay_period_end=2026-03-31`
+
+### Sorting
+- Use `sort` with comma-separated field names.
+- Prefix descending fields with `-`.
 - Sort order must be deterministic and documented per endpoint.
-- If `hasNext` is `false`, `nextCursor` should be `null`.
 
-## 5) Authentication
+## 6) Validation and idempotency
 
-### Scheme
-- Use OAuth 2.0 Bearer tokens (JWT or opaque token).
-- Send token via `Authorization: Bearer <token>`.
-- All endpoints are authenticated by default unless explicitly documented as public.
+### Validation
+- Validate enums and state transitions against canonical domain rules.
+- Return `422` for business-rule violations such as invalid workflow transitions.
+- Return `409` for duplicates or optimistic-concurrency conflicts.
+
+### Idempotency
+- Create or action endpoints that may be retried by clients should accept `Idempotency-Key`.
+- Servers must persist idempotency results long enough to protect against duplicate processing for payroll runs, candidate imports, and notification sends.
+
+## 7) Authentication and authorization
+
+### Authentication
+- Use bearer tokens in `Authorization: Bearer <token>`.
+- All endpoints are authenticated by default unless explicitly public.
+- Validate signature, issuer, audience, expiry, and not-before claims.
 
 ### Authorization
-- Enforce role/scope checks at endpoint and resource levels.
-- Return:
-  - `401` for missing/invalid token.
-  - `403` for insufficient permissions.
+- Enforce both capability and scope checks.
+- Return `401` for invalid credentials and `403` for denied capabilities/scope.
+- Service-to-service calls use service principals with scoped capabilities.
 
-### Security baseline
-- Require HTTPS in all environments except approved local development.
-- Validate token signature, issuer, audience, expiry, and not-before claims.
-- Minimize token lifetimes and support key rotation.
+## 8) Observability and correlation
 
-## 6) Versioning
+- Accept and propagate `X-Trace-Id` when provided; otherwise generate one.
+- Include `trace_id` in response envelopes and structured logs.
+- Emit audit records for privileged writes, approvals, payroll actions, access changes, and notification preference changes.
+
+## 9) Versioning and compatibility
 
 ### Strategy
-- Version in URL path using major version only.
-- Format: `/api/v{major}` (e.g., `/api/v1/employees`).
+- Use major versions in the URL: `/api/v{major}`.
+- `v1` is the current canonical version in this repository.
 
-### Compatibility
-- Additive, backward-compatible changes are allowed within the same major version.
+### Compatibility rules
+- Backward-compatible additive changes are allowed within the same major version.
 - Breaking changes require a new major version.
+- Read models and event payloads must be versioned independently when contracts change.
 
 ### Deprecation
-- Announce deprecations with migration guidance.
-- Include deprecation metadata via headers when applicable:
+- Signal deprecation with headers when applicable:
   - `Deprecation: true`
   - `Sunset: <HTTP-date>`
-- Maintain an overlap period where old and new versions both function.
+- Provide migration guidance before removal.
+
+## 10) Domain-event alignment
+
+- APIs that change canonical workflow state must publish the corresponding domain event from `docs/canon/event-catalog.md` after a successful commit.
+- APIs that invoke asynchronous integrations must surface `202 Accepted` when completion occurs out of band.
+- Event-producing endpoints should document the resulting state transition and emitted event names.

@@ -1,271 +1,362 @@
 # Service Map
 
-This document defines the bounded-service decomposition for the HRMS domain model and establishes responsibilities, ownership, integration points, and event flows.
+This document defines the canonical bounded-service decomposition for SME-HRMS, including responsibilities, owned entities, APIs, dependencies, workflows, published events, subscribed events, and read-model contributions.
+
+## Canonical service registry
+
+| Service | Primary scope | Route prefix |
+|---|---|---|
+| `employee-service` | Workforce master data and organizational structure | `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/performance-reviews` |
+| `attendance-service` | Attendance capture, validation, and period closure | `/api/v1/attendance` |
+| `leave-service` | Leave lifecycle and approval workflow | `/api/v1/leave` |
+| `payroll-service` | Payroll processing and payout lifecycle | `/api/v1/payroll` |
+| `hiring-service` | Job postings, candidates, interviews, and hire handoff | `/api/v1/hiring` |
+| `auth-service` | Identity, sessions, tokens, role bindings, and policy | `/api/v1/auth` |
+| `notification-service` | Notification templates, queueing, delivery, and preferences | `/api/v1/notifications` |
 
 ## employee-service
 
 ### Responsibilities
-- Manage employee master data and employment lifecycle (`Draft`, `Active`, `OnLeave`, `Suspended`, `Terminated`).
+- Manage employee master data and employment lifecycle.
 - Manage organizational reference data for departments and roles.
-- Maintain reporting lines (manager relationships) and department leadership metadata.
-- Provide employee profile/search views for downstream services.
+- Manage performance review cycles and outcomes.
+- Publish authoritative employee and organization changes to downstream services.
 
 ### Owned entities
-- Employee
-- Department
-- Role
-- PerformanceReview
+- `Employee`
+- `Department`
+- `Role`
+- `PerformanceReview`
 
-### APIs
-- `POST /employees` — create employee profile.
-- `GET /employees/{employee_id}` — fetch employee details.
-- `PATCH /employees/{employee_id}` — update employee profile/status.
-- `GET /employees?department_id=&status=` — query/filter employees.
-- `POST /departments` / `PATCH /departments/{department_id}` — manage department catalog.
-- `POST /roles` / `PATCH /roles/{role_id}` — manage role catalog.
-- `POST /performance-reviews` / `PATCH /performance-reviews/{performance_review_id}` — manage review cycles.
+### Canonical APIs
+- `POST /api/v1/employees`
+- `GET /api/v1/employees/{employee_id}`
+- `PATCH /api/v1/employees/{employee_id}`
+- `GET /api/v1/employees?department_id=&status=&manager_employee_id=&limit=&cursor=`
+- `POST /api/v1/departments`
+- `PATCH /api/v1/departments/{department_id}`
+- `GET /api/v1/departments?status=&limit=&cursor=`
+- `POST /api/v1/roles`
+- `PATCH /api/v1/roles/{role_id}`
+- `GET /api/v1/roles?status=&limit=&cursor=`
+- `POST /api/v1/performance-reviews`
+- `PATCH /api/v1/performance-reviews/{performance_review_id}`
+- `GET /api/v1/performance-reviews?employee_id=&reviewer_employee_id=&status=&limit=&cursor=`
 
 ### Dependencies
-- **auth-service** for authentication and authorization (admin/manager/employee scopes).
-- **notification-service** to deliver review reminders, manager-assignment updates, and lifecycle notices.
+- `auth-service` for authentication and authorization.
+- `notification-service` for onboarding, status-change, and performance-review notifications.
+- `hiring-service` as upstream producer of `CandidateHired` for recruitment-driven onboarding.
 
-### Events
-- Publishes:
-  - `EmployeeCreated`
-  - `EmployeeUpdated`
-  - `EmployeeStatusChanged`
-  - `DepartmentCreated`
-  - `DepartmentUpdated`
-  - `RoleCreated`
-  - `RoleUpdated`
-  - `PerformanceReviewSubmitted`
-  - `PerformanceReviewFinalized`
-- Subscribes:
-  - `CandidateHired` (from hiring-service) to convert onboarding payload into an employee record.
+### Supported workflows
+- `employee_onboarding`
+- `performance_review`
+
+### Publishes
+- `EmployeeCreated`
+- `EmployeeUpdated`
+- `EmployeeStatusChanged`
+- `DepartmentCreated`
+- `DepartmentUpdated`
+- `RoleCreated`
+- `RoleUpdated`
+- `PerformanceReviewSubmitted`
+- `PerformanceReviewFinalized`
+
+### Subscribes
+- `CandidateHired`
+
+### Read models produced or enriched
+- `employee_directory_view`
+- `organization_structure_view`
+- `performance_review_view`
+- enriches `attendance_dashboard_view`, `leave_requests_view`, `payroll_summary_view`, `job_posting_directory_view`, and `candidate_pipeline_view`
 
 ## attendance-service
 
 ### Responsibilities
-- Capture attendance events and maintain daily attendance records.
-- Validate attendance against schedule/policy and support approval/lock workflow.
-- Publish period summaries for payroll consumption.
+- Capture daily attendance records.
+- Validate time entries against policy.
+- Approve and lock attendance for payroll-safe period closure.
+- Publish attendance summaries and closure events.
 
 ### Owned entities
-- AttendanceRecord
+- `AttendanceRecord`
 
-### APIs
-- `POST /attendance/records` — create an attendance record (manual/biometric/import).
-- `PATCH /attendance/records/{attendance_id}` — update check-in/check-out/status.
-- `GET /attendance/records/{attendance_id}` — fetch a single attendance record.
-- `GET /attendance/records?employee_id=&from=&to=` — list attendance by employee/date range.
-- `POST /attendance/periods/{period_id}/lock` — lock period records for payroll.
-- `GET /attendance/summaries?employee_id=&period_start=&period_end=` — period summary endpoint.
+### Canonical APIs
+- `POST /api/v1/attendance/records`
+- `PATCH /api/v1/attendance/records/{attendance_id}`
+- `GET /api/v1/attendance/records/{attendance_id}`
+- `GET /api/v1/attendance/records?employee_id=&attendance_date_from=&attendance_date_to=&attendance_status=&limit=&cursor=`
+- `POST /api/v1/attendance/records/{attendance_id}/validate`
+- `POST /api/v1/attendance/records/{attendance_id}/approve`
+- `POST /api/v1/attendance/periods/{period_id}/lock`
+- `GET /api/v1/attendance/summaries?employee_id=&period_start=&period_end=`
 
 ### Dependencies
-- **employee-service** for employee existence/status validation.
-- **auth-service** for access control.
-- **notification-service** for anomaly alerts (late/absent) and lock notifications.
+- `employee-service` for employee existence and employment-status validation.
+- `auth-service` for access control.
+- `notification-service` for anomaly alerts and closure notices.
 
-### Events
-- Publishes:
-  - `AttendanceCaptured`
-  - `AttendanceValidated`
-  - `AttendanceApproved`
-  - `AttendanceLocked`
-  - `AttendancePeriodClosed`
-- Subscribes:
-  - `EmployeeCreated`
-  - `EmployeeStatusChanged`
+### Supported workflows
+- `attendance_tracking`
+
+### Publishes
+- `AttendanceCaptured`
+- `AttendanceValidated`
+- `AttendanceApproved`
+- `AttendanceLocked`
+- `AttendancePeriodClosed`
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `attendance_dashboard_view`
+- contributes attendance inputs to `payroll_summary_view`
 
 ## leave-service
 
 ### Responsibilities
-- Manage leave request lifecycle (`Draft` → `Submitted` → `Approved/Rejected/Cancelled`).
-- Apply approval workflow and decision tracking.
-- Maintain leave-day totals used for payroll/time deductions.
+- Manage leave request drafting, submission, approval, rejection, and cancellation.
+- Track approver decisions and timestamps.
+- Publish approved leave impacts for payroll and availability projections.
 
 ### Owned entities
-- LeaveRequest
+- `LeaveRequest`
 
-### APIs
-- `POST /leave/requests` — create leave request.
-- `PATCH /leave/requests/{leave_request_id}` — edit/cancel request.
-- `POST /leave/requests/{leave_request_id}/submit` — submit for approval.
-- `POST /leave/requests/{leave_request_id}/approve` — approve request.
-- `POST /leave/requests/{leave_request_id}/reject` — reject request.
-- `GET /leave/requests/{leave_request_id}` — fetch request details.
-- `GET /leave/requests?employee_id=&status=&from=&to=` — query requests.
+### Canonical APIs
+- `POST /api/v1/leave/requests`
+- `PATCH /api/v1/leave/requests/{leave_request_id}`
+- `POST /api/v1/leave/requests/{leave_request_id}/submit`
+- `POST /api/v1/leave/requests/{leave_request_id}/approve`
+- `POST /api/v1/leave/requests/{leave_request_id}/reject`
+- `POST /api/v1/leave/requests/{leave_request_id}/cancel`
+- `GET /api/v1/leave/requests/{leave_request_id}`
+- `GET /api/v1/leave/requests?employee_id=&approver_employee_id=&status=&start_date_from=&end_date_to=&limit=&cursor=`
 
 ### Dependencies
-- **employee-service** for employee/manager lookups and status checks.
-- **auth-service** for submitter/approver permissions.
-- **notification-service** for submission and decision notifications.
-- **payroll-service** as downstream consumer of approved leave impacts.
+- `employee-service` for employee and manager lookup.
+- `auth-service` for submitter and approver authorization.
+- `notification-service` for submission and decision notifications.
+- `payroll-service` as downstream consumer of approved leave impact.
 
-### Events
-- Publishes:
-  - `LeaveRequestSubmitted`
-  - `LeaveRequestApproved`
-  - `LeaveRequestRejected`
-  - `LeaveRequestCancelled`
-- Subscribes:
-  - `EmployeeCreated`
-  - `EmployeeStatusChanged`
+### Supported workflows
+- `leave_request`
+
+### Publishes
+- `LeaveRequestSubmitted`
+- `LeaveRequestApproved`
+- `LeaveRequestRejected`
+- `LeaveRequestCancelled`
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `leave_requests_view`
+- contributes approved leave inputs to `payroll_summary_view`
 
 ## payroll-service
 
 ### Responsibilities
-- Calculate and persist payroll outcomes by pay period.
-- Combine salary, allowances, deductions, overtime, attendance summaries, and leave impacts.
-- Manage payroll lifecycle (`Draft`, `Processed`, `Paid`, `Cancelled`) and payment state.
+- Draft, process, pay, and cancel payroll records by pay period.
+- Combine compensation, attendance, and leave impacts into final pay.
+- Provide payroll records for dashboards, self-service, and audit.
 
 ### Owned entities
-- PayrollRecord
+- `PayrollRecord`
 
-### APIs
-- `POST /payroll/records` — create payroll draft for employee/period.
-- `POST /payroll/run?period_start=&period_end=` — process payroll for a pay period.
-- `PATCH /payroll/records/{payroll_record_id}` — adjust record components.
-- `POST /payroll/records/{payroll_record_id}/mark-paid` — mark disbursement completion.
-- `GET /payroll/records/{payroll_record_id}` — fetch payroll record.
-- `GET /payroll/records?employee_id=&period_start=&period_end=&status=` — query payroll records.
+### Canonical APIs
+- `POST /api/v1/payroll/records`
+- `PATCH /api/v1/payroll/records/{payroll_record_id}`
+- `GET /api/v1/payroll/records/{payroll_record_id}`
+- `GET /api/v1/payroll/records?employee_id=&pay_period_start=&pay_period_end=&status=&limit=&cursor=`
+- `POST /api/v1/payroll/run?period_start=&period_end=`
+- `POST /api/v1/payroll/records/{payroll_record_id}/process`
+- `POST /api/v1/payroll/records/{payroll_record_id}/mark-paid`
+- `POST /api/v1/payroll/records/{payroll_record_id}/cancel`
 
 ### Dependencies
-- **employee-service** for employee salary metadata and active roster.
-- **attendance-service** for approved/locked attendance summaries.
-- **leave-service** for approved leave days and unpaid leave impacts.
-- **auth-service** for payroll admin access.
-- **notification-service** for payslip-ready and payment completion messages.
+- `employee-service` for roster and compensation context.
+- `attendance-service` for approved/locked attendance summaries.
+- `leave-service` for approved leave impacts.
+- `auth-service` for payroll-admin authorization.
+- `notification-service` for payslip-ready and payment notifications.
 
-### Events
-- Publishes:
-  - `PayrollDrafted`
-  - `PayrollProcessed`
-  - `PayrollPaid`
-  - `PayrollCancelled`
-- Subscribes:
-  - `AttendancePeriodClosed`
-  - `LeaveRequestApproved`
-  - `EmployeeStatusChanged`
+### Supported workflows
+- `payroll_processing`
+
+### Publishes
+- `PayrollDrafted`
+- `PayrollProcessed`
+- `PayrollPaid`
+- `PayrollCancelled`
+
+### Subscribes
+- `AttendancePeriodClosed`
+- `LeaveRequestApproved`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `payroll_summary_view`
 
 ## hiring-service
 
 ### Responsibilities
-- Manage hiring pipeline from job posting to candidate conversion.
-- Handle interview scheduling/feedback workflow.
-- Execute hire decision and publish candidate-to-employee handoff event.
+- Manage job posting lifecycle.
+- Manage candidate applications, stage transitions, and interview scheduling.
+- Support Google Calendar interview sync and LinkedIn candidate import in the reference implementation.
+- Publish hire handoff events for employee onboarding.
 
 ### Owned entities
-- JobPosting
-- Candidate
-- Interview
+- `JobPosting`
+- `Candidate`
+- `Interview`
 
-### APIs
-- `POST /hiring/job-postings` / `PATCH /hiring/job-postings/{job_posting_id}` — manage job postings.
-- `GET /hiring/job-postings?status=&department_id=` — list/filter postings.
-- `POST /hiring/candidates` / `PATCH /hiring/candidates/{candidate_id}` — manage candidate applications/stages.
-- `POST /hiring/interviews` / `PATCH /hiring/interviews/{interview_id}` — schedule/update interviews.
-- `POST /hiring/candidates/{candidate_id}/mark-hired` — finalize hiring decision.
-- `GET /hiring/candidates/{candidate_id}` — fetch candidate details.
+### Canonical APIs
+- `POST /api/v1/hiring/job-postings`
+- `PATCH /api/v1/hiring/job-postings/{job_posting_id}`
+- `GET /api/v1/hiring/job-postings?status=&department_id=&limit=&cursor=`
+- `POST /api/v1/hiring/candidates`
+- `PATCH /api/v1/hiring/candidates/{candidate_id}`
+- `GET /api/v1/hiring/candidates/{candidate_id}`
+- `POST /api/v1/hiring/interviews`
+- `POST /api/v1/hiring/interviews/google-calendar`
+- `PATCH /api/v1/hiring/interviews/{interview_id}`
+- `POST /api/v1/hiring/candidates/{candidate_id}/mark-hired`
+- `POST /api/v1/hiring/candidates/import/linkedin`
 
 ### Dependencies
-- **employee-service** for department/role reference validation and interviewer lookups.
-- **auth-service** for recruiter/hiring-manager authorization.
-- **notification-service** for candidate/interviewer communications.
+- `employee-service` for department, role, and interviewer validation.
+- `auth-service` for recruiter and hiring-manager authorization.
+- `notification-service` for candidate/interviewer communications.
+- Google Calendar as an external interview scheduling provider.
+- LinkedIn as an optional candidate source provider.
 
-### Events
-- Publishes:
-  - `JobPostingOpened`
-  - `JobPostingClosed`
-  - `CandidateApplied`
-  - `CandidateStageChanged`
-  - `InterviewScheduled`
-  - `InterviewCompleted`
-  - `CandidateHired`
-- Subscribes:
-  - `DepartmentUpdated`
-  - `RoleUpdated`
+### Supported workflows
+- `candidate_hiring`
+
+### Publishes
+- `JobPostingOpened`
+- `JobPostingClosed`
+- `CandidateApplied`
+- `CandidateStageChanged`
+- `InterviewScheduled`
+- `InterviewCompleted`
+- `InterviewCalendarSynced`
+- `CandidateImported`
+- `LinkedInCandidatesImported`
+- `CandidateHired`
+
+### Subscribes
+- `DepartmentUpdated`
+- `RoleUpdated`
+
+### Read models produced or enriched
+- `job_posting_directory_view`
+- `candidate_pipeline_view`
 
 ## auth-service
 
 ### Responsibilities
-- Provide identity, authentication, and token issuance.
-- Manage authorization policies (RBAC/claims/scopes) for HRMS actors.
-- Handle session lifecycle and credential management.
+- Authenticate principals and issue tokens.
+- Maintain user accounts, sessions, refresh tokens, and role bindings.
+- Evaluate role/capability policy for human and service principals.
 
 ### Owned entities
-- UserAccount
-- RoleBinding
-- PermissionPolicy
-- Session
-- RefreshToken
+- `UserAccount`
+- `RoleBinding`
+- `PermissionPolicy`
+- `Session`
+- `RefreshToken`
 
-### APIs
-- `POST /auth/login` — authenticate principal and issue tokens.
-- `POST /auth/refresh` — refresh access token.
-- `POST /auth/logout` — revoke active session/token.
-- `GET /auth/me` — introspect authenticated principal.
-- `POST /auth/users` / `PATCH /auth/users/{user_id}` — manage user accounts.
-- `POST /auth/roles/bindings` / `DELETE /auth/roles/bindings/{binding_id}` — manage authorization bindings.
+### Canonical APIs
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/users`
+- `PATCH /api/v1/auth/users/{user_id}`
+- `POST /api/v1/auth/roles/bindings`
+- `DELETE /api/v1/auth/roles/bindings/{binding_id}`
+- `POST /api/v1/auth/policies`
+- `PATCH /api/v1/auth/policies/{policy_id}`
+- `GET /api/v1/auth/access?user_id=`
 
 ### Dependencies
-- **employee-service** for employee-to-user identity linkage.
-- **notification-service** for password reset and security alerts.
+- `employee-service` for workforce identity linkage.
+- `notification-service` for password reset and security alerts.
 
-### Events
-- Publishes:
-  - `UserAuthenticated`
-  - `SessionRevoked`
-  - `UserProvisioned`
-  - `AuthorizationPolicyUpdated`
-- Subscribes:
-  - `EmployeeCreated`
-  - `EmployeeStatusChanged`
+### Supported workflows
+- `access_provisioning`
+
+### Publishes
+- `UserAuthenticated`
+- `SessionRevoked`
+- `UserProvisioned`
+- `AuthorizationPolicyUpdated`
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `access_control_view`
 
 ## notification-service
 
 ### Responsibilities
-- Deliver asynchronous outbound communications (email/SMS/push/in-app).
-- Template, queue, and track notification delivery outcomes.
-- Centralize event-to-notification routing rules for all domain services.
+- Queue, render, send, and track notifications.
+- Apply subject preferences and channel routing.
+- Translate domain events into outbound communications.
 
 ### Owned entities
-- NotificationTemplate
-- NotificationMessage
-- DeliveryAttempt
-- NotificationPreference
+- `NotificationTemplate`
+- `NotificationMessage`
+- `DeliveryAttempt`
+- `NotificationPreference`
 
-### APIs
-- `POST /notifications/send` — send ad hoc notification.
-- `POST /notifications/bulk-send` — send batch notifications.
-- `POST /notifications/templates` / `PATCH /notifications/templates/{template_id}` — manage templates.
-- `GET /notifications/messages/{message_id}` — retrieve message/delivery status.
-- `PATCH /notifications/preferences/{subject_id}` — update user notification preferences.
+### Canonical APIs
+- `POST /api/v1/notifications/send`
+- `POST /api/v1/notifications/bulk-send`
+- `POST /api/v1/notifications/templates`
+- `PATCH /api/v1/notifications/templates/{template_id}`
+- `GET /api/v1/notifications/messages/{message_id}`
+- `PATCH /api/v1/notifications/preferences/{subject_id}`
+- `GET /api/v1/notifications/delivery?subject_id=&status=&channel=&limit=&cursor=`
 
 ### Dependencies
-- **auth-service** for service-to-service auth and operator permissions.
-- External providers (SMTP, SMS gateway, push providers) for delivery execution.
+- `auth-service` for operator and service-principal authorization.
+- External providers (SMTP, SMS, push) for channel delivery.
 
-### Events
-- Publishes:
-  - `NotificationQueued`
-  - `NotificationSent`
-  - `NotificationFailed`
-- Subscribes:
-  - `LeaveRequestSubmitted`
-  - `LeaveRequestApproved`
-  - `AttendanceCaptured`
-  - `PayrollProcessed`
-  - `PayrollPaid`
-  - `InterviewScheduled`
-  - `CandidateHired`
-  - `PerformanceReviewSubmitted`
-  - `EmployeeStatusChanged`
+### Supported workflows
+- `notification_dispatch`
 
-## Cross-service dependency summary
+### Publishes
+- `NotificationQueued`
+- `NotificationSent`
+- `NotificationFailed`
 
-- `employee-service` is the authoritative source for workforce core records and is depended on by attendance, leave, payroll, hiring, and auth.
-- `attendance-service` and `leave-service` feed payroll inputs; payroll should only process finalized/approved upstream records.
-- `hiring-service` hands off successful candidates to employee-service through `CandidateHired`.
-- `notification-service` is shared infrastructure subscribed to business events across domains.
-- `auth-service` is a platform dependency for all protected APIs.
+### Subscribes
+- `LeaveRequestSubmitted`
+- `LeaveRequestApproved`
+- `AttendanceCaptured`
+- `PayrollProcessed`
+- `PayrollPaid`
+- `InterviewScheduled`
+- `InterviewCalendarSynced`
+- `UserProvisioned`
+- `SessionRevoked`
+
+### Read models produced or enriched
+- `notification_delivery_view`
+
+## Coverage checklist
+
+- Every service listed by the API gateway route registry is represented here.
+- Every owned entity is defined in `docs/canon/domain-model.md`.
+- Every published and subscribed event is defined in `docs/canon/event-catalog.md`.
+- Every supported workflow is defined in `docs/canon/workflow-catalog.md`.
