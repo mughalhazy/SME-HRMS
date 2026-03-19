@@ -6,7 +6,7 @@ from time import perf_counter
 from typing import Any, Callable, Dict
 from uuid import UUID
 
-from attendance_service.models import AttendanceSource, AttendanceStatus
+from attendance_service.models import AttendanceLogEvent, AttendanceSource, AttendanceStatus
 from attendance_service.service import Actor, AttendanceService, AttendanceServiceError
 from resilience import new_trace_id
 
@@ -48,6 +48,7 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
                 "ATTENDANCE_DUPLICATE": 409,
                 "ATTENDANCE_LOCKED": 409,
                 "LOCK_REQUIRES_APPROVAL": 409,
+                "TIME_LOGIC_INVALID": 422,
             }
             status = status_map.get(exc.code, 422)
             service.observability.logger.error(
@@ -91,8 +92,34 @@ def post_attendance_records(service: AttendanceService, actor: Actor, payload: d
         source=AttendanceSource(payload["source"]) if payload.get("source") else None,
         check_in_time=_parse_datetime(payload.get("check_in_time")),
         check_out_time=_parse_datetime(payload.get("check_out_time")),
+        correction_note=payload.get("correction_note"),
     )
     return 201, _record_to_response(record)
+
+
+@with_error_handling
+def post_attendance_log(service: AttendanceService, actor: Actor, payload: dict) -> tuple[int, dict]:
+    record = service.log_attendance(
+        actor,
+        employee_id=UUID(payload["employee_id"]),
+        event_type=AttendanceLogEvent(payload["event_type"]),
+        occurred_at=_parse_datetime(payload["occurred_at"]),
+        source=AttendanceSource(payload["source"]) if payload.get("source") else None,
+    )
+    return 200, _record_to_response(record)
+
+
+@with_error_handling
+def get_attendance_records(service: AttendanceService, actor: Actor, query: dict) -> tuple[int, dict]:
+    employee_id = UUID(query["employee_id"])
+    from_date = _parse_date(query["from_date"])
+    to_date = _parse_date(query["to_date"])
+    records = service.list_records(actor, employee_id=employee_id, from_date=from_date, to_date=to_date)
+    aggregation = service.aggregate_period(actor, employee_id=employee_id, from_date=from_date, to_date=to_date)
+    return 200, {
+        "records": [_record_to_response(record) for record in records],
+        "aggregation": aggregation,
+    }
 
 
 @with_error_handling
@@ -103,6 +130,7 @@ def patch_attendance_record(service: AttendanceService, actor: Actor, attendance
         attendance_status=AttendanceStatus(payload["attendance_status"]) if payload.get("attendance_status") else None,
         check_in_time=_parse_datetime(payload.get("check_in_time")),
         check_out_time=_parse_datetime(payload.get("check_out_time")),
+        correction_note=payload.get("correction_note"),
     )
     return 200, _record_to_response(record)
 
@@ -117,6 +145,8 @@ def _record_to_response(record: Any) -> dict:
     for key in ["attendance_status", "source", "lifecycle_state"]:
         if data.get(key):
             data[key] = data[key].value
+    if data.get("anomalies"):
+        data["anomalies"] = [anomaly.value for anomaly in data["anomalies"]]
     if data.get("total_hours") is not None:
         data["total_hours"] = str(data["total_hours"])
     return data
