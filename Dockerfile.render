@@ -1,0 +1,29 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy shared resilience module and service scripts
+COPY resilience.py ./
+COPY docker/api_gateway_service.py ./
+COPY docker/common_service.py ./
+COPY start.sh ./
+RUN chmod +x /app/start.sh
+
+# Internal service URLs - all localhost since services share the same container
+ENV EMPLOYEE_SERVICE_URL=http://localhost:8001 \
+    ATTENDANCE_SERVICE_URL=http://localhost:8002 \
+    LEAVE_SERVICE_URL=http://localhost:8003 \
+    PAYROLL_SERVICE_URL=http://localhost:8004 \
+    HIRING_SERVICE_URL=http://localhost:8005 \
+    AUTH_SERVICE_URL=http://localhost:8006 \
+    NOTIFICATION_SERVICE_URL=http://localhost:8007
+
+EXPOSE 8000
+
+CMD ["/app/start.sh"]
