@@ -1,6 +1,7 @@
 import {
   CreatePerformanceReviewInput,
   PERFORMANCE_REVIEW_STATUSES,
+  PerformanceReviewFilters,
   PerformanceReviewStatus,
   UpdatePerformanceReviewInput,
 } from './performance.model';
@@ -115,5 +116,36 @@ export function validatePerformanceReviewStatus(status: PerformanceReviewStatus)
     throw new ValidationError([
       { field: 'status', reason: `must be one of: ${PERFORMANCE_REVIEW_STATUSES.join(', ')}` },
     ]);
+  }
+}
+
+export function validatePerformanceReviewFilters(filters: PerformanceReviewFilters): void {
+  const details: Array<{ field: string; reason: string }> = [];
+
+  if (filters.employee_id !== undefined && (typeof filters.employee_id !== 'string' || filters.employee_id.trim() === '')) {
+    details.push({ field: 'employee_id', reason: 'must be a non-empty string when provided' });
+  }
+
+  if (filters.reviewer_employee_id !== undefined && (typeof filters.reviewer_employee_id !== 'string' || filters.reviewer_employee_id.trim() === '')) {
+    details.push({ field: 'reviewer_employee_id', reason: 'must be a non-empty string when provided' });
+  }
+
+  if (filters.status !== undefined && !PERFORMANCE_REVIEW_STATUSES.includes(filters.status)) {
+    details.push({
+      field: 'status',
+      reason: `must be one of: ${PERFORMANCE_REVIEW_STATUSES.join(', ')}`,
+    });
+  }
+
+  if (filters.limit !== undefined && (!Number.isInteger(filters.limit) || filters.limit < 1 || filters.limit > 100)) {
+    details.push({ field: 'limit', reason: 'must be an integer between 1 and 100' });
+  }
+
+  if (filters.cursor !== undefined && (typeof filters.cursor !== 'string' || filters.cursor.trim() === '')) {
+    details.push({ field: 'cursor', reason: 'must be a non-empty string when provided' });
+  }
+
+  if (details.length > 0) {
+    throw new ValidationError(details);
   }
 }

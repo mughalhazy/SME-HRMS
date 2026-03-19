@@ -20,11 +20,16 @@ const STATUS_TRANSITIONS: Record<EmployeeStatus, EmployeeStatus[]> = {
   Terminated: [],
 };
 
+interface EmployeePerformanceReviewReferenceRepository {
+  hasEmployeeReference(employeeId: string): boolean;
+}
+
 export class EmployeeService {
   constructor(
     private readonly repository: EmployeeRepository,
     private readonly roleService?: RoleService,
     private readonly departmentRepository?: DepartmentRepository,
+    private readonly performanceReviewRepository?: EmployeePerformanceReviewReferenceRepository,
   ) {}
 
   createEmployee(input: CreateEmployeeInput): Employee {
@@ -174,6 +179,10 @@ export class EmployeeService {
     const headedDepartment = this.departmentRepository?.findByHeadEmployeeId(employeeId);
     if (headedDepartment) {
       throw new ConflictError('cannot delete employee assigned as department head');
+    }
+
+    if (this.performanceReviewRepository?.hasEmployeeReference(employeeId)) {
+      throw new ConflictError('cannot delete employee referenced by performance reviews');
     }
 
     if (!this.repository.delete(employeeId)) {
