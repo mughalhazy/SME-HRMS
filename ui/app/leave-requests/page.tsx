@@ -1,10 +1,10 @@
 import { AppShell } from '@/components/shared/app-shell'
-import { LeaveRequestsPage } from '@/components/surfaces/leave-requests-page'
+import { LeaveManagement } from '@/components/surfaces/LeaveManagement'
 
 export default function LeaveRequestsRoute() {
   return (
     <AppShell currentPath="/leave-requests">
-      <LeaveRequestsPage />
+      <LeaveManagement />
     </AppShell>
   )
 }
