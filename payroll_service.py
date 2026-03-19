@@ -115,6 +115,60 @@ class PayrollBatch:
         }
 
 
+@dataclass
+class PayrollCycle:
+    payroll_cycle_id: str
+    name: str
+    pay_period_start: date
+    pay_period_end: date
+    payment_date: date
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payroll_cycle_id": self.payroll_cycle_id,
+            "name": self.name,
+            "pay_period_start": self.pay_period_start.isoformat(),
+            "pay_period_end": self.pay_period_end.isoformat(),
+            "payment_date": self.payment_date.isoformat(),
+            "status": self.status,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+@dataclass
+class SalaryStructure:
+    salary_structure_id: str
+    employee_id: str
+    base_salary: Decimal
+    allowances: Decimal
+    deductions: Decimal
+    overtime_rate: Decimal
+    currency: str
+    effective_from: date
+    effective_to: date | None
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "salary_structure_id": self.salary_structure_id,
+            "employee_id": self.employee_id,
+            "base_salary": str(self.base_salary),
+            "allowances": str(self.allowances),
+            "deductions": str(self.deductions),
+            "overtime_rate": str(self.overtime_rate),
+            "currency": self.currency,
+            "effective_from": self.effective_from.isoformat(),
+            "effective_to": self.effective_to.isoformat() if self.effective_to else None,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
 class ServiceError(Exception):
     def __init__(self, code: str, message: str, status: int, details: list[dict[str, Any]] | None = None):
         self.code = code
@@ -140,6 +194,10 @@ class PayrollService:
     def __init__(self):
         self.records: dict[str, PayrollRecord] = {}
         self.period_index: dict[tuple[str, date, date], str] = {}
+        self.payroll_cycles: dict[str, PayrollCycle] = {}
+        self.payroll_cycle_index: dict[tuple[date, date], str] = {}
+        self.salary_structures: dict[str, SalaryStructure] = {}
+        self.salary_structure_index: dict[str, list[str]] = {}
         self.batches: dict[str, PayrollBatch] = {}
         self.batch_index: dict[tuple[date, date], str] = {}
         self.record_batches: dict[str, str] = {}
@@ -480,7 +538,7 @@ class PayrollService:
             "issues": issues,
         }
 
-    def create_payroll_record(self, payload: dict[str, Any], authorization: str | None, idempotency_key: str | None = None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+    def upsert_payroll_cycle(self, payload: dict[str, Any], authorization: str | None, idempotency_key: str | None = None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
         trace = self._trace(trace_id)
         started = perf_counter()
         try:
@@ -532,6 +590,64 @@ class PayrollService:
         except Exception as exc:
             self.error_logger.log("upsert_payroll_cycle", exc, trace_id=trace, details={"name": payload.get("name")})
             self._finalize_observation("upsert_payroll_cycle", trace, started, False, {"name": payload.get("name")})
+            raise
+
+    def create_salary_structure(
+        self,
+        payload: dict[str, Any],
+        authorization: str | None,
+        idempotency_key: str | None = None,
+        trace_id: str | None = None,
+    ) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            self._require_admin(ctx)
+            with self._lock:
+                employee_id = str(self._require_field(payload, "employee_id"))
+                effective_from = self._coerce_date(self._require_field(payload, "effective_from"), "effective_from")
+                effective_to_value = payload.get("effective_to")
+                effective_to = self._coerce_date(effective_to_value, "effective_to") if effective_to_value else None
+                if effective_to and effective_to < effective_from:
+                    raise ServiceError("VALIDATION_ERROR", "effective_to must be on or after effective_from", 422)
+
+                fingerprint = json.dumps(payload, sort_keys=True)
+                replay_key = idempotency_key or f"salary-structure:{employee_id}:{effective_from.isoformat()}"
+                replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
+                if replay is not None:
+                    self._finalize_observation("create_salary_structure", trace, started, True, {"status": replay.status_code, "replayed": True})
+                    return replay.status_code, replay.payload
+
+                ts = self._now()
+                structure = SalaryStructure(
+                    salary_structure_id=str(uuid4()),
+                    employee_id=employee_id,
+                    base_salary=self._money(payload.get("base_salary"), "base_salary"),
+                    allowances=self._money(payload.get("allowances"), "allowances"),
+                    deductions=self._money(payload.get("deductions"), "deductions"),
+                    overtime_rate=self._money(payload.get("overtime_rate"), "overtime_rate"),
+                    currency=self._validate_currency(payload.get("currency", "USD")),
+                    effective_from=effective_from,
+                    effective_to=effective_to,
+                    created_at=ts,
+                    updated_at=ts,
+                )
+                self.salary_structures[structure.salary_structure_id] = structure
+                self.salary_structure_index.setdefault(employee_id, []).append(structure.salary_structure_id)
+            self.observability.logger.audit(
+                "salary_structure_created",
+                trace_id=trace,
+                actor=ctx.employee_id or ctx.role.value,
+                entity="SalaryStructure",
+                entity_id=structure.salary_structure_id,
+                context={"employee_id": employee_id},
+            )
+            self._finalize_observation("create_salary_structure", trace, started, True, {"status": 201})
+            return self._record_idempotent_result(replay_key, fingerprint, 201, structure.to_dict())
+        except Exception as exc:
+            self.error_logger.log("create_salary_structure", exc, trace_id=trace, details={"employee_id": payload.get("employee_id")})
+            self._finalize_observation("create_salary_structure", trace, started, False, {"employee_id": payload.get("employee_id")})
             raise
 
     def generate_payroll(
