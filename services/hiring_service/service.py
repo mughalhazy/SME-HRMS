@@ -50,6 +50,18 @@ class Candidate:
 
 
 @dataclass(slots=True)
+class CandidateStageTransition:
+    candidate_stage_transition_id: str
+    candidate_id: str
+    from_status: str | None
+    to_status: str
+    changed_at: datetime
+    changed_by: str | None = None
+    reason: str | None = None
+    notes: str | None = None
+
+
+@dataclass(slots=True)
 class Interview:
     interview_id: str
     candidate_id: str
@@ -99,6 +111,7 @@ class HiringService:
     def __init__(self) -> None:
         self.job_postings: dict[str, JobPosting] = {}
         self.candidates: dict[str, Candidate] = {}
+        self.candidate_stage_transitions: dict[str, CandidateStageTransition] = {}
         self.interviews: dict[str, Interview] = {}
         self.events: list[dict[str, Any]] = []
         self.error_logger = CentralErrorLogger("hiring-service")
@@ -272,6 +285,14 @@ class HiringService:
             )
             self._validate_value(candidate.status, self.CANDIDATE_STATUSES, "status")
             self.candidates[candidate.candidate_id] = candidate
+            self._record_candidate_stage_transition(
+                candidate_id=candidate.candidate_id,
+                from_status=None,
+                to_status=candidate.status,
+                changed_by=payload.get("changed_by"),
+                reason=payload.get("stage_reason"),
+                notes=payload.get("stage_notes"),
+            )
             self._emit("CandidateApplied", {"candidate_id": candidate.candidate_id, "job_posting_id": candidate.job_posting_id})
         self.observability.track("create_candidate", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "candidate_id": candidate.candidate_id})
         return self._serialize(candidate)
@@ -281,6 +302,7 @@ class HiringService:
             checks={
                 "job_postings": len(self.job_postings),
                 "candidates": len(self.candidates),
+                "candidate_stage_transitions": len(self.candidate_stage_transitions),
                 "interviews": len(self.interviews),
             }
         )
@@ -319,6 +341,14 @@ class HiringService:
         candidate.updated_at = self._now()
 
         if previous_status != candidate.status:
+            self._record_candidate_stage_transition(
+                candidate_id=candidate.candidate_id,
+                from_status=previous_status,
+                to_status=candidate.status,
+                changed_by=patch.get("changed_by"),
+                reason=patch.get("stage_reason"),
+                notes=patch.get("stage_notes"),
+            )
             self._emit(
                 "CandidateStageChanged",
                 {
@@ -333,6 +363,7 @@ class HiringService:
     def get_candidate(self, candidate_id: str) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
         payload = self._serialize(candidate)
+        payload["stage_history"] = self.list_candidate_stage_history(candidate_id)
         payload["interviews"] = [
             self._serialize(x)
             for x in sorted(
@@ -539,9 +570,27 @@ class HiringService:
         candidate.status = "Hired"
         candidate.updated_at = self._now()
 
+        self._record_candidate_stage_transition(
+            candidate_id=candidate_id,
+            from_status="Offered",
+            to_status="Hired",
+            changed_by=None,
+            reason="candidate accepted offer",
+            notes=None,
+        )
         self._emit("CandidateStageChanged", {"candidate_id": candidate_id, "from_status": "Offered", "to_status": "Hired"})
         self._emit("CandidateHired", {"candidate_id": candidate_id, "job_posting_id": candidate.job_posting_id})
         return self._serialize(candidate)
+
+    def list_candidate_stage_history(self, candidate_id: str) -> list[dict[str, Any]]:
+        self._require_candidate(candidate_id)
+        rows = [
+            transition
+            for transition in self.candidate_stage_transitions.values()
+            if transition.candidate_id == candidate_id
+        ]
+        rows.sort(key=lambda row: (row.changed_at, row.candidate_stage_transition_id))
+        return [self._serialize(row) for row in rows]
 
     def list_candidate_pipeline_view(
         self,
@@ -576,8 +625,11 @@ class HiringService:
                 "application_date": candidate.application_date.isoformat(),
                 "pipeline_stage": candidate.status,
                 "stage_updated_at": candidate.updated_at.isoformat(),
+                "source": candidate.source,
+                "source_candidate_id": candidate.source_candidate_id,
                 "next_interview_at": next_interview.isoformat() if next_interview else None,
                 "interview_count": len(interviews),
+                "last_interview_recommendation": self._latest_interview_recommendation(interviews),
                 "hiring_owner_employee_id": None,
                 "hiring_owner_name": None,
                 "updated_at": candidate.updated_at.isoformat(),
@@ -690,3 +742,42 @@ class HiringService:
         if not interview:
             raise HiringValidationError("interview_id does not exist")
         return interview
+
+    def _record_candidate_stage_transition(
+        self,
+        *,
+        candidate_id: str,
+        from_status: str | None,
+        to_status: str,
+        changed_by: str | None,
+        reason: str | None,
+        notes: str | None,
+    ) -> CandidateStageTransition:
+        transition = CandidateStageTransition(
+            candidate_stage_transition_id=self._new_id(),
+            candidate_id=candidate_id,
+            from_status=from_status,
+            to_status=to_status,
+            changed_at=self._now(),
+            changed_by=changed_by,
+            reason=reason,
+            notes=notes,
+        )
+        self.candidate_stage_transitions[transition.candidate_stage_transition_id] = transition
+        self._emit(
+            "CandidateStageTransitionRecorded",
+            {
+                "candidate_stage_transition_id": transition.candidate_stage_transition_id,
+                "candidate_id": candidate_id,
+                "from_status": from_status,
+                "to_status": to_status,
+            },
+        )
+        return transition
+
+    def _latest_interview_recommendation(self, interviews: list[Interview]) -> str | None:
+        recommended = [row for row in interviews if row.recommendation]
+        if not recommended:
+            return None
+        recommended.sort(key=lambda row: (row.updated_at, row.interview_id), reverse=True)
+        return recommended[0].recommendation

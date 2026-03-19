@@ -28,6 +28,8 @@ class HiringServiceTest(unittest.TestCase):
                 "last_name": "Stone",
                 "email": "ava@example.com",
                 "application_date": "2026-01-03",
+                "changed_by": "recruiter-1",
+                "stage_reason": "initial application",
             }
         )
         self.assertEqual(candidate["status"], "Applied")
@@ -61,9 +63,53 @@ class HiringServiceTest(unittest.TestCase):
         event_types = [event["event_type"] for event in self.service.events]
         self.assertIn("JobPostingOpened", event_types)
         self.assertIn("CandidateApplied", event_types)
+        self.assertIn("CandidateStageTransitionRecorded", event_types)
         self.assertIn("InterviewScheduled", event_types)
         self.assertIn("InterviewCompleted", event_types)
         self.assertIn("CandidateHired", event_types)
+
+    def test_candidate_stage_history_tracks_initial_and_subsequent_stage_changes(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "June",
+                "last_name": "Park",
+                "email": "june@example.com",
+                "application_date": "2026-01-03",
+                "changed_by": "recruiter-1",
+                "stage_reason": "candidate submitted application",
+                "stage_notes": "career site flow",
+            }
+        )
+
+        self.service.update_candidate(
+            candidate["candidate_id"],
+            {
+                "status": "Screening",
+                "changed_by": "recruiter-2",
+                "stage_reason": "resume matched requirements",
+                "stage_notes": "advance to recruiter screen",
+            },
+        )
+        self.service.update_candidate(
+            candidate["candidate_id"],
+            {
+                "status": "Interviewing",
+                "changed_by": "recruiter-2",
+                "stage_reason": "screen passed",
+            },
+        )
+
+        stage_history = self.service.list_candidate_stage_history(candidate["candidate_id"])
+        self.assertEqual([entry["to_status"] for entry in stage_history], ["Applied", "Screening", "Interviewing"])
+        self.assertEqual(stage_history[0]["from_status"], None)
+        self.assertEqual(stage_history[0]["changed_by"], "recruiter-1")
+        self.assertEqual(stage_history[0]["reason"], "candidate submitted application")
+        self.assertEqual(stage_history[1]["from_status"], "Applied")
+        self.assertEqual(stage_history[1]["notes"], "advance to recruiter screen")
+
+        hydrated = self.service.get_candidate(candidate["candidate_id"])
+        self.assertEqual(len(hydrated["stage_history"]), 3)
 
     def test_invalid_candidate_transition_rejected(self) -> None:
         candidate = self.service.create_candidate(
@@ -201,8 +247,41 @@ class HiringServiceTest(unittest.TestCase):
         self.assertEqual(row["job_title"], "Backend Engineer")
         self.assertEqual(row["department_id"], "dep-1")
         self.assertEqual(row["pipeline_stage"], "Interviewing")
+        self.assertEqual(row["source"], None)
+        self.assertEqual(row["source_candidate_id"], None)
         self.assertEqual(row["next_interview_at"], "2026-01-08T10:00:00+00:00")
         self.assertEqual(row["interview_count"], 1)
+        self.assertEqual(row["last_interview_recommendation"], None)
+
+    def test_list_candidate_pipeline_view_includes_latest_interview_recommendation(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Tara",
+                "last_name": "Cole",
+                "email": "tara@example.com",
+                "application_date": "2026-01-03",
+                "source": "LinkedIn",
+                "source_candidate_id": "ln-500",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+        interview = self.service.create_interview(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-10T10:00:00Z",
+                "scheduled_end": "2026-01-10T11:00:00Z",
+            }
+        )
+        self.service.update_interview(interview["interview_id"], {"status": "Completed", "recommendation": "StrongHire"})
+
+        rows = self.service.list_candidate_pipeline_view(job_posting_id=self.posting["job_posting_id"])
+        tara = next(row for row in rows if row["candidate_id"] == candidate["candidate_id"])
+        self.assertEqual(tara["source"], "LinkedIn")
+        self.assertEqual(tara["source_candidate_id"], "ln-500")
+        self.assertEqual(tara["last_interview_recommendation"], "StrongHire")
 
 
     def test_schedule_interview_with_google_calendar_emits_sync_event(self) -> None:
