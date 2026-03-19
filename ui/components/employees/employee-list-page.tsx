@@ -9,7 +9,7 @@ import { ArrowUpRight, PencilLine, RefreshCw, Search, UserPlus, Users } from 'lu
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { EmptyState, ErrorState, InlineLoading, TableSkeleton } from '@/components/ui/feedback'
+import { ErrorState, InlineLoading, Skeleton } from '@/components/ui/feedback'
 import { Input, Select } from '@/components/ui/input'
 import { PageStack } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -60,6 +60,42 @@ function matchesQuickStatus(employee: Employee, quickStatus: QuickStatus) {
   }
 
   return true
+}
+
+function DirectoryLoadingState() {
+  return (
+    <section className="min-w-0 border-t border-slate-200">
+      <div className="grid gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto]">
+        <span>Employee</span>
+        <span>Department</span>
+        <span>Role</span>
+        <span>Status</span>
+        <span>Join date</span>
+        <span className="text-right">Actions</span>
+      </div>
+      <div className="divide-y divide-slate-100">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div key={index} className="grid gap-3 px-4 py-3.5 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] md:items-center">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-56 max-w-full" />
+              </div>
+            </div>
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+            <Skeleton className="h-4 w-24" />
+            <div className="ml-auto flex gap-2">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 export function EmployeeListPage() {
@@ -122,6 +158,8 @@ export function EmployeeListPage() {
     })
   }, [departmentId, employees, quickStatus, roleId, search, status])
 
+  const activeEmployeeCount = useMemo(() => employees.filter((employee) => employee.status === 'Active').length, [employees])
+  const inactiveEmployeeCount = useMemo(() => employees.filter((employee) => employee.status !== 'Active').length, [employees])
   const hasActiveFilters = search.length > 0 || status !== 'all' || departmentId !== 'all' || roleId !== 'all' || quickStatus !== 'all'
 
   const resetFilters = () => {
@@ -133,13 +171,13 @@ export function EmployeeListPage() {
   }
 
   return (
-    <PageStack className="gap-5">
-      <section className="space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,1.4fr)_auto] xl:items-center">
+    <PageStack className="gap-4">
+      <section className="space-y-4 border-b border-slate-200 pb-4">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)_auto] xl:items-center">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Employees</h1>
             <p className="mt-1 text-sm text-slate-500">
-              <span className="font-medium text-slate-700">{filteredEmployees.length}</span>
+              <span className="font-medium text-slate-900">{filteredEmployees.length}</span>
               <span className="ml-1">employees</span>
             </p>
           </div>
@@ -147,7 +185,7 @@ export function EmployeeListPage() {
           <label className="relative block">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
-              className="h-11 w-full rounded-full border-[var(--border)] bg-[var(--surface)] pl-11 pr-4 text-sm shadow-none"
+              className="h-12 w-full rounded-full border-slate-200 bg-white pl-11 pr-4 text-sm shadow-none"
               placeholder="Search employees..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -162,8 +200,8 @@ export function EmployeeListPage() {
           </Button>
         </div>
 
-        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div className="flex flex-col gap-3">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:grid-cols-[220px_220px_220px_auto] xl:items-center">
             <Select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
               <option value="all">All departments</option>
               {departmentOptions.map((option) => (
@@ -191,30 +229,34 @@ export function EmployeeListPage() {
               ))}
             </Select>
 
-            <div className="flex items-center gap-2 lg:justify-end">
-              {(['all', 'active', 'inactive'] as const).map((option) => {
-                const isActive = quickStatus === option
-                const label = option === 'all' ? 'All' : option === 'active' ? 'Active' : 'Inactive'
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              {([
+                { value: 'all', label: 'All', count: employees.length },
+                { value: 'active', label: 'Active', count: activeEmployeeCount },
+                { value: 'inactive', label: 'Inactive', count: inactiveEmployeeCount },
+              ] as const).map((option) => {
+                const isActive = quickStatus === option.value
 
                 return (
                   <button
-                    key={option}
+                    key={option.value}
                     type="button"
                     className={cn(
-                      'rounded-full px-3 py-2 text-sm font-medium transition-colors',
+                      'inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors',
                       isActive ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950',
                     )}
-                    onClick={() => setQuickStatus(option)}
+                    onClick={() => setQuickStatus(option.value)}
                   >
-                    {label}
+                    <span>{option.label}</span>
+                    <span className={cn('text-xs', isActive ? 'text-slate-200' : 'text-slate-400')}>{option.count}</span>
                   </button>
                 )
               })}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-2 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span>
                 Showing <span className="font-medium text-slate-950">{filteredEmployees.length}</span> of{' '}
                 <span className="font-medium text-slate-950">{employees.length}</span> loaded employees
@@ -239,52 +281,59 @@ export function EmployeeListPage() {
 
       <section className="min-w-0">
         {query.isLoading ? (
-          <TableSkeleton rows={8} columns={6} />
+          <DirectoryLoadingState />
         ) : query.isError ? (
-          <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
+          <ErrorState className="rounded-none border-x-0 border-b-0 border-t border-rose-200 bg-rose-50/60 px-0 py-6 shadow-none" message={query.error.message} onRetry={() => query.refetch()} />
         ) : filteredEmployees.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title={employees.length === 0 ? 'No employees yet' : 'No employees match the current filters'}
-            message={
-              employees.length === 0
-                ? 'Add the first employee to start building the directory.'
-                : 'Try a broader search or clear filters to see more employees.'
-            }
-            action={
-              employees.length === 0 ? (
-                <Button asChild>
-                  <Link href="/employees/new">
-                    <UserPlus className="h-4 w-4" />
-                    Add employee
-                  </Link>
-                </Button>
-              ) : hasActiveFilters ? (
-                <Button variant="outline" onClick={resetFilters}>
-                  Clear filters
-                </Button>
-              ) : null
-            }
-            className="border-0 bg-transparent p-10 shadow-none"
-          />
+          <div className="border-t border-slate-200 px-4 py-12">
+            <div className="mx-auto flex max-w-md flex-col items-center gap-4 text-center">
+              <div className="rounded-full bg-slate-100 p-3 text-slate-600">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold tracking-tight text-slate-950">
+                  {employees.length === 0 ? 'No employees yet' : 'No employees match the current filters'}
+                </h2>
+                <p className="text-sm leading-6 text-slate-500">
+                  {employees.length === 0
+                    ? 'Add the first employee to start building the directory.'
+                    : 'Try a broader search or clear filters to see more employees.'}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                {employees.length === 0 ? (
+                  <Button asChild>
+                    <Link href="/employees/new">
+                      <UserPlus className="h-4 w-4" />
+                      Add employee
+                    </Link>
+                  </Button>
+                ) : hasActiveFilters ? (
+                  <Button variant="outline" onClick={resetFilters}>
+                    Clear filters
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
         ) : (
-          <div className="overflow-hidden border border-slate-200/80 bg-[var(--surface)]">
-            <Table>
-              <TableHeader className="bg-[var(--surface)]">
+          <div className="min-w-0 border-t border-slate-200">
+            <Table className="table-fixed">
+              <TableHeader className="bg-slate-50/80 backdrop-blur-none">
                 <TableRow className="h-auto border-b border-slate-200 bg-transparent hover:bg-transparent hover:shadow-none">
-                  <TableHead className="px-5 py-3">Employee</TableHead>
-                  <TableHead className="px-4 py-3">Department</TableHead>
-                  <TableHead className="px-4 py-3">Role</TableHead>
-                  <TableHead className="px-4 py-3">Status</TableHead>
-                  <TableHead className="px-4 py-3">Join date</TableHead>
-                  <TableHead className="px-5 py-3 text-right">Actions</TableHead>
+                  <TableHead className="w-[34%] px-4 py-3">Employee</TableHead>
+                  <TableHead className="w-[16%] px-4 py-3">Department</TableHead>
+                  <TableHead className="w-[16%] px-4 py-3">Role</TableHead>
+                  <TableHead className="w-[12%] px-4 py-3">Status</TableHead>
+                  <TableHead className="w-[12%] px-4 py-3">Join date</TableHead>
+                  <TableHead className="w-[10%] px-4 py-3 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="[&_tr:nth-child(even)]:bg-transparent">
                 {filteredEmployees.map((employee) => (
                   <TableRow
                     key={employee.employee_id}
-                    className="group h-auto cursor-pointer border-b border-slate-100 hover:bg-slate-50"
+                    className="group h-auto cursor-pointer border-b border-slate-100 hover:bg-slate-50/80"
                     onClick={() => router.push(`/employees/${employee.employee_id}`)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -294,28 +343,28 @@ export function EmployeeListPage() {
                     }}
                     tabIndex={0}
                   >
-                    <TableCell className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
+                    <TableCell className="px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         <Avatar className="h-9 w-9 border-slate-200 shadow-none">
                           <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-700">{getInitials(employee)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-slate-950">{getEmployeeFullName(employee)}</div>
+                          <div className="truncate text-sm font-medium text-slate-950">{getEmployeeFullName(employee)}</div>
                           <div className="truncate text-xs text-slate-500">
                             {employee.employee_number} · {employee.email}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{employee.department_id}</TableCell>
-                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{employee.role_id}</TableCell>
-                    <TableCell className="px-4 py-3.5">
+                    <TableCell className="px-4 py-3 text-sm text-slate-600">{employee.department_id}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-slate-600">{employee.role_id}</TableCell>
+                    <TableCell className="px-4 py-3">
                       <Badge variant="outline" className={cn('font-medium', statusTone(employee.status))}>
                         {formatStatus(employee.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{formatDate(employee.hire_date)}</TableCell>
-                    <TableCell className="px-5 py-3.5">
+                    <TableCell className="px-4 py-3 text-sm text-slate-600">{formatDate(employee.hire_date)}</TableCell>
+                    <TableCell className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                         <Button
                           asChild
@@ -346,7 +395,7 @@ export function EmployeeListPage() {
               </TableBody>
             </Table>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-sm text-slate-500">
+            <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
               <span>{query.hasNextPage ? 'Load more employees to expand the directory.' : 'End of loaded employee results.'}</span>
               {query.hasNextPage ? (
                 <Button variant="outline" onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
