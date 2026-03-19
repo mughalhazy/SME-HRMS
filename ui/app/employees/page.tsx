@@ -1,9 +1,9 @@
-import { AppShell } from '@/components/shared/app-shell'
 import { EmployeeList } from '@/components/employees/EmployeeList'
+import AppShell from '@/components/hrms/shell/app-shell'
 
 export default function EmployeesPage() {
   return (
-    <AppShell currentPath="/employees">
+    <AppShell pageTitle="Employees" pageDescription="Manage employee records, search the directory, and move into detailed profiles without leaving the workspace.">
       <EmployeeList />
     </AppShell>
   )

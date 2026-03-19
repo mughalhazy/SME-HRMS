@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import {
   Activity,
+  ArrowLeft,
   BriefcaseBusiness,
   CalendarClock,
   FileText,
@@ -9,11 +11,12 @@ import {
   MapPin,
   Pencil,
   Phone,
-  ShieldAlert,
-  Sparkles,
+  ShieldCheck,
+  UserRound,
   Wallet,
 } from 'lucide-react'
 
+import { employees, getEmployeeById, getEmployeeInitials } from '@/components/employees/employee-data'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,149 +24,158 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-const stats = [
-  {
-    label: 'Attendance %',
-    value: '96.4%',
-    note: 'Present 21 of 22 working days',
-  },
-  {
-    label: 'Leaves taken',
-    value: '08',
-    note: '3 casual · 5 annual',
-  },
-  {
-    label: 'Salary band',
-    value: 'B4',
-    note: 'Senior IC compensation tier',
-  },
-  {
-    label: 'Performance score',
-    value: '4.7/5',
-    note: 'Exceeded expectations this quarter',
-  },
-]
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'Active':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    case 'Remote':
+      return 'bg-sky-50 text-sky-700 border-sky-200'
+    case 'On Leave':
+      return 'bg-amber-50 text-amber-700 border-amber-200'
+    default:
+      return 'bg-rose-50 text-rose-700 border-rose-200'
+  }
+}
 
-const overviewSections = [
-  {
-    title: 'Personal info',
-    description: 'Core employee identity and profile details.',
-    items: [
-      { label: 'Full name', value: 'Ahmed Khan' },
-      { label: 'Employee ID', value: 'EMP-1024' },
-      { label: 'Date of birth', value: 'May 14, 1991' },
-      { label: 'Nationality', value: 'Pakistani' },
-      { label: 'Marital status', value: 'Married' },
-    ],
-  },
-  {
-    title: 'Job info',
-    description: 'Current position, reporting line, and employment details.',
-    items: [
-      { label: 'Role', value: 'Senior Engineer' },
-      { label: 'Department', value: 'Engineering' },
-      { label: 'Manager', value: 'Fatima Noor' },
-      { label: 'Employment type', value: 'Full-time' },
-      { label: 'Joining date', value: 'January 10, 2021' },
-    ],
-  },
-  {
-    title: 'Contact info',
-    description: 'Preferred channels and location data for employee outreach.',
-    items: [
-      { label: 'Work email', value: 'ahmed.khan@smehrms.com' },
-      { label: 'Phone', value: '+1 (415) 555-0184' },
-      { label: 'Location', value: 'San Francisco, CA' },
-      { label: 'Address', value: '145 Market Street, Suite 900' },
-      { label: 'Emergency contact', value: 'Sara Khan · +1 (415) 555-0172' },
-    ],
-  },
-]
+export function EmployeeDetail({ employeeId }: { employeeId?: string }) {
+  const employee = getEmployeeById(employeeId ?? '') ?? employees[0]
 
-const secondaryTabs = [
-  {
-    value: 'attendance',
-    title: 'Attendance summary',
-    description: 'Consistent on-time presence with a strong punctuality trend over the last 90 days.',
-    icon: CalendarClock,
-  },
-  {
-    value: 'leave',
-    title: 'Leave balance',
-    description: '12 annual leave days and 4 sick leave days remain available for the current cycle.',
-    icon: Sparkles,
-  },
-  {
-    value: 'payroll',
-    title: 'Payroll snapshot',
-    description: 'Monthly payroll processed on time with no pending adjustments or reimbursement issues.',
-    icon: Wallet,
-  },
-  {
-    value: 'documents',
-    title: 'Document center',
-    description: 'Contract, national ID, and performance letters are uploaded and verified by HR operations.',
-    icon: FileText,
-  },
-  {
-    value: 'activity',
-    title: 'Recent activity',
-    description: 'Latest employee events include review completion, attendance regularization, and profile updates.',
-    icon: Activity,
-  },
-]
+  const stats = [
+    { label: 'Attendance %', value: employee.attendanceRate, note: 'Present and punctual across current reporting cycle.' },
+    { label: 'Leaves taken', value: employee.leavesTaken, note: 'Approved leave days used in the current annual cycle.' },
+    { label: 'Salary band', value: employee.salaryBand, note: 'Current compensation tier aligned with role level.' },
+    { label: 'Performance score', value: employee.performanceScore, note: 'Latest calibrated review snapshot.' },
+  ]
 
-export function EmployeeDetail() {
+  const overviewSections = [
+    {
+      title: 'Personal info',
+      description: 'Core employee identity and profile details.',
+      items: [
+        { label: 'Full name', value: employee.name },
+        { label: 'Employee ID', value: employee.id },
+        { label: 'Work email', value: employee.email },
+        { label: 'Phone', value: employee.phone },
+      ],
+    },
+    {
+      title: 'Job info',
+      description: 'Current position, reporting line, and employment details.',
+      items: [
+        { label: 'Role', value: employee.role },
+        { label: 'Department', value: employee.department },
+        { label: 'Manager', value: employee.manager },
+        { label: 'Employment type', value: employee.employmentType },
+      ],
+    },
+    {
+      title: 'Location & support',
+      description: 'Location data and key contact references.',
+      items: [
+        { label: 'Location', value: employee.location },
+        { label: 'Emergency contact', value: employee.emergencyContact },
+        { label: 'Joined', value: new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(employee.joinDate)) },
+        { label: 'Status', value: employee.status },
+      ],
+    },
+  ]
+
+  const secondaryTabs = [
+    {
+      value: 'attendance',
+      title: 'Attendance summary',
+      description: `${employee.attendanceRate} attendance with healthy punctuality trends over the current quarter.`,
+      icon: CalendarClock,
+    },
+    {
+      value: 'leave',
+      title: 'Leave balance',
+      description: `${employee.leavesTaken} leave days used with no pending exceptions requiring HR intervention.`,
+      icon: ShieldCheck,
+    },
+    {
+      value: 'payroll',
+      title: 'Payroll snapshot',
+      description: `Salary band ${employee.salaryBand} is active and payroll records are synced for the current cycle.`,
+      icon: Wallet,
+    },
+    {
+      value: 'documents',
+      title: 'Document center',
+      description: 'Employment documents, verification records, and compliance files remain in a healthy state.',
+      icon: FileText,
+    },
+    {
+      value: 'activity',
+      title: 'Recent activity',
+      description: 'Recent updates include profile changes, attendance review, and scheduled manager touchpoints.',
+      icon: Activity,
+    },
+  ]
+
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-      <Card className="border-slate-200 bg-white shadow-sm">
-        <CardContent className="p-6 lg:p-8">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-              <Avatar className="h-20 w-20 border-slate-200 bg-slate-50">
-                <AvatarFallback className="bg-slate-100 text-xl font-semibold text-slate-700">AK</AvatarFallback>
-              </Avatar>
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="space-y-6 p-6 lg:p-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-5">
+              <Button asChild variant="ghost" className="-ml-3 w-fit text-slate-600 hover:bg-slate-100 hover:text-slate-950">
+                <Link href="/employees">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to employees
+                </Link>
+              </Button>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-3xl font-semibold tracking-tight text-slate-950">Ahmed Khan</h2>
-                    <Badge variant="success">Active</Badge>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                    <span className="inline-flex items-center gap-2">
-                      <BriefcaseBusiness className="h-4 w-4 text-slate-400" />
-                      Senior Engineer
-                    </span>
-                    <span className="hidden text-slate-300 sm:inline">•</span>
-                    <span className="inline-flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-slate-400" />
-                      Engineering Department
-                    </span>
-                  </div>
-                </div>
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                <Avatar className="h-20 w-20 border border-slate-200 bg-slate-50">
+                  <AvatarFallback className="bg-slate-100 text-xl font-semibold text-slate-700">{getEmployeeInitials(employee.name)}</AvatarFallback>
+                </Avatar>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <InfoPill icon={Mail} label="Email" value="ahmed.khan@smehrms.com" />
-                  <InfoPill icon={Phone} label="Phone" value="+1 (415) 555-0184" />
-                  <InfoPill icon={MapPin} label="Location" value="San Francisco, CA" />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-3xl font-semibold tracking-tight text-slate-950">{employee.name}</h2>
+                      <Badge variant="outline" className={statusBadgeClass(employee.status)}>
+                        {employee.status}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                      <span className="inline-flex items-center gap-2">
+                        <BriefcaseBusiness className="h-4 w-4 text-slate-400" />
+                        {employee.role}
+                      </span>
+                      <span className="hidden text-slate-300 sm:inline">•</span>
+                      <span className="inline-flex items-center gap-2">
+                        <UserRound className="h-4 w-4 text-slate-400" />
+                        {employee.department}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <InfoPill icon={Mail} label="Email" value={employee.email} />
+                    <InfoPill icon={Phone} label="Phone" value={employee.phone} />
+                    <InfoPill icon={MapPin} label="Location" value={employee.location} />
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button variant="outline" className="border-slate-200 bg-white">
-                <Pencil className="h-4 w-4" />
-                Edit
+              <Button asChild variant="outline" className="border-slate-200 bg-white">
+                <Link href={`/employees/${employee.id}/edit`}>
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Link>
               </Button>
-              <Button variant="ghost" className="border border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800">
-                <ShieldAlert className="h-4 w-4" />
-                Deactivate
+              <Button variant="ghost" className="border border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800">
+                <ShieldCheck className="h-4 w-4" />
+                Mark reviewed
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
@@ -180,7 +192,7 @@ export function EmployeeDetail() {
         ))}
       </section>
 
-      <Tabs defaultValue="overview" className="gap-5">
+      <Tabs defaultValue="overview" className="space-y-6">
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardContent className="p-4 sm:p-5">
             <TabsList className="w-full justify-start gap-2 overflow-x-auto border-slate-200 bg-slate-50">
@@ -194,7 +206,7 @@ export function EmployeeDetail() {
           </CardContent>
         </Card>
 
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-4 xl:grid-cols-3">
             {overviewSections.map((section) => (
               <Card key={section.title} className="border-slate-200 bg-white shadow-sm">
@@ -205,11 +217,9 @@ export function EmployeeDetail() {
                 <CardContent className="space-y-4">
                   {section.items.map((item, index) => (
                     <div key={item.label} className="space-y-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{item.label}</p>
-                          <p className="text-sm font-medium text-slate-900">{item.value}</p>
-                        </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{item.label}</p>
+                        <p className="text-sm font-medium text-slate-900">{item.value}</p>
                       </div>
                       {index < section.items.length - 1 ? <Separator className="bg-slate-100" /> : null}
                     </div>
@@ -224,23 +234,24 @@ export function EmployeeDetail() {
           const Icon = tab.icon
 
           return (
-            <TabsContent key={tab.value} value={tab.value}>
+            <TabsContent key={tab.value} value={tab.value} className="space-y-6">
               <Card className="border-slate-200 bg-white shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-600">
-                      <Icon className="h-5 w-5" />
+                <CardContent className="flex flex-col gap-4 p-6 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-950">{tab.title}</h3>
+                        <p className="text-sm text-slate-500">Focused employee insight</p>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle>{tab.title}</CardTitle>
-                      <CardDescription>{tab.description}</CardDescription>
-                    </div>
+                    <p className="max-w-3xl text-sm leading-6 text-slate-600">{tab.description}</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-sm leading-6 text-slate-600">
-                    This tab is ready for deeper employee-specific content while keeping the current detail page clean, light, and easy to scan.
-                  </div>
+                  <Badge variant="outline" className="w-fit border-slate-200 bg-slate-50 text-slate-600">
+                    {employee.id}
+                  </Badge>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -261,12 +272,16 @@ function InfoPill({
   value: string
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <p className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-        <Icon className="h-4 w-4 text-slate-400" />
-        {value}
-      </p>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-white p-2 text-slate-600 shadow-sm">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+          <p className="mt-1 truncate text-sm font-medium text-slate-900">{value}</p>
+        </div>
+      </div>
     </div>
   )
 }

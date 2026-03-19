@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import {
   Building2,
@@ -23,156 +24,8 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input, Select } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { employees, getEmployeeInitials, type EmployeeRecord, type EmployeeStatus } from '@/components/employees/employee-data'
 import { cn } from '@/lib/utils'
-
-type EmployeeStatus = 'Active' | 'Remote' | 'On Leave' | 'Probation'
-
-type EmployeeRecord = {
-  id: string
-  name: string
-  department: 'Engineering' | 'Human Resources' | 'Finance' | 'Design' | 'Operations' | 'Sales'
-  role: string
-  manager: string
-  status: EmployeeStatus
-  joinDate: string
-  location: 'New York, USA' | 'Austin, USA' | 'Chicago, USA' | 'London, UK' | 'Toronto, Canada'
-  email: string
-}
-
-const employees: EmployeeRecord[] = [
-  {
-    id: 'EMP-1048',
-    name: 'Olivia Bennett',
-    department: 'Engineering',
-    role: 'Senior Frontend Engineer',
-    manager: 'Marcus Hill',
-    status: 'Active',
-    joinDate: '2022-03-14',
-    location: 'New York, USA',
-    email: 'olivia.bennett@acmehr.com',
-  },
-  {
-    id: 'EMP-1052',
-    name: 'Daniel Kim',
-    department: 'Finance',
-    role: 'Financial Analyst',
-    manager: 'Priya Shah',
-    status: 'Remote',
-    joinDate: '2021-09-06',
-    location: 'Toronto, Canada',
-    email: 'daniel.kim@acmehr.com',
-  },
-  {
-    id: 'EMP-1061',
-    name: 'Ava Thompson',
-    department: 'Human Resources',
-    role: 'HR Business Partner',
-    manager: 'Leah Morgan',
-    status: 'Active',
-    joinDate: '2023-01-23',
-    location: 'Chicago, USA',
-    email: 'ava.thompson@acmehr.com',
-  },
-  {
-    id: 'EMP-1067',
-    name: 'Ethan Carter',
-    department: 'Operations',
-    role: 'Operations Coordinator',
-    manager: 'Monica Reyes',
-    status: 'Probation',
-    joinDate: '2024-11-04',
-    location: 'Austin, USA',
-    email: 'ethan.carter@acmehr.com',
-  },
-  {
-    id: 'EMP-1074',
-    name: 'Sophia Martinez',
-    department: 'Design',
-    role: 'Product Designer',
-    manager: 'Nina Walker',
-    status: 'Remote',
-    joinDate: '2022-07-18',
-    location: 'London, UK',
-    email: 'sophia.martinez@acmehr.com',
-  },
-  {
-    id: 'EMP-1083',
-    name: 'Noah Patel',
-    department: 'Engineering',
-    role: 'Backend Engineer',
-    manager: 'Marcus Hill',
-    status: 'Active',
-    joinDate: '2020-05-11',
-    location: 'Austin, USA',
-    email: 'noah.patel@acmehr.com',
-  },
-  {
-    id: 'EMP-1090',
-    name: 'Grace Liu',
-    department: 'Sales',
-    role: 'Account Executive',
-    manager: 'Trevor Miles',
-    status: 'On Leave',
-    joinDate: '2021-11-29',
-    location: 'New York, USA',
-    email: 'grace.liu@acmehr.com',
-  },
-  {
-    id: 'EMP-1098',
-    name: 'Liam Foster',
-    department: 'Operations',
-    role: 'Facilities Lead',
-    manager: 'Monica Reyes',
-    status: 'Active',
-    joinDate: '2019-08-12',
-    location: 'Chicago, USA',
-    email: 'liam.foster@acmehr.com',
-  },
-  {
-    id: 'EMP-1106',
-    name: 'Charlotte Reed',
-    department: 'Human Resources',
-    role: 'Talent Acquisition Specialist',
-    manager: 'Leah Morgan',
-    status: 'Active',
-    joinDate: '2023-04-17',
-    location: 'Toronto, Canada',
-    email: 'charlotte.reed@acmehr.com',
-  },
-  {
-    id: 'EMP-1115',
-    name: 'James Walker',
-    department: 'Finance',
-    role: 'Payroll Manager',
-    manager: 'Priya Shah',
-    status: 'Remote',
-    joinDate: '2020-10-08',
-    location: 'London, UK',
-    email: 'james.walker@acmehr.com',
-  },
-  {
-    id: 'EMP-1124',
-    name: 'Mia Gonzalez',
-    department: 'Sales',
-    role: 'Sales Operations Analyst',
-    manager: 'Trevor Miles',
-    status: 'Active',
-    joinDate: '2022-02-21',
-    location: 'Austin, USA',
-    email: 'mia.gonzalez@acmehr.com',
-  },
-  {
-    id: 'EMP-1138',
-    name: 'Benjamin Clark',
-    department: 'Engineering',
-    role: 'QA Automation Engineer',
-    manager: 'Marcus Hill',
-    status: 'Probation',
-    joinDate: '2025-01-13',
-    location: 'New York, USA',
-    email: 'benjamin.clark@acmehr.com',
-  },
-]
 
 const departments = ['All Departments', 'Engineering', 'Human Resources', 'Finance', 'Design', 'Operations', 'Sales'] as const
 const statuses = ['All Statuses', 'Active', 'Remote', 'On Leave', 'Probation'] as const
@@ -183,21 +36,11 @@ function formatJoinDate(date: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
 }
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-}
-
 function statusVariant(status: EmployeeStatus) {
   switch (status) {
     case 'Active':
       return 'success'
     case 'On Leave':
-      return 'outline'
     case 'Probation':
       return 'outline'
     default:
@@ -224,34 +67,15 @@ function summaryMetrics(records: EmployeeRecord[]) {
   const departmentsCount = new Set(records.map((employee) => employee.department)).size
 
   return [
-    {
-      label: 'Total employees',
-      value: records.length,
-      tone: 'text-slate-950',
-      detail: 'Visible in current view',
-    },
-    {
-      label: 'Active employees',
-      value: activeCount,
-      tone: 'text-emerald-700',
-      detail: 'Ready for active workforce planning',
-    },
-    {
-      label: 'Remote employees',
-      value: remoteCount,
-      tone: 'text-sky-700',
-      detail: 'Distributed teams in this result set',
-    },
-    {
-      label: 'Departments',
-      value: departmentsCount,
-      tone: 'text-slate-950',
-      detail: 'Functional coverage represented',
-    },
+    { label: 'Total employees', value: records.length, tone: 'text-slate-950', detail: 'Visible in current view' },
+    { label: 'Active employees', value: activeCount, tone: 'text-emerald-700', detail: 'Ready for active workforce planning' },
+    { label: 'Remote employees', value: remoteCount, tone: 'text-sky-700', detail: 'Distributed teams in this result set' },
+    { label: 'Departments', value: departmentsCount, tone: 'text-slate-950', detail: 'Functional coverage represented' },
   ]
 }
 
 export function EmployeeList() {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [department, setDepartment] = useState<(typeof departments)[number]>('All Departments')
   const [status, setStatus] = useState<(typeof statuses)[number]>('All Statuses')
@@ -280,7 +104,6 @@ export function EmployeeList() {
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const paginatedEmployees = filteredEmployees.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-
   const startResult = filteredEmployees.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const endResult = Math.min(currentPage * PAGE_SIZE, filteredEmployees.length)
   const metrics = useMemo(() => summaryMetrics(filteredEmployees), [filteredEmployees])
@@ -296,8 +119,8 @@ export function EmployeeList() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-6 px-6 py-6 lg:px-8 lg:py-7">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="space-y-6 px-6 py-6 lg:px-8">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-4">
               <Badge variant="outline" className="w-fit border-slate-200 bg-slate-50 text-slate-600">
@@ -341,7 +164,7 @@ export function EmployeeList() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {metrics.map((metric) => (
-              <div key={metric.label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+              <div key={metric.label} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <p className="text-sm font-medium text-slate-500">{metric.label}</p>
                 <p className={cn('mt-2 text-2xl font-semibold tracking-tight', metric.tone)}>{metric.value}</p>
                 <p className="mt-1.5 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{metric.detail}</p>
@@ -351,9 +174,9 @@ export function EmployeeList() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-6 px-6 py-6 lg:px-8">
-          <div className="flex flex-col gap-4 border-b border-slate-200 pb-6">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="space-y-6 px-6 py-6 lg:px-8">
+          <div className="space-y-4 border-b border-slate-200 pb-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-1">
                 <h3 className="text-lg font-semibold text-slate-950">Filters</h3>
@@ -457,7 +280,7 @@ export function EmployeeList() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
             <Table>
               <TableHeader className="bg-slate-50">
                 <TableRow className="h-auto border-slate-200 hover:bg-slate-50">
@@ -472,21 +295,21 @@ export function EmployeeList() {
               <TableBody>
                 {paginatedEmployees.length > 0 ? (
                   paginatedEmployees.map((employee) => (
-                    <TableRow key={employee.id} className="border-slate-200 hover:bg-gray-50">
+                    <TableRow key={employee.id} className="border-slate-200 hover:bg-slate-50">
                       <TableCell className="py-4 align-top">
-                        <div className="flex items-start gap-3">
+                        <Link href={`/employees/${employee.id}`} className="group flex items-start gap-3 rounded-xl -m-2 p-2 transition-colors hover:bg-slate-50">
                           <Avatar className="mt-0.5 h-10 w-10 border border-slate-200 bg-slate-100">
-                            <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-700">{initials(employee.name)}</AvatarFallback>
+                            <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-700">{getEmployeeInitials(employee.name)}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 space-y-1">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <p className="font-semibold text-slate-950">{employee.name}</p>
+                              <p className="font-semibold text-slate-950 group-hover:text-blue-600">{employee.name}</p>
                               <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">{employee.id}</span>
                             </div>
                             <p className="truncate text-sm text-slate-600">{employee.email}</p>
                             <p className="text-sm text-slate-500">{employee.location}</p>
                           </div>
-                        </div>
+                        </Link>
                       </TableCell>
                       <TableCell className="py-4 align-top">
                         <div className="space-y-1">
@@ -515,8 +338,8 @@ export function EmployeeList() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem>View profile</DropdownMenuItem>
-                              <DropdownMenuItem>Edit employee</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/employees/${employee.id}`)}>View profile</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/employees/${employee.id}/edit`)}>Edit employee</DropdownMenuItem>
                               <DropdownMenuItem>Assign review</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -539,7 +362,7 @@ export function EmployeeList() {
           </div>
 
           <div className="flex flex-col gap-4 border-t border-slate-200 pt-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
               <div className="rounded-full bg-white p-2 text-slate-500 shadow-sm">
                 <Users className="h-4 w-4" />
               </div>

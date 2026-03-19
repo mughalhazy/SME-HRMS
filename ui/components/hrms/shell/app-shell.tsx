@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Bell,
+  Building2,
   CalendarDays,
   ClipboardList,
   CreditCard,
@@ -12,7 +13,6 @@ import {
   LogOut,
   Search,
   Settings,
-  Trees,
   Users,
 } from 'lucide-react'
 
@@ -27,7 +27,7 @@ const navigationItems = [
   { label: 'Attendance', href: '/attendance', icon: CalendarDays },
   { label: 'Leave', href: '/leave', icon: ClipboardList },
   { label: 'Payroll', href: '/payroll', icon: CreditCard },
-  { label: 'Departments', href: '/departments', icon: Trees },
+  { label: 'Departments', href: '/departments', icon: Building2 },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
 
@@ -39,24 +39,32 @@ function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-interface AppShellProps {
+type AppShellProps = {
   children: ReactNode
   pageTitle?: string
+  pageDescription?: string
+  pageActions?: ReactNode
 }
 
-export function AppShell({ children, pageTitle = 'Workspace Overview' }: AppShellProps) {
+export default function AppShell({
+  children,
+  pageTitle,
+  pageDescription = 'Run daily HR operations from a consistent enterprise workspace.',
+  pageActions,
+}: AppShellProps) {
   const pathname = usePathname() ?? '/'
+  const activeItem = navigationItems.find((item) => isActiveRoute(pathname, item.href)) ?? navigationItems[0]
 
   return (
-    <div className="h-screen bg-slate-50 text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-slate-200 bg-white">
+    <div className="min-h-screen bg-slate-50 text-slate-950">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[272px] flex-col border-r border-slate-200 bg-white lg:flex">
         <div className="border-b border-slate-200 px-6 py-5">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-sm font-semibold text-white shadow-sm">
               HR
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">HRMS</p>
+              <p className="truncate text-sm font-semibold text-slate-950">SME HRMS</p>
               <p className="truncate text-xs text-slate-500">Enterprise Workspace</p>
             </div>
           </Link>
@@ -73,16 +81,14 @@ export function AppShell({ children, pageTitle = 'Workspace Overview' }: AppShel
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors',
-                    active
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                    'flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-colors hover:bg-gray-100',
+                    active ? 'bg-blue-50 text-blue-600' : 'text-slate-600',
                   )}
                 >
                   <span
                     className={cn(
-                      'flex h-9 w-9 items-center justify-center rounded-lg',
-                      active ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-500',
+                      'flex h-10 w-10 items-center justify-center rounded-xl transition-colors',
+                      active ? 'bg-white text-blue-600 shadow-sm' : 'bg-slate-100 text-slate-500',
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -94,17 +100,19 @@ export function AppShell({ children, pageTitle = 'Workspace Overview' }: AppShel
           </nav>
 
           <div className="space-y-4 border-t border-slate-200 pt-4">
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3">
-              <Avatar className="h-10 w-10 border-slate-200 bg-white">
-                <AvatarFallback>AD</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-950">Ava Davis</p>
-                <p className="truncate text-xs text-slate-500">HR Director</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-11 w-11 border border-slate-200 bg-white">
+                  <AvatarFallback>AD</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-950">Ava Davis</p>
+                  <p className="truncate text-xs text-slate-500">HR Director</p>
+                </div>
               </div>
             </div>
 
-            <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl px-3.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl px-3.5 text-slate-600 hover:bg-gray-100 hover:text-slate-900">
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
@@ -112,34 +120,35 @@ export function AppShell({ children, pageTitle = 'Workspace Overview' }: AppShel
         </div>
       </aside>
 
-      <div className="pl-[260px]">
-        <header className="fixed left-[260px] right-0 top-0 z-20 border-b border-slate-200 bg-white">
-          <div className="flex h-[60px] items-center justify-between gap-4 px-6">
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold text-slate-950">{pageTitle}</h1>
+      <div className="lg:pl-[272px]">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex min-h-[76px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 space-y-1">
+              <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-950">{pageTitle ?? activeItem.label}</h1>
+              <p className="text-sm text-slate-500">{pageDescription}</p>
             </div>
 
-            <div className="flex flex-1 items-center justify-end gap-3">
-              <div className="relative w-full max-w-md">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+              <div className="relative w-full sm:w-[320px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input className="border-slate-200 bg-white pl-9" placeholder="Search employees, payroll, or leave requests" />
               </div>
-
-              <Button variant="ghost" size="icon" className="rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Notifications">
-                <Bell className="h-5 w-5" />
-              </Button>
-
-              <Avatar className="h-10 w-10 border-slate-200 bg-white">
-                <AvatarFallback>AD</AvatarFallback>
-              </Avatar>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="icon" className="border-slate-200 bg-white hover:bg-slate-50" aria-label="Notifications">
+                  <Bell className="h-4 w-4" />
+                </Button>
+                {pageActions ?? null}
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="h-screen overflow-y-auto bg-slate-50 pt-[60px]">
-          <div className="min-h-full p-6">{children}</div>
+        <main className="min-h-[calc(100vh-76px)] bg-slate-50">
+          <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6">{children}</div>
         </main>
       </div>
     </div>
   )
 }
+
+export { AppShell }
