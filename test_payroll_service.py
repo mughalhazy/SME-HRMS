@@ -191,3 +191,133 @@ def test_payroll_observability_captures_metrics_and_audit_logs(service: PayrollS
     assert metrics["request_count"] >= 3
     assert any(record["trace_id"] == "trace-payroll-paid" and record["message"] == "payroll_record_paid" for record in service.observability.logger.records)
     assert service.health_snapshot()["status"] == "ok"
+
+
+def test_generate_fetch_and_update_payroll_with_salary_structure_and_cycle(service: PayrollService):
+    admin = token("Admin")
+    _, structure = service.create_salary_structure(
+        {
+            "employee_id": "emp-10",
+            "base_salary": "3000.00",
+            "allowances": "250.00",
+            "deductions": "100.00",
+            "overtime_rate": "25.00",
+            "currency": "USD",
+            "effective_from": "2026-10-01",
+        },
+        admin,
+    )
+    _, cycle = service.upsert_payroll_cycle(
+        {
+            "name": "October 2026 Monthly",
+            "pay_period_start": "2026-10-01",
+            "pay_period_end": "2026-10-31",
+            "payment_date": "2026-11-05",
+        },
+        admin,
+    )
+
+    status, created = service.generate_payroll(
+        {
+            "salary_structure_id": structure["salary_structure_id"],
+            "payroll_cycle_id": cycle["payroll_cycle_id"],
+            "overtime_hours": "4",
+        },
+        admin,
+    )
+
+    assert status == 201
+    assert created["salary_structure_id"] == structure["salary_structure_id"]
+    assert created["payroll_cycle_id"] == cycle["payroll_cycle_id"]
+    assert created["overtime_pay"] == "100.00"
+    assert created["gross_pay"] == "3350.00"
+    assert created["net_pay"] == "3250.00"
+
+    status, fetched = service.fetch_payroll(admin, payroll_record_id=created["payroll_record_id"])
+    assert status == 200
+    assert fetched["data"]["salary_structure"]["salary_structure_id"] == structure["salary_structure_id"]
+    assert fetched["data"]["payroll_cycle"]["payroll_cycle_id"] == cycle["payroll_cycle_id"]
+
+    status, updated = service.update_payroll(
+        created["payroll_record_id"],
+        {
+            "allowances": "300.00",
+            "deductions": "125.00",
+            "gross_pay": "3400.00",
+            "net_pay": "3275.00",
+        },
+        admin,
+    )
+    assert status == 200
+    assert updated["gross_pay"] == "3400.00"
+    assert updated["net_pay"] == "3275.00"
+
+
+def test_generate_payroll_rejects_invalid_calculations(service: PayrollService):
+    admin = token("Admin")
+    _, structure = service.create_salary_structure(
+        {
+            "employee_id": "emp-11",
+            "base_salary": "2000.00",
+            "allowances": "100.00",
+            "deductions": "50.00",
+            "overtime_rate": "10.00",
+            "currency": "USD",
+            "effective_from": "2026-11-01",
+        },
+        admin,
+    )
+
+    with pytest.raises(ServiceError) as exc:
+        service.generate_payroll(
+            {
+                "salary_structure_id": structure["salary_structure_id"],
+                "pay_period_start": "2026-11-01",
+                "pay_period_end": "2026-11-30",
+                "overtime_hours": "2",
+                "gross_pay": "9999.99",
+            },
+            admin,
+        )
+
+    assert exc.value.status == 422
+    assert exc.value.message == "gross_pay does not match validated calculation"
+
+
+def test_generate_payroll_rejects_negative_net_pay_edge_case(service: PayrollService):
+    admin = token("Admin")
+
+    with pytest.raises(ServiceError) as exc:
+        service.generate_payroll(
+            {
+                "employee_id": "emp-12",
+                "pay_period_start": "2026-12-01",
+                "pay_period_end": "2026-12-31",
+                "base_salary": "100.00",
+                "allowances": "0.00",
+                "deductions": "125.00",
+                "currency": "USD",
+            },
+            admin,
+        )
+
+    assert exc.value.status == 422
+    assert exc.value.message == "net_pay must be >= 0"
+
+
+def test_payroll_cycle_rejects_payment_before_period_end_edge_case(service: PayrollService):
+    admin = token("Admin")
+
+    with pytest.raises(ServiceError) as exc:
+        service.upsert_payroll_cycle(
+            {
+                "name": "Invalid Cycle",
+                "pay_period_start": "2026-12-01",
+                "pay_period_end": "2026-12-31",
+                "payment_date": "2026-12-15",
+            },
+            admin,
+        )
+
+    assert exc.value.status == 422
+    assert exc.value.message == "payment_date must be on or after pay_period_end"
