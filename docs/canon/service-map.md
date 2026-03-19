@@ -41,6 +41,9 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `GET /api/v1/roles?status=&limit=&cursor=`
 - `POST /api/v1/performance-reviews`
 - `PATCH /api/v1/performance-reviews/{performance_review_id}`
+- `POST /api/v1/performance-reviews/{performance_review_id}/submit`
+- `POST /api/v1/performance-reviews/{performance_review_id}/acknowledge`
+- `POST /api/v1/performance-reviews/{performance_review_id}/finalize`
 - `GET /api/v1/performance-reviews?employee_id=&reviewer_employee_id=&status=&limit=&cursor=`
 
 ### Dependencies
@@ -61,6 +64,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `RoleCreated`
 - `RoleUpdated`
 - `PerformanceReviewSubmitted`
+- `PerformanceReviewAcknowledged`
 - `PerformanceReviewFinalized`
 
 ### Subscribes
@@ -219,6 +223,8 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 ### Canonical APIs
 - `POST /api/v1/hiring/job-postings`
 - `PATCH /api/v1/hiring/job-postings/{job_posting_id}`
+- `POST /api/v1/hiring/job-postings/{job_posting_id}/hold`
+- `POST /api/v1/hiring/job-postings/{job_posting_id}/reopen`
 - `GET /api/v1/hiring/job-postings?status=&department_id=&limit=&cursor=`
 - `POST /api/v1/hiring/candidates`
 - `PATCH /api/v1/hiring/candidates/{candidate_id}`
@@ -226,6 +232,8 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `POST /api/v1/hiring/interviews`
 - `POST /api/v1/hiring/interviews/google-calendar`
 - `PATCH /api/v1/hiring/interviews/{interview_id}`
+- `POST /api/v1/hiring/interviews/{interview_id}/cancel`
+- `POST /api/v1/hiring/interviews/{interview_id}/mark-no-show`
 - `POST /api/v1/hiring/candidates/{candidate_id}/mark-hired`
 - `POST /api/v1/hiring/candidates/import/linkedin`
 
@@ -241,11 +249,14 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 
 ### Publishes
 - `JobPostingOpened`
+- `JobPostingOnHold`
 - `JobPostingClosed`
 - `CandidateApplied`
 - `CandidateStageChanged`
 - `InterviewScheduled`
 - `InterviewCompleted`
+- `InterviewCancelled`
+- `InterviewNoShow`
 - `InterviewCalendarSynced`
 - `CandidateImported`
 - `LinkedInCandidatesImported`
@@ -280,10 +291,15 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/users`
 - `PATCH /api/v1/auth/users/{user_id}`
+- `POST /api/v1/auth/users/{user_id}/lock`
+- `POST /api/v1/auth/users/{user_id}/unlock`
+- `GET /api/v1/auth/sessions?user_id=&status=&limit=&cursor=`
+- `POST /api/v1/auth/sessions/{session_id}/revoke`
 - `POST /api/v1/auth/roles/bindings`
 - `DELETE /api/v1/auth/roles/bindings/{binding_id}`
 - `POST /api/v1/auth/policies`
 - `PATCH /api/v1/auth/policies/{policy_id}`
+- `GET /api/v1/auth/policies?capability_id=&role_name=&effect=&limit=&cursor=`
 - `GET /api/v1/auth/access?user_id=`
 
 ### Dependencies
@@ -297,6 +313,9 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `UserAuthenticated`
 - `SessionRevoked`
 - `UserProvisioned`
+- `UserAccountStatusChanged`
+- `RoleBindingChanged`
+- `RefreshTokenRotated`
 - `AuthorizationPolicyUpdated`
 
 ### Subscribes
@@ -324,7 +343,9 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `POST /api/v1/notifications/bulk-send`
 - `POST /api/v1/notifications/templates`
 - `PATCH /api/v1/notifications/templates/{template_id}`
+- `GET /api/v1/notifications/templates?code=&channel=&status=&limit=&cursor=`
 - `GET /api/v1/notifications/messages/{message_id}`
+- `GET /api/v1/notifications/preferences/{subject_id}`
 - `PATCH /api/v1/notifications/preferences/{subject_id}`
 - `GET /api/v1/notifications/delivery?subject_id=&status=&channel=&limit=&cursor=`
 
@@ -339,6 +360,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `NotificationQueued`
 - `NotificationSent`
 - `NotificationFailed`
+- `NotificationSuppressed`
 
 ### Subscribes
 - `LeaveRequestSubmitted`

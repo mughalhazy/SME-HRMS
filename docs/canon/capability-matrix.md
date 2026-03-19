@@ -18,12 +18,12 @@ Source anchors:
 | `CAP-LEV-002` | Leave decision workflow | `leave-service` | `LeaveRequest` | `leave_requests_view` | `/api/v1/leave/requests/{leave_request_id}/submit`, `/approve`, `/reject`, `/cancel` |
 | `CAP-PAY-001` | Payroll processing and payroll data access | `payroll-service` | `PayrollRecord`, `Employee` | `payroll_summary_view` | `/api/v1/payroll/records`, `/api/v1/payroll/run` |
 | `CAP-PAY-002` | Payroll disbursement completion | `payroll-service` | `PayrollRecord` | `payroll_summary_view` | `/api/v1/payroll/records/{payroll_record_id}/mark-paid` |
-| `CAP-HIR-001` | Job posting and requisition management | `hiring-service` | `JobPosting`, `Department`, `Role` | `job_posting_directory_view` | `/api/v1/hiring/job-postings` |
-| `CAP-HIR-002` | Candidate pipeline and interview management | `hiring-service` | `Candidate`, `Interview`, `JobPosting` | `candidate_pipeline_view` | `/api/v1/hiring/candidates`, `/api/v1/hiring/interviews` |
-| `CAP-PRF-001` | Performance review lifecycle | `employee-service` | `PerformanceReview`, `Employee` | `performance_review_view` | `/api/v1/performance-reviews` |
-| `CAP-AUT-001` | Identity and access administration | `auth-service` | `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Session`, `RefreshToken` | `access_control_view` | `/api/v1/auth` |
-| `CAP-NOT-001` | Notification template and delivery operations | `notification-service` | `NotificationTemplate`, `NotificationMessage`, `DeliveryAttempt` | `notification_delivery_view` | `/api/v1/notifications/send`, `/api/v1/notifications/templates`, `/api/v1/notifications/messages/{message_id}` |
-| `CAP-NOT-002` | Notification preference management | `notification-service` | `NotificationPreference` | `notification_delivery_view` | `/api/v1/notifications/preferences/{subject_id}` |
+| `CAP-HIR-001` | Job posting and requisition management | `hiring-service` | `JobPosting`, `Department`, `Role` | `job_posting_directory_view` | `/api/v1/hiring/job-postings`, `/api/v1/hiring/job-postings/{job_posting_id}/hold`, `/api/v1/hiring/job-postings/{job_posting_id}/reopen` |
+| `CAP-HIR-002` | Candidate pipeline and interview management | `hiring-service` | `Candidate`, `Interview`, `JobPosting` | `candidate_pipeline_view` | `/api/v1/hiring/candidates`, `/api/v1/hiring/interviews`, `/api/v1/hiring/interviews/{interview_id}/cancel`, `/api/v1/hiring/interviews/{interview_id}/mark-no-show` |
+| `CAP-PRF-001` | Performance review lifecycle | `employee-service` | `PerformanceReview`, `Employee` | `performance_review_view` | `/api/v1/performance-reviews`, `/api/v1/performance-reviews/{performance_review_id}/submit`, `/acknowledge`, `/finalize` |
+| `CAP-AUT-001` | Identity and access administration | `auth-service` | `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Session`, `RefreshToken` | `access_control_view` | `/api/v1/auth/users`, `/api/v1/auth/sessions`, `/api/v1/auth/policies`, `/api/v1/auth/access` |
+| `CAP-NOT-001` | Notification template and delivery operations | `notification-service` | `NotificationTemplate`, `NotificationMessage`, `DeliveryAttempt` | `notification_delivery_view` | `/api/v1/notifications/send`, `/api/v1/notifications/templates`, `/api/v1/notifications/messages/{message_id}`, `/api/v1/notifications/delivery` |
+| `CAP-NOT-002` | Notification preference management | `notification-service` | `NotificationPreference` | `notification_delivery_view` | `GET/PATCH /api/v1/notifications/preferences/{subject_id}` |
 
 ## Entity coverage check
 

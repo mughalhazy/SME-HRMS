@@ -22,6 +22,7 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `RoleCreated` | `employee-service` | `Role` | Role created. |
 | `RoleUpdated` | `employee-service` | `Role` | Role metadata/status updated. |
 | `PerformanceReviewSubmitted` | `employee-service` | `PerformanceReview` | Review submitted by reviewer. |
+| `PerformanceReviewAcknowledged` | `employee-service` | `PerformanceReview` | Review acknowledged by employee. |
 | `PerformanceReviewFinalized` | `employee-service` | `PerformanceReview` | Review finalized after acknowledgement/closure. |
 | `AttendanceCaptured` | `attendance-service` | `AttendanceRecord` | Attendance record captured. |
 | `AttendanceValidated` | `attendance-service` | `AttendanceRecord` | Attendance validated. |
@@ -37,11 +38,14 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `PayrollPaid` | `payroll-service` | `PayrollRecord` | Payroll disbursement completed. |
 | `PayrollCancelled` | `payroll-service` | `PayrollRecord` | Payroll invalidated or reversed. |
 | `JobPostingOpened` | `hiring-service` | `JobPosting` | Job posting opened. |
+| `JobPostingOnHold` | `hiring-service` | `JobPosting` | Job posting placed on hold. |
 | `JobPostingClosed` | `hiring-service` | `JobPosting` | Job posting closed or filled. |
 | `CandidateApplied` | `hiring-service` | `Candidate` | Candidate application created. |
 | `CandidateStageChanged` | `hiring-service` | `Candidate` | Candidate moves between pipeline states. |
 | `InterviewScheduled` | `hiring-service` | `Interview` | Interview created in `Scheduled`. |
 | `InterviewCompleted` | `hiring-service` | `Interview` | Interview marked `Completed`. |
+| `InterviewCancelled` | `hiring-service` | `Interview` | Interview marked `Cancelled`. |
+| `InterviewNoShow` | `hiring-service` | `Interview` | Interview marked `NoShow`. |
 | `InterviewCalendarSynced` | `hiring-service` | `Interview` | Interview synced to Google Calendar. |
 | `CandidateImported` | `hiring-service` | `Candidate` | Candidate imported from external source. |
 | `LinkedInCandidatesImported` | `hiring-service` | `Candidate` | Batch LinkedIn import completed. |
@@ -49,10 +53,14 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `UserAuthenticated` | `auth-service` | `Session` | Successful login completed. |
 | `SessionRevoked` | `auth-service` | `Session` | Logout or forced revocation completed. |
 | `UserProvisioned` | `auth-service` | `UserAccount` | New user account provisioned or invited. |
+| `UserAccountStatusChanged` | `auth-service` | `UserAccount` | User account locked, unlocked, or disabled. |
+| `RoleBindingChanged` | `auth-service` | `RoleBinding` | Role binding granted, revoked, or scope-adjusted. |
+| `RefreshTokenRotated` | `auth-service` | `RefreshToken` | Refresh token rotated to continue a session safely. |
 | `AuthorizationPolicyUpdated` | `auth-service` | `PermissionPolicy` | Policy or role binding model updated. |
 | `NotificationQueued` | `notification-service` | `NotificationMessage` | Notification accepted for delivery. |
 | `NotificationSent` | `notification-service` | `NotificationMessage` | Notification delivered successfully. |
 | `NotificationFailed` | `notification-service` | `NotificationMessage` | Notification failed after attempt(s). |
+| `NotificationSuppressed` | `notification-service` | `NotificationMessage` | Notification intentionally suppressed by preference or policy. |
 
 ## employee-service events
 
@@ -102,6 +110,12 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Aggregate:** `PerformanceReview`
 - **Transition:** `Draft -> Submitted`.
 - **Minimum payload:** `performance_review_id`, `employee_id`, `reviewer_employee_id`, `status`, `submitted_at`.
+- **Consumers:** `notification-service`, talent analytics.
+
+### `PerformanceReviewAcknowledged`
+- **Aggregate:** `PerformanceReview`
+- **Transition:** `Submitted -> Acknowledged`.
+- **Minimum payload:** `performance_review_id`, `employee_id`, `acknowledged_at`, `status`.
 - **Consumers:** `notification-service`, talent analytics.
 
 ### `PerformanceReviewFinalized`
@@ -202,6 +216,12 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Minimum payload:** `job_posting_id`, `department_id`, `role_id`, `openings_count`, `status`, `posting_date`.
 - **Consumers:** job-posting read models, recruitment notifications.
 
+### `JobPostingOnHold`
+- **Aggregate:** `JobPosting`
+- **Transition:** `Open -> OnHold`.
+- **Minimum payload:** `job_posting_id`, `department_id`, `role_id`, `status`, `updated_at`.
+- **Consumers:** recruiter work queues, recruitment notifications.
+
 ### `JobPostingClosed`
 - **Aggregate:** `JobPosting`
 - **Transition:** `Open/OnHold -> Closed` or `Open -> Filled`.
@@ -231,6 +251,18 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Transition:** `Scheduled -> Completed`.
 - **Minimum payload:** `interview_id`, `candidate_id`, `recommendation`, `status`, `updated_at`.
 - **Consumers:** hiring analytics, recruiter notifications.
+
+### `InterviewCancelled`
+- **Aggregate:** `Interview`
+- **Transition:** `Scheduled -> Cancelled`.
+- **Minimum payload:** `interview_id`, `candidate_id`, `status`, `updated_at`, `cancellation_reason`.
+- **Consumers:** recruiter notifications, calendar reconciliations.
+
+### `InterviewNoShow`
+- **Aggregate:** `Interview`
+- **Transition:** `Scheduled -> NoShow`.
+- **Minimum payload:** `interview_id`, `candidate_id`, `status`, `updated_at`.
+- **Consumers:** recruiter dashboards, candidate follow-up workflows.
 
 ### `InterviewCalendarSynced`
 - **Aggregate:** `Interview`
@@ -276,6 +308,24 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Minimum payload:** `user_id`, `employee_id`, `email`, `status`, `identity_provider`.
 - **Consumers:** `notification-service`, access reporting.
 
+### `UserAccountStatusChanged`
+- **Aggregate:** `UserAccount`
+- **Transition:** `Invited/Active/Locked -> Active/Locked/Disabled`.
+- **Minimum payload:** `user_id`, `employee_id`, `from_status`, `to_status`, `updated_at`.
+- **Consumers:** `notification-service`, access-control read models, audit.
+
+### `RoleBindingChanged`
+- **Aggregate:** `RoleBinding`
+- **Transition:** binding granted, revoked, or materially scope-adjusted.
+- **Minimum payload:** `binding_id`, `user_id`, `role_name`, `scope_type`, `scope_id`, `state`, `updated_at`.
+- **Consumers:** authorization caches, access-control read models, audit.
+
+### `RefreshTokenRotated`
+- **Aggregate:** `RefreshToken`
+- **Transition:** `Active -> Rotated` with successor token issued.
+- **Minimum payload:** `refresh_token_id`, `session_id`, `user_id`, `rotated_from_token_id`, `updated_at`.
+- **Consumers:** security monitoring, token lineage audit.
+
 ### `AuthorizationPolicyUpdated`
 - **Aggregate:** `PermissionPolicy`
 - **Transition:** authorization policy, binding semantics, or effective policy version changes.
@@ -298,9 +348,15 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 
 ### `NotificationFailed`
 - **Aggregate:** `NotificationMessage`
-- **Transition:** `Queued -> Failed` after provider attempt(s) or preference suppression logic.
+- **Transition:** `Queued -> Failed` after provider attempt(s).
 - **Minimum payload:** `message_id`, `subject_type`, `subject_id`, `channel`, `status`, `failure_reason`, `updated_at`.
 - **Consumers:** support dashboards, retry workflows.
+
+### `NotificationSuppressed`
+- **Aggregate:** `NotificationMessage`
+- **Transition:** `Queued -> Suppressed` due to preference, quiet-hours, or policy rules.
+- **Minimum payload:** `message_id`, `subject_type`, `subject_id`, `channel`, `status`, `failure_reason`, `updated_at`.
+- **Consumers:** support dashboards, preference analytics, audit.
 
 ## Coverage checklist
 
