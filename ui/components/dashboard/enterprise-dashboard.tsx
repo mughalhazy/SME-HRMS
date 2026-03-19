@@ -1,918 +1,558 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  ArrowRight,
+  BriefcaseBusiness,
+  CalendarClock,
   CheckCircle2,
-  ChevronRight,
+  CircleAlert,
   Clock3,
-  LoaderCircle,
-  Plus,
-  RefreshCcw,
+  DollarSign,
+  FileCheck2,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  UserPlus,
   Users,
 } from 'lucide-react'
 
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Input, Select, Textarea } from '@/components/ui/input'
-import { PageStack } from '@/components/ui/page'
-import { apiRequest, buildHeaders } from '@/lib/api/client'
-import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { PageGrid, PageStack } from '@/components/ui/page'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-type EmployeeRow = {
-  employee_id: string
-  employee_number?: string
-  first_name?: string
-  last_name?: string
-  full_name?: string
-  department_name?: string
-  department_id?: string
-  status?: string
-  employee_status?: string
-  employment_type?: string
-  hire_date?: string
-  role_id?: string
-  email?: string
-}
-
-type AttendanceRow = {
-  employee_id?: string
-  employee_name?: string
-  attendance_date?: string
-  attendance_status?: string
-  check_in_time?: string | null
-  check_out_time?: string | null
-  total_hours?: string
-  updated_at?: string
-}
-
-type LeaveRow = {
-  leave_request_id: string
-  employee_name?: string
-  leave_type?: string
-  start_date?: string
-  end_date?: string
-  status?: string
-  updated_at?: string
-}
-
-type PayrollRow = {
-  payroll_record_id: string
-  employee_name?: string
-  employee_id?: string
-  pay_period_start?: string
-  pay_period_end?: string
-  net_pay?: string
-  gross_pay?: string
-  status?: string
-  currency?: string
-  payment_date?: string | null
-  updated_at?: string
-}
-
-type JobPostingRow = {
-  job_posting_id: string
-  title?: string
-  status?: string
-  openings_count?: number
-  posting_date?: string
-  department_id?: string
-}
-
-type DashboardDataset = {
-  employees: EmployeeRow[]
-  attendance: AttendanceRow[]
-  leave: LeaveRow[]
-  payroll: PayrollRow[]
-  jobs: JobPostingRow[]
-  fetchedAt: string
-}
-
-type WidgetState = 'live' | 'empty' | 'error'
-
-type ActionKey = 'add-employee' | 'run-payroll' | 'approve-leave' | 'post-job'
-
-type ActionConfig = {
-  key: ActionKey
+type MetricCard = {
   title: string
-  description: string
-  path: string
-  method: 'POST'
-  submitLabel: string
-  buildPath?: (form: Record<string, string>) => string
-  buildBody: (form: Record<string, string>) => Record<string, unknown>
+  value: string
+  change: string
+  hint: string
+  icon: typeof Users
 }
 
-type QueryEnvelope<T> = {
-  data?: T[]
-  page?: {
-    nextCursor?: string | null
-    hasNext?: boolean
-    limit?: number
-  }
-} & Record<string, unknown>
+type TeamMember = {
+  name: string
+  role: string
+  department: string
+  location: string
+  status: 'Active' | 'On leave' | 'Probation'
+}
 
-const dashboardQueryKey = ['enterprise-dashboard'] as const
+type PipelineRole = {
+  title: string
+  department: string
+  applicants: number
+  interviews: number
+  stage: string
+}
 
-const quickActions: ActionConfig[] = [
+type ReviewItem = {
+  name: string
+  manager: string
+  dueDate: string
+  status: 'Ready' | 'In progress' | 'Needs calibration'
+}
+
+const metrics: MetricCard[] = [
   {
-    key: 'add-employee',
-    title: 'Add employee',
-    description: 'Create a new employee record in the employee-service flow.',
-    path: '/api/v1/employees',
-    method: 'POST',
-    submitLabel: 'Create employee',
-    buildBody: (form) => ({
-      employee_number: form.employee_number,
-      first_name: form.first_name,
-      last_name: form.last_name,
-      email: form.email,
-      phone: form.phone,
-      hire_date: form.hire_date,
-      employment_type: form.employment_type,
-      status: form.status,
-      department_id: form.department_id,
-      role_id: form.role_id,
-      manager_employee_id: form.manager_employee_id || undefined,
-    }),
+    title: 'Active employees',
+    value: '248',
+    change: '+12 this quarter',
+    hint: 'Distributed across 9 departments with 96% retention.',
+    icon: Users,
   },
   {
-    key: 'run-payroll',
-    title: 'Run payroll',
-    description: 'Trigger the canonical payroll run for the selected pay period.',
-    path: '/api/v1/payroll/run',
-    method: 'POST',
-    submitLabel: 'Run payroll',
-    buildPath: (form) =>
-      `/api/v1/payroll/run?period_start=${encodeURIComponent(form.period_start)}&period_end=${encodeURIComponent(form.period_end)}`,
-    buildBody: () => ({}),
+    title: 'Monthly payroll',
+    value: '$612,480',
+    change: 'On track',
+    hint: 'Next payroll closes on March 25 with zero unresolved exceptions.',
+    icon: DollarSign,
   },
   {
-    key: 'approve-leave',
-    title: 'Approve leave',
-    description: 'Send the selected request through the canonical approval flow.',
-    path: '/api/v1/leave/requests',
-    method: 'POST',
-    submitLabel: 'Approve request',
-    buildPath: (form) => `/api/v1/leave/requests/${encodeURIComponent(form.leave_request_id)}/approve`,
-    buildBody: () => ({}),
+    title: 'Open positions',
+    value: '18',
+    change: '6 priority roles',
+    hint: 'Engineering and Sales hiring plans remain the top focus.',
+    icon: BriefcaseBusiness,
   },
   {
-    key: 'post-job',
-    title: 'Post job',
-    description: 'Open a new job posting in the hiring-service flow.',
-    path: '/api/v1/hiring/job-postings',
-    method: 'POST',
-    submitLabel: 'Create posting',
-    buildBody: (form) => ({
-      title: form.title,
-      department_id: form.department_id,
-      role_id: form.role_id || undefined,
-      employment_type: form.employment_type,
-      description: form.description,
-      openings_count: Number(form.openings_count),
-      posting_date: form.posting_date,
-      closing_date: form.closing_date || undefined,
-      status: form.status,
-      location: form.location || undefined,
-    }),
+    title: 'Attendance compliance',
+    value: '97.8%',
+    change: '+1.4%',
+    hint: 'Late check-ins declined after the flexible shift policy update.',
+    icon: ShieldCheck,
   },
 ]
 
-const defaultForms: Record<ActionKey, Record<string, string>> = {
-  'add-employee': {
-    employee_number: '',
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    hire_date: todayIso(),
-    employment_type: 'FullTime',
+const workforce: TeamMember[] = [
+  {
+    name: 'Ayesha Khan',
+    role: 'Senior Product Designer',
+    department: 'Product Design',
+    location: 'Dubai · Hybrid',
     status: 'Active',
-    department_id: '',
-    role_id: '',
-    manager_employee_id: '',
   },
-  'run-payroll': {
-    period_start: monthStartIso(),
-    period_end: todayIso(),
+  {
+    name: 'Omar Siddiqui',
+    role: 'Finance Operations Lead',
+    department: 'Finance',
+    location: 'Lahore · On-site',
+    status: 'Active',
   },
-  'approve-leave': {
-    leave_request_id: '',
+  {
+    name: 'Maham Raza',
+    role: 'People Business Partner',
+    department: 'People & Culture',
+    location: 'Karachi · Hybrid',
+    status: 'On leave',
   },
-  'post-job': {
-    title: '',
-    department_id: '',
-    role_id: '',
-    employment_type: 'FullTime',
-    description: '',
-    openings_count: '1',
-    posting_date: todayIso(),
-    closing_date: '',
-    status: 'Open',
-    location: '',
+  {
+    name: 'Danish Ali',
+    role: 'Account Executive',
+    department: 'Sales',
+    location: 'Riyadh · Remote',
+    status: 'Probation',
   },
+]
+
+const pipeline: PipelineRole[] = [
+  {
+    title: 'Senior Frontend Engineer',
+    department: 'Engineering',
+    applicants: 42,
+    interviews: 6,
+    stage: 'Final panel this week',
+  },
+  {
+    title: 'HR Operations Specialist',
+    department: 'People & Culture',
+    applicants: 19,
+    interviews: 4,
+    stage: 'Offer review',
+  },
+  {
+    title: 'Payroll Analyst',
+    department: 'Finance',
+    applicants: 27,
+    interviews: 5,
+    stage: 'Hiring manager screen',
+  },
+]
+
+const reviews: ReviewItem[] = [
+  {
+    name: 'Zara Sheikh',
+    manager: 'Imran Qureshi',
+    dueDate: 'Mar 22',
+    status: 'Ready',
+  },
+  {
+    name: 'Saad Noman',
+    manager: 'Fatima Rehman',
+    dueDate: 'Mar 24',
+    status: 'In progress',
+  },
+  {
+    name: 'Hina Tariq',
+    manager: 'Ali Hamza',
+    dueDate: 'Mar 26',
+    status: 'Needs calibration',
+  },
+]
+
+const leaveRequests = [
+  {
+    employee: 'Noor Ahmed',
+    type: 'Annual leave',
+    dates: 'Mar 28 – Apr 1',
+    manager: 'Ayesha Malik',
+    priority: 'Low risk',
+  },
+  {
+    employee: 'Bilal Hussain',
+    type: 'Sick leave',
+    dates: 'Mar 20 – Mar 21',
+    manager: 'Usman Farooq',
+    priority: 'Coverage required',
+  },
+  {
+    employee: 'Rida Ameen',
+    type: 'Parental leave',
+    dates: 'Apr 8 – Jul 5',
+    manager: 'Sameer Azhar',
+    priority: 'Transition planning',
+  },
+]
+
+const announcements = [
+  'Medical insurance renewals are due for dependents by March 29.',
+  'Managers should complete calibration notes before the April performance cycle freeze.',
+  'Q2 headcount approvals for Customer Success and RevOps are ready for review.',
+]
+
+function statusBadge(status: TeamMember['status'] | ReviewItem['status']) {
+  if (status === 'Active' || status === 'Ready') {
+    return <Badge variant="success">{status}</Badge>
+  }
+
+  if (status === 'On leave' || status === 'In progress') {
+    return <Badge className="bg-amber-50 text-amber-700">{status}</Badge>
+  }
+
+  return <Badge className="bg-red-50 text-red-700">{status}</Badge>
 }
 
 export function EnterpriseDashboard() {
-  const queryClient = useQueryClient()
-  const [token] = useState('')
-  const [activeAction, setActiveAction] = useState<ActionKey | null>(null)
-  const [forms, setForms] = useState(defaultForms)
-  const [actionMessage, setActionMessage] = useState<string | null>(null)
-
-  const dashboardQuery = useQuery({
-    queryKey: [...dashboardQueryKey, token],
-    queryFn: () => fetchDashboardData(token),
-  })
-
-  const actionMutation = useMutation({
-    mutationFn: async (actionKey: ActionKey) => {
-      const config = quickActions.find((action) => action.key === actionKey)
-      if (!config) {
-        throw new Error('Unknown action')
-      }
-
-      const form = forms[actionKey]
-      const path = config.buildPath ? config.buildPath(form) : config.path
-      return apiRequest(path, {
-        method: config.method,
-        headers: buildHeaders({ token }),
-        body: JSON.stringify(config.buildBody(form)),
-      })
-    },
-    onSuccess: (_payload, actionKey) => {
-      setActionMessage(`${labelForAction(actionKey)} flow triggered successfully.`)
-      setForms((current) => ({ ...current, [actionKey]: { ...defaultForms[actionKey] } }))
-      setActiveAction(null)
-      void queryClient.invalidateQueries({ queryKey: [...dashboardQueryKey] })
-    },
-    onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Action failed'
-      setActionMessage(message)
-    },
-  })
-
-  const data = dashboardQuery.data
-
-  const employeesSummary = useMemo(() => {
-    const rows = data?.employees ?? []
-    return {
-      total: rows.length,
-      active: rows.filter((row) => statusForEmployee(row) === 'Active').length,
-      newHires: rows.filter((row) => isInCurrentMonth(row.hire_date)).length,
-      recent: rows.slice(0, 4),
-      state: toWidgetState(rows.length, dashboardQuery.isError),
-    }
-  }, [data?.employees, dashboardQuery.isError])
-
-  const attendanceSummary = useMemo(() => {
-    const rows = (data?.attendance ?? []).filter((row) => row.attendance_date === todayIso())
-    return {
-      total: rows.length,
-      present: rows.filter((row) => row.attendance_status === 'Present').length,
-      late: rows.filter((row) => row.attendance_status === 'Late').length,
-      absent: rows.filter((row) => row.attendance_status === 'Absent').length,
-      recent: rows.slice(0, 4),
-      state: toWidgetState(rows.length, dashboardQuery.isError),
-    }
-  }, [data?.attendance, dashboardQuery.isError])
-
-  const leaveSummary = useMemo(() => {
-    const rows = data?.leave ?? []
-    return {
-      total: rows.length,
-      pending: rows.filter((row) => row.status === 'Submitted').length,
-      approved: rows.filter((row) => row.status === 'Approved').length,
-      recent: rows.slice(0, 4),
-      state: toWidgetState(rows.length, dashboardQuery.isError),
-      pendingRows: rows.filter((row) => row.status === 'Submitted').slice(0, 12),
-    }
-  }, [data?.leave, dashboardQuery.isError])
-
-  const payrollSummary = useMemo(() => {
-    const rows = data?.payroll ?? []
-    return {
-      total: rows.length,
-      processed: rows.filter((row) => row.status === 'Processed').length,
-      paid: rows.filter((row) => row.status === 'Paid').length,
-      draft: rows.filter((row) => row.status === 'Draft').length,
-      netPay: currencyFormat(rows.reduce((sum, row) => sum + numberFromValue(row.net_pay), 0)),
-      recent: rows.slice(0, 4),
-      state: toWidgetState(rows.length, dashboardQuery.isError),
-    }
-  }, [data?.payroll, dashboardQuery.isError])
-
   return (
-    <PageStack className="gap-0 text-slate-950">
-      <section className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Dashboard</h1>
-          <p className="max-w-3xl text-sm text-slate-600">
-            Canonical summaries for employees, attendance, leave, and payroll with a clean separation between live signals and actions.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button onClick={() => void dashboardQuery.refetch()} disabled={dashboardQuery.isFetching}>
-            {dashboardQuery.isFetching ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCcw className="size-4" />}
-            Refresh
-          </Button>
-        </div>
-      </section>
-
-      {actionMessage ? (
-        <section className="mb-6 rounded-lg border border-gray-200 bg-white p-5 text-sm text-slate-700">
-          {actionMessage}
-        </section>
-      ) : null}
-
-      <div className="flex flex-col xl:flex-row">
-        <main className="min-w-0 flex-1">
-          <section className="mb-6 grid gap-6 md:grid-cols-3">
-            <KpiCard
-              title="Employee Count"
-              value={formatCompact(employeesSummary.total)}
-              details={`${employeesSummary.active} active • ${employeesSummary.newHires} new this month`}
-              icon={<Users className="size-5" />}
-            />
-            <KpiCard
-              title="Attendance Summary"
-              value={formatCompact(attendanceSummary.total)}
-              details={`${attendanceSummary.present} present • ${attendanceSummary.late} late • ${attendanceSummary.absent} absent`}
-              icon={<Clock3 className="size-5" />}
-            />
-            <KpiCard
-              title="Leave Summary"
-              value={formatCompact(leaveSummary.pending)}
-              details={`${leaveSummary.approved} approved • ${leaveSummary.total} tracked`}
-              icon={<CheckCircle2 className="size-5" />}
-            />
-          </section>
-
-          <section className="mb-6 grid gap-6 lg:grid-cols-3">
-            <StructuredCard
-              className="lg:col-span-2"
-              title="Attendance activity"
-              value={formatCompact(attendanceSummary.total)}
-              details={data?.fetchedAt ? `Updated ${formatDateTime(data.fetchedAt)}` : 'Today'}
-            >
-              {attendanceSummary.state === 'error' ? (
-                <EmptyState message="Unable to load attendance activity." />
-              ) : attendanceSummary.recent.length === 0 ? (
-                <EmptyState message="No attendance records returned for today." />
-              ) : (
-                <SignalList
-                  items={attendanceSummary.recent.map((row) => ({
-                    primary: row.employee_name ?? 'Unknown employee',
-                    secondary: row.check_in_time ? `Checked in ${formatTime(row.check_in_time)}` : 'No check-in recorded',
-                    meta: row.attendance_status ?? 'Unknown',
-                  }))}
-                />
-              )}
-            </StructuredCard>
-
-            <StructuredCard title="Leave requests summary" value={formatCompact(leaveSummary.pending)} details={`${leaveSummary.total} total requests`}>
-              {leaveSummary.state === 'error' ? (
-                <EmptyState message="Unable to load leave requests." />
-              ) : (
-                <div className="space-y-2">
-                  <SummaryRow label="Pending" value={String(leaveSummary.pending)} />
-                  <SummaryRow label="Approved" value={String(leaveSummary.approved)} />
-                  <SummaryRow label="Tracked" value={String(leaveSummary.total)} />
-                  {leaveSummary.pendingRows.length > 0 ? (
-                    <div className="pt-2">
-                      <p className="text-xs text-gray-400">Next request</p>
-                      <p className="text-sm text-slate-900">{leaveSummary.pendingRows[0]?.employee_name ?? 'Unknown employee'}</p>
-                      <p className="text-xs text-gray-400">
-                        {leaveSummary.pendingRows[0]
-                          ? formatDateRange(leaveSummary.pendingRows[0].start_date, leaveSummary.pendingRows[0].end_date)
-                          : 'No pending request'}
-                      </p>
-                    </div>
-                  ) : null}
+    <PageStack className="animate-[page-enter_180ms_ease-out] gap-6">
+      <Card className="overflow-hidden border-slate-200 bg-white">
+        <CardContent className="p-0">
+          <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1.5fr)_22rem] lg:p-8">
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge>March workforce snapshot</Badge>
+                <Badge variant="outline">Light enterprise workspace</Badge>
+              </div>
+              <div className="space-y-3">
+                <h2 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                  HR operations built for headcount planning, performance visibility, and fast decision making.
+                </h2>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                  Track hiring, payroll readiness, leave approvals, and performance cycles from a clean command center designed for enterprise people teams.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="w-full max-w-sm">
+                  <Input aria-label="Search employees or teams" placeholder="Search employees, teams, or requests" />
                 </div>
-              )}
-            </StructuredCard>
-          </section>
-
-          <section className="mb-6 grid gap-6 lg:grid-cols-3">
-            <StructuredCard className="lg:col-span-2" title="Payroll summary" value={payrollSummary.netPay} details={`${payrollSummary.total} payroll records`}>
-              {payrollSummary.state === 'error' ? (
-                <EmptyState message="Unable to load payroll summary." />
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <CompactMetric label="Processed" value={String(payrollSummary.processed)} />
-                  <CompactMetric label="Paid" value={String(payrollSummary.paid)} />
-                  <CompactMetric label="Draft" value={String(payrollSummary.draft)} />
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button>
+                    <UserPlus className="h-4 w-4" />
+                    Add employee
+                  </Button>
+                  <Button variant="outline">
+                    <FileCheck2 className="h-4 w-4" />
+                    Review approvals
+                  </Button>
                 </div>
-              )}
-            </StructuredCard>
-
-            <StructuredCard title="Recent payroll records" value={formatCompact(payrollSummary.recent.length)} details="Most recent records">
-              {payrollSummary.state === 'error' ? (
-                <EmptyState message="Unable to load payroll records." />
-              ) : payrollSummary.recent.length === 0 ? (
-                <EmptyState message="No payroll records returned yet." />
-              ) : (
-                <SignalList
-                  items={payrollSummary.recent.map((row) => ({
-                    primary: row.employee_name ?? row.employee_id ?? 'Unknown employee',
-                    secondary: formatDateRange(row.pay_period_start, row.pay_period_end),
-                    meta: row.status ?? 'Unknown',
-                  }))}
-                />
-              )}
-            </StructuredCard>
-          </section>
-        </main>
-
-        <aside className="w-full xl:ml-6 xl:w-80">
-          <div className="rounded-lg border border-gray-200 bg-white p-5">
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">Quick actions</p>
-              <p className="text-2xl font-semibold text-slate-950">Action panel</p>
-              <p className="text-xs text-gray-400">Launch core HR workflows without mixing actions into dashboard data cards.</p>
+              </div>
             </div>
 
-            <div className="mt-5 space-y-3">
-              {quickActions.map((action) => (
-                <button
-                  key={action.key}
-                  type="button"
-                  onClick={() => {
-                    setActionMessage(null)
-                    setActiveAction(action.key)
-                    if (action.key === 'approve-leave' && !forms['approve-leave'].leave_request_id) {
-                      const firstPending = leaveSummary.pendingRows[0]?.leave_request_id ?? ''
-                      if (firstPending) {
-                        setForms((current) => ({
-                          ...current,
-                          'approve-leave': { leave_request_id: firstPending },
-                        }))
-                      }
-                    }
-                  }}
-                  className={buttonVariants({
-                    variant: 'outline',
-                    size: 'lg',
-                    className: 'h-auto w-full justify-between rounded-lg border-gray-200 px-4 py-3 text-left whitespace-normal',
-                  })}
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-slate-900">{action.title}</p>
-                    <p className="text-xs text-gray-400">{action.description}</p>
+            <Card className="border-slate-200 bg-slate-50 shadow-none">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base">Today&apos;s priorities</CardTitle>
+                    <CardDescription>Focused items for the People Operations team.</CardDescription>
                   </div>
-                  <ChevronRight className="size-4 text-slate-400" />
-                </button>
-              ))}
-            </div>
+                  <Sparkles className="h-5 w-5 text-[var(--primary)]" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
+                      <Clock3 className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">Payroll cutoff in 2 days</p>
+                      <p className="text-sm leading-6 text-slate-600">Finalize overtime approvals and sync reimbursement adjustments before 5:00 PM.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-green-50 p-2 text-green-700">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">13 reviews ready for sign-off</p>
+                      <p className="text-sm leading-6 text-slate-600">Most calibration notes are complete across Product, Finance, and Operations.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-amber-50 p-2 text-amber-700">
+                      <CircleAlert className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">2 leave requests need coverage review</p>
+                      <p className="text-sm leading-6 text-slate-600">Coordinate temporary ownership for Customer Support and Finance Operations.</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </aside>
-      </div>
+        </CardContent>
+      </Card>
 
-      {activeAction ? (
-        <ActionDialog
-          action={quickActions.find((item) => item.key === activeAction)!}
-          form={forms[activeAction]}
-          pendingLeaveRows={leaveSummary.pendingRows}
-          isPending={actionMutation.isPending}
-          onClose={() => setActiveAction(null)}
-          onChange={(field, value) =>
-            setForms((current) => ({
-              ...current,
-              [activeAction]: {
-                ...current[activeAction],
-                [field]: value,
-              },
-            }))
-          }
-          onSubmit={() => actionMutation.mutate(activeAction)}
-        />
-      ) : null}
-    </PageStack>
-  )
-}
+      <PageGrid className="gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => {
+          const Icon = metric.icon
 
-function KpiCard({
-  title,
-  value,
-  details,
-  icon,
-}: {
-  title: string
-  value: string
-  details: string
-  icon: React.ReactNode
-}) {
-  return (
-    <article className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-5">
-      <div className="flex items-start justify-between gap-4 space-y-2">
-        <div className="space-y-2">
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-2xl font-semibold text-slate-950">{value}</p>
-          <p className="text-xs text-gray-400">{details}</p>
-        </div>
-        <div className="rounded-lg bg-slate-100 p-2 text-slate-600">{icon}</div>
-      </div>
-    </article>
-  )
-}
-
-function StructuredCard({
-  title,
-  value,
-  details,
-  className,
-  children,
-}: {
-  title: string
-  value: string
-  details: string
-  className?: string
-  children: React.ReactNode
-}) {
-  return (
-    <article className={cn('rounded-lg border border-gray-200 bg-white p-5', className)}>
-      <div className="mb-6 space-y-2">
-        <p className="text-sm text-gray-500">{title}</p>
-        <p className="text-2xl font-semibold text-slate-950">{value}</p>
-        <p className="text-xs text-gray-400">{details}</p>
-      </div>
-      <div className="space-y-2">{children}</div>
-    </article>
-  )
-}
-
-function SignalList({
-  items,
-}: {
-  items: Array<{ primary: string; secondary: string; meta: string }>
-}) {
-  return (
-    <ul className="space-y-2">
-      {items.map((item, index) => (
-        <li key={`${item.primary}-${index}`} className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 px-3 py-3">
-          <div className="min-w-0 space-y-1">
-            <p className="truncate text-sm font-medium text-slate-900">{item.primary}</p>
-            <p className="truncate text-xs text-gray-400">{item.secondary}</p>
-          </div>
-          <span className="whitespace-nowrap text-xs text-gray-400">{item.meta}</span>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3">
-      <span className="text-sm text-slate-600">{label}</span>
-      <span className="text-sm font-semibold text-slate-950">{value}</span>
-    </div>
-  )
-}
-
-function CompactMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-slate-50 px-4 py-4">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
-    </div>
-  )
-}
-
-function ActionDialog({
-  action,
-  form,
-  pendingLeaveRows,
-  isPending,
-  onClose,
-  onChange,
-  onSubmit,
-}: {
-  action: ActionConfig
-  form: Record<string, string>
-  pendingLeaveRows: LeaveRow[]
-  isPending: boolean
-  onClose: () => void
-  onChange: (field: string, value: string) => void
-  onSubmit: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-4 sm:items-center">
-      <div className="w-full max-w-xl rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-slate-500">Quick action</p>
-            <h3 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{action.title}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{action.description}</p>
-          </div>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-
-        <div className="mt-6 space-y-4">{renderFields(action.key, form, pendingLeaveRows, onChange)}</div>
-
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button onClick={onSubmit} disabled={isPending || hasMissingRequiredFields(action.key, form)}>
-            {isPending ? <LoaderCircle className="size-4 animate-spin" /> : <Plus className="size-4" />}
-            {action.submitLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function renderFields(
-  actionKey: ActionKey,
-  form: Record<string, string>,
-  pendingLeaveRows: LeaveRow[],
-  onChange: (field: string, value: string) => void,
-) {
-  if (actionKey === 'add-employee') {
-    return (
-      <div className="grid gap-4 sm:grid-cols-2">
-        <InputField label="Employee #" value={form.employee_number} onChange={(value) => onChange('employee_number', value)} />
-        <InputField label="Hire date" type="date" value={form.hire_date} onChange={(value) => onChange('hire_date', value)} />
-        <InputField label="First name" value={form.first_name} onChange={(value) => onChange('first_name', value)} />
-        <InputField label="Last name" value={form.last_name} onChange={(value) => onChange('last_name', value)} />
-        <InputField label="Email" type="email" value={form.email} onChange={(value) => onChange('email', value)} />
-        <InputField label="Phone" value={form.phone} onChange={(value) => onChange('phone', value)} />
-        <InputField label="Department ID" value={form.department_id} onChange={(value) => onChange('department_id', value)} />
-        <InputField label="Role ID" value={form.role_id} onChange={(value) => onChange('role_id', value)} />
-        <SelectField label="Employment type" value={form.employment_type} options={['FullTime', 'PartTime', 'Contract', 'Intern']} onChange={(value) => onChange('employment_type', value)} />
-        <SelectField label="Status" value={form.status} options={['Active', 'Draft', 'OnLeave', 'Suspended', 'Terminated']} onChange={(value) => onChange('status', value)} />
-        <div className="sm:col-span-2">
-          <InputField label="Manager employee ID" value={form.manager_employee_id} onChange={(value) => onChange('manager_employee_id', value)} />
-        </div>
-      </div>
-    )
-  }
-
-  if (actionKey === 'run-payroll') {
-    return (
-      <div className="grid gap-4 sm:grid-cols-2">
-        <InputField label="Period start" type="date" value={form.period_start} onChange={(value) => onChange('period_start', value)} />
-        <InputField label="Period end" type="date" value={form.period_end} onChange={(value) => onChange('period_end', value)} />
-      </div>
-    )
-  }
-
-  if (actionKey === 'approve-leave') {
-    return (
-      <div className="space-y-4">
-        <SelectField
-          label="Pending request"
-          value={form.leave_request_id}
-          options={pendingLeaveRows.map((row) => ({
-            label: `${row.employee_name ?? 'Unknown'} · ${row.leave_request_id}`,
-            value: row.leave_request_id,
-          }))}
-          placeholder="Select a submitted leave request"
-          onChange={(value) => onChange('leave_request_id', value)}
-        />
-        <InputField label="Leave request ID" value={form.leave_request_id} onChange={(value) => onChange('leave_request_id', value)} />
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="sm:col-span-2">
-        <InputField label="Title" value={form.title} onChange={(value) => onChange('title', value)} />
-      </div>
-      <InputField label="Department ID" value={form.department_id} onChange={(value) => onChange('department_id', value)} />
-      <InputField label="Role ID" value={form.role_id} onChange={(value) => onChange('role_id', value)} />
-      <SelectField label="Employment type" value={form.employment_type} options={['FullTime', 'PartTime', 'Contract', 'Intern']} onChange={(value) => onChange('employment_type', value)} />
-      <InputField label="Openings" type="number" value={form.openings_count} onChange={(value) => onChange('openings_count', value)} />
-      <InputField label="Posting date" type="date" value={form.posting_date} onChange={(value) => onChange('posting_date', value)} />
-      <InputField label="Closing date" type="date" value={form.closing_date} onChange={(value) => onChange('closing_date', value)} />
-      <SelectField label="Status" value={form.status} options={['Open', 'Draft', 'OnHold']} onChange={(value) => onChange('status', value)} />
-      <div className="sm:col-span-2">
-        <InputField label="Location" value={form.location} onChange={(value) => onChange('location', value)} />
-      </div>
-      <div className="sm:col-span-2">
-        <TextAreaField label="Description" value={form.description} onChange={(value) => onChange('description', value)} />
-      </div>
-    </div>
-  )
-}
-
-function InputField({
-  label,
-  value,
-  onChange,
-  type = 'text',
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  type?: string
-}) {
-  return (
-    <label className="space-y-2 text-sm font-medium text-slate-700">
-      <span>{label}</span>
-      <Input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-       
-      />
-    </label>
-  )
-}
-
-function TextAreaField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <label className="space-y-2 text-sm font-medium text-slate-700">
-      <span>{label}</span>
-      <Textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-       
-      />
-    </label>
-  )
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  placeholder,
-  onChange,
-}: {
-  label: string
-  value: string
-  options: Array<string | { label: string; value: string }>
-  placeholder?: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <label className="space-y-2 text-sm font-medium text-slate-700">
-      <span>{label}</span>
-      <Select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-       
-      >
-        {placeholder ? <option value="">{placeholder}</option> : null}
-        {options.map((option) => {
-          const normalized = typeof option === 'string' ? { label: option, value: option } : option
           return (
-            <option key={normalized.value} value={normalized.value}>
-              {normalized.label}
-            </option>
+            <Card key={metric.title} className="border-slate-200 bg-white">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <Badge variant="outline">{metric.change}</Badge>
+                </div>
+                <div className="space-y-1">
+                  <CardDescription>{metric.title}</CardDescription>
+                  <CardTitle className="text-3xl">{metric.value}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-6 text-slate-600">{metric.hint}</p>
+              </CardContent>
+            </Card>
           )
         })}
-      </Select>
-    </label>
+      </PageGrid>
+
+      <Tabs defaultValue="overview">
+        <TabsList className="w-full justify-start bg-slate-100">
+          <TabsTrigger value="overview">Workforce overview</TabsTrigger>
+          <TabsTrigger value="hiring">Hiring pipeline</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_24rem]">
+            <Card className="border-slate-200 bg-white">
+              <CardHeader className="flex flex-col gap-3 border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-xl">Team directory highlights</CardTitle>
+                  <CardDescription>Current workforce view with role ownership and employee status.</CardDescription>
+                </div>
+                <Button variant="outline">
+                  Open directory
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="px-0 pb-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workforce.map((member) => (
+                      <TableRow key={member.name}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-slate-900">{member.name}</p>
+                            <p className="text-sm text-slate-500">{member.role}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{member.department}</TableCell>
+                        <TableCell>{member.location}</TableCell>
+                        <TableCell>{statusBadge(member.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+              <Card className="border-slate-200 bg-white">
+                <CardHeader>
+                  <CardTitle className="text-xl">Leave queue</CardTitle>
+                  <CardDescription>Pending approvals that could impact staffing coverage.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {leaveRequests.map((request) => (
+                    <div key={request.employee} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-slate-900">{request.employee}</p>
+                          <p className="text-sm text-slate-500">{request.type}</p>
+                        </div>
+                        <Badge variant="outline">{request.priority}</Badge>
+                      </div>
+                      <div className="mt-3 space-y-1 text-sm text-slate-600">
+                        <p>{request.dates}</p>
+                        <p>Manager: {request.manager}</p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 bg-white">
+                <CardHeader>
+                  <CardTitle className="text-xl">Internal announcements</CardTitle>
+                  <CardDescription>Time-sensitive reminders from HR, payroll, and leadership.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {announcements.map((announcement) => (
+                    <div key={announcement} className="flex gap-3 rounded-xl border border-slate-200 p-4">
+                      <CalendarClock className="mt-0.5 h-4 w-4 text-blue-700" />
+                      <p className="text-sm leading-6 text-slate-600">{announcement}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hiring">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.9fr)]">
+            <Card className="border-slate-200 bg-white">
+              <CardHeader className="border-b border-slate-200">
+                <CardTitle className="text-xl">Priority hiring roles</CardTitle>
+                <CardDescription>Open requisitions aligned to current approved headcount plans.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-5">
+                {pipeline.map((role) => (
+                  <div key={role.title} className="rounded-xl border border-slate-200 p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-base font-semibold text-slate-950">{role.title}</p>
+                        <p className="text-sm text-slate-500">{role.department}</p>
+                      </div>
+                      <Badge>{role.stage}</Badge>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg bg-slate-50 p-4">
+                        <p className="text-sm text-slate-500">Applicants</p>
+                        <p className="mt-1 text-2xl font-semibold text-slate-950">{role.applicants}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-4">
+                        <p className="text-sm text-slate-500">Interview loops</p>
+                        <p className="mt-1 text-2xl font-semibold text-slate-950">{role.interviews}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 bg-white">
+              <CardHeader>
+                <CardTitle className="text-xl">Hiring health</CardTitle>
+                <CardDescription>Operational signals from recruiting and coordination workflows.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl border border-slate-200 bg-blue-50/60 p-4">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="h-5 w-5 text-blue-700" />
+                    <div>
+                      <p className="font-medium text-slate-900">Time to fill</p>
+                      <p className="text-sm text-slate-600">Average reduced to 29 days across enterprise roles.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-green-50/60 p-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-700" />
+                    <div>
+                      <p className="font-medium text-slate-900">Offer acceptance</p>
+                      <p className="text-sm text-slate-600">91% acceptance rate in the last 60 days.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-amber-50/60 p-4">
+                  <div className="flex items-center gap-3">
+                    <CircleAlert className="h-5 w-5 text-amber-700" />
+                    <div>
+                      <p className="font-medium text-slate-900">Interviewer capacity</p>
+                      <p className="text-sm text-slate-600">Engineering panels are nearing capacity for next week.</p>
+                    </div>
+                  </div>
+                </div>
+                <Button className="w-full" variant="outline">
+                  View recruiting analytics
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.95fr)]">
+            <Card className="border-slate-200 bg-white">
+              <CardHeader className="border-b border-slate-200">
+                <CardTitle className="text-xl">Review cycle tracker</CardTitle>
+                <CardDescription>Manager and calibration readiness for the current cycle.</CardDescription>
+              </CardHeader>
+              <CardContent className="px-0 pb-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Manager</TableHead>
+                      <TableHead>Due date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reviews.map((review) => (
+                      <TableRow key={review.name}>
+                        <TableCell className="font-medium text-slate-900">{review.name}</TableCell>
+                        <TableCell>{review.manager}</TableCell>
+                        <TableCell>{review.dueDate}</TableCell>
+                        <TableCell>{statusBadge(review.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 bg-white">
+              <CardHeader>
+                <CardTitle className="text-xl">Cycle readiness</CardTitle>
+                <CardDescription>Completion indicators before ratings are finalized.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-slate-700">Self reviews submitted</p>
+                    <p className="text-lg font-semibold text-slate-950">88%</p>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-slate-100">
+                    <div className="h-2 rounded-full bg-blue-600" style={{ width: '88%' }} />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-slate-700">Manager reviews completed</p>
+                    <p className="text-lg font-semibold text-slate-950">74%</p>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-slate-100">
+                    <div className="h-2 rounded-full bg-emerald-600" style={{ width: '74%' }} />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-slate-700">Calibration completed</p>
+                    <p className="text-lg font-semibold text-slate-950">61%</p>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-slate-100">
+                    <div className="h-2 rounded-full bg-amber-500" style={{ width: '61%' }} />
+                  </div>
+                </div>
+                <Button className="w-full">
+                  Continue review cycle
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </PageStack>
   )
-}
-
-function EmptyState({ message }: { message: string }) {
-  return <p className="text-sm leading-6 text-slate-500">{message}</p>
-}
-
-async function fetchDashboardData(token: string): Promise<DashboardDataset> {
-  const today = todayIso()
-  const monthStart = monthStartIso()
-  const headers = buildHeaders({ token })
-
-  const [employees, attendance, leave, payroll, jobs] = await Promise.all([
-    fetchArray<EmployeeRow>('/api/v1/employees?limit=200', headers),
-    fetchArray<AttendanceRow>(`/api/v1/attendance/records?from=${today}&to=${today}`, headers),
-    fetchArray<LeaveRow>(`/api/v1/leave/requests?status=Submitted&from=${monthStart}&to=${today}`, headers),
-    fetchArray<PayrollRow>(`/api/v1/payroll/records?period_start=${monthStart}&period_end=${today}`, headers),
-    fetchArray<JobPostingRow>('/api/v1/hiring/job-postings?status=Open&limit=20', headers),
-  ])
-
-  return {
-    employees,
-    attendance,
-    leave,
-    payroll,
-    jobs,
-    fetchedAt: new Date().toISOString(),
-  }
-}
-
-async function fetchArray<T>(path: string, headers: HeadersInit): Promise<T[]> {
-  try {
-    const payload = await apiRequest<QueryEnvelope<T>>(path, { headers })
-    return extractRows<T>(payload)
-  } catch {
-    return []
-  }
-}
-
-function extractRows<T>(payload: QueryEnvelope<T>): T[] {
-  if (Array.isArray(payload.data)) {
-    return payload.data
-  }
-
-  const arrayValue = Object.values(payload).find((value) => Array.isArray(value))
-  return Array.isArray(arrayValue) ? (arrayValue as T[]) : []
-}
-
-function formatCompact(value: number) {
-  return new Intl.NumberFormat('en-US', { notation: value > 999 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value)
-}
-
-function currencyFormat(value: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(value))
-}
-
-function formatDateRange(start?: string, end?: string) {
-  if (!start && !end) {
-    return 'Date pending'
-  }
-
-  const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
-  const startLabel = start ? formatter.format(new Date(start)) : 'Start TBD'
-  const endLabel = end ? formatter.format(new Date(end)) : 'End TBD'
-  return `${startLabel} - ${endLabel}`
-}
-
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(value))
-}
-
-function employeeName(row: EmployeeRow) {
-  if (row.full_name) {
-    return row.full_name
-  }
-  return [row.first_name, row.last_name].filter(Boolean).join(' ') || row.employee_id
-}
-
-function statusForEmployee(row: EmployeeRow) {
-  return row.employee_status ?? row.status ?? 'Unknown'
-}
-
-function numberFromValue(value?: string) {
-  const parsed = Number(value ?? '0')
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function toWidgetState(rowCount: number, hasQueryError: boolean): WidgetState {
-  if (rowCount > 0) {
-    return 'live'
-  }
-  return hasQueryError ? 'error' : 'empty'
-}
-
-function hasMissingRequiredFields(actionKey: ActionKey, form: Record<string, string>) {
-  const requirements: Record<ActionKey, string[]> = {
-    'add-employee': ['employee_number', 'first_name', 'last_name', 'email', 'hire_date', 'employment_type', 'status', 'department_id', 'role_id'],
-    'run-payroll': ['period_start', 'period_end'],
-    'approve-leave': ['leave_request_id'],
-    'post-job': ['title', 'department_id', 'employment_type', 'description', 'openings_count', 'posting_date', 'status'],
-  }
-
-  return requirements[actionKey].some((field) => !form[field])
-}
-
-function labelForAction(actionKey: ActionKey) {
-  return quickActions.find((action) => action.key === actionKey)?.title ?? 'Action'
-}
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function monthStartIso() {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10)
-}
-
-function isInCurrentMonth(value?: string) {
-  if (!value) {
-    return false
-  }
-
-  const date = new Date(value)
-  const now = new Date()
-  return date.getUTCFullYear() === now.getUTCFullYear() && date.getUTCMonth() === now.getUTCMonth()
 }
