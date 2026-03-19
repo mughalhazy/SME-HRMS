@@ -189,16 +189,53 @@ class HiringService:
 
         return self._serialize(posting)
 
-    def list_job_postings(self, *, status: str | None = None, department_id: str | None = None) -> list[dict[str, Any]]:
+    def get_job_posting(self, job_posting_id: str) -> dict[str, Any]:
+        posting = self._require_job_posting(job_posting_id)
+        payload = self._serialize(posting)
+        payload["candidate_count"] = self._candidate_count(job_posting_id)
+        return payload
+
+    def list_job_postings(
+        self,
+        *,
+        status: str | None = None,
+        department_id: str | None = None,
+        limit: int | None = None,
+        cursor: str | None = None,
+    ) -> list[dict[str, Any]]:
         if status is not None:
             self._validate_value(status, self.JOB_POSTING_STATUSES, "status")
+        if limit is not None and limit < 1:
+            raise HiringValidationError("limit must be >= 1")
+
         rows: list[JobPosting] = list(self.job_postings.values())
         if status:
             rows = [r for r in rows if r.status == status]
         if department_id:
             rows = [r for r in rows if r.department_id == department_id]
-        rows.sort(key=lambda r: (r.posting_date, r.job_posting_id), reverse=True)
-        return [self._serialize(x) for x in rows]
+        rows.sort(key=lambda r: (r.posting_date, r.updated_at, r.job_posting_id), reverse=True)
+
+        if cursor is not None:
+            cursor_index = next((index for index, row in enumerate(rows) if row.job_posting_id == cursor), None)
+            if cursor_index is None:
+                raise HiringValidationError("cursor does not exist")
+            rows = rows[cursor_index + 1 :]
+
+        if limit is not None:
+            rows = rows[:limit]
+
+        return [self.get_job_posting(x.job_posting_id) for x in rows]
+
+    def delete_job_posting(self, job_posting_id: str) -> dict[str, Any]:
+        with self._lock:
+            posting = self._require_job_posting(job_posting_id)
+            if any(candidate.job_posting_id == job_posting_id for candidate in self.candidates.values()):
+                raise HiringValidationError("job posting cannot be deleted while candidates exist")
+
+            payload = self._serialize(posting)
+            payload["candidate_count"] = 0
+            del self.job_postings[job_posting_id]
+            return payload
 
     def create_candidate(self, payload: dict[str, Any]) -> dict[str, Any]:
         started = perf_counter()
@@ -573,6 +610,9 @@ class HiringService:
                 job_posting_id=job_posting_id,
             ),
         }
+
+    def _candidate_count(self, job_posting_id: str) -> int:
+        return sum(1 for candidate in self.candidates.values() if candidate.job_posting_id == job_posting_id)
 
     def _serialize(self, instance: Any) -> dict[str, Any]:
         payload = asdict(instance)
