@@ -3,7 +3,14 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
-from leave_api import get_leave_requests, post_leave_decision, post_leave_requests
+from leave_api import (
+    get_leave_request,
+    get_leave_requests,
+    patch_leave_request,
+    post_leave_decision,
+    post_leave_requests,
+    post_leave_submit,
+)
 from leave_service import LeaveService
 
 
@@ -96,6 +103,52 @@ class LeaveApiTests(unittest.TestCase):
         self.assertEqual(len(payload["data"]), 1)
         self.assertEqual(payload["data"][0]["status"], "Submitted")
         self.assertTrue(payload["leave_balances"])
+
+    def test_submit_get_and_cancel_leave_request_via_api(self) -> None:
+        _, created = post_leave_requests(
+            self.service,
+            "Employee",
+            "emp-001",
+            {
+                "employee_id": "emp-001",
+                "leave_type": "Annual",
+                "start_date": date(2026, 12, 1).isoformat(),
+                "end_date": date(2026, 12, 2).isoformat(),
+            },
+            trace_id="trace-leave-create-2",
+        )
+
+        status, submitted = post_leave_submit(
+            self.service,
+            "Employee",
+            "emp-001",
+            created["leave_request_id"],
+            trace_id="trace-leave-submit",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(submitted["status"], "Submitted")
+
+        status, fetched = get_leave_request(
+            self.service,
+            "Employee",
+            "emp-001",
+            created["leave_request_id"],
+            trace_id="trace-leave-get",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(fetched["leave_request_id"], created["leave_request_id"])
+
+        status, cancelled = patch_leave_request(
+            self.service,
+            "Employee",
+            "emp-001",
+            created["leave_request_id"],
+            {"status": "Cancelled"},
+            trace_id="trace-leave-cancel",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(cancelled["status"], "Cancelled")
+
 
 
 if __name__ == "__main__":

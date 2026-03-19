@@ -48,7 +48,9 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
                 "ATTENDANCE_DUPLICATE": 409,
                 "ATTENDANCE_LOCKED": 409,
                 "LOCK_REQUIRES_APPROVAL": 409,
+                "APPROVAL_REQUIRES_VALIDATED": 409,
                 "TIME_LOGIC_INVALID": 422,
+                "DATE_RANGE_INVALID": 422,
             }
             status = status_map.get(exc.code, 422)
             service.observability.logger.error(
@@ -123,6 +125,12 @@ def get_attendance_records(service: AttendanceService, actor: Actor, query: dict
 
 
 @with_error_handling
+def get_attendance_record(service: AttendanceService, actor: Actor, attendance_id: str) -> tuple[int, dict]:
+    record = service.get_record(actor, UUID(attendance_id))
+    return 200, _record_to_response(record)
+
+
+@with_error_handling
 def patch_attendance_record(service: AttendanceService, actor: Actor, attendance_id: str, payload: dict) -> tuple[int, dict]:
     record = service.update_record(
         actor,
@@ -133,6 +141,40 @@ def patch_attendance_record(service: AttendanceService, actor: Actor, attendance
         correction_note=payload.get("correction_note"),
     )
     return 200, _record_to_response(record)
+
+
+@with_error_handling
+def post_attendance_approval(service: AttendanceService, actor: Actor, attendance_id: str) -> tuple[int, dict]:
+    record = service.approve_record(actor, UUID(attendance_id))
+    return 200, _record_to_response(record)
+
+
+@with_error_handling
+def post_attendance_period_lock(service: AttendanceService, actor: Actor, payload: dict) -> tuple[int, dict]:
+    result = service.lock_period(
+        actor,
+        period_id=payload["period_id"],
+        from_date=_parse_date(payload["from_date"]),
+        to_date=_parse_date(payload["to_date"]),
+    )
+    return 200, result
+
+
+@with_error_handling
+def get_attendance_summary(service: AttendanceService, actor: Actor, query: dict) -> tuple[int, dict]:
+    result = service.get_summary(
+        actor,
+        employee_id=UUID(query["employee_id"]),
+        period_start=_parse_date(query["period_start"]),
+        period_end=_parse_date(query["period_end"]),
+    )
+    return 200, result
+
+
+@with_error_handling
+def get_attendance_absence_alerts(service: AttendanceService, actor: Actor, query: dict) -> tuple[int, dict]:
+    result = service.attendance_absence_alerts(actor, attendance_date=_parse_date(query["attendance_date"]))
+    return 200, result
 
 
 def _record_to_response(record: Any) -> dict:

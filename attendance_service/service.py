@@ -232,6 +232,12 @@ class AttendanceService:
             raise AttendanceServiceError("ATTENDANCE_LOCKED", "Locked records cannot be approved")
         if record.lifecycle_state == RecordState.CAPTURED:
             self._auto_validate(record)
+        if record.lifecycle_state != RecordState.VALIDATED:
+            raise AttendanceServiceError(
+                "APPROVAL_REQUIRES_VALIDATED",
+                "Only validated attendance records can be approved.",
+                [{"attendance_id": str(record.attendance_id), "lifecycle_state": record.lifecycle_state.value}],
+            )
         record.lifecycle_state = RecordState.APPROVED
         record.updated_at = datetime.utcnow()
         self.events.append({"type": "AttendanceApproved", "attendance_id": str(record.attendance_id)})
