@@ -10,6 +10,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `hiring-service`
 - `auth-service`
 - `notification-service`
+- `settings-service`
 
 ## employee_onboarding
 
@@ -20,6 +21,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `hiring-service` (optional upstream source)
 - `auth-service`
 - `notification-service`
+- `settings-service`
 - `attendance-service` (consumer of eligibility)
 - `leave-service` (consumer of eligibility)
 - `payroll-service` (consumer of eligibility)
@@ -65,6 +67,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `employee-service`
 - `auth-service`
 - `notification-service`
+- `settings-service`
 
 ### Entities referenced
 - `AttendanceRecord`
@@ -104,6 +107,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `employee-service`
 - `auth-service`
 - `notification-service`
+- `settings-service`
 - `payroll-service`
 
 ### Entities referenced
@@ -146,6 +150,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `leave-service`
 - `auth-service`
 - `notification-service`
+- `settings-service`
 
 ### Entities referenced
 - `PayrollRecord`
@@ -179,6 +184,47 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 5. Transition valid records to `Processed`.
 6. Mark paid records on successful disbursement.
 7. Cancel records only for reversal or invalidation scenarios.
+
+
+## settings_administration
+
+### Owning service
+- `settings-service`
+
+### Participating services
+- `auth-service`
+- `attendance-service`
+- `leave-service`
+- `payroll-service`
+- `notification-service`
+
+### Entities referenced
+- `AttendanceRule`
+- `LeavePolicy`
+- `PayrollSettings`
+
+### Trigger
+- HR operations or payroll administration updates company-wide configuration.
+
+### State transitions
+- `AttendanceRule: none -> Draft -> Active/Archived`
+- `LeavePolicy: none -> Draft -> Active/Archived`
+- `PayrollSettings: none -> Draft -> Active/Archived`
+
+### Events
+- Publishes:
+  - `AttendanceRuleConfigured`
+  - `LeavePolicyConfigured`
+  - `PayrollSettingsConfigured`
+  - `SettingsPublished`
+
+### Steps
+1. Draft or revise attendance rules for schedule and lateness compliance.
+2. Draft or revise leave policies for accrual, carry-forward, and approval behavior.
+3. Draft or revise payroll settings for pay schedule, cutoff, and deduction controls.
+4. Validate cross-domain guardrails before activation.
+5. Activate the approved configuration and publish settings events for downstream consumers.
+6. Refresh `settings_configuration_view` and any dependent operational projections.
 
 ## candidate_hiring
 

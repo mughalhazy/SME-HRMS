@@ -187,6 +187,64 @@ CREATE INDEX IF NOT EXISTS idx_interviews_candidate_id ON interviews (candidate_
 CREATE INDEX IF NOT EXISTS idx_interviews_schedule ON interviews (scheduled_start, scheduled_end);
 CREATE INDEX IF NOT EXISTS idx_interviews_status ON interviews (status);
 
+
+CREATE TABLE IF NOT EXISTS attendance_rules (
+  attendance_rule_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(80) NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  timezone VARCHAR(80) NOT NULL,
+  workdays VARCHAR(20)[] NOT NULL,
+  standard_work_hours NUMERIC(4,2) NOT NULL CHECK (standard_work_hours >= 0 AND standard_work_hours <= 24),
+  grace_period_minutes INTEGER NOT NULL DEFAULT 0 CHECK (grace_period_minutes >= 0),
+  late_after_minutes INTEGER NOT NULL DEFAULT 0 CHECK (late_after_minutes >= grace_period_minutes),
+  auto_clock_out_hours NUMERIC(4,2) CHECK (auto_clock_out_hours IS NULL OR (auto_clock_out_hours >= 0 AND auto_clock_out_hours <= 24)),
+  require_geo_fencing BOOLEAN NOT NULL DEFAULT FALSE,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Active', 'Archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_attendance_rules_code UNIQUE (code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_rules_status ON attendance_rules (status);
+
+CREATE TABLE IF NOT EXISTS leave_policies (
+  leave_policy_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(80) NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  leave_type VARCHAR(20) NOT NULL CHECK (leave_type IN ('Annual', 'Sick', 'Casual', 'Unpaid', 'Parental', 'Other')),
+  accrual_frequency VARCHAR(20) NOT NULL CHECK (accrual_frequency IN ('None', 'Monthly', 'Quarterly', 'Yearly')),
+  accrual_rate_days NUMERIC(5,2) NOT NULL CHECK (accrual_rate_days >= 0),
+  annual_entitlement_days NUMERIC(5,2) NOT NULL CHECK (annual_entitlement_days >= 0),
+  carry_forward_limit_days NUMERIC(5,2) NOT NULL CHECK (carry_forward_limit_days >= 0 AND carry_forward_limit_days <= annual_entitlement_days),
+  requires_approval BOOLEAN NOT NULL DEFAULT TRUE,
+  allow_negative_balance BOOLEAN NOT NULL DEFAULT FALSE,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Active', 'Archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_leave_policies_code UNIQUE (code),
+  CONSTRAINT chk_leave_policies_unpaid_entitlement CHECK (leave_type <> 'Unpaid' OR annual_entitlement_days = 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_policies_status ON leave_policies (status);
+CREATE INDEX IF NOT EXISTS idx_leave_policies_type_status ON leave_policies (leave_type, status);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_leave_policies_active_type ON leave_policies (leave_type) WHERE status = 'Active';
+
+CREATE TABLE IF NOT EXISTS payroll_settings (
+  payroll_setting_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pay_schedule VARCHAR(20) NOT NULL CHECK (pay_schedule IN ('Weekly', 'BiWeekly', 'SemiMonthly', 'Monthly')),
+  pay_day INTEGER NOT NULL CHECK (pay_day >= 1 AND pay_day <= 31),
+  currency CHAR(3) NOT NULL,
+  overtime_multiplier NUMERIC(4,2) NOT NULL CHECK (overtime_multiplier >= 1),
+  attendance_cutoff_days INTEGER NOT NULL CHECK (attendance_cutoff_days >= 0 AND attendance_cutoff_days <= 31),
+  leave_deduction_mode VARCHAR(20) NOT NULL CHECK (leave_deduction_mode IN ('None', 'Prorated', 'FullDay')),
+  approval_chain TEXT[] NOT NULL,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Active', 'Archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_settings_status ON payroll_settings (status);
+
 CREATE TABLE IF NOT EXISTS performance_reviews (
   performance_review_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   employee_id UUID NOT NULL,
