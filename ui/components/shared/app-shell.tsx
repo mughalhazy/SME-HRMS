@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   Search,
   ShieldCheck,
+  Settings2,
   TrendingUp,
   UserRoundSearch,
   Users,
@@ -38,6 +39,7 @@ const navIcons = {
   jobs: BriefcaseBusiness,
   candidates: TrendingUp,
   performance: TrendingUp,
+  settings: Settings2,
 }
 
 function isPathActive(currentPath: string | undefined, href: string) {

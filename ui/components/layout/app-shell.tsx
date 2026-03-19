@@ -1,4 +1,4 @@
-import { Bell, Building2, CalendarDays, ClipboardList, LayoutGrid, Search, Users, Wallet, BriefcaseBusiness, TrendingUp } from 'lucide-react'
+import { Bell, Building2, CalendarDays, ClipboardList, LayoutGrid, Search, Settings2, Users, Wallet, BriefcaseBusiness, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +19,7 @@ const navIcons = {
   jobs: BriefcaseBusiness,
   candidates: TrendingUp,
   performance: Bell,
+  settings: Settings2,
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -80,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Input className="pl-9" placeholder="Search people, payroll, or reviews" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant="outline">9 surfaces</Badge>
+                  <Badge variant="outline">{navigationItems.length} surfaces</Badge>
                   <Button variant="outline">Open command menu</Button>
                 </div>
               </div>
