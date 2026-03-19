@@ -140,6 +140,7 @@ class LeaveService:
             "emp-002": EmployeeRecord("emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
         }
         self.leave_balances: dict[tuple[str, LeaveType], LeaveBalance] = {}
+        self.attendance_impacts: dict[str, list[dict]] = {}
         self._lock = RLock()
         self._seed_leave_balances()
 
@@ -299,9 +300,52 @@ class LeaveService:
     def _finalize_observation(self, operation: str, trace_id: str, started: float, success: bool, context: dict | None = None) -> None:
         self.observability.track(operation, trace_id=trace_id, started_at=started, success=success, context=context)
 
+    def _sync_attendance_impacts(self, leave: LeaveRequest) -> None:
+        if leave.status != LeaveStatus.APPROVED:
+            self.attendance_impacts.pop(leave.leave_request_id, None)
+            return
+
+        impacts = []
+        cursor = leave.start_date
+        while cursor <= leave.end_date:
+            impacts.append(
+                {
+                    "attendance_date": cursor.isoformat(),
+                    "attendance_status": "Absent",
+                    "employee_id": leave.employee_id,
+                    "leave_request_id": leave.leave_request_id,
+                    "leave_type": leave.leave_type.value,
+                    "source": "leave_approval",
+                }
+            )
+            cursor = date.fromordinal(cursor.toordinal() + 1)
+        self.attendance_impacts[leave.leave_request_id] = impacts
+
+    def get_employee_detail(self, employee_id: str) -> dict:
+        employee = self.employees.get(employee_id)
+        if not employee:
+            self._fail(404, "EMPLOYEE_NOT_FOUND", "Employee not found", None)
+        leaves = [self._response_payload(leave) for leave in self.requests.values() if leave.employee_id == employee_id]
+        leaves.sort(key=lambda item: (item["start_date"], item["leave_request_id"]))
+        active_leave = next((leave for leave in leaves if leave["status"] == LeaveStatus.APPROVED.value and leave["start_date"] <= self._today().isoformat() <= leave["end_date"]), None)
+        return {
+            "employee": {
+                "employee_id": employee.employee_id,
+                "department_id": employee.department_id,
+                "manager_employee_id": employee.manager_employee_id,
+                "status": employee.status.value,
+            },
+            "leave_balances": self._balances_for_employee(employee_id),
+            "leave_requests": leaves,
+            "attendance_impacts": [impact for leave_id, items in self.attendance_impacts.items() for impact in items if impact["employee_id"] == employee_id],
+            "active_leave": active_leave,
+        }
+
     def _response_payload(self, leave: LeaveRequest) -> dict:
         payload = leave.to_dict()
         payload["leave_balance"] = self._balance_snapshot(leave.employee_id, leave.leave_type)
+        payload["attendance_impacts"] = list(self.attendance_impacts.get(leave.leave_request_id, []))
+        payload["employee_status"] = self.employees[leave.employee_id].status.value
         return payload
 
     def replay_dead_letters(self) -> list[dict]:
@@ -477,6 +521,7 @@ class LeaveService:
             leave.decision_at = ts
             leave.updated_at = ts
             self._sync_employee_leave_status(leave.employee_id)
+            self._sync_attendance_impacts(leave)
             payload = self._response_payload(leave)
             event_payload = {
                 "leave_request_id": leave.leave_request_id,
@@ -528,6 +573,7 @@ class LeaveService:
                 leave.status = LeaveStatus.CANCELLED
                 leave.updated_at = self._now()
                 self._sync_employee_leave_status(leave.employee_id)
+                self._sync_attendance_impacts(leave)
                 self._emit_event(
                     "LeaveRequestCancelled",
                     {

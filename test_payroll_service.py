@@ -354,3 +354,37 @@ def test_mark_paid_updates_batch_and_global_consistency(service: PayrollService)
     assert consistency["data"]["status"] == "ok"
     assert consistency["data"]["orphan_record_ids"] == []
     assert consistency["data"]["batches"][0]["consistent"] is True
+
+
+def test_attendance_summary_enriches_payroll_overtime(service: PayrollService):
+    admin = token("Admin")
+    service.register_employee_profile("emp-77", department_id="dept-eng", role_id="role-eng")
+    service.create_salary_structure(
+        {
+            "employee_id": "emp-77",
+            "effective_from": "2026-09-01",
+            "base_salary": "1000.00",
+            "allowances": "0.00",
+            "deductions": "0.00",
+            "overtime_rate": "10.00",
+            "currency": "USD",
+        },
+        admin,
+    )
+    service.sync_attendance_summary("emp-77", "2026-09-01", "2026-09-30", {"overtime_hours": "3.00"})
+
+    status, created = service.create_payroll_record(
+        {
+            "employee_id": "emp-77",
+            "pay_period_start": "2026-09-01",
+            "pay_period_end": "2026-09-30",
+            "currency": "USD",
+        },
+        admin,
+    )
+
+    assert status == 201
+    assert created["overtime_pay"] == "30.00"
+    summary = service.get_employee_payroll_summary("emp-77")
+    assert summary["employee"]["employee_id"] == "emp-77"
+    assert summary["attendance_summaries"][0]["overtime_hours"] == "3.00"

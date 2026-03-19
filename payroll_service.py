@@ -169,6 +169,26 @@ class SalaryStructure:
         }
 
 
+@dataclass
+class EmployeePayrollProfile:
+    employee_id: str
+    department_id: str | None = None
+    role_id: str | None = None
+    status: str = "Active"
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "employee_id": self.employee_id,
+            "department_id": self.department_id,
+            "role_id": self.role_id,
+            "status": self.status,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
 class ServiceError(Exception):
     def __init__(self, code: str, message: str, status: int, details: list[dict[str, Any]] | None = None):
         self.code = code
@@ -193,6 +213,8 @@ class PayrollService:
 
     def __init__(self):
         self.records: dict[str, PayrollRecord] = {}
+        self.employee_profiles: dict[str, EmployeePayrollProfile] = {}
+        self.attendance_summaries: dict[tuple[str, date, date], dict[str, Any]] = {}
         self.period_index: dict[tuple[str, date, date], str] = {}
         self.payroll_cycles: dict[str, PayrollCycle] = {}
         self.payroll_cycle_index: dict[tuple[date, date], str] = {}
@@ -285,11 +307,49 @@ class PayrollService:
     ) -> None:
         if not employee_id:
             raise ServiceError("VALIDATION_ERROR", "employee_id is required", 422)
+        if self.employee_profiles and employee_id not in self.employee_profiles:
+            raise ServiceError("NOT_FOUND", "Employee not found", 404)
         if pay_period_end < pay_period_start:
             raise ServiceError("VALIDATION_ERROR", "pay_period_end must be on or after pay_period_start", 422)
         if net_pay < 0:
             raise ServiceError("VALIDATION_ERROR", "net_pay must be >= 0", 422)
         self._validate_currency(currency)
+
+    def register_employee_profile(self, employee_id: str, *, department_id: str | None = None, role_id: str | None = None, status: str = "Active") -> dict[str, Any]:
+        ts = self._now()
+        profile = self.employee_profiles.get(employee_id)
+        if profile is None:
+            profile = EmployeePayrollProfile(employee_id=employee_id, department_id=department_id, role_id=role_id, status=status, created_at=ts, updated_at=ts)
+            self.employee_profiles[employee_id] = profile
+        else:
+            profile.department_id = department_id if department_id is not None else profile.department_id
+            profile.role_id = role_id if role_id is not None else profile.role_id
+            profile.status = status or profile.status
+            profile.updated_at = ts
+        return profile.to_dict()
+
+    def sync_attendance_summary(self, employee_id: str, period_start: str | date, period_end: str | date, summary: dict[str, Any]) -> dict[str, Any]:
+        start = self._coerce_date(period_start, "period_start")
+        end = self._coerce_date(period_end, "period_end")
+        key = (employee_id, start, end)
+        normalized = {**summary, "employee_id": employee_id, "period_start": start.isoformat(), "period_end": end.isoformat()}
+        self.attendance_summaries[key] = normalized
+        if employee_id not in self.employee_profiles:
+            self.register_employee_profile(employee_id)
+        return normalized
+
+    def get_employee_payroll_summary(self, employee_id: str) -> dict[str, Any]:
+        profile = self.employee_profiles.get(employee_id)
+        records = [record.to_dict() for record in self.records.values() if record.employee_id == employee_id]
+        records.sort(key=lambda item: (item["pay_period_start"], item["payroll_record_id"]))
+        return {
+            "employee": profile.to_dict() if profile else {"employee_id": employee_id},
+            "attendance_summaries": [
+                value for (emp_id, _, _), value in sorted(self.attendance_summaries.items(), key=lambda item: (item[0][1], item[0][2])) if emp_id == employee_id
+            ],
+            "payroll_records": records,
+            "paid_record_count": sum(1 for record in self.records.values() if record.employee_id == employee_id and record.status == PayrollStatus.PAID),
+        }
 
     def _validate_declared_totals(self, payload: dict[str, Any], gross: Decimal, net: Decimal) -> None:
         if "gross_pay" in payload and self._money(payload["gross_pay"], "gross_pay") != gross:
@@ -343,6 +403,7 @@ class PayrollService:
         payroll_cycle: PayrollCycle | None = None,
     ) -> PayrollRecord:
         employee_id = payload.get("employee_id") or (salary_structure.employee_id if salary_structure else None)
+        attendance_summary = None
         pay_period_start = self._coerce_date(
             payload.get("pay_period_start") or (payroll_cycle.pay_period_start if payroll_cycle else None),
             "pay_period_start",
@@ -356,7 +417,12 @@ class PayrollService:
         allowances = self._money(payload.get("allowances", salary_structure.allowances if salary_structure else None), "allowances")
         deductions = self._money(payload.get("deductions", salary_structure.deductions if salary_structure else None), "deductions")
 
-        overtime_hours = self._money(payload.get("overtime_hours"), "overtime_hours")
+        if employee_id is not None:
+            attendance_summary = self.attendance_summaries.get((employee_id, pay_period_start, pay_period_end))
+        overtime_source = payload.get("overtime_hours")
+        if overtime_source is None and attendance_summary is not None:
+            overtime_source = attendance_summary.get("overtime_hours") or attendance_summary.get("overtimeHours")
+        overtime_hours = self._money(overtime_source, "overtime_hours")
         default_overtime_pay = (
             (overtime_hours * salary_structure.overtime_rate).quantize(Decimal("0.01"))
             if salary_structure
@@ -606,6 +672,8 @@ class PayrollService:
             self._require_admin(ctx)
             with self._lock:
                 employee_id = str(self._require_field(payload, "employee_id"))
+                if employee_id not in self.employee_profiles:
+                    self.register_employee_profile(employee_id)
                 effective_from = self._coerce_date(self._require_field(payload, "effective_from"), "effective_from")
                 effective_to_value = payload.get("effective_to")
                 effective_to = self._coerce_date(effective_to_value, "effective_to") if effective_to_value else None
@@ -698,6 +766,8 @@ class PayrollService:
                     self._finalize_observation("create_payroll_record", trace, started, True, {"status": 201, "replayed": True})
                     return self._record_idempotent_result(replay_key, fingerprint, 201, record.to_dict())
 
+                if employee_id not in self.employee_profiles:
+                    self.register_employee_profile(str(employee_id))
                 payroll_cycle = cycle_for_key or self._resolve_or_create_cycle(enriched_payload)
                 salary_structure = self._resolve_or_create_salary_structure(enriched_payload, employee_id)
                 if salary_structure is None:

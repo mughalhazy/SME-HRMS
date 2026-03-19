@@ -79,6 +79,24 @@ class Interview:
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+@dataclass(slots=True)
+class EmployeeProfile:
+    employee_id: str
+    candidate_id: str
+    job_posting_id: str
+    department_id: str
+    role_id: str | None
+    first_name: str
+    last_name: str
+    email: str
+    phone: str | None
+    employment_type: str
+    hire_date: date
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class HiringService:
     """In-memory domain service implementing the canonical hiring workflow."""
 
@@ -113,6 +131,8 @@ class HiringService:
         self.candidates: dict[str, Candidate] = {}
         self.candidate_stage_transitions: dict[str, CandidateStageTransition] = {}
         self.interviews: dict[str, Interview] = {}
+        self.employee_profiles: dict[str, EmployeeProfile] = {}
+        self.hired_candidate_index: dict[str, str] = {}
         self.events: list[dict[str, Any]] = []
         self.error_logger = CentralErrorLogger("hiring-service")
         self.dead_letters = DeadLetterQueue()
@@ -415,6 +435,8 @@ class HiringService:
         payload["job_posting"] = self.get_job_posting(candidate.job_posting_id)
         payload["stage_history"] = self.list_candidate_stage_history(candidate_id)
         payload["interviews"] = self.list_interviews(candidate_id=candidate_id)
+        employee_id = self.hired_candidate_index.get(candidate_id)
+        payload["employee_profile"] = self.get_employee_profile(employee_id) if employee_id else None
         return payload
 
     def create_interview(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -655,10 +677,12 @@ class HiringService:
 
         return self.get_interview(interview.interview_id)
 
-    def mark_candidate_hired(self, candidate_id: str) -> dict[str, Any]:
+    def mark_candidate_hired(self, candidate_id: str, employee_payload: dict[str, Any] | None = None) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
         if candidate.status != "Offered":
             raise HiringValidationError("candidate can only be hired from Offered status")
+
+        employee_profile = self._upsert_employee_profile_for_candidate(candidate, employee_payload or {})
         candidate.status = "Hired"
         candidate.updated_at = self._now()
 
@@ -666,13 +690,89 @@ class HiringService:
             candidate_id=candidate_id,
             from_status="Offered",
             to_status="Hired",
-            changed_by=None,
+            changed_by=(employee_payload or {}).get("changed_by"),
             reason="candidate accepted offer",
             notes=None,
         )
         self._emit("CandidateStageChanged", {"candidate_id": candidate_id, "from_status": "Offered", "to_status": "Hired"})
-        self._emit("CandidateHired", {"candidate_id": candidate_id, "job_posting_id": candidate.job_posting_id})
+        self._emit(
+            "CandidateHired",
+            {
+                "candidate_id": candidate_id,
+                "job_posting_id": candidate.job_posting_id,
+                "employee_id": employee_profile.employee_id,
+            },
+        )
+        self._emit(
+            "EmployeeCreatedFromCandidate",
+            {
+                "candidate_id": candidate_id,
+                "employee_id": employee_profile.employee_id,
+                "department_id": employee_profile.department_id,
+                "role_id": employee_profile.role_id,
+            },
+        )
         return self.get_candidate(candidate_id)
+
+    def get_employee_profile(self, employee_id: str) -> dict[str, Any]:
+        employee = self.employee_profiles.get(employee_id)
+        if employee is None:
+            raise HiringValidationError("employee does not exist")
+        payload = self._serialize(employee)
+        payload["candidate"] = self.get_candidate_summary(employee.candidate_id)
+        payload["job_posting"] = self.get_job_posting(employee.job_posting_id)
+        return payload
+
+    def list_employee_profiles(self, *, candidate_id: str | None = None) -> list[dict[str, Any]]:
+        rows = list(self.employee_profiles.values())
+        if candidate_id is not None:
+            rows = [row for row in rows if row.candidate_id == candidate_id]
+        rows.sort(key=lambda row: (row.hire_date, row.updated_at, row.employee_id), reverse=True)
+        return [self.get_employee_profile(row.employee_id) for row in rows]
+
+    def _upsert_employee_profile_for_candidate(self, candidate: Candidate, payload: dict[str, Any]) -> EmployeeProfile:
+        posting = self._require_job_posting(candidate.job_posting_id)
+        existing_employee_id = self.hired_candidate_index.get(candidate.candidate_id)
+        now = self._now()
+        hire_date = self._coerce_date(payload.get("hire_date", now.date().isoformat()), "hire_date")
+        employee_id = payload.get("employee_id") or existing_employee_id or self._new_id()
+        for employee in self.employee_profiles.values():
+            if employee.employee_id != employee_id and employee.email.lower() == candidate.email.lower():
+                raise HiringValidationError("employee email must be unique")
+
+        if existing_employee_id and existing_employee_id in self.employee_profiles:
+            employee = self.employee_profiles[existing_employee_id]
+            employee.department_id = payload.get("department_id", posting.department_id)
+            employee.role_id = payload.get("role_id", posting.role_id)
+            employee.first_name = payload.get("first_name", candidate.first_name)
+            employee.last_name = payload.get("last_name", candidate.last_name)
+            employee.email = payload.get("email", candidate.email)
+            employee.phone = payload.get("phone", candidate.phone)
+            employee.employment_type = payload.get("employment_type", posting.employment_type)
+            employee.hire_date = hire_date
+            employee.status = payload.get("status", "Active")
+            employee.updated_at = now
+            return employee
+
+        employee = EmployeeProfile(
+            employee_id=employee_id,
+            candidate_id=candidate.candidate_id,
+            job_posting_id=posting.job_posting_id,
+            department_id=payload.get("department_id", posting.department_id),
+            role_id=payload.get("role_id", posting.role_id),
+            first_name=payload.get("first_name", candidate.first_name),
+            last_name=payload.get("last_name", candidate.last_name),
+            email=payload.get("email", candidate.email),
+            phone=payload.get("phone", candidate.phone),
+            employment_type=payload.get("employment_type", posting.employment_type),
+            hire_date=hire_date,
+            status=payload.get("status", "Active"),
+            created_at=now,
+            updated_at=now,
+        )
+        self.employee_profiles[employee.employee_id] = employee
+        self.hired_candidate_index[candidate.candidate_id] = employee.employee_id
+        return employee
 
     def list_candidate_stage_history(self, candidate_id: str) -> list[dict[str, Any]]:
         self._require_candidate(candidate_id)
@@ -726,6 +826,7 @@ class HiringService:
                 "last_interview_recommendation": self._latest_interview_recommendation(interviews),
                 "hiring_owner_employee_id": None,
                 "hiring_owner_name": None,
+                "hired_employee_id": self.hired_candidate_index.get(candidate.candidate_id),
                 "updated_at": candidate.updated_at.isoformat(),
             }
             rows.append(row)

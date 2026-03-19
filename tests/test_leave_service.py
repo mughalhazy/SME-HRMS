@@ -127,3 +127,17 @@ def test_list_requests_returns_balances_for_employee_scope():
     assert code == 200
     assert len(payload["data"]) == 1
     assert any(balance["leave_type"] == "Sick" and balance["reserved_days"] == 1.0 for balance in payload["leave_balances"])
+
+
+def test_approved_leave_includes_attendance_impacts_and_employee_detail():
+    svc = LeaveService()
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 10, 10), date(2026, 10, 12))
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+    _, approved = svc.decide_request("approve", "Manager", "emp-manager", created["leave_request_id"])
+
+    assert len(approved["attendance_impacts"]) == 3
+    assert approved["attendance_impacts"][0]["attendance_status"] == "Absent"
+    detail = svc.get_employee_detail("emp-001")
+    assert detail["employee"]["employee_id"] == "emp-001"
+    assert len(detail["attendance_impacts"]) == 3
+    assert any(item["leave_request_id"] == created["leave_request_id"] for item in detail["attendance_impacts"])
