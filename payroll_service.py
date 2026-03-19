@@ -47,6 +47,8 @@ class AuthContext:
 class PayrollRecord:
     payroll_record_id: str
     employee_id: str
+    salary_structure_id: str | None
+    payroll_cycle_id: str | None
     pay_period_start: date
     pay_period_end: date
     base_salary: Decimal
@@ -65,6 +67,8 @@ class PayrollRecord:
         return {
             "payroll_record_id": self.payroll_record_id,
             "employee_id": self.employee_id,
+            "salary_structure_id": self.salary_structure_id,
+            "payroll_cycle_id": self.payroll_cycle_id,
             "pay_period_start": self.pay_period_start.isoformat(),
             "pay_period_end": self.pay_period_end.isoformat(),
             "base_salary": str(self.base_salary),
@@ -188,6 +192,158 @@ class PayrollService:
         gross = (base_salary + allowances + overtime_pay).quantize(Decimal("0.01"))
         net = (gross - deductions).quantize(Decimal("0.01"))
         return gross, net
+
+    @staticmethod
+    def _coerce_date(value: str | date, field: str) -> date:
+        if isinstance(value, date):
+            return value
+        try:
+            return date.fromisoformat(value)
+        except (TypeError, ValueError) as exc:
+            raise ServiceError("VALIDATION_ERROR", f"{field} must be a valid ISO date", 422) from exc
+
+    @staticmethod
+    def _validate_currency(value: str | None) -> str:
+        currency = str(value or "USD").upper()
+        if len(currency) != 3 or not currency.isalpha():
+            raise ServiceError("VALIDATION_ERROR", "currency must be a 3-letter ISO code", 422)
+        return currency
+
+    @staticmethod
+    def _require_field(payload: dict[str, Any], field: str) -> Any:
+        value = payload.get(field)
+        if value in {None, ""}:
+            raise ServiceError("VALIDATION_ERROR", f"{field} is required", 422)
+        return value
+
+    def _validate_record_fields(
+        self,
+        *,
+        employee_id: str | None,
+        pay_period_start: date,
+        pay_period_end: date,
+        currency: str,
+        net_pay: Decimal,
+    ) -> None:
+        if not employee_id:
+            raise ServiceError("VALIDATION_ERROR", "employee_id is required", 422)
+        if pay_period_end < pay_period_start:
+            raise ServiceError("VALIDATION_ERROR", "pay_period_end must be on or after pay_period_start", 422)
+        if net_pay < 0:
+            raise ServiceError("VALIDATION_ERROR", "net_pay must be >= 0", 422)
+        self._validate_currency(currency)
+
+    def _validate_declared_totals(self, payload: dict[str, Any], gross: Decimal, net: Decimal) -> None:
+        if "gross_pay" in payload and self._money(payload["gross_pay"], "gross_pay") != gross:
+            raise ServiceError("VALIDATION_ERROR", "gross_pay does not match validated calculation", 422)
+        if "net_pay" in payload and self._money(payload["net_pay"], "net_pay") != net:
+            raise ServiceError("VALIDATION_ERROR", "net_pay does not match validated calculation", 422)
+
+    def _resolve_salary_structure_for_period(self, employee_id: str, period_start: date, period_end: date) -> SalaryStructure | None:
+        structure_ids = self.salary_structure_index.get(employee_id, [])
+        eligible: list[SalaryStructure] = []
+        for structure_id in structure_ids:
+            structure = self.salary_structures[structure_id]
+            if structure.effective_from <= period_start and (structure.effective_to is None or structure.effective_to >= period_end):
+                eligible.append(structure)
+        if not eligible:
+            return None
+        return max(eligible, key=lambda item: (item.effective_from, item.created_at))
+
+    def _resolve_or_create_cycle(self, payload: dict[str, Any]) -> PayrollCycle | None:
+        cycle_id = payload.get("payroll_cycle_id")
+        if cycle_id:
+            cycle = self.payroll_cycles.get(cycle_id)
+            if not cycle:
+                raise ServiceError("NOT_FOUND", "Payroll cycle not found", 404)
+            return cycle
+        cycle_payload = payload.get("payroll_cycle")
+        if cycle_payload:
+            _, cycle_data = self.upsert_payroll_cycle(cycle_payload, payload.get("_authorization"))
+            return self.payroll_cycles[cycle_data["payroll_cycle_id"]]
+        return None
+
+    def _resolve_or_create_salary_structure(self, payload: dict[str, Any], employee_id: str) -> SalaryStructure | None:
+        structure_id = payload.get("salary_structure_id")
+        if structure_id:
+            structure = self.salary_structures.get(structure_id)
+            if not structure:
+                raise ServiceError("NOT_FOUND", "Salary structure not found", 404)
+            return structure
+        structure_payload = payload.get("salary_structure")
+        if structure_payload:
+            structure_payload = {**structure_payload, "employee_id": structure_payload.get("employee_id", employee_id)}
+            _, structure_data = self.create_salary_structure(structure_payload, payload.get("_authorization"))
+            return self.salary_structures[structure_data["salary_structure_id"]]
+        return None
+
+    def _build_record_from_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        salary_structure: SalaryStructure | None = None,
+        payroll_cycle: PayrollCycle | None = None,
+    ) -> PayrollRecord:
+        employee_id = payload.get("employee_id") or (salary_structure.employee_id if salary_structure else None)
+        pay_period_start = self._coerce_date(
+            payload.get("pay_period_start") or (payroll_cycle.pay_period_start if payroll_cycle else None),
+            "pay_period_start",
+        )
+        pay_period_end = self._coerce_date(
+            payload.get("pay_period_end") or (payroll_cycle.pay_period_end if payroll_cycle else None),
+            "pay_period_end",
+        )
+
+        base_salary = self._money(payload.get("base_salary", salary_structure.base_salary if salary_structure else None), "base_salary")
+        allowances = self._money(payload.get("allowances", salary_structure.allowances if salary_structure else None), "allowances")
+        deductions = self._money(payload.get("deductions", salary_structure.deductions if salary_structure else None), "deductions")
+
+        overtime_hours = self._money(payload.get("overtime_hours"), "overtime_hours")
+        default_overtime_pay = (
+            (overtime_hours * salary_structure.overtime_rate).quantize(Decimal("0.01"))
+            if salary_structure
+            else Decimal("0.00")
+        )
+        overtime_pay = self._money(payload.get("overtime_pay", default_overtime_pay), "overtime_pay")
+        gross, net = self._calc(base_salary, allowances, overtime_pay, deductions)
+        self._validate_declared_totals(payload, gross, net)
+        currency = self._validate_currency(payload.get("currency", salary_structure.currency if salary_structure else "USD"))
+        self._validate_record_fields(
+            employee_id=employee_id,
+            pay_period_start=pay_period_start,
+            pay_period_end=pay_period_end,
+            currency=currency,
+            net_pay=net,
+        )
+
+        if salary_structure and salary_structure.employee_id != employee_id:
+            raise ServiceError("VALIDATION_ERROR", "salary_structure employee_id does not match payroll employee_id", 422)
+        if salary_structure and salary_structure.currency != currency:
+            raise ServiceError("VALIDATION_ERROR", "salary_structure currency does not match payroll currency", 422)
+        if payroll_cycle:
+            if payroll_cycle.pay_period_start != pay_period_start or payroll_cycle.pay_period_end != pay_period_end:
+                raise ServiceError("VALIDATION_ERROR", "payroll_cycle period does not match payroll record period", 422)
+
+        ts = self._now()
+        return PayrollRecord(
+            payroll_record_id=str(uuid4()),
+            employee_id=employee_id,
+            salary_structure_id=salary_structure.salary_structure_id if salary_structure else None,
+            payroll_cycle_id=payroll_cycle.payroll_cycle_id if payroll_cycle else None,
+            pay_period_start=pay_period_start,
+            pay_period_end=pay_period_end,
+            base_salary=base_salary,
+            allowances=allowances,
+            deductions=deductions,
+            overtime_pay=overtime_pay,
+            gross_pay=gross,
+            net_pay=net,
+            currency=currency,
+            payment_date=payroll_cycle.payment_date if payroll_cycle else None,
+            status=PayrollStatus.DRAFT,
+            created_at=ts,
+            updated_at=ts,
+        )
 
     @staticmethod
     def _encode_cursor(last_id: str) -> str:
@@ -331,11 +487,87 @@ class PayrollService:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
             with self._lock:
-                employee_id = payload.get("employee_id")
-                pay_period_start = date.fromisoformat(payload["pay_period_start"])
-                pay_period_end = date.fromisoformat(payload["pay_period_end"])
-                if pay_period_end < pay_period_start:
+                period_start = self._coerce_date(self._require_field(payload, "pay_period_start"), "pay_period_start")
+                period_end = self._coerce_date(self._require_field(payload, "pay_period_end"), "pay_period_end")
+                payment_date = self._coerce_date(self._require_field(payload, "payment_date"), "payment_date")
+                if period_end < period_start:
                     raise ServiceError("VALIDATION_ERROR", "pay_period_end must be on or after pay_period_start", 422)
+                if payment_date < period_end:
+                    raise ServiceError("VALIDATION_ERROR", "payment_date must be on or after pay_period_end", 422)
+
+                cycle_key = (period_start, period_end)
+                cycle_id = payload.get("payroll_cycle_id") or self.payroll_cycle_index.get(cycle_key)
+                cycle = self.payroll_cycles.get(cycle_id) if cycle_id else None
+                ts = self._now()
+                if cycle:
+                    cycle.name = str(payload.get("name", cycle.name))
+                    cycle.payment_date = payment_date
+                    cycle.status = str(payload.get("status", cycle.status))
+                    cycle.updated_at = ts
+                    status_code = 200
+                else:
+                    cycle = PayrollCycle(
+                        payroll_cycle_id=str(uuid4()),
+                        name=str(payload.get("name", f"{period_start.isoformat()}:{period_end.isoformat()}")),
+                        pay_period_start=period_start,
+                        pay_period_end=period_end,
+                        payment_date=payment_date,
+                        status=str(payload.get("status", "Open")),
+                        created_at=ts,
+                        updated_at=ts,
+                    )
+                    self.payroll_cycles[cycle.payroll_cycle_id] = cycle
+                    self.payroll_cycle_index[cycle_key] = cycle.payroll_cycle_id
+                    status_code = 201
+            self.observability.logger.audit(
+                "payroll_cycle_upserted",
+                trace_id=trace,
+                actor=ctx.employee_id or ctx.role.value,
+                entity="PayrollCycle",
+                entity_id=cycle.payroll_cycle_id,
+                context={"status": cycle.status},
+            )
+            self._finalize_observation("upsert_payroll_cycle", trace, started, True, {"status": status_code})
+            return status_code, cycle.to_dict()
+        except Exception as exc:
+            self.error_logger.log("upsert_payroll_cycle", exc, trace_id=trace, details={"name": payload.get("name")})
+            self._finalize_observation("upsert_payroll_cycle", trace, started, False, {"name": payload.get("name")})
+            raise
+
+    def generate_payroll(
+        self,
+        payload: dict[str, Any],
+        authorization: str | None,
+        idempotency_key: str | None = None,
+        trace_id: str | None = None,
+    ) -> tuple[int, dict[str, Any]]:
+        return self.create_payroll_record(payload, authorization, idempotency_key=idempotency_key, trace_id=trace_id)
+
+    def create_payroll_record(self, payload: dict[str, Any], authorization: str | None, idempotency_key: str | None = None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            self._require_admin(ctx)
+            with self._lock:
+                enriched_payload = {**payload, "_authorization": authorization}
+                employee_id = enriched_payload.get("employee_id")
+                if not employee_id and enriched_payload.get("salary_structure_id"):
+                    salary_structure = self.salary_structures.get(str(enriched_payload["salary_structure_id"]))
+                    if not salary_structure:
+                        raise ServiceError("NOT_FOUND", "Salary structure not found", 404)
+                    employee_id = salary_structure.employee_id
+                    enriched_payload["employee_id"] = employee_id
+                cycle_for_key = None
+                if "pay_period_start" in enriched_payload and "pay_period_end" in enriched_payload:
+                    pay_period_start = self._coerce_date(enriched_payload["pay_period_start"], "pay_period_start")
+                    pay_period_end = self._coerce_date(enriched_payload["pay_period_end"], "pay_period_end")
+                else:
+                    cycle_for_key = self._resolve_or_create_cycle(enriched_payload)
+                    if cycle_for_key is None:
+                        raise ServiceError("VALIDATION_ERROR", "pay_period_start and pay_period_end are required when payroll_cycle is not provided", 422)
+                    pay_period_start = cycle_for_key.pay_period_start
+                    pay_period_end = cycle_for_key.pay_period_end
 
                 key = (employee_id, pay_period_start, pay_period_end)
                 fingerprint = json.dumps(payload, sort_keys=True)
@@ -350,32 +582,15 @@ class PayrollService:
                     self._finalize_observation("create_payroll_record", trace, started, True, {"status": 201, "replayed": True})
                     return self._record_idempotent_result(replay_key, fingerprint, 201, record.to_dict())
 
-                base_salary = self._money(payload.get("base_salary"), "base_salary")
-                allowances = self._money(payload.get("allowances"), "allowances")
-                deductions = self._money(payload.get("deductions"), "deductions")
-                overtime_pay = self._money(payload.get("overtime_pay"), "overtime_pay")
-                gross, net = self._calc(base_salary, allowances, overtime_pay, deductions)
-                ts = self._now()
-                record = PayrollRecord(
-                    payroll_record_id=str(uuid4()),
-                    employee_id=employee_id,
-                    pay_period_start=pay_period_start,
-                    pay_period_end=pay_period_end,
-                    base_salary=base_salary,
-                    allowances=allowances,
-                    deductions=deductions,
-                    overtime_pay=overtime_pay,
-                    gross_pay=gross,
-                    net_pay=net,
-                    currency=str(payload.get("currency", "USD")).upper(),
-                    payment_date=None,
-                    status=PayrollStatus.DRAFT,
-                    created_at=ts,
-                    updated_at=ts,
-                )
+                payroll_cycle = cycle_for_key or self._resolve_or_create_cycle(enriched_payload)
+                salary_structure = self._resolve_or_create_salary_structure(enriched_payload, employee_id)
+                if salary_structure is None:
+                    salary_structure = self._resolve_salary_structure_for_period(employee_id, pay_period_start, pay_period_end)
+
+                record = self._build_record_from_payload(enriched_payload, salary_structure=salary_structure, payroll_cycle=payroll_cycle)
                 self.records[record.payroll_record_id] = record
                 self.period_index[key] = record.payroll_record_id
-                self.events.append({"type": "PayrollDrafted", "payroll_record_id": record.payroll_record_id, "at": ts.isoformat()})
+                self.events.append({"type": "PayrollDrafted", "payroll_record_id": record.payroll_record_id, "at": record.created_at.isoformat()})
             self.observability.logger.audit(
                 "payroll_record_drafted",
                 trace_id=trace,
@@ -553,8 +768,20 @@ class PayrollService:
                 record.deductions = self._money(payload["deductions"], "deductions")
             if "overtime_pay" in payload:
                 record.overtime_pay = self._money(payload["overtime_pay"], "overtime_pay")
+            if "currency" in payload:
+                record.currency = self._validate_currency(payload["currency"])
+            if "payment_date" in payload and payload["payment_date"] is not None:
+                record.payment_date = self._coerce_date(payload["payment_date"], "payment_date")
 
             record.gross_pay, record.net_pay = self._calc(record.base_salary, record.allowances, record.overtime_pay, record.deductions)
+            self._validate_declared_totals(payload, record.gross_pay, record.net_pay)
+            self._validate_record_fields(
+                employee_id=record.employee_id,
+                pay_period_start=record.pay_period_start,
+                pay_period_end=record.pay_period_end,
+                currency=record.currency,
+                net_pay=record.net_pay,
+            )
             record.updated_at = self._now()
             batch_id = self.record_batches.get(record.payroll_record_id)
             if batch_id and batch_id in self.batches:
@@ -569,6 +796,15 @@ class PayrollService:
         )
         self._finalize_observation("patch_payroll_record", trace, started, True, {"status": 200})
         return 200, record.to_dict()
+
+    def update_payroll(
+        self,
+        payroll_record_id: str,
+        payload: dict[str, Any],
+        authorization: str | None,
+        trace_id: str | None = None,
+    ) -> tuple[int, dict[str, Any]]:
+        return self.patch_payroll_record(payroll_record_id, payload, authorization, trace_id=trace_id)
 
     def mark_paid(self, payroll_record_id: str, authorization: str | None, payment_date: str | None = None, idempotency_key: str | None = None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
         trace = self._trace(trace_id)
