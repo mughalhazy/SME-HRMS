@@ -172,6 +172,14 @@ export class EmployeeRepository {
     }));
   }
 
+  countByDepartmentId(departmentId: string): number {
+    return (this.departmentIndex.get(departmentId)?.size ?? 0);
+  }
+
+  hasDirectReports(managerEmployeeId: string): boolean {
+    return [...this.employees.values()].some((employee) => employee.manager_employee_id === managerEmployeeId);
+  }
+
   delete(employeeId: string): boolean {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.delete', expectedIndex: 'pk_employees' }, () => {
       const existing = this.employees.get(employeeId);

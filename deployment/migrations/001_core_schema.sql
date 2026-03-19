@@ -3,12 +3,14 @@ CREATE TABLE IF NOT EXISTS departments (
   name VARCHAR(150) NOT NULL UNIQUE,
   code VARCHAR(30) NOT NULL UNIQUE,
   description TEXT,
+  parent_department_id UUID,
   head_employee_id UUID,
   status VARCHAR(20) NOT NULL CHECK (status IN ('Proposed', 'Active', 'Inactive', 'Archived')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE INDEX IF NOT EXISTS idx_departments_parent_department_id ON departments (parent_department_id);
 CREATE INDEX IF NOT EXISTS idx_departments_head_employee_id ON departments (head_employee_id);
 CREATE INDEX IF NOT EXISTS idx_departments_status ON departments (status);
 
@@ -67,6 +69,19 @@ CREATE INDEX IF NOT EXISTS idx_employees_status ON employees (status);
 
 DO $$
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_departments_parent_department'
+  ) THEN
+    ALTER TABLE departments
+      ADD CONSTRAINT fk_departments_parent_department
+      FOREIGN KEY (parent_department_id)
+      REFERENCES departments (department_id)
+      ON UPDATE CASCADE
+      ON DELETE RESTRICT;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1
     FROM pg_constraint

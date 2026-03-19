@@ -42,6 +42,7 @@ export interface UpdateEmployeeInput {
   phone?: string;
   hire_date?: string;
   employment_type?: EmploymentType;
+  department_id?: string;
   role_id?: string;
   manager_employee_id?: string;
 }

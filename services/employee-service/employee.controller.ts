@@ -139,6 +139,12 @@ export class EmployeeController {
       if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
         return;
       }
+      if (req.body?.department_id !== undefined) {
+        sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
+          { field: 'department_id', reason: 'use the department assignment endpoint for department changes' },
+        ]);
+        return;
+      }
       const employee = this.employeeService.updateEmployee(req.params.employeeId, req.body);
       this.logger.audit('employee_updated', req.traceId ?? 'missing-trace-id', {
         actor: auth.employee_id ?? auth.role,

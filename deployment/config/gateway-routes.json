@@ -2,6 +2,7 @@
   "version": "v1",
   "routes": {
     "employees": "http://employee-service:8001",
+    "departments": "http://employee-service:8001",
     "attendance": "http://attendance-service:8002",
     "leave": "http://leave-service:8003",
     "payroll": "http://payroll-service:8004",
