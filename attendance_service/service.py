@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Dict, Iterable, List, Optional
 from uuid import UUID
 
 from attendance_service.models import (
+    AttendanceAnomaly,
+    AttendanceLogEvent,
     AttendanceRecord,
     AttendanceSource,
     AttendanceStatus,
@@ -57,12 +59,13 @@ class InMemoryEmployeeDirectory(EmployeeDirectory):
 
 
 class AttendanceService:
-    def __init__(self, employee_directory: EmployeeDirectory):
+    def __init__(self, employee_directory: EmployeeDirectory, *, late_after: time = time(9, 15)):
         self._employee_directory = employee_directory
         self._records: Dict[UUID, AttendanceRecord] = {}
         self._employee_date_index: Dict[tuple[UUID, date], UUID] = {}
         self.events: List[dict] = []
         self.observability = Observability("attendance-service")
+        self._late_after = late_after
 
     def create_record(
         self,
@@ -74,6 +77,7 @@ class AttendanceService:
         source: Optional[AttendanceSource] = None,
         check_in_time: Optional[datetime] = None,
         check_out_time: Optional[datetime] = None,
+        correction_note: Optional[str] = None,
     ) -> AttendanceRecord:
         self._authorize_capture(actor, employee_id)
         employee = self._employee_directory.get(employee_id)
@@ -98,8 +102,9 @@ class AttendanceService:
             source=source,
             check_in_time=check_in_time,
             check_out_time=check_out_time,
+            correction_note=correction_note,
         )
-        record.recalculate_total_hours()
+        self._normalize_record(record)
 
         self._records[record.attendance_id] = record
         self._employee_date_index[key] = record.attendance_id
@@ -119,6 +124,67 @@ class AttendanceService:
         self._auto_validate(record)
         return record
 
+    def log_attendance(
+        self,
+        actor: Actor,
+        *,
+        employee_id: UUID,
+        event_type: AttendanceLogEvent,
+        occurred_at: datetime,
+        source: Optional[AttendanceSource] = None,
+    ) -> AttendanceRecord:
+        self._authorize_capture(actor, employee_id)
+        attendance_date = occurred_at.date()
+        key = (employee_id, attendance_date)
+        attendance_id = self._employee_date_index.get(key)
+
+        if attendance_id is None:
+            record = self.create_record(
+                actor,
+                employee_id=employee_id,
+                attendance_date=attendance_date,
+                attendance_status=AttendanceStatus.PRESENT,
+                source=source,
+                check_in_time=occurred_at if event_type == AttendanceLogEvent.CHECK_IN else None,
+                check_out_time=occurred_at if event_type == AttendanceLogEvent.CHECK_OUT else None,
+            )
+        else:
+            record = self._get_record(attendance_id)
+            if record.lifecycle_state == RecordState.LOCKED:
+                raise AttendanceServiceError("ATTENDANCE_LOCKED", "Locked records cannot be modified")
+            if source is not None:
+                record.source = source
+            if event_type == AttendanceLogEvent.CHECK_IN:
+                if record.check_in_time and occurred_at > record.check_in_time:
+                    raise AttendanceServiceError("TIME_LOGIC_INVALID", "check-in cannot move later than existing check-in")
+                record.check_in_time = occurred_at
+            if event_type == AttendanceLogEvent.CHECK_OUT:
+                if record.check_out_time and occurred_at < record.check_out_time:
+                    raise AttendanceServiceError("TIME_LOGIC_INVALID", "check-out cannot move earlier than existing check-out")
+                record.check_out_time = occurred_at
+            self._normalize_record(record)
+            record.lifecycle_state = RecordState.CAPTURED
+            self._auto_validate(record)
+
+        self.events.append(
+            {
+                "type": "AttendanceLogged",
+                "attendance_id": str(record.attendance_id),
+                "employee_id": str(record.employee_id),
+                "event_type": event_type.value,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        )
+        self.observability.logger.info(
+            "attendance.logged",
+            context={
+                "employee_id": str(record.employee_id),
+                "attendance_id": str(record.attendance_id),
+                "event_type": event_type.value,
+            },
+        )
+        return record
+
     def update_record(
         self,
         actor: Actor,
@@ -127,6 +193,7 @@ class AttendanceService:
         attendance_status: Optional[AttendanceStatus] = None,
         check_in_time: Optional[datetime] = None,
         check_out_time: Optional[datetime] = None,
+        correction_note: Optional[str] = None,
     ) -> AttendanceRecord:
         record = self._get_record(attendance_id)
         self._authorize_capture(actor, record.employee_id)
@@ -140,9 +207,18 @@ class AttendanceService:
             record.check_in_time = check_in_time
         if check_out_time is not None:
             record.check_out_time = check_out_time
-        record.recalculate_total_hours()
+        if correction_note is not None:
+            record.correction_note = correction_note
+        self._normalize_record(record)
         record.lifecycle_state = RecordState.CAPTURED
         self._auto_validate(record)
+        self.events.append(
+            {
+                "type": "AttendanceCorrected",
+                "attendance_id": str(record.attendance_id),
+                "employee_id": str(record.employee_id),
+            }
+        )
         self.observability.logger.info(
             "attendance.updated",
             context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
@@ -189,6 +265,27 @@ class AttendanceService:
         ]
         return sorted(results, key=lambda x: x.attendance_date)
 
+    def aggregate_period(self, actor: Actor, *, employee_id: UUID, from_date: date, to_date: date) -> dict:
+        rows = self.list_records(actor, employee_id=employee_id, from_date=from_date, to_date=to_date)
+        total_hours = sum((record.total_hours or Decimal("0")) for record in rows)
+        status_breakdown: dict[str, int] = {}
+        anomaly_breakdown: dict[str, int] = {}
+        for record in rows:
+            status_breakdown[record.attendance_status.value] = status_breakdown.get(record.attendance_status.value, 0) + 1
+            for anomaly in record.anomalies:
+                anomaly_breakdown[anomaly.value] = anomaly_breakdown.get(anomaly.value, 0) + 1
+        return {
+            "employeeId": str(employee_id),
+            "from": from_date.isoformat(),
+            "to": to_date.isoformat(),
+            "records": len(rows),
+            "totalHours": str(total_hours.quantize(Decimal("0.01"))),
+            "statusBreakdown": status_breakdown,
+            "anomalyBreakdown": anomaly_breakdown,
+            "anomalousRecords": sum(1 for row in rows if row.anomalies),
+            "completeRecords": sum(1 for row in rows if not row.anomalies),
+        }
+
     def lock_period(self, actor: Actor, *, period_id: str, from_date: date, to_date: date) -> dict:
         self._authorize_period_lock(actor)
         if to_date < from_date:
@@ -222,19 +319,16 @@ class AttendanceService:
         return {"periodId": period_id, "lockedCount": len(locked_ids)}
 
     def get_summary(self, actor: Actor, *, employee_id: UUID, period_start: date, period_end: date) -> dict:
-        self._authorize_read(actor, employee_id)
-        rows = self.list_records(actor, employee_id=employee_id, from_date=period_start, to_date=period_end)
-        total_hours = sum((record.total_hours or Decimal("0")) for record in rows)
-        by_status: dict[str, int] = {}
-        for record in rows:
-            by_status[record.attendance_status.value] = by_status.get(record.attendance_status.value, 0) + 1
+        summary = self.aggregate_period(actor, employee_id=employee_id, from_date=period_start, to_date=period_end)
         return {
-            "employeeId": str(employee_id),
+            "employeeId": summary["employeeId"],
             "periodStart": period_start.isoformat(),
             "periodEnd": period_end.isoformat(),
-            "totalHours": str(total_hours.quantize(Decimal("0.01"))),
-            "statusBreakdown": by_status,
-            "records": len(rows),
+            "totalHours": summary["totalHours"],
+            "statusBreakdown": summary["statusBreakdown"],
+            "records": summary["records"],
+            "anomalyBreakdown": summary["anomalyBreakdown"],
+            "anomalousRecords": summary["anomalousRecords"],
         }
 
     def attendance_absence_alerts(self, actor: Actor, *, attendance_date: date) -> dict:
@@ -293,14 +387,29 @@ class AttendanceService:
             raise AttendanceServiceError("ATTENDANCE_NOT_FOUND", "Attendance record not found")
         return record
 
+    def _normalize_record(self, record: AttendanceRecord) -> None:
+        try:
+            record.validate_time_consistency()
+            record.recalculate_total_hours()
+            record.derive_anomalies(late_after=self._late_after)
+        except ValueError as exc:
+            raise AttendanceServiceError(
+                "TIME_LOGIC_INVALID",
+                "Attendance time logic is invalid.",
+                [{"reason": str(exc)}],
+            ) from exc
+
     def _auto_validate(self, record: AttendanceRecord) -> None:
-        if (
-            record.attendance_status in {AttendanceStatus.ABSENT, AttendanceStatus.HOLIDAY}
-            or record.total_hours is not None
-        ):
+        if record.attendance_status in {AttendanceStatus.ABSENT, AttendanceStatus.HOLIDAY} or record.total_hours is not None:
             record.lifecycle_state = RecordState.VALIDATED
             record.updated_at = datetime.utcnow()
-            self.events.append({"type": "AttendanceValidated", "attendance_id": str(record.attendance_id)})
+            self.events.append(
+                {
+                    "type": "AttendanceValidated",
+                    "attendance_id": str(record.attendance_id),
+                    "anomalies": [anomaly.value for anomaly in record.anomalies],
+                }
+            )
 
     def _authorize_capture(self, actor: Actor, target_employee_id: UUID) -> None:
         if actor.role == "Admin":
