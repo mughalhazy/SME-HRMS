@@ -29,6 +29,7 @@ export class ApiError extends Error {
 
 type ApiRequestOptions = RequestInit & {
   headers?: HeadersInit
+  skipAuth?: boolean
 }
 
 type ErrorEnvelope = {
@@ -38,6 +39,14 @@ type ErrorEnvelope = {
     details?: ApiErrorDetail[]
     traceId?: string
   }
+}
+
+type AccessTokenResolver = () => Promise<string | null> | string | null
+
+let accessTokenResolver: AccessTokenResolver | null = null
+
+export function registerAccessTokenResolver(resolver: AccessTokenResolver | null) {
+  accessTokenResolver = resolver
 }
 
 export function buildApiUrl(path: string) {
@@ -64,10 +73,25 @@ function parseJsonSafely(text: string): unknown {
   }
 }
 
+async function resolveAccessToken(skipAuth?: boolean) {
+  if (skipAuth || !accessTokenResolver) {
+    return undefined
+  }
+
+  return (await accessTokenResolver()) ?? undefined
+}
+
 export async function apiRequest<T>(path: string, init?: ApiRequestOptions): Promise<T> {
+  const hasJsonBody = !(init?.body instanceof FormData)
+  const token = await resolveAccessToken(init?.skipAuth)
+  const headers = buildHeaders({ token, headers: init?.headers, hasJsonBody })
+
   if (USE_MOCK) {
     try {
-      return await mockApiRequest<T>(path, init)
+      return await mockApiRequest<T>(path, {
+        ...init,
+        headers,
+      })
     } catch (error) {
       throw error instanceof ApiError
         ? error
@@ -78,11 +102,9 @@ export async function apiRequest<T>(path: string, init?: ApiRequestOptions): Pro
     }
   }
 
-  const hasJsonBody = !(init?.body instanceof FormData)
-
   const response = await fetch(buildApiUrl(path), {
     ...init,
-    headers: buildHeaders({ headers: init?.headers, hasJsonBody }),
+    headers,
   })
 
   const text = await response.text()

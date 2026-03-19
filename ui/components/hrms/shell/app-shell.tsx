@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Bell,
   Building2,
@@ -13,10 +13,13 @@ import {
   LogOut,
   Search,
   Settings,
+  ShieldCheck,
   Users,
 } from 'lucide-react'
 
+import { useAuth } from '@/components/auth/auth-provider'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -39,6 +42,24 @@ function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+function buildUserDisplay(session: ReturnType<typeof useAuth>['session']) {
+  if (!session) {
+    return {
+      name: 'Secure user',
+      subtitle: 'No active session',
+      initials: 'SU',
+    }
+  }
+
+  const username = session.user.employee_id ?? session.user.user_id
+  const role = session.user.role
+  return {
+    name: username,
+    subtitle: role,
+    initials: role.slice(0, 2).toUpperCase(),
+  }
+}
+
 type AppShellProps = {
   children: ReactNode
   pageTitle?: string
@@ -53,7 +74,10 @@ export default function AppShell({
   pageActions,
 }: AppShellProps) {
   const pathname = usePathname() ?? '/'
+  const router = useRouter()
+  const { session, logout } = useAuth()
   const activeItem = navigationItems.find((item) => isActiveRoute(pathname, item.href)) ?? navigationItems[0]
+  const userDisplay = buildUserDisplay(session)
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
@@ -103,16 +127,29 @@ export default function AppShell({
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-11 w-11 border border-slate-200 bg-white">
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarFallback>{userDisplay.initials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-950">Ava Davis</p>
-                  <p className="truncate text-xs text-slate-500">HR Director</p>
+                  <p className="truncate text-sm font-semibold text-slate-950">{userDisplay.name}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="truncate text-xs text-slate-500">{userDisplay.subtitle}</p>
+                    <Badge variant="outline" className="gap-1 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em]">
+                      <ShieldCheck className="h-3 w-3" />
+                      Session active
+                    </Badge>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl px-3.5 text-slate-600 hover:bg-gray-100 hover:text-slate-900">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 rounded-xl px-3.5 text-slate-600 hover:bg-gray-100 hover:text-slate-900"
+              onClick={async () => {
+                await logout()
+                router.replace('/login')
+              }}
+            >
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
