@@ -559,7 +559,7 @@ Represents a reusable notification definition for a workflow or event.
 | subject_template | String | No | Used for subject-capable channels. |
 | body_template | Text | Yes | Message body template. |
 | locale | String | Yes | Locale code such as `en-US`. |
-| is_active | Boolean | Yes | Whether template can be used for sends. |
+| status | Enum | Yes | `Draft`, `Active`, `Retired`. |
 | created_at | DateTime | Yes | Record creation timestamp. |
 | updated_at | DateTime | Yes | Record last update timestamp. |
 

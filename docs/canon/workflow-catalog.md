@@ -44,7 +44,8 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - Publishes:
   - `EmployeeCreated`
   - `EmployeeStatusChanged`
-  - `UserProvisioned` (when access is created during onboarding)
+- Downstream follow-on events:
+  - `UserProvisioned` is emitted by `auth-service` when onboarding invokes access provisioning.
 
 ### Steps
 1. Validate that `Department` and `Role` exist and are assignable.
@@ -212,11 +213,14 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
   - `RoleUpdated`
 - Publishes:
   - `JobPostingOpened`
+  - `JobPostingOnHold`
   - `JobPostingClosed`
   - `CandidateApplied`
   - `CandidateStageChanged`
   - `InterviewScheduled`
   - `InterviewCompleted`
+  - `InterviewCancelled`
+  - `InterviewNoShow`
   - `InterviewCalendarSynced`
   - `CandidateImported`
   - `LinkedInCandidatesImported`
@@ -253,6 +257,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 ### Events
 - Publishes:
   - `PerformanceReviewSubmitted`
+  - `PerformanceReviewAcknowledged`
   - `PerformanceReviewFinalized`
 
 ### Steps
@@ -284,10 +289,10 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - New employee onboarding, direct admin invitation, or role change requiring access updates.
 
 ### State transitions
-- `UserAccount: none -> Invited -> Active -> Locked/Disabled`
-- `RoleBinding: none -> Active -> Revoked/Expired`
-- `Session: none -> Active -> Revoked/Expired`
-- `RefreshToken: none -> Active -> Rotated/Revoked/Expired`
+- `UserAccount: none -> Invited/Active -> Locked/Disabled`
+- `RoleBinding: none -> Active -> Revoked`
+- `Session: none -> Active -> Revoked`
+- `RefreshToken: none -> Active -> Rotated`
 
 ### Events
 - Consumes:
@@ -297,6 +302,9 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
   - `UserProvisioned`
   - `UserAuthenticated`
   - `SessionRevoked`
+  - `UserAccountStatusChanged`
+  - `RoleBindingChanged`
+  - `RefreshTokenRotated`
   - `AuthorizationPolicyUpdated`
 
 ### Steps
@@ -305,7 +313,8 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 3. Activate the account or issue an invitation.
 4. Issue sessions and refresh tokens on successful authentication.
 5. Revoke sessions on logout, disablement, or compromise response.
-6. Publish policy updates when authorization rules change.
+6. Publish user-status, role-binding, or token-rotation events when access posture changes.
+7. Publish policy updates when authorization rules change.
 
 ## notification_dispatch
 
@@ -349,13 +358,14 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
   - `NotificationQueued`
   - `NotificationSent`
   - `NotificationFailed`
+  - `NotificationSuppressed`
 
 ### Steps
 1. Resolve the applicable template and subject preferences.
 2. Build a `NotificationMessage` in `Queued`.
 3. Execute one or more `DeliveryAttempt` records by channel/provider.
 4. Transition the message to `Sent`, `Failed`, or `Suppressed`.
-5. Publish delivery outcome events for dashboards and audit.
+5. Publish delivery outcome events for dashboards and audit, including suppression outcomes.
 
 ## Coverage checklist
 
