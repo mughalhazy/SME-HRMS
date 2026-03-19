@@ -16,6 +16,7 @@ import {
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageStack } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -218,16 +219,21 @@ const directoryHighlights = [
   },
 ]
 
+const sectionLabelClassName = 'text-xs font-medium uppercase tracking-[0.16em] text-slate-500'
+const sectionTitleClassName = 'text-lg font-semibold tracking-tight text-slate-950'
+const sectionBodyClassName = 'text-sm leading-6 text-slate-600'
+const mutedMetaClassName = 'text-xs font-medium text-slate-500'
+
 function statusBadge(status: TeamMember['status'] | ReviewItem['status']) {
   if (status === 'Active' || status === 'Ready') {
     return <Badge variant="success">{status}</Badge>
   }
 
   if (status === 'On leave' || status === 'In progress') {
-    return <Badge className="bg-amber-50 text-amber-700">{status}</Badge>
+    return <Badge className="border-transparent bg-amber-50 text-amber-700">{status}</Badge>
   }
 
-  return <Badge className="bg-red-50 text-red-700">{status}</Badge>
+  return <Badge className="border-transparent bg-red-50 text-red-700">{status}</Badge>
 }
 
 export function EnterpriseDashboard() {
@@ -250,8 +256,8 @@ export function EnterpriseDashboard() {
           </div>
         </div>
 
-        <div className="lg:col-span-4 lg:justify-self-end">
-          <Button size="lg" className="w-full min-w-56 justify-between lg:w-auto">
+        <div className="flex items-center justify-start lg:col-span-4 lg:justify-end">
+          <Button size="lg" className="w-full justify-between sm:w-auto sm:min-w-56">
             <span className="inline-flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Add employee
@@ -261,48 +267,49 @@ export function EnterpriseDashboard() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
         {metrics.map((metric) => {
           const Icon = metric.icon
 
           return (
-            <div
-              key={metric.title}
-              className="flex h-full min-h-40 flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="rounded-xl bg-slate-100 p-2.5 text-slate-700">
-                  <Icon className="h-5 w-5" />
+            <Card key={metric.title} className="flex min-h-48 flex-col xl:col-span-3">
+              <CardContent className="flex h-full flex-col justify-between p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="rounded-[var(--radius-control)] bg-slate-100 p-2 text-slate-700">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <p className={mutedMetaClassName}>{metric.change}</p>
                 </div>
-                <p className="text-xs font-medium text-slate-500">{metric.change}</p>
-              </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-600">{metric.title}</p>
-                <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
-                <p className="text-xs leading-5 text-slate-500">{metric.hint}</p>
-              </div>
-            </div>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-600">{metric.title}</p>
+                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
+                  <p className="text-sm leading-6 text-slate-500">{metric.hint}</p>
+                </div>
+              </CardContent>
+            </Card>
           )
         })}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(18rem,0.8fr)]">
-        <div className="min-w-0 space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white">
-            <div className="flex flex-col gap-3 border-b border-slate-200 p-6 sm:flex-row sm:items-end sm:justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-500">Primary workspace</p>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Workforce overview</h2>
+      <section className="grid gap-6 xl:grid-cols-12">
+        <div className="min-w-0 space-y-6 xl:col-span-8">
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <p className={sectionLabelClassName}>Primary workspace</p>
+                  <CardTitle className="text-2xl">Workforce overview</CardTitle>
+                </div>
                 <p className="max-w-2xl text-sm leading-6 text-slate-600">
                   Review role ownership, status, and location from one operating table built for fast scanning.
                 </p>
               </div>
-              <Button variant="outline" className="w-full sm:w-auto">
+              <Button variant="ghost" className="w-full justify-start px-0 text-slate-600 sm:w-auto sm:justify-center sm:px-3.5">
                 Open directory
                 <ArrowRight className="h-4 w-4" />
               </Button>
-            </div>
+            </CardHeader>
 
             <div className="overflow-hidden">
               <Table>
@@ -331,121 +338,136 @@ export function EnterpriseDashboard() {
                 </TableBody>
               </Table>
             </div>
-          </div>
+          </Card>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-500">Activity</p>
-                <h3 className="text-lg font-semibold text-slate-950">Operational signals</h3>
-              </div>
+          <div className="grid gap-6 lg:grid-cols-12">
+            <Card className="lg:col-span-7">
+              <CardHeader className="gap-3 p-4">
+                <div className="space-y-1">
+                  <p className={sectionLabelClassName}>Activity</p>
+                  <h3 className={sectionTitleClassName}>Operational signals</h3>
+                </div>
+              </CardHeader>
 
-              <div className="mt-4 space-y-4">
+              <CardContent className="space-y-4 px-4 pb-4">
                 {directoryHighlights.map((highlight) => (
-                  <div key={highlight.team} className="space-y-1 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
+                  <div key={highlight.team} className="space-y-2 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
                     <p className="text-sm font-medium text-slate-900">{highlight.team}</p>
-                    <p className="text-sm leading-6 text-slate-600">{highlight.update}</p>
+                    <p className={sectionBodyClassName}>{highlight.update}</p>
                   </div>
                 ))}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-500">Performance pulse</p>
-                <h3 className="text-lg font-semibold text-slate-950">Cycle momentum</h3>
-              </div>
+            <Card className="lg:col-span-5">
+              <CardHeader className="gap-3 p-4">
+                <div className="space-y-1">
+                  <p className={sectionLabelClassName}>Performance pulse</p>
+                  <h3 className={sectionTitleClassName}>Cycle momentum</h3>
+                </div>
+              </CardHeader>
 
-              <div className="mt-4 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-slate-600">Self reviews submitted</p>
-                    <p className="text-sm font-semibold text-slate-950">88%</p>
+              <CardContent className="space-y-4 px-4 pb-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm text-slate-600">Self reviews submitted</p>
+                      <p className="text-sm font-semibold text-slate-950">88%</p>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-200">
+                      <div className="h-2 rounded-full bg-blue-600" style={{ width: '88%' }} />
+                    </div>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-200">
-                    <div className="h-2 rounded-full bg-blue-600" style={{ width: '88%' }} />
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm text-slate-600">Manager reviews completed</p>
+                      <p className="text-sm font-semibold text-slate-950">74%</p>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-200">
+                      <div className="h-2 rounded-full bg-emerald-600" style={{ width: '74%' }} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm text-slate-600">Calibration completed</p>
+                      <p className="text-sm font-semibold text-slate-950">61%</p>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-200">
+                      <div className="h-2 rounded-full bg-amber-500" style={{ width: '61%' }} />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-slate-600">Manager reviews completed</p>
-                    <p className="text-sm font-semibold text-slate-950">74%</p>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-200">
-                    <div className="h-2 rounded-full bg-emerald-600" style={{ width: '74%' }} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-slate-600">Calibration completed</p>
-                    <p className="text-sm font-semibold text-slate-950">61%</p>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-200">
-                    <div className="h-2 rounded-full bg-amber-500" style={{ width: '61%' }} />
-                  </div>
-                </div>
+
                 <div className="space-y-3 border-t border-slate-200 pt-4">
                   <div className="flex gap-3">
                     <TrendingUp className="mt-0.5 h-4 w-4 text-blue-700" />
-                    <p className="text-sm leading-6 text-slate-600">
+                    <p className={sectionBodyClassName}>
                       13 reviews are ready for sign-off and 7 still need calibration alignment.
                     </p>
                   </div>
                   <div className="flex gap-3">
                     <CalendarClock className="mt-0.5 h-4 w-4 text-emerald-700" />
-                    <p className="text-sm leading-6 text-slate-600">
+                    <p className={sectionBodyClassName}>
                       Managers should complete calibration notes before the April performance freeze.
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        <aside className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <div className="space-y-1 border-b border-slate-200 pb-4">
-            <p className="text-sm font-medium text-slate-500">Priorities</p>
-            <h2 className="text-xl font-semibold tracking-tight text-slate-950">Today&apos;s action queue</h2>
-            <p className="text-sm leading-6 text-slate-600">
-              Urgent approvals, staffing risks, and blocked work surfaced for immediate action.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {priorities.map((item) => {
-              const Icon = item.icon
-
-              return (
-                <div key={item.title} className="space-y-2 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
-                  <div className="flex items-start gap-3">
-                    <div className={`rounded-lg bg-white p-2 ring-1 ring-slate-200 ${item.tone}`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                      <p className="text-xs font-medium text-slate-500">{item.urgency}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm leading-6 text-slate-600">{item.description}</p>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-slate-900">Approval queue</p>
-                <p className="text-xs text-slate-500">3 items need action this week</p>
+        <aside className="space-y-4 xl:col-span-4">
+          <Card className="border-slate-200 bg-slate-50/70 shadow-none">
+            <CardHeader className="gap-3 p-4">
+              <div className="space-y-1">
+                <p className={sectionLabelClassName}>Priorities</p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-950">Today&apos;s action queue</h2>
               </div>
-              <Badge variant="outline">This week</Badge>
-            </div>
+              <p className={sectionBodyClassName}>
+                Urgent approvals, staffing risks, and blocked work surfaced for immediate action.
+              </p>
+            </CardHeader>
 
-            <div className="space-y-3">
+            <CardContent className="space-y-4 px-4 pb-4">
+              {priorities.map((item) => {
+                const Icon = item.icon
+
+                return (
+                  <div key={item.title} className="space-y-3 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
+                    <div className="flex items-start gap-3">
+                      <div className={`rounded-[var(--radius-control)] bg-white p-2 ring-1 ring-slate-200 ${item.tone}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-medium text-slate-900">{item.title}</p>
+                        <p className={mutedMetaClassName}>{item.urgency}</p>
+                      </div>
+                    </div>
+                    <p className={sectionBodyClassName}>{item.description}</p>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-900">Approval queue</p>
+                  <p className="text-sm text-slate-500">3 items need action this week</p>
+                </div>
+                <Badge variant="outline">This week</Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-3 px-4 pb-4">
               {reviews.map((review) => (
                 <div key={review.name} className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3 first:border-t-0 first:pt-0">
-                  <div className="min-w-0">
+                  <div className="min-w-0 space-y-1">
                     <p className="text-sm font-medium text-slate-900">{review.name}</p>
                     <p className="text-xs text-slate-500">
                       {review.manager} · Due {review.dueDate}
@@ -454,20 +476,22 @@ export function EnterpriseDashboard() {
                   {statusBadge(review.status)}
                 </div>
               ))}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-            <div>
-              <p className="text-sm font-medium text-slate-900">Leave coverage watch</p>
-              <p className="text-xs text-slate-500">Upcoming requests that affect staffing continuity</p>
-            </div>
+          <Card>
+            <CardHeader className="gap-3 p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-900">Leave coverage watch</p>
+                <p className="text-sm text-slate-500">Upcoming requests that affect staffing continuity</p>
+              </div>
+            </CardHeader>
 
-            <div className="space-y-3">
+            <CardContent className="space-y-3 px-4 pb-4">
               {leaveRequests.map((request) => (
-                <div key={request.employee} className="space-y-1 border-t border-slate-200 pt-3 first:border-t-0 first:pt-0">
+                <div key={request.employee} className="space-y-2 border-t border-slate-200 pt-3 first:border-t-0 first:pt-0">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="space-y-1">
                       <p className="text-sm font-medium text-slate-900">{request.employee}</p>
                       <p className="text-sm text-slate-500">{request.type}</p>
                     </div>
@@ -477,8 +501,8 @@ export function EnterpriseDashboard() {
                   <p className="text-xs text-slate-500">Manager: {request.manager}</p>
                 </div>
               ))}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </aside>
       </section>
     </PageStack>
