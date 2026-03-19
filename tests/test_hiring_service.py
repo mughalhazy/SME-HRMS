@@ -101,6 +101,74 @@ class HiringServiceTest(unittest.TestCase):
                 }
             )
 
+
+    def test_job_posting_read_model_supports_get_list_and_pagination(self) -> None:
+        second = self.service.create_job_posting(
+            {
+                "title": "Data Engineer",
+                "department_id": "dep-1",
+                "employment_type": "FullTime",
+                "description": "Build pipelines",
+                "openings_count": 1,
+                "posting_date": "2026-01-02",
+                "status": "Draft",
+            }
+        )
+        self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Mina",
+                "last_name": "Cole",
+                "email": "mina@example.com",
+                "application_date": "2026-01-05",
+            }
+        )
+
+        fetched = self.service.get_job_posting(self.posting["job_posting_id"])
+        self.assertEqual(fetched["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(fetched["candidate_count"], 1)
+
+        first_page = self.service.list_job_postings(limit=1)
+        self.assertEqual(len(first_page), 1)
+        self.assertEqual(first_page[0]["job_posting_id"], second["job_posting_id"])
+
+        second_page = self.service.list_job_postings(limit=1, cursor=first_page[0]["job_posting_id"])
+        self.assertEqual(len(second_page), 1)
+        self.assertEqual(second_page[0]["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(second_page[0]["candidate_count"], 1)
+
+    def test_delete_job_posting_rejects_existing_candidates_and_removes_empty_posting(self) -> None:
+        self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Nina",
+                "last_name": "Shaw",
+                "email": "nina.delete@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.delete_job_posting(self.posting["job_posting_id"])
+
+        removable = self.service.create_job_posting(
+            {
+                "title": "QA Engineer",
+                "department_id": "dep-2",
+                "employment_type": "Contract",
+                "description": "Test releases",
+                "openings_count": 1,
+                "posting_date": "2026-01-10",
+                "status": "Draft",
+            }
+        )
+
+        deleted = self.service.delete_job_posting(removable["job_posting_id"])
+        self.assertEqual(deleted["job_posting_id"], removable["job_posting_id"])
+
+        with self.assertRaises(HiringValidationError):
+            self.service.get_job_posting(removable["job_posting_id"])
+
     def test_list_candidate_pipeline_view_maps_read_model_fields(self) -> None:
         candidate = self.service.create_candidate(
             {
