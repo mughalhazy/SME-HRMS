@@ -10,7 +10,7 @@ export type AuthContext = {
   department_id?: string;
 };
 
-type EmployeeAction =
+type ResourceAction =
   | 'create'
   | 'read'
   | 'list'
@@ -18,16 +18,16 @@ type EmployeeAction =
   | 'manageDepartment'
   | 'manageStatus'
   | 'delete'
-  | 'createDepartment'
-  | 'readDepartment'
-  | 'listDepartments'
-  | 'updateDepartmentRecord'
-  | 'deleteDepartmentRecord';
+  | 'createRole'
+  | 'readRole'
+  | 'listRoles'
+  | 'updateRole'
+  | 'deleteRole';
 
-const ROLE_ACTIONS: Record<AuthRole, EmployeeAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createDepartment', 'readDepartment', 'listDepartments', 'updateDepartmentRecord', 'deleteDepartmentRecord'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readDepartment', 'listDepartments', 'updateDepartmentRecord'],
-  Employee: ['read', 'list', 'updateProfile', 'readDepartment', 'listDepartments'],
+const ROLE_ACTIONS: Record<AuthRole, ResourceAction[]> = {
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles'],
+  Employee: ['read', 'list', 'updateProfile'],
 };
 
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;
@@ -136,7 +136,7 @@ export const authenticate: RequestHandler = (req: Request, res: Response, next: 
   }
 };
 
-export function authorizeEmployeeAction(action: EmployeeAction): RequestHandler {
+export function authorizeEmployeeAction(action: ResourceAction): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     const auth = req.auth;
     if (!auth) {

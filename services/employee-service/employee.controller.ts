@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { EMPLOYEE_STATUSES } from './employee.model';
-import { ConflictError, EmployeeService, NotFoundError } from './employee.service';
+import { EmployeeService } from './employee.service';
+import { ConflictError, NotFoundError } from './service.errors';
 import { ValidationError } from './employee.validation';
 import { AuthContext } from './rbac.middleware';
 import { ApiError, sendApiError } from '../../middleware/error-handler';

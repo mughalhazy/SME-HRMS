@@ -8,9 +8,8 @@ import {
 import { DepartmentRepository } from './department.repository';
 import { EmployeeRepository } from './employee.repository';
 import { validateCreateEmployee, validateStatus, validateUpdateEmployee, ValidationError } from './employee.validation';
-
-export class NotFoundError extends Error {}
-export class ConflictError extends Error {}
+import { RoleService } from './role.service';
+import { ConflictError, NotFoundError } from './service.errors';
 
 const STATUS_TRANSITIONS: Record<EmployeeStatus, EmployeeStatus[]> = {
   Draft: ['Active', 'Terminated'],
@@ -23,7 +22,7 @@ const STATUS_TRANSITIONS: Record<EmployeeStatus, EmployeeStatus[]> = {
 export class EmployeeService {
   constructor(
     private readonly repository: EmployeeRepository,
-    private readonly departmentRepository: DepartmentRepository,
+    private readonly roleService: RoleService,
   ) {}
 
   createEmployee(input: CreateEmployeeInput): Employee {
@@ -41,11 +40,11 @@ export class EmployeeService {
       throw new ValidationError([{ field: 'manager_employee_id', reason: 'manager employee was not found' }]);
     }
 
-    if (!this.departmentRepository.findById(input.department_id)) {
-      throw new ValidationError([{ field: 'department_id', reason: 'department was not found' }]);
-    }
+    this.roleService.getActiveRoleById(input.role_id);
 
-    return this.repository.create(input);
+    const employee = this.repository.create(input);
+    this.roleService.linkEmployee(employee.role_id, employee.employee_id);
+    return employee;
   }
 
   getEmployeeById(employeeId: string): Employee {
@@ -86,11 +85,15 @@ export class EmployeeService {
       throw new ValidationError([{ field: 'manager_employee_id', reason: 'manager employee was not found' }]);
     }
 
-    if (input.department_id && !this.departmentRepository.findById(input.department_id)) {
-      throw new ValidationError([{ field: 'department_id', reason: 'department was not found' }]);
+    if (input.role_id && input.role_id !== existing.role_id) {
+      this.roleService.getActiveRoleById(input.role_id);
     }
 
     const updated = this.repository.update(employeeId, input);
+
+    if (updated && input.role_id && input.role_id !== existing.role_id) {
+      this.roleService.relinkEmployee(existing.role_id, updated.role_id, employeeId);
+    }
 
     if (!updated) {
       throw new NotFoundError('employee not found');
@@ -140,17 +143,15 @@ export class EmployeeService {
   }
 
   deleteEmployee(employeeId: string): void {
-    if (this.repository.hasDirectReports(employeeId)) {
-      throw new ConflictError('employee still has direct reports');
-    }
-
-    const headedDepartment = this.departmentRepository.findByHeadEmployeeId(employeeId);
-    if (headedDepartment) {
-      throw new ConflictError('employee is still assigned as a department head');
+    const existing = this.repository.findById(employeeId);
+    if (!existing) {
+      throw new NotFoundError('employee not found');
     }
 
     if (!this.repository.delete(employeeId)) {
       throw new NotFoundError('employee not found');
     }
+
+    this.roleService.unlinkEmployee(existing.role_id, employeeId);
   }
 }
