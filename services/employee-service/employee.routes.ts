@@ -138,11 +138,11 @@ export function createEmployeeRouter(): Router {
   });
   const roleService = new RoleService(roleRepository);
   const departmentService = new DepartmentService(departmentRepository, repository);
-  const service = new EmployeeService(repository, roleService, departmentRepository);
   const performanceReviewRepository = new PerformanceReviewRepository({
     findEmployeeById: (employeeId) => repository.findById(employeeId),
     findDepartmentById: (departmentId) => repository.findDepartmentById(departmentId),
   });
+  const service = new EmployeeService(repository, roleService, departmentRepository, performanceReviewRepository);
   const performanceReviewService = new PerformanceReviewService(performanceReviewRepository, repository);
   const controller = new EmployeeController(service);
   const performanceReviewController = new PerformanceReviewController(performanceReviewService);

@@ -10,6 +10,7 @@ import {
 import { PerformanceReviewRepository } from './performance.repository';
 import {
   validateCreatePerformanceReview,
+  validatePerformanceReviewFilters,
   validatePerformanceReviewStatus,
   validateUpdatePerformanceReview,
 } from './performance.validation';
@@ -53,10 +54,12 @@ export class PerformanceReviewService {
   }
 
   listReviews(filters: PerformanceReviewFilters) {
+    validatePerformanceReviewFilters(filters);
     return this.repository.list(filters);
   }
 
   listReviewReadModels(filters: PerformanceReviewFilters) {
+    validatePerformanceReviewFilters(filters);
     const page = this.repository.list(filters);
     return this.repository.toReadModelListBundle(page.data);
   }

@@ -85,6 +85,13 @@ export class PerformanceReviewRepository {
     }));
   }
 
+  hasEmployeeReference(employeeId: string): boolean {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.hasEmployeeReference' }, () => {
+      return (this.employeeIndex.get(employeeId)?.size ?? 0) > 0
+        || (this.reviewerIndex.get(employeeId)?.size ?? 0) > 0;
+    }));
+  }
+
   list(filters: PerformanceReviewFilters): PaginatedResult<PerformanceReview> {
     const cacheKey = `${PERFORMANCE_REVIEW_CACHE_PREFIX}:list:${JSON.stringify(filters)}`;
     const cached = this.cache.get<PaginatedResult<PerformanceReview>>(cacheKey);

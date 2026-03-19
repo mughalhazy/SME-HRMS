@@ -16,11 +16,11 @@ const { ConflictError } = require('./services/employee-service/service.errors.js
 const { ValidationError } = require('./services/employee-service/employee.validation.js');
 
 const employeeRepository = new EmployeeRepository();
-const employeeService = new EmployeeService(employeeRepository);
 const reviewRepository = new PerformanceReviewRepository({
   findEmployeeById: (employeeId) => employeeRepository.findById(employeeId),
   findDepartmentById: (departmentId) => employeeRepository.findDepartmentById(departmentId),
 });
+const employeeService = new EmployeeService(employeeRepository, undefined, undefined, reviewRepository);
 const service = new PerformanceReviewService(reviewRepository, employeeRepository);
 
 const reviewer = employeeService.createEmployee({
@@ -84,6 +84,14 @@ assert.equal(readModels.performance_review_view.department_name, 'Engineering');
 const listed = service.listReviews({ reviewer_employee_id: reviewer.employee_id, limit: 10 });
 assert.equal(listed.data.length, 1);
 assert.equal(listed.data[0].performance_review_id, review.performance_review_id);
+const listedByEmployee = service.listReviews({ employee_id: employee.employee_id, status: 'Finalized', limit: 10 });
+assert.equal(listedByEmployee.data.length, 1);
+assert.equal(listedByEmployee.data[0].performance_review_id, review.performance_review_id);
+
+assert.throws(
+  () => service.listReviews({ status: 'Unknown', limit: 10 }),
+  ValidationError,
+);
 
 assert.throws(
   () => service.createReview({
@@ -107,6 +115,10 @@ const secondReview = service.createReview({
   review_period_end: '2026-06-30',
 });
 assert.throws(() => service.finalizeReview(secondReview.performance_review_id), ValidationError);
+assert.throws(
+  () => employeeService.deleteEmployee(employee.employee_id),
+  ConflictError,
+);
 """
 
 
@@ -144,6 +156,9 @@ def test_performance_review_service_crud_and_lifecycle() -> None:
                     "{ROOT / 'services/employee-service/employee.validation.ts'}",
                     "{ROOT / 'services/employee-service/employee.repository.ts'}",
                     "{ROOT / 'services/employee-service/employee.service.ts'}",
+                    "{ROOT / 'services/employee-service/department.repository.ts'}",
+                    "{ROOT / 'services/employee-service/role.repository.ts'}",
+                    "{ROOT / 'services/employee-service/domain-seed.ts'}",
                     "{ROOT / 'services/employee-service/performance.model.ts'}",
                     "{ROOT / 'services/employee-service/performance.validation.ts'}",
                     "{ROOT / 'services/employee-service/performance.repository.ts'}",
