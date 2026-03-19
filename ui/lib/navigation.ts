@@ -1,4 +1,4 @@
-export type NavigationSectionKey = 'overview' | 'people' | 'operations' | 'talent'
+export type NavigationSectionKey = 'overview' | 'people' | 'operations' | 'talent' | 'admin'
 
 export type NavigationItem = {
   key:
@@ -13,6 +13,7 @@ export type NavigationItem = {
     | 'jobs'
     | 'candidates'
     | 'performance'
+    | 'settings'
   href: string
   label: string
   shortLabel: string
@@ -30,6 +31,7 @@ export type ReadModelKey =
   | 'payroll_summary_view'
   | 'candidate_pipeline_view'
   | 'performance_review_view'
+  | 'settings_configuration_view'
 
 export const readModelLabels: Record<ReadModelKey, string> = {
   employee_directory_view: 'Employee Directory',
@@ -38,6 +40,7 @@ export const readModelLabels: Record<ReadModelKey, string> = {
   payroll_summary_view: 'Payroll',
   candidate_pipeline_view: 'Candidates',
   performance_review_view: 'Performance',
+  settings_configuration_view: 'Settings',
 }
 
 export function getReadModelLabel(readModel: ReadModelKey) {
@@ -49,6 +52,7 @@ export const navigationSections: { key: NavigationSectionKey; title: string }[] 
   { key: 'people', title: 'People' },
   { key: 'operations', title: 'Operations' },
   { key: 'talent', title: 'Talent' },
+  { key: 'admin', title: 'Admin' },
 ]
 
 export const navigationItems: NavigationItem[] = [
@@ -175,6 +179,16 @@ export const navigationItems: NavigationItem[] = [
     section: 'talent',
     capabilityIds: ['CAP-PRF-001'],
     readModels: ['performance_review_view'],
+  },
+  {
+    key: 'settings',
+    href: '/settings',
+    label: 'Settings',
+    shortLabel: 'Settings',
+    description: 'Global HRMS configuration for company info, policies, branding, and integrations.',
+    section: 'admin',
+    capabilityIds: ['CAP-ADM-001'],
+    readModels: ['settings_configuration_view'],
   },
 ]
 
