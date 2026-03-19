@@ -13,6 +13,7 @@ This document defines the canonical backend domain for SME-HRMS and aligns entit
 | `hiring-service` | `JobPosting`, `Candidate`, `Interview` |
 | `auth-service` | `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Session`, `RefreshToken` |
 | `notification-service` | `NotificationTemplate`, `NotificationMessage`, `DeliveryAttempt`, `NotificationPreference` |
+| `settings-service` | `AttendanceRule`, `LeavePolicy`, `PayrollSettings` |
 
 ## Cross-entity rules
 
@@ -269,6 +270,107 @@ Represents a payroll result for an employee over a defined pay period.
 - `Processed`
 - `Paid`
 - `Cancelled`
+
+
+## AttendanceRule
+
+### Owning service
+- `settings-service`
+
+### Description
+Represents a reusable workforce attendance policy template used to validate schedules, lateness thresholds, and attendance automation.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| attendance_rule_id | UUID | Yes | Primary identifier. |
+| code | String | Yes | Unique human-readable rule code. |
+| name | String | Yes | Rule name shown to administrators. |
+| timezone | String | Yes | IANA timezone used for cutoffs and schedule evaluation. |
+| workdays | String[] | Yes | Ordered weekdays expected for the rule. |
+| standard_work_hours | Decimal(4,2) | Yes | Expected daily scheduled hours. |
+| grace_period_minutes | Integer | Yes | Allowed lateness before flagging. |
+| late_after_minutes | Integer | Yes | Threshold for late classification. |
+| auto_clock_out_hours | Decimal(4,2) | No | Optional auto clock-out threshold. |
+| require_geo_fencing | Boolean | Yes | Indicates whether compliant check-in locations are required. |
+| status | Enum | Yes | `Draft`, `Active`, `Archived`. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Record last update timestamp. |
+
+### Relationships
+- Referenced by attendance schedule templates and validation policies.
+- Contributes attendance defaults to downstream `AttendanceRecord` classification logic.
+
+### Lifecycle states
+- `Draft`
+- `Active`
+- `Archived`
+
+## LeavePolicy
+
+### Owning service
+- `settings-service`
+
+### Description
+Represents a configurable leave entitlement policy that defines accrual, carry-forward, and approval requirements.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| leave_policy_id | UUID | Yes | Primary identifier. |
+| code | String | Yes | Unique leave policy code. |
+| name | String | Yes | Policy display name. |
+| leave_type | Enum | Yes | `Annual`, `Sick`, `Casual`, `Unpaid`, `Parental`, `Other`. |
+| accrual_frequency | Enum | Yes | `None`, `Monthly`, `Quarterly`, `Yearly`. |
+| accrual_rate_days | Decimal(4,2) | Yes | Days accrued per frequency interval. |
+| annual_entitlement_days | Decimal(5,2) | Yes | Annual leave entitlement. |
+| carry_forward_limit_days | Decimal(5,2) | Yes | Max unused days allowed to carry forward. |
+| requires_approval | Boolean | Yes | Whether manager approval is required. |
+| allow_negative_balance | Boolean | Yes | Whether balances may go below zero. |
+| status | Enum | Yes | `Draft`, `Active`, `Archived`. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Record last update timestamp. |
+
+### Relationships
+- Applied as a default or assignment source during employee onboarding.
+- Governs validation rules for downstream `LeaveRequest` workflows.
+
+### Lifecycle states
+- `Draft`
+- `Active`
+- `Archived`
+
+## PayrollSettings
+
+### Owning service
+- `settings-service`
+
+### Description
+Represents the authoritative company payroll configuration used for pay schedule timing, approvals, and leave deduction behavior.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| payroll_setting_id | UUID | Yes | Primary identifier. |
+| pay_schedule | Enum | Yes | `Weekly`, `BiWeekly`, `SemiMonthly`, `Monthly`. |
+| pay_day | Integer | Yes | Pay day number interpreted relative to the chosen schedule. |
+| currency | String | Yes | ISO-4217 currency code. |
+| overtime_multiplier | Decimal(4,2) | Yes | Multiplier used for overtime calculations. |
+| attendance_cutoff_days | Integer | Yes | Number of days before payroll close that attendance must be finalized. |
+| leave_deduction_mode | Enum | Yes | `None`, `Prorated`, `FullDay`. |
+| approval_chain | String[] | Yes | Ordered payroll approval stages. |
+| status | Enum | Yes | `Draft`, `Active`, `Archived`. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Record last update timestamp. |
+
+### Relationships
+- Configures downstream `PayrollRecord` generation and approval flow.
+- Consumes attendance and leave configuration defaults to support payroll processing.
+
+### Lifecycle states
+- `Draft`
+- `Active`
+- `Archived`
 
 ## JobPosting
 
