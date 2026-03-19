@@ -5,12 +5,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Bell,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
   ClipboardList,
   LayoutGrid,
   LoaderCircle,
+  Search,
   ShieldCheck,
   TrendingUp,
   UserRoundSearch,
@@ -18,6 +20,9 @@ import {
   Wallet,
 } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { navigationItems, navigationSections, sidebarNavigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
@@ -102,22 +107,25 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-white text-black">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="w-64 border-b border-gray-200 bg-white lg:border-b-0 lg:border-r">
+    <div className="min-h-screen bg-slate-50 text-slate-950">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="flex h-full flex-col gap-6 p-6">
-            <div className="space-y-1">
-              <Link href="/" onClick={onNavigationStart('/')} className="inline-flex items-center text-base font-semibold text-black">
-                SME HRMS
-              </Link>
-              <p className="text-sm text-gray-500">Enterprise workspace</p>
+            <div className="space-y-3">
+              <Badge className="w-fit">Enterprise HRMS</Badge>
+              <div className="space-y-1">
+                <Link href="/" onClick={onNavigationStart('/')} className="inline-flex items-center text-lg font-semibold tracking-tight text-slate-950">
+                  SME HRMS
+                </Link>
+                <p className="text-sm leading-6 text-slate-500">People, payroll, and performance operations in one workspace.</p>
+              </div>
             </div>
 
             <nav aria-label="Primary navigation" className="space-y-6">
               {groupedNavigation.map((section) => (
                 <div key={section.key} className="space-y-2">
-                  <p className="px-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{section.title}</p>
-                  <div className="space-y-1">
+                  <p className="px-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{section.title}</p>
+                  <div className="space-y-1.5">
                     {section.items.map((item) => {
                       const Icon = navIcons[item.key]
                       const active = isPathActive(activePath, item.href)
@@ -130,13 +138,19 @@ export function AppShell({
                           onClick={onNavigationStart(item.href)}
                           aria-busy={isPending}
                           className={cn(
-                            'flex items-center gap-3 px-3 py-2 rounded-md text-sm text-gray-600 transition-colors',
-                            'hover:bg-gray-100 hover:text-black',
-                            active && 'bg-gray-200 text-black',
+                            'flex items-start gap-3 rounded-xl border px-3.5 py-3 text-sm transition-colors',
+                            active
+                              ? 'border-blue-100 bg-blue-50 text-slate-950'
+                              : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950',
                           )}
                         >
-                          {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
-                          <span>{item.label}</span>
+                          <span className={cn('mt-0.5 rounded-lg p-2', active ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-500')}>
+                            {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+                          </span>
+                          <span className="min-w-0 space-y-1">
+                            <span className="block font-medium">{item.label}</span>
+                            <span className="block text-xs leading-5 text-slate-500">{item.description}</span>
+                          </span>
                         </Link>
                       )
                     })}
@@ -147,14 +161,36 @@ export function AppShell({
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-col bg-white">
-          <header className="border-b border-gray-200 bg-white">
-            <div className="flex min-h-16 items-center justify-between gap-4 p-6">
-              <div className="min-w-0">
-                <h1 className="truncate text-xl font-semibold text-black">{activeItem.label}</h1>
-                {pendingHref ? <p className="mt-1 text-sm text-gray-500">Opening {navigationItems.find((item) => item.href === pendingHref)?.label ?? 'page'}…</p> : null}
+        <div className="flex min-w-0 flex-col bg-slate-50">
+          <header className="border-b border-slate-200 bg-white">
+            <div className="flex flex-col gap-4 p-6 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-950">{activeItem.label}</h1>
+                  <Badge variant="outline">Live workspace</Badge>
+                </div>
+                <p className="text-sm leading-6 text-slate-500">
+                  {pendingHref ? `Opening ${navigationItems.find((item) => item.href === pendingHref)?.label ?? 'page'}…` : activeItem.description}
+                </p>
               </div>
-              {pageActions ? <div className="flex shrink-0 items-center gap-3">{pageActions}</div> : <div />}
+
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="relative min-w-[280px]">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input className="pl-9" placeholder="Search employees, payroll, or reviews" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="icon" aria-label="Notifications">
+                    <Bell className="h-4 w-4" />
+                  </Button>
+                  {pageActions ?? (
+                    <>
+                      <Button variant="outline">Export</Button>
+                      <Button>New request</Button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </header>
 
