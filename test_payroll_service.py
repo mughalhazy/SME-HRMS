@@ -230,6 +230,90 @@ def test_run_payroll_returns_batch_and_validates_processing(service: PayrollServ
     assert validation["data"]["batch"]["record_ids"] == payload["data"]["batch"]["record_ids"]
 
 
+def test_run_payroll_is_consistent_across_repeated_runs(service: PayrollService):
+    admin = token("Admin")
+    records = [
+        {
+            "employee_id": "emp-30",
+            "pay_period_start": "2026-10-01",
+            "pay_period_end": "2026-10-31",
+            "base_salary": "1200.00",
+            "allowances": "125.00",
+            "deductions": "75.00",
+            "overtime_pay": "30.00",
+            "currency": "USD",
+        },
+        {
+            "employee_id": "emp-31",
+            "pay_period_start": "2026-10-01",
+            "pay_period_end": "2026-10-31",
+            "base_salary": "1600.00",
+            "allowances": "175.00",
+            "deductions": "90.00",
+            "overtime_pay": "40.00",
+            "currency": "USD",
+        },
+    ]
+
+    first_status, first_payload = service.run_payroll("2026-10-01", "2026-10-31", admin, records=records)
+    second_status, second_payload = service.run_payroll("2026-10-01", "2026-10-31", admin, records=records)
+
+    assert first_status == 200
+    assert second_status == 200
+    assert second_payload == first_payload
+    assert first_payload["data"]["consistency"]["consistent"] is True
+    assert first_payload["data"]["batch"]["failed_count"] == 0
+    assert sorted(first_payload["data"]["record_ids"]) == sorted(first_payload["data"]["batch"]["record_ids"])
+
+    consistency_status, consistency = service.validate_consistency(admin)
+    assert consistency_status == 200
+    assert consistency["data"]["status"] == "ok"
+    assert consistency["data"]["orphan_record_ids"] == []
+
+
+def test_create_payroll_record_rejects_total_mismatches_and_persists_calculated_totals(service: PayrollService):
+    admin = token("Admin")
+
+    with pytest.raises(ServiceError) as exc:
+        service.create_payroll_record(
+            {
+                "employee_id": "emp-40",
+                "pay_period_start": "2026-11-01",
+                "pay_period_end": "2026-11-30",
+                "base_salary": "1000.00",
+                "allowances": "100.00",
+                "deductions": "50.00",
+                "overtime_pay": "20.00",
+                "gross_pay": "9999.99",
+                "currency": "USD",
+            },
+            admin,
+        )
+
+    assert exc.value.status == 422
+    assert exc.value.message == "gross_pay does not match validated calculation"
+
+    status, created = service.create_payroll_record(
+        {
+            "employee_id": "emp-41",
+            "pay_period_start": "2026-11-01",
+            "pay_period_end": "2026-11-30",
+            "base_salary": "1000.00",
+            "allowances": "100.00",
+            "deductions": "50.00",
+            "overtime_pay": "20.00",
+            "gross_pay": "1120.00",
+            "net_pay": "1070.00",
+            "currency": "USD",
+        },
+        admin,
+    )
+
+    assert status == 201
+    assert created["gross_pay"] == "1120.00"
+    assert created["net_pay"] == "1070.00"
+
+
 def test_mark_paid_updates_batch_and_global_consistency(service: PayrollService):
     admin = token("Admin")
     _, payload = service.run_payroll(
