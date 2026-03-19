@@ -122,7 +122,9 @@ CREATE TABLE IF NOT EXISTS candidates (
   email VARCHAR(255) NOT NULL,
   phone VARCHAR(30),
   resume_url TEXT,
-  source VARCHAR(20) CHECK (source IN ('Referral', 'JobBoard', 'CareerSite', 'Agency', 'Other')),
+  source VARCHAR(20) CHECK (source IN ('Referral', 'JobBoard', 'CareerSite', 'Agency', 'LinkedIn', 'Other')),
+  source_candidate_id VARCHAR(120),
+  source_profile_url TEXT,
   application_date DATE NOT NULL,
   status VARCHAR(20) NOT NULL CHECK (status IN ('Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Rejected', 'Withdrawn')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -138,6 +140,27 @@ CREATE TABLE IF NOT EXISTS candidates (
 CREATE INDEX IF NOT EXISTS idx_candidates_job_posting_id ON candidates (job_posting_id);
 CREATE INDEX IF NOT EXISTS idx_candidates_status ON candidates (status);
 CREATE INDEX IF NOT EXISTS idx_candidates_application_date ON candidates (application_date);
+CREATE INDEX IF NOT EXISTS idx_candidates_source_candidate_id ON candidates (source_candidate_id);
+
+CREATE TABLE IF NOT EXISTS candidate_stage_transitions (
+  candidate_stage_transition_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  candidate_id UUID NOT NULL,
+  from_status VARCHAR(20) CHECK (from_status IN ('Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Rejected', 'Withdrawn')),
+  to_status VARCHAR(20) NOT NULL CHECK (to_status IN ('Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Rejected', 'Withdrawn')),
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  changed_by VARCHAR(120),
+  reason TEXT,
+  notes TEXT,
+  CONSTRAINT fk_candidate_stage_transitions_candidate
+    FOREIGN KEY (candidate_id)
+    REFERENCES candidates (candidate_id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_candidate_id ON candidate_stage_transitions (candidate_id);
+CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_changed_at ON candidate_stage_transitions (changed_at);
+CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_to_status ON candidate_stage_transitions (to_status);
 
 CREATE TABLE IF NOT EXISTS interviews (
   interview_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
