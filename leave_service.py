@@ -42,12 +42,46 @@ class LeaveStatus(str, Enum):
     CANCELLED = "Cancelled"
 
 
+BALANCE_CAPS: dict[LeaveType, float | None] = {
+    LeaveType.ANNUAL: 18.0,
+    LeaveType.SICK: 10.0,
+    LeaveType.CASUAL: 7.0,
+    LeaveType.UNPAID: None,
+    LeaveType.OTHER: 5.0,
+}
+
+
 @dataclass
 class EmployeeRecord:
     employee_id: str
     department_id: str
     manager_employee_id: str | None
     status: EmployeeStatus
+
+
+@dataclass
+class LeaveBalance:
+    employee_id: str
+    leave_type: LeaveType
+    entitlement_days: float | None
+    reserved_days: float
+    approved_days: float
+
+    @property
+    def remaining_days(self) -> float | None:
+        if self.entitlement_days is None:
+            return None
+        return float(self.entitlement_days - self.reserved_days - self.approved_days)
+
+    def to_dict(self) -> dict:
+        return {
+            "employee_id": self.employee_id,
+            "leave_type": self.leave_type.value,
+            "entitlement_days": self.entitlement_days,
+            "reserved_days": self.reserved_days,
+            "approved_days": self.approved_days,
+            "remaining_days": self.remaining_days,
+        }
 
 
 @dataclass
@@ -105,10 +139,26 @@ class LeaveService:
             "emp-001": EmployeeRecord("emp-001", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
             "emp-002": EmployeeRecord("emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
         }
+        self.leave_balances: dict[tuple[str, LeaveType], LeaveBalance] = {}
         self._lock = RLock()
+        self._seed_leave_balances()
+
+    def _seed_leave_balances(self) -> None:
+        for employee_id in self.employees:
+            for leave_type, entitlement_days in BALANCE_CAPS.items():
+                self.leave_balances[(employee_id, leave_type)] = LeaveBalance(
+                    employee_id=employee_id,
+                    leave_type=leave_type,
+                    entitlement_days=entitlement_days,
+                    reserved_days=0.0,
+                    approved_days=0.0,
+                )
 
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
+
+    def _today(self) -> date:
+        return self._now().date()
 
     def _trace(self, trace_id: str | None) -> str:
         return self.observability.trace_id(trace_id)
@@ -156,6 +206,69 @@ class LeaveService:
         if role == Role.MANAGER and not self._can_access(role, actor_employee_id, leave):
             self._fail(403, "FORBIDDEN", "Insufficient team scope", trace_id)
 
+    def _get_balance(self, employee_id: str, leave_type: LeaveType) -> LeaveBalance:
+        return self.leave_balances[(employee_id, leave_type)]
+
+    def _balance_snapshot(self, employee_id: str, leave_type: LeaveType) -> dict:
+        return self._get_balance(employee_id, leave_type).to_dict()
+
+    def _balances_for_employee(self, employee_id: str) -> list[dict]:
+        return [
+            self.leave_balances[(employee_id, leave_type)].to_dict()
+            for leave_type in LeaveType
+        ]
+
+    def _ensure_balance_capacity(self, employee_id: str, leave_type: LeaveType, days: float, trace_id: str | None) -> None:
+        balance = self._get_balance(employee_id, leave_type)
+        remaining = balance.remaining_days
+        if remaining is not None and remaining < days:
+            self._fail(
+                409,
+                "INSUFFICIENT_LEAVE_BALANCE",
+                "Requested leave exceeds the employee balance.",
+                trace_id,
+                details=[
+                    {
+                        "employee_id": employee_id,
+                        "leave_type": leave_type.value,
+                        "requested_days": days,
+                        "remaining_days": remaining,
+                    }
+                ],
+            )
+
+    def _reserve_balance(self, leave: LeaveRequest, trace_id: str | None) -> None:
+        self._ensure_balance_capacity(leave.employee_id, leave.leave_type, leave.total_days, trace_id)
+        balance = self._get_balance(leave.employee_id, leave.leave_type)
+        balance.reserved_days += leave.total_days
+
+    def _release_reserved_balance(self, leave: LeaveRequest) -> None:
+        balance = self._get_balance(leave.employee_id, leave.leave_type)
+        balance.reserved_days = max(0.0, balance.reserved_days - leave.total_days)
+
+    def _consume_reserved_balance(self, leave: LeaveRequest) -> None:
+        balance = self._get_balance(leave.employee_id, leave.leave_type)
+        balance.reserved_days = max(0.0, balance.reserved_days - leave.total_days)
+        balance.approved_days += leave.total_days
+
+    def _restore_approved_balance(self, leave: LeaveRequest) -> None:
+        balance = self._get_balance(leave.employee_id, leave.leave_type)
+        balance.approved_days = max(0.0, balance.approved_days - leave.total_days)
+
+    def _sync_employee_leave_status(self, employee_id: str) -> None:
+        employee = self.employees[employee_id]
+        today = self._today()
+        has_active_approved_leave = any(
+            leave.employee_id == employee_id
+            and leave.status == LeaveStatus.APPROVED
+            and leave.start_date <= today <= leave.end_date
+            for leave in self.requests.values()
+        )
+        if has_active_approved_leave:
+            employee.status = EmployeeStatus.ON_LEAVE
+        elif employee.status == EmployeeStatus.ON_LEAVE:
+            employee.status = EmployeeStatus.ACTIVE
+
     def _overlap_exists(self, employee_id: str, start: date, end: date, exclude_id: str | None = None) -> bool:
         tracked = {LeaveStatus.SUBMITTED, LeaveStatus.APPROVED}
         for item in self.requests.values():
@@ -185,6 +298,11 @@ class LeaveService:
 
     def _finalize_observation(self, operation: str, trace_id: str, started: float, success: bool, context: dict | None = None) -> None:
         self.observability.track(operation, trace_id=trace_id, started_at=started, success=success, context=context)
+
+    def _response_payload(self, leave: LeaveRequest) -> dict:
+        payload = leave.to_dict()
+        payload["leave_balance"] = self._balance_snapshot(leave.employee_id, leave.leave_type)
+        return payload
 
     def replay_dead_letters(self) -> list[dict]:
         recovered = self.dead_letters.recover(
@@ -221,11 +339,13 @@ class LeaveService:
                 if self._overlap_exists(employee_id, start_date, end_date):
                     self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
 
+                leave_type_enum = LeaveType(leave_type)
+                self._ensure_balance_capacity(employee_id, leave_type_enum, self._total_days(start_date, end_date), trace)
                 now = self._now()
                 leave = LeaveRequest(
                     leave_request_id=str(uuid.uuid4()),
                     employee_id=employee_id,
-                    leave_type=LeaveType(leave_type),
+                    leave_type=leave_type_enum,
                     start_date=start_date,
                     end_date=end_date,
                     total_days=self._total_days(start_date, end_date),
@@ -244,7 +364,7 @@ class LeaveService:
                 context={"leave_request_id": leave.leave_request_id, "employee_id": employee_id},
             )
             self._finalize_observation("create_request", trace, started, True, {"status": 201})
-            return 201, leave.to_dict()
+            return 201, self._response_payload(leave)
         except Exception:
             self._finalize_observation("create_request", trace, started, False)
             raise
@@ -262,26 +382,42 @@ class LeaveService:
             key = idempotency_key or f"leave-submit:{leave_request_id}:{actor_employee_id}"
             fingerprint = f"submit:{leave_request_id}:{actor_role}:{actor_employee_id}"
             replay = self.idempotency.replay_or_conflict(key, fingerprint)
-            if replay is not None:
-                self._finalize_observation("submit_request", trace, started, True, {"status": replay.status_code, "replayed": True})
-                return replay.status_code, replay.payload
 
             if leave.status == LeaveStatus.SUBMITTED:
-                payload = leave.to_dict()
+                payload = self._response_payload(leave)
                 self.idempotency.record(key, fingerprint, 200, payload)
                 self._finalize_observation("submit_request", trace, started, True, {"status": 200, "replayed": True})
                 return 200, payload
             if leave.status != LeaveStatus.DRAFT:
                 self._fail(409, "INVALID_TRANSITION", "Only Draft requests can be submitted", trace)
+            if replay is not None:
+                self._finalize_observation("submit_request", trace, started, True, {"status": replay.status_code, "replayed": True})
+                return replay.status_code, replay.payload
             if self._overlap_exists(leave.employee_id, leave.start_date, leave.end_date, exclude_id=leave.leave_request_id):
                 self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
 
+            self._reserve_balance(leave, trace)
             ts = self._now()
             leave.status = LeaveStatus.SUBMITTED
             leave.submitted_at = ts
             leave.updated_at = ts
-            payload = leave.to_dict()
-            self._emit_event("LeaveRequestSubmitted", {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
+            payload = self._response_payload(leave)
+            self._emit_event(
+                "LeaveRequestSubmitted",
+                {
+                    "leave_request_id": leave.leave_request_id,
+                    "employee_id": leave.employee_id,
+                    "approver_employee_id": leave.approver_employee_id,
+                    "start_date": leave.start_date.isoformat(),
+                    "end_date": leave.end_date.isoformat(),
+                    "status": leave.status.value,
+                    "submitted_at": ts.isoformat(),
+                    "simulate_failure": simulate_event_failure,
+                },
+                workflow="leave_request",
+                trace_id=trace,
+                simulate_failure=simulate_event_failure,
+            )
             self.idempotency.record(key, fingerprint, 200, payload)
         self.observability.logger.audit(
             "leave_request_submitted",
@@ -307,28 +443,30 @@ class LeaveService:
             key = idempotency_key or f"leave-decision:{leave_request_id}:{action}:{actor_employee_id}"
             fingerprint = f"{action}:{leave_request_id}:{actor_role}:{actor_employee_id}:{reason or ''}"
             replay = self.idempotency.replay_or_conflict(key, fingerprint)
-            if replay is not None:
-                self._finalize_observation("decide_request", trace, started, True, {"status": replay.status_code, "replayed": True, "action": action})
-                return replay.status_code, replay.payload
 
             if action == "approve" and leave.status == LeaveStatus.APPROVED:
-                payload = leave.to_dict()
+                payload = self._response_payload(leave)
                 self.idempotency.record(key, fingerprint, 200, payload)
                 self._finalize_observation("decide_request", trace, started, True, {"status": 200, "replayed": True, "action": action})
                 return 200, payload
             if action == "reject" and leave.status == LeaveStatus.REJECTED:
-                payload = leave.to_dict()
+                payload = self._response_payload(leave)
                 self.idempotency.record(key, fingerprint, 200, payload)
                 self._finalize_observation("decide_request", trace, started, True, {"status": 200, "replayed": True, "action": action})
                 return 200, payload
             if leave.status != LeaveStatus.SUBMITTED:
                 self._fail(409, "INVALID_TRANSITION", "Only Submitted requests can be decided", trace)
+            if replay is not None:
+                self._finalize_observation("decide_request", trace, started, True, {"status": replay.status_code, "replayed": True, "action": action})
+                return replay.status_code, replay.payload
 
             ts = self._now()
             if action == "approve":
+                self._consume_reserved_balance(leave)
                 leave.status = LeaveStatus.APPROVED
                 event = "LeaveRequestApproved"
             elif action == "reject":
+                self._release_reserved_balance(leave)
                 leave.status = LeaveStatus.REJECTED
                 if reason:
                     leave.reason = f"{leave.reason or ''}\n[Rejection] {reason}".strip()
@@ -338,8 +476,19 @@ class LeaveService:
             leave.approver_employee_id = actor_employee_id
             leave.decision_at = ts
             leave.updated_at = ts
-            payload = leave.to_dict()
-            self._emit_event(event, {"leave_request_id": leave.leave_request_id, "at": ts.isoformat(), "simulate_failure": simulate_event_failure}, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
+            self._sync_employee_leave_status(leave.employee_id)
+            payload = self._response_payload(leave)
+            event_payload = {
+                "leave_request_id": leave.leave_request_id,
+                "employee_id": leave.employee_id,
+                "approver_employee_id": leave.approver_employee_id,
+                "status": leave.status.value,
+                "decision_at": ts.isoformat(),
+                "simulate_failure": simulate_event_failure,
+            }
+            if action == "approve":
+                event_payload.update({"total_days": leave.total_days, "leave_type": leave.leave_type.value})
+            self._emit_event(event, event_payload, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
             self.idempotency.record(key, fingerprint, 200, payload)
         self.observability.logger.audit(
             f"leave_request_{action}",
@@ -362,15 +511,34 @@ class LeaveService:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
             if not self._can_access(role, actor_employee_id, leave):
                 self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace)
-            if leave.status in {LeaveStatus.APPROVED, LeaveStatus.REJECTED, LeaveStatus.CANCELLED}:
+            if leave.status in {LeaveStatus.REJECTED, LeaveStatus.CANCELLED}:
                 self._fail(409, "INVALID_TRANSITION", "Finalized leave cannot be modified", trace)
             if leave.status == LeaveStatus.SUBMITTED and set(patch) != {"status"}:
                 self._fail(409, "INVALID_TRANSITION", "Submitted leave can only be cancelled", trace)
+            if leave.status == LeaveStatus.APPROVED and set(patch) != {"status"}:
+                self._fail(409, "INVALID_TRANSITION", "Approved leave can only be cancelled", trace)
 
             if patch.get("status") == LeaveStatus.CANCELLED.value:
+                if leave.status == LeaveStatus.APPROVED and leave.end_date < self._today():
+                    self._fail(409, "INVALID_TRANSITION", "Past approved leave cannot be cancelled", trace)
+                if leave.status == LeaveStatus.SUBMITTED:
+                    self._release_reserved_balance(leave)
+                elif leave.status == LeaveStatus.APPROVED:
+                    self._restore_approved_balance(leave)
                 leave.status = LeaveStatus.CANCELLED
                 leave.updated_at = self._now()
-                self._emit_event("LeaveRequestCancelled", {"leave_request_id": leave.leave_request_id, "at": leave.updated_at.isoformat()}, workflow="leave_request", trace_id=trace)
+                self._sync_employee_leave_status(leave.employee_id)
+                self._emit_event(
+                    "LeaveRequestCancelled",
+                    {
+                        "leave_request_id": leave.leave_request_id,
+                        "employee_id": leave.employee_id,
+                        "status": leave.status.value,
+                        "updated_at": leave.updated_at.isoformat(),
+                    },
+                    workflow="leave_request",
+                    trace_id=trace,
+                )
                 self.observability.logger.audit(
                     "leave_request_cancelled",
                     trace_id=trace,
@@ -380,7 +548,7 @@ class LeaveService:
                     context={"employee_id": leave.employee_id},
                 )
                 self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": True})
-                return 200, leave.to_dict()
+                return 200, self._response_payload(leave)
 
             start = date.fromisoformat(patch.get("start_date")) if patch.get("start_date") else leave.start_date
             end = date.fromisoformat(patch.get("end_date")) if patch.get("end_date") else leave.end_date
@@ -389,15 +557,19 @@ class LeaveService:
             if self._overlap_exists(leave.employee_id, start, end, exclude_id=leave.leave_request_id):
                 self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
 
+            next_type = LeaveType(patch["leave_type"]) if "leave_type" in patch else leave.leave_type
+            next_total_days = self._total_days(start, end)
+            self._ensure_balance_capacity(leave.employee_id, next_type, next_total_days, trace)
+
             if "leave_type" in patch:
-                leave.leave_type = LeaveType(patch["leave_type"])
+                leave.leave_type = next_type
             leave.start_date = start
             leave.end_date = end
             if "reason" in patch:
                 leave.reason = patch["reason"]
             if "approver_employee_id" in patch:
                 leave.approver_employee_id = patch["approver_employee_id"]
-            leave.total_days = self._total_days(start, end)
+            leave.total_days = next_total_days
             leave.updated_at = self._now()
         self.observability.logger.info(
             "leave.request_patched",
@@ -405,7 +577,7 @@ class LeaveService:
             context={"leave_request_id": leave.leave_request_id, "fields": sorted(patch.keys())},
         )
         self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": False})
-        return 200, leave.to_dict()
+        return 200, self._response_payload(leave)
 
     def get_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None) -> tuple[int, dict]:
         role = Role(actor_role)
@@ -415,21 +587,27 @@ class LeaveService:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace_id)
             if not self._can_access(role, actor_employee_id, leave):
                 self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace_id)
-            return 200, leave.to_dict()
+            return 200, self._response_payload(leave)
 
-    def list_requests(self, actor_role: str, actor_employee_id: str, employee_id: str | None = None, status: str | None = None) -> tuple[int, dict]:
+    def list_requests(self, actor_role: str, actor_employee_id: str, employee_id: str | None = None, approver_employee_id: str | None = None, status: str | None = None) -> tuple[int, dict]:
         role = Role(actor_role)
         rows = []
         with self._lock:
             for leave in self.requests.values():
                 if employee_id and leave.employee_id != employee_id:
                     continue
+                if approver_employee_id and leave.approver_employee_id != approver_employee_id:
+                    continue
                 if status and leave.status.value != status:
                     continue
                 if self._can_access(role, actor_employee_id, leave):
-                    rows.append(leave.to_dict())
+                    rows.append(self._response_payload(leave))
+            balances = self._balances_for_employee(employee_id or actor_employee_id) if (role == Role.EMPLOYEE or employee_id) else None
         rows.sort(key=lambda item: (item["created_at"], item["leave_request_id"]))
-        return 200, {"data": rows}
+        payload = {"data": rows}
+        if balances is not None:
+            payload["leave_balances"] = balances
+        return 200, payload
 
     def health_snapshot(self) -> dict:
         with self._lock:
@@ -437,6 +615,7 @@ class LeaveService:
                 checks={
                     "requests": len(self.requests),
                     "dead_letters": len(self.dead_letters.entries),
+                    "leave_balances": len(self.leave_balances),
                 }
             )
 
