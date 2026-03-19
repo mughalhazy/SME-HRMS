@@ -132,7 +132,7 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     key: 'leave',
-    href: '/leave-requests',
+    href: '/leave',
     label: 'Leave',
     shortLabel: 'Leave',
     description: 'Requests, approvals, and team coverage for planned time away.',

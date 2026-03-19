@@ -1,9 +1,9 @@
 import { Settings } from '@/components/surfaces/Settings'
-import { AppShell } from '@/components/shared/app-shell'
+import AppShell from '@/components/hrms/shell/app-shell'
 
 export default function SettingsPage() {
   return (
-    <AppShell currentPath="/settings" pageActions={<></>}>
+    <AppShell pageTitle="Settings" pageDescription="Configure company-wide HR defaults, integrations, and operational controls.">
       <Settings />
     </AppShell>
   )

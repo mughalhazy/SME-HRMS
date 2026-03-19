@@ -1,5 +1,10 @@
 import { Dashboard } from '@/components/dashboard/Dashboard'
+import AppShell from '@/components/hrms/shell/app-shell'
 
 export default function HomePage() {
-  return <Dashboard />
+  return (
+    <AppShell pageTitle="Dashboard" pageDescription="Track workforce health, approvals, and operational priorities from one calm command center.">
+      <Dashboard />
+    </AppShell>
+  )
 }

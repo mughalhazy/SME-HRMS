@@ -2,7 +2,7 @@
 
 import type { ComponentType } from 'react'
 import { useMemo, useState } from 'react'
-import { ArrowUpRight, BellRing, Building2, Clock3, CreditCard, Handshake, Palette, Save, Settings2, ShieldCheck, Upload, Workflow } from 'lucide-react'
+import { ArrowUpRight, BellRing, Building2, Clock3, CreditCard, Handshake, Save, Settings2, ShieldCheck, Workflow } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,48 +19,13 @@ type SettingsSection = {
 }
 
 const sidebarSections: SettingsSection[] = [
-  {
-    id: 'company-settings',
-    label: 'Company Settings',
-    description: 'Profile, branding, and operating defaults.',
-    icon: Building2,
-  },
-  {
-    id: 'roles-permissions',
-    label: 'Roles & Permissions',
-    description: 'Access rules and role templates.',
-    icon: ShieldCheck,
-  },
-  {
-    id: 'attendance-rules',
-    label: 'Attendance Rules',
-    description: 'Schedules, grace periods, and alerts.',
-    icon: Clock3,
-  },
-  {
-    id: 'leave-policies',
-    label: 'Leave Policies',
-    description: 'Time-off setup and accrual controls.',
-    icon: Workflow,
-  },
-  {
-    id: 'payroll-settings',
-    label: 'Payroll Settings',
-    description: 'Cycles, approvals, and deductions.',
-    icon: CreditCard,
-  },
-  {
-    id: 'notifications',
-    label: 'Notifications',
-    description: 'Channel preferences and reminders.',
-    icon: BellRing,
-  },
-  {
-    id: 'integrations',
-    label: 'Integrations',
-    description: 'Connected apps and sync health.',
-    icon: Handshake,
-  },
+  { id: 'company-settings', label: 'Company Settings', description: 'Profile, branding, and operating defaults.', icon: Building2 },
+  { id: 'roles-permissions', label: 'Roles & Permissions', description: 'Access rules and role templates.', icon: ShieldCheck },
+  { id: 'attendance-rules', label: 'Attendance Rules', description: 'Schedules, grace periods, and alerts.', icon: Clock3 },
+  { id: 'leave-policies', label: 'Leave Policies', description: 'Time-off setup and accrual controls.', icon: Workflow },
+  { id: 'payroll-settings', label: 'Payroll Settings', description: 'Cycles, approvals, and deductions.', icon: CreditCard },
+  { id: 'notifications', label: 'Notifications', description: 'Channel preferences and reminders.', icon: BellRing },
+  { id: 'integrations', label: 'Integrations', description: 'Connected apps and sync health.', icon: Handshake },
 ]
 
 const auditTimeline = [
@@ -124,16 +89,12 @@ function SidebarCard({ activeSection, onSelect }: { activeSection: string; onSel
 
 export function Settings() {
   const [activeSection, setActiveSection] = useState(sidebarSections[0]?.id ?? 'company-settings')
-
-  const activeSectionMeta = useMemo(
-    () => sidebarSections.find((section) => section.id === activeSection) ?? sidebarSections[0],
-    [activeSection],
-  )
+  const activeSectionMeta = useMemo(() => sidebarSections.find((section) => section.id === activeSection) ?? sidebarSections[0], [activeSection])
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <section className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-6 text-slate-900">
+      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
               <Settings2 className="h-3.5 w-3.5" />
@@ -157,213 +118,180 @@ export function Settings() {
               Save changes
             </Button>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
-            <SidebarCard activeSection={activeSection} onSelect={setActiveSection} />
+      <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+          <SidebarCard activeSection={activeSection} onSelect={setActiveSection} />
 
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardHeader className="gap-2 border-b border-slate-100 pb-4">
-                <CardTitle className="text-base text-slate-950">Audit Info</CardTitle>
-                <CardDescription>Track ownership and the last committed settings update.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {auditTimeline.map((entry, index) => (
-                  <div key={entry.label} className="space-y-2">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{entry.label}</p>
-                      <p className="mt-1 text-sm font-medium text-slate-700">{entry.value}</p>
-                    </div>
-                    {index < auditTimeline.length - 1 ? <Separator /> : null}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardHeader className="gap-2 border-b border-slate-100 pb-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <Card className="border-slate-200 bg-white shadow-sm">
+            <CardHeader className="gap-2 border-b border-slate-100 pb-4">
+              <CardTitle className="text-base text-slate-950">Audit Info</CardTitle>
+              <CardDescription>Track ownership and the last committed settings update.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {auditTimeline.map((entry, index) => (
+                <div key={entry.label} className="space-y-2">
                   <div>
-                    <CardTitle className="text-xl text-slate-950">{activeSectionMeta.label}</CardTitle>
-                    <CardDescription className="max-w-2xl">{activeSectionMeta.description} The primary panel below is configured for company-wide defaults and branding.</CardDescription>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{entry.label}</p>
+                    <p className="mt-1 text-sm font-medium text-slate-700">{entry.value}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Status</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-700">Draft changes not yet published</p>
-                  </div>
+                  {index < auditTimeline.length - 1 ? <Separator /> : null}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-6 pt-5">
-                <div className="grid gap-6 2xl:grid-cols-2">
-                  <Card className="border-slate-200 bg-slate-50/70 shadow-none">
-                    <CardHeader className="gap-1 pb-4">
-                      <CardTitle className="text-base text-slate-950">Company Info</CardTitle>
-                      <CardDescription>Foundational identity used across employee records, communications, and compliance outputs.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <FieldLabel title="Name" hint="Displayed on employee portals, payslips, and policy documents." />
-                        <Input defaultValue="Northstar People Ops, Inc." placeholder="Company name" />
-                      </div>
-                      <div className="space-y-2">
-                        <FieldLabel title="Address" hint="Primary office or legal entity address for HR correspondence." />
-                        <Input defaultValue="1450 Market Street, Suite 800, San Francisco, CA 94103" placeholder="Company address" />
-                      </div>
-                      <div className="space-y-2">
-                        <FieldLabel title="Timezone" hint="Used for attendance cutoffs, reminders, and automation schedules." />
-                        <Select defaultValue="America/Los_Angeles">
-                          <option value="America/Los_Angeles">Pacific Time (UTC-08:00)</option>
-                          <option value="America/Denver">Mountain Time (UTC-07:00)</option>
-                          <option value="America/Chicago">Central Time (UTC-06:00)</option>
-                          <option value="America/New_York">Eastern Time (UTC-05:00)</option>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
 
-                  <Card className="border-slate-200 bg-slate-50/70 shadow-none">
-                    <CardHeader className="gap-1 pb-4">
-                      <CardTitle className="text-base text-slate-950">HR Preferences</CardTitle>
-                      <CardDescription>Default rules for work planning, leave assignment, and approval experience.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <FieldLabel title="Work week" hint="Sets the expected working pattern for new employees and schedule templates." />
-                        <Select defaultValue="mon-fri">
-                          <option value="mon-fri">Monday to Friday</option>
-                          <option value="sun-thu">Sunday to Thursday</option>
-                          <option value="mon-sat">Monday to Saturday</option>
-                          <option value="custom">Custom schedule template</option>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <FieldLabel title="Default leave policy" hint="Applied automatically during employee onboarding unless overridden." />
-                        <Select defaultValue="standard-pto">
-                          <option value="standard-pto">Standard PTO · 18 days annually</option>
-                          <option value="flex-pto">Flexible PTO · manager approval</option>
-                          <option value="regional">Regional statutory leave pack</option>
-                        </Select>
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">Auto-assign policy templates</p>
-                            <p className="text-sm leading-6 text-slate-500">Apply the selected defaults when new departments or entities are created.</p>
-                          </div>
-                          <Switch defaultChecked aria-label="Toggle automatic policy assignment" />
-                        </div>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">Require HR review for overrides</p>
-                            <p className="text-sm leading-6 text-slate-500">Escalate manual changes to work week or leave defaults before publishing.</p>
-                          </div>
-                          <Switch defaultChecked aria-label="Toggle HR review for overrides" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+        <div className="space-y-6">
+          <Card className="border-slate-200 bg-white shadow-sm">
+            <CardHeader className="gap-2 border-b border-slate-100 pb-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <CardTitle className="text-xl text-slate-950">{activeSectionMeta.label}</CardTitle>
+                  <CardDescription className="max-w-2xl">{activeSectionMeta.description} The primary panel below is configured for company-wide defaults and branding.</CardDescription>
                 </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Status</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-700">Draft changes not yet published</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-5">
+              <div className="grid gap-6 2xl:grid-cols-2">
+                <Card className="border-slate-200 bg-slate-50/70 shadow-none">
+                  <CardHeader className="gap-1 pb-4">
+                    <CardTitle className="text-base text-slate-950">Company Info</CardTitle>
+                    <CardDescription>Foundational identity used across employee records, communications, and compliance outputs.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <FieldLabel title="Name" hint="Displayed on employee portals, payslips, and policy documents." />
+                      <Input defaultValue="Northstar People Ops, Inc." placeholder="Company name" />
+                    </div>
+                    <div className="space-y-2">
+                      <FieldLabel title="Address" hint="Primary office or legal entity address for HR correspondence." />
+                      <Input defaultValue="1450 Market Street, Suite 800, San Francisco, CA 94103" placeholder="Company address" />
+                    </div>
+                    <div className="space-y-2">
+                      <FieldLabel title="Timezone" hint="Used for attendance cutoffs, reminders, and automation schedules." />
+                      <Select defaultValue="America/Los_Angeles">
+                        <option value="America/Los_Angeles">Pacific Time (UTC-08:00)</option>
+                        <option value="America/Denver">Mountain Time (UTC-07:00)</option>
+                        <option value="America/Chicago">Central Time (UTC-06:00)</option>
+                        <option value="America/New_York">Eastern Time (UTC-05:00)</option>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 <Card className="border-slate-200 bg-slate-50/70 shadow-none">
                   <CardHeader className="gap-1 pb-4">
-                    <div className="flex items-start gap-3">
-                      <span className="rounded-2xl bg-white p-2 text-blue-700 shadow-sm">
-                        <Palette className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <CardTitle className="text-base text-slate-950">Branding</CardTitle>
-                        <CardDescription>Maintain brand consistency in internal portals, email templates, and exported HR documents.</CardDescription>
-                      </div>
-                    </div>
+                    <CardTitle className="text-base text-slate-950">HR Preferences</CardTitle>
+                    <CardDescription>Default rules for work planning, leave assignment, and approval experience.</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <FieldLabel title="Logo upload" hint="Recommended size: 512×512 PNG with transparent background." />
-                          <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-slate-300 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">northstar-mark.png</p>
-                              <p className="text-sm leading-6 text-slate-500">Current logo is used on the employee portal, payslips, and policy PDFs.</p>
-                            </div>
-                            <Button type="button" variant="outline">
-                              <Upload className="h-4 w-4" />
-                              Upload new logo
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <FieldLabel title="Primary color" hint="Sets the accent color for buttons, highlights, and navigational emphasis." />
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <Input aria-label="Primary brand color" className="h-11 w-full sm:w-32" defaultValue="#2347AA" type="color" />
-                            <Input className="sm:max-w-xs" defaultValue="#2347AA" placeholder="#2347AA" />
-                          </div>
-                        </div>
-                      </div>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <FieldLabel title="Work week" hint="Sets the expected working pattern for new employees and schedule templates." />
+                      <Select defaultValue="mon-fri">
+                        <option value="mon-fri">Monday to Friday</option>
+                        <option value="sun-thu">Sunday to Thursday</option>
+                        <option value="mon-sat">Monday to Saturday</option>
+                        <option value="custom">Custom schedule template</option>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <FieldLabel title="Default leave policy" hint="Applied automatically during employee onboarding unless overridden." />
+                      <Select defaultValue="standard-pto">
+                        <option value="standard-pto">Standard PTO · 18 days annually</option>
+                        <option value="flex-pto">Flexible PTO · manager approval</option>
+                        <option value="regional">Regional statutory leave pack</option>
+                      </Select>
+                    </div>
 
-                      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Preview</p>
-                        <div className="mt-4 space-y-4 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#2347AA] text-sm font-semibold text-white">NP</div>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">Northstar People Ops</p>
-                              <p className="text-xs text-slate-500">Brand appearance on employee touchpoints</p>
-                            </div>
-                          </div>
-                          <Button className="w-full justify-center" type="button">
-                            Preview primary action
-                          </Button>
-                          <div className="rounded-2xl bg-blue-50 p-3 text-sm text-blue-900">Announcements, onboarding workflows, and self-service prompts inherit this accent palette.</div>
+                    <Separator />
+
+                    <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Auto-assign policy templates</p>
+                          <p className="text-sm leading-6 text-slate-500">Apply the selected defaults when new departments or entities are created.</p>
                         </div>
+                        <Switch defaultChecked aria-label="Toggle automatic policy assignment" />
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Require dual approval for policy edits</p>
+                          <p className="text-sm leading-6 text-slate-500">Adds a second reviewer for sensitive leave and attendance rule changes.</p>
+                        </div>
+                        <Switch defaultChecked aria-label="Toggle dual approval for policy edits" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardHeader className="gap-2 border-b border-slate-100 pb-4">
-                <CardTitle className="text-base text-slate-950">Integrations snapshot</CardTitle>
-                <CardDescription>Quick glance at connected platforms impacted by settings changes.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-5">
-                {connectedApps.map((app) => (
-                  <div key={app} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="text-sm font-medium text-slate-700">{app}</p>
-                    <Button size="sm" type="button" variant="ghost">
-                      Inspect
-                    </Button>
+          <Card className="border-slate-200 bg-white shadow-sm">
+            <CardHeader className="gap-2 border-b border-slate-100 pb-4">
+              <CardTitle className="text-base text-slate-950">Integrations & Notifications</CardTitle>
+              <CardDescription>Operational tooling and communication flows that support the HR workspace.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 pt-5 lg:grid-cols-2">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <FieldLabel title="Primary support inbox" hint="Default sender and reply channel for HR notifications." />
+                  <Input defaultValue="peopleops@northstarhr.com" />
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel title="Payroll approval SLA" hint="Expected turnaround time for pending payroll sign-offs." />
+                  <Select defaultValue="24-hours">
+                    <option value="12-hours">12 hours</option>
+                    <option value="24-hours">24 hours</option>
+                    <option value="48-hours">48 hours</option>
+                  </Select>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">Notification guards</p>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Manager reminders</p>
+                        <p className="text-sm text-slate-500">Send approval nudges for leave, attendance, and reviews.</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Employee digest</p>
+                        <p className="text-sm text-slate-500">Weekly summary of changes to policies, payroll, and time off.</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+                </div>
+              </div>
 
-        <div className="sticky bottom-4 z-20">
-          <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">You have unsaved settings changes</p>
-              <p className="text-sm leading-6 text-slate-500">Publish updates to apply new company defaults, branding, and workflow rules across the HRMS workspace.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="button" variant="outline">Discard</Button>
-              <Button type="button">
-                <Save className="h-4 w-4" />
-                Save settings
-              </Button>
-            </div>
-          </div>
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Connected apps</p>
+                  <p className="mt-1 text-sm text-slate-500">Track the status of critical integrations tied to HR workflows.</p>
+                </div>
+                <div className="space-y-3">
+                  {connectedApps.map((app, index) => (
+                    <div key={app} className="space-y-3">
+                      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700">{app}</div>
+                      {index < connectedApps.length - 1 ? <Separator /> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      </section>
     </div>
   )
 }
