@@ -2,12 +2,11 @@ import Link from 'next/link'
 import {
   ArrowRight,
   CalendarClock,
-  ChartColumnIncreasing,
   CheckCheck,
   ChevronRight,
   Clock3,
+  Download,
   Filter,
-  Flame,
   LoaderCircle,
   Sparkles,
   Star,
@@ -18,7 +17,7 @@ import {
 import { EmptyState, Skeleton } from '@/components/ui/feedback'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PageGrid, PageHero, PageStack } from '@/components/ui/page'
+import { PageStack } from '@/components/ui/page'
 
 const metrics = [
   {
@@ -26,28 +25,24 @@ const metrics = [
     value: '32',
     note: '8 due this week',
     icon: Clock3,
-    accent: 'bg-amber-50 text-amber-700',
   },
   {
     label: 'Completed reviews',
     value: '84',
-    note: '72% of current cycle closed',
+    note: '72% of cycle closed',
     icon: CheckCheck,
-    accent: 'bg-emerald-50 text-emerald-700',
   },
   {
     label: 'Avg rating',
     value: '4.2',
-    note: 'Steady from last cycle',
-    icon: ChartColumnIncreasing,
-    accent: 'bg-sky-50 text-sky-700',
+    note: 'Stable from last cycle',
+    icon: TrendingUp,
   },
   {
     label: 'Top performers',
     value: '11',
     note: 'Rated 4.7 and above',
     icon: Star,
-    accent: 'bg-violet-50 text-violet-700',
   },
 ]
 
@@ -55,479 +50,396 @@ const reviewQueue = [
   {
     id: 'prf-4401',
     employee: 'Noah Bennett',
-    role: 'Senior Product Engineer',
     department: 'Engineering',
+    role: 'Senior Product Engineer',
+    note: 'Peer feedback below team median',
     status: 'Pending',
-    rating: null,
+    rating: '—',
     dueDate: 'Mar 24',
-    dueContext: 'Manager review due in 5 days',
-    priority: 'Overdue inputs',
-    comparison: 'Peer feedback below team median',
   },
   {
     id: 'prf-4402',
     employee: 'Amina Yusuf',
-    role: 'Finance Manager',
     department: 'Finance',
+    role: 'Finance Manager',
+    note: 'Calibration notes waiting',
     status: 'In progress',
     rating: '4.4',
     dueDate: 'Mar 22',
-    dueContext: 'Calibration notes waiting',
-    priority: 'Needs alignment',
-    comparison: 'Leadership score trending above prior cycle',
   },
   {
     id: 'prf-4403',
     employee: 'Jordan Kim',
-    role: 'Operations Lead',
     department: 'Operations',
+    role: 'Operations Lead',
+    note: 'Highest delivery score in team',
     status: 'Completed',
     rating: '4.8',
     dueDate: 'Mar 18',
-    dueContext: 'Closed 1 day early',
-    priority: 'Ready to calibrate',
-    comparison: 'Highest delivery score in Operations',
   },
   {
     id: 'prf-4404',
     employee: 'Priya Shah',
-    role: 'HR Business Partner',
     department: 'People',
+    role: 'HR Business Partner',
+    note: 'Self review still missing',
     status: 'Pending',
-    rating: null,
+    rating: '—',
     dueDate: 'Mar 27',
-    dueContext: 'Self review still missing',
-    priority: 'Waiting on employee',
-    comparison: 'No prior-cycle variance yet',
   },
   {
     id: 'prf-4405',
     employee: 'Liam Carter',
-    role: 'Customer Success Manager',
     department: 'Customer Success',
+    role: 'Customer Success Manager',
+    note: 'Lowest momentum among open reviews',
     status: 'In progress',
     rating: '3.8',
     dueDate: 'Mar 21',
-    dueContext: 'Peer feedback 2/3 complete',
-    priority: 'Needs attention',
-    comparison: 'Lowest momentum among open reviews',
   },
 ]
 
 const topPerformers = [
-  { name: 'Jordan Kim', meta: 'Operations · 4.8', note: 'Strong cross-functional execution' },
-  { name: 'Maya Patel', meta: 'Design · 4.7', note: 'Highest collaboration score' },
-  { name: 'Ethan Cole', meta: 'Sales · 4.7', note: 'Exceeded quota and mentoring goals' },
+  { name: 'Jordan Kim', meta: 'Operations · 4.8', note: 'Strong execution across cross-functional work.' },
+  { name: 'Maya Patel', meta: 'Design · 4.7', note: 'Highest collaboration signal in current cycle.' },
+  { name: 'Ethan Cole', meta: 'Sales · 4.7', note: 'Exceeded quota and mentoring goals.' },
 ]
 
 const needsAttention = [
-  { name: 'Liam Carter', meta: 'Customer Success · 3.8', note: 'Delivery consistency trending down' },
-  { name: 'Olivia Chen', meta: 'Marketing · pending', note: 'Review overdue with no manager draft' },
+  { name: 'Liam Carter', meta: 'Customer Success · 3.8', note: 'Delivery consistency trending below team baseline.' },
+  { name: 'Olivia Chen', meta: 'Marketing · Pending', note: 'Review overdue with no manager draft started.' },
+  { name: 'Priya Shah', meta: 'People · Pending', note: 'Missing self review is slowing completion.' },
 ]
 
-const comparisonStats = [
-  { label: 'Highest team avg', value: 'Engineering · 4.5', context: '+0.3 above company avg' },
-  { label: 'Most pending', value: 'Operations · 9 reviews', context: 'Largest review backlog this week' },
-  { label: 'Fastest completion', value: 'People · 6.1 days', context: 'Best turnaround from kickoff to close' },
+const quickInsights = [
+  { label: 'Most pending', value: 'Operations', note: '9 reviews are still open this cycle.' },
+  { label: 'Fastest completion', value: 'People', note: '6.1 days from kickoff to close.' },
+  { label: 'Rating variance', value: '1.1 pts', note: 'Wider spread than last cycle for stronger differentiation.' },
 ]
 
-const trendCards = [
+const historyCards = [
   {
-    label: 'Ratings spread',
-    value: '1.1 pts',
-    context: 'Wider than last cycle, giving managers clearer differentiation.',
+    title: 'Past cycles',
+    value: 'Q4 2025',
+    note: '91% completion after staggered department deadlines.',
   },
   {
-    label: 'Cycle velocity',
-    value: '6.4 days',
-    context: 'Average time from draft start to completion across open reviews.',
+    title: 'Completion trend',
+    value: '+9%',
+    note: 'Cycle close rate improved compared with Q3 2025.',
   },
   {
-    label: 'Calibration risk',
-    value: '4 teams',
-    context: 'Departments with elevated pending volume and low completion momentum.',
-  },
-]
-
-const pastReviews = [
-  {
-    period: 'Q4 2025',
-    completion: '91%',
-    summary: 'Completion improved after review deadlines were staggered by department.',
-    trend: 'Completion rate +9%',
-  },
-  {
-    period: 'Q3 2025',
-    completion: '82%',
-    summary: 'Ratings clustered tightly, suggesting stronger calibration but less differentiation.',
-    trend: 'Avg rating variance -0.3',
-  },
-  {
-    period: 'Mid-year 2025',
-    completion: '88%',
-    summary: 'Top performer concentration shifted from Sales to Engineering and Operations.',
-    trend: 'Top performers +4 employees',
-  },
-]
-
-const priorityMoments = [
-  {
-    label: 'Most urgent',
-    title: '3 reviews need manager action today',
-    note: 'Pending reviews with missing self-assessment or overdue peer input.',
-    icon: Flame,
-    tone: 'text-amber-700 bg-amber-50',
-  },
-  {
-    label: 'Best momentum',
-    title: 'People team is closing fastest',
-    note: 'Shortest turnaround from kickoff to completion in the current cycle.',
-    icon: TrendingUp,
-    tone: 'text-emerald-700 bg-emerald-50',
-  },
-  {
-    label: 'Watch list',
-    title: 'Customer Success ratings softening',
-    note: 'Lower average score and slower completion than the company baseline.',
-    icon: TrendingDown,
-    tone: 'text-rose-700 bg-rose-50',
+    title: 'Rating variance',
+    value: '-0.3',
+    note: 'Last cycle ratings clustered tighter during calibration.',
   },
 ]
 
 export function PerformanceReviewsPage() {
   return (
     <PageStack className="gap-6">
-      <PageHero
-        eyebrow="Performance"
-        title="Performance"
-        description={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <p>32 reviews pending.</p>
-            <span className="hidden text-slate-300 sm:inline">•</span>
-            <p className="text-slate-500">Analytical review workspace for comparison, prioritization, and decision making across the cycle.</p>
+      <section className="grid grid-cols-12 gap-6 border-b border-slate-200 pb-6">
+        <div className="col-span-12 flex flex-col gap-4 xl:col-span-8">
+          <div className="flex flex-col gap-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Performance</p>
+            <div className="flex flex-col gap-4">
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Performance</h1>
+              <p className="text-sm leading-6 text-slate-600">32 reviews pending this cycle with clear comparison signals for prioritization, calibration, and decision support.</p>
+            </div>
           </div>
-        }
-        actions={
-          <>
-            <Button asChild>
-              <Link href="/performance/new">
-                Start review
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/performance?filter=pending">
-                <Filter className="h-4 w-4" />
-                Pending first
-              </Link>
-            </Button>
-          </>
-        }
-      />
+        </div>
 
-      <PageGrid className="gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="col-span-12 flex flex-wrap items-start justify-start gap-4 xl:col-span-4 xl:justify-end">
+          <Button asChild>
+            <Link href="/performance/new">
+              Start review
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/performance?filter=open">
+              <Filter className="h-4 w-4" />
+              Filter
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/performance/export">
+              <Download className="h-4 w-4" />
+              Export
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => {
           const Icon = metric.icon
 
           return (
-            <Card key={metric.label} className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-500">{metric.label}</p>
-                    <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
-                    <p className="text-sm text-slate-600">{metric.note}</p>
-                  </div>
-                  <div className={`rounded-2xl p-2.5 ${metric.accent}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
+            <Card key={metric.label} className="h-full">
+              <CardContent className="flex h-full items-start justify-between gap-4 p-6">
+                <div className="flex min-h-24 flex-col gap-4">
+                  <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
+                  <p className="text-sm text-slate-600">{metric.note}</p>
+                </div>
+                <div className="rounded-[var(--radius-surface)] bg-slate-100 p-6 text-slate-700">
+                  <Icon className="h-5 w-5" />
                 </div>
               </CardContent>
             </Card>
           )
         })}
-      </PageGrid>
+      </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
-            {priorityMoments.map((item) => {
-              const Icon = item.icon
-
-              return (
-                <div
-                  key={item.label}
-                  className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-surface)]"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`rounded-2xl p-2 ${item.tone}`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
-                      <p className="text-sm font-semibold text-slate-950">{item.title}</p>
-                      <p className="text-sm text-slate-600">{item.note}</p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
-            <div className="flex flex-col gap-5 border-b border-slate-200 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  Review queue
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-slate-950">Priority reviews in motion</p>
-                  <p className="text-sm text-slate-600">A layered queue that keeps employee context, status, rating, due date, and comparison signals visible without dropping into a heavy table.</p>
-                </div>
+      <section className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 xl:col-span-8">
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-6">
+              <div className="flex items-center gap-4 text-slate-500">
+                <Clock3 className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Review queue</span>
               </div>
-
-              <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[360px] lg:max-w-[420px]">
-                <QueueSummaryCard label="Action this week" value="5" note="Priority reviews due soon" />
-                <QueueSummaryCard label="Pending" value="2" note="Need kickoff or input" />
-                <QueueSummaryCard label="In progress" value="2" note="Waiting on calibration" />
+              <div className="grid grid-cols-12 gap-4 text-sm text-slate-500">
+                <div className="col-span-5">Employee</div>
+                <div className="col-span-2">Status</div>
+                <div className="col-span-2">Rating</div>
+                <div className="col-span-2">Due date</div>
+                <div className="col-span-1 text-right">Open</div>
               </div>
-            </div>
-
-            <div className="divide-y divide-slate-200">
-              {reviewQueue.map((review) => (
-                <Link
-                  key={review.id}
-                  href={`/performance/${review.id}`}
-                  className="group block px-5 py-4 transition-colors hover:bg-slate-50"
-                >
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(280px,1fr)_24px] xl:items-center">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-slate-950">{review.employee}</p>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          {review.department}
-                        </span>
-                        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
-                          {review.priority}
-                        </span>
-                      </div>
-
-                      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_190px] lg:items-start">
-                        <div className="space-y-1.5">
-                          <p className="text-sm text-slate-600">{review.role}</p>
-                          <p className="text-sm text-slate-500">{review.dueContext}</p>
-                          <p className="text-sm font-medium text-slate-700">{review.comparison}</p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 lg:justify-self-end">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Status</p>
-                          <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClassName(review.status)}`}>
-                            {review.status}
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-200">
+                {reviewQueue.map((review) => (
+                  <Link
+                    key={review.id}
+                    href={`/performance/${review.id}`}
+                    className="block transition-colors hover:bg-slate-50"
+                  >
+                    <div className="grid min-h-24 grid-cols-12 items-center gap-4 p-6">
+                      <div className="col-span-5 flex min-w-0 flex-col gap-4">
+                        <div className="flex flex-wrap items-center gap-4">
+                          <p className="text-base font-semibold text-slate-950">{review.employee}</p>
+                          <span className="rounded-full bg-slate-100 px-4 py-1 text-xs font-semibold text-slate-600">
+                            {review.department}
                           </span>
                         </div>
+                        <div className="flex min-w-0 flex-col gap-4 text-sm text-slate-600">
+                          <p>{review.role}</p>
+                          <p className="truncate">{review.note}</p>
+                        </div>
+                      </div>
+
+                      <div className="col-span-2">
+                        <div className="inline-flex rounded-full bg-slate-50 px-4 py-2 text-sm font-semibold">
+                          <span className={statusClassName(review.status)}>{review.status}</span>
+                        </div>
+                      </div>
+
+                      <div className="col-span-2">
+                        <GhostCell value={review.rating} label={review.id.toUpperCase()} />
+                      </div>
+
+                      <div className="col-span-2">
+                        <GhostCell value={review.dueDate} label="Due" />
+                      </div>
+
+                      <div className="col-span-1 flex justify-end text-slate-400">
+                        <ChevronRight className="h-4 w-4" />
                       </div>
                     </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3 xl:gap-2">
-                      <QueueStat label="Rating" value={review.rating ?? '—'} />
-                      <QueueStat label="Due date" value={review.dueDate} />
-                      <QueueStat label="Review ID" value={review.id.toUpperCase()} />
-                    </div>
-
-                    <div className="hidden justify-self-end text-slate-400 transition-transform group-hover:translate-x-0.5 xl:block">
-                      <ChevronRight className="h-4 w-4" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <aside className="space-y-4">
-          <Card className="border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2 text-slate-500">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-xs font-semibold uppercase tracking-[0.18em]">Performance insights</span>
+        <aside className="col-span-12 flex flex-col gap-6 xl:col-span-4">
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-6">
+              <div className="flex items-center gap-4 text-slate-500">
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Top performers</span>
               </div>
-              <CardTitle className="text-base">Signals to support comparison</CardTitle>
+              <CardTitle className="text-base">Highest-rated employees this cycle</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <InsightGroup
-                title="Top performers"
-                icon={TrendingUp}
-                tone="text-emerald-600"
-                items={topPerformers}
-              />
-
-              <InsightGroup
-                title="Needs attention"
-                icon={TrendingDown}
-                tone="text-amber-600"
-                items={needsAttention}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2 text-slate-300">
-                <ChartColumnIncreasing className="h-4 w-4" />
-                <span className="text-xs font-semibold uppercase tracking-[0.18em]">Quick comparisons</span>
-              </div>
-              <CardTitle className="text-base text-white">Compare where attention should go next</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {comparisonStats.map((stat) => (
-                <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{stat.label}</p>
-                  <p className="mt-2 text-sm font-semibold text-white">{stat.value}</p>
-                  <p className="mt-1 text-sm text-slate-300">{stat.context}</p>
-                </div>
+            <CardContent className="flex flex-col gap-4 p-6">
+              {topPerformers.map((item) => (
+                <InsightItem key={item.name} name={item.name} meta={item.meta} note={item.note} />
               ))}
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Fallback states</CardTitle>
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-6">
+              <div className="flex items-center gap-4 text-slate-500">
+                <TrendingDown className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Needs attention</span>
+              </div>
+              <CardTitle className="text-base">Reviews requiring follow-up</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-3xl border border-dashed border-slate-200 p-2">
-                <EmptyState
-                  icon={CheckCheck}
-                  title="No active reviews"
-                  message="When a new cycle begins, pending reviews appear here with status, due date, and rating context."
-                  action={
-                    <Button asChild>
-                      <Link href="/performance/new">Create review</Link>
-                    </Button>
-                  }
-                />
+            <CardContent className="flex flex-col gap-4 p-6">
+              {needsAttention.map((item) => (
+                <InsightItem key={item.name} name={item.name} meta={item.meta} note={item.note} />
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-6">
+              <div className="flex items-center gap-4 text-slate-500">
+                <Sparkles className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Quick insights</span>
               </div>
-              <div className="rounded-3xl border border-dashed border-slate-200 p-2">
-                <EmptyState
-                  icon={ChartColumnIncreasing}
-                  title="No insights yet"
-                  message="Insights unlock after enough reviews are submitted to compare teams, ratings, and completion patterns."
-                />
-              </div>
+              <CardTitle className="text-base">Comparison signals for prioritization</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 p-6">
+              {quickInsights.map((item) => (
+                <div key={item.label} className="flex flex-col gap-4 rounded-[var(--radius-surface)] bg-slate-50 p-6">
+                  <p className="text-sm font-medium text-slate-500">{item.label}</p>
+                  <p className="text-base font-semibold text-slate-950">{item.value}</p>
+                  <p className="text-sm text-slate-600">{item.note}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </aside>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.95fr)]">
-        <Card className="border-slate-200 bg-white shadow-sm">
-          <CardHeader className="border-b border-slate-200 pb-4">
-            <div className="flex items-center gap-2 text-slate-500">
-              <CalendarClock className="h-4 w-4" />
-              <span className="text-xs font-semibold uppercase tracking-[0.18em]">History and trends</span>
-            </div>
-            <CardTitle className="text-base">Past reviews and cycle movement</CardTitle>
-            <p className="text-sm text-slate-600">Recent summaries and trend snapshots keep prior cycles close to the active queue.</p>
-          </CardHeader>
-          <CardContent className="space-y-5 pt-5">
-            <div className="grid gap-3 md:grid-cols-3">
-              {trendCards.map((card) => (
-                <div key={card.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{card.label}</p>
-                  <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{card.value}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{card.context}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-4">
-              {pastReviews.map((review) => (
-                <div key={review.period} className="grid gap-4 rounded-3xl border border-slate-200 p-4 md:grid-cols-[160px_minmax(0,1fr)_160px] md:items-center">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">{review.period}</p>
-                    <p className="mt-1 text-sm text-slate-500">Completion {review.completion}</p>
-                  </div>
-                  <p className="text-sm leading-6 text-slate-600">{review.summary}</p>
-                  <p className="text-sm font-semibold text-slate-950 md:text-right">{review.trend}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Loading placeholders</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[0, 1].map((item) => (
-              <div key={item} className="grid gap-3 rounded-3xl border border-slate-200 p-4 sm:grid-cols-[minmax(0,1fr)_110px_90px] sm:items-center">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="h-3.5 w-full max-w-[220px]" />
-                </div>
-                <Skeleton className="h-7 w-20 rounded-full" />
-                <Skeleton className="h-7 w-16" />
+      <section className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 xl:col-span-8">
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-6">
+              <div className="flex items-center gap-4 text-slate-500">
+                <CalendarClock className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">History and trends</span>
               </div>
-            ))}
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-              Loading review insights
-            </div>
-          </CardContent>
-        </Card>
+              <CardTitle className="text-base">Past cycles and completion movement</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-6 p-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                {historyCards.map((item) => (
+                  <div key={item.title} className="flex h-full flex-col gap-4 rounded-[var(--radius-surface)] bg-slate-50 p-6">
+                    <p className="text-sm font-medium text-slate-500">{item.title}</p>
+                    <p className="text-2xl font-semibold tracking-tight text-slate-950">{item.value}</p>
+                    <p className="text-sm text-slate-600">{item.note}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-4">
+                <div className="grid grid-cols-12 gap-4 rounded-[var(--radius-surface)] bg-slate-50 p-6 text-sm text-slate-500">
+                  <div className="col-span-3">Cycle</div>
+                  <div className="col-span-3">Completion</div>
+                  <div className="col-span-6">Summary</div>
+                </div>
+                <div className="grid grid-cols-12 gap-4 rounded-[var(--radius-surface)] p-6">
+                  <div className="col-span-3 text-sm font-semibold text-slate-950">Q4 2025</div>
+                  <div className="col-span-3 text-sm text-slate-600">91%</div>
+                  <div className="col-span-6 text-sm text-slate-600">Completion improved after deadlines were staggered by department.</div>
+                </div>
+                <div className="grid grid-cols-12 gap-4 rounded-[var(--radius-surface)] p-6">
+                  <div className="col-span-3 text-sm font-semibold text-slate-950">Q3 2025</div>
+                  <div className="col-span-3 text-sm text-slate-600">82%</div>
+                  <div className="col-span-6 text-sm text-slate-600">Ratings clustered tightly, suggesting stronger calibration with less differentiation.</div>
+                </div>
+                <div className="grid grid-cols-12 gap-4 rounded-[var(--radius-surface)] p-6">
+                  <div className="col-span-3 text-sm font-semibold text-slate-950">Mid-year 2025</div>
+                  <div className="col-span-3 text-sm text-slate-600">88%</div>
+                  <div className="col-span-6 text-sm text-slate-600">Top performer concentration shifted from Sales toward Engineering and Operations.</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="col-span-12 flex flex-col gap-6 xl:col-span-4">
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-6">
+              <div className="flex items-center gap-4 text-slate-500">
+                <LoaderCircle className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Loading skeletons</span>
+              </div>
+              <CardTitle className="text-base">Workspace loading states</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 p-6">
+              {[0, 1, 2].map((item) => (
+                <div key={item} className="grid grid-cols-12 gap-4 rounded-[var(--radius-surface)] bg-slate-50 p-6">
+                  <div className="col-span-5 flex flex-col gap-4">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                  <div className="col-span-2 flex items-center">
+                    <Skeleton className="h-8 w-20 rounded-full" />
+                  </div>
+                  <div className="col-span-2 flex items-center">
+                    <Skeleton className="h-10 w-full rounded-[var(--radius-surface)]" />
+                  </div>
+                  <div className="col-span-2 flex items-center">
+                    <Skeleton className="h-10 w-full rounded-[var(--radius-surface)]" />
+                  </div>
+                  <div className="col-span-1 flex items-center justify-end">
+                    <Skeleton className="h-4 w-4" />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-4 border-b border-slate-200 p-6">
+              <CardTitle className="text-base">Empty states</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-6 p-6">
+              <EmptyState
+                icon={CheckCheck}
+                title="No reviews in queue"
+                message="When a cycle opens, pending reviews will appear here for comparison and prioritization."
+                action={
+                  <Button asChild>
+                    <Link href="/performance/new">Create review</Link>
+                  </Button>
+                }
+              />
+              <EmptyState
+                icon={Sparkles}
+                title="No insights yet"
+                message="Insights will populate after enough reviews are in progress or completed to compare patterns."
+              />
+            </CardContent>
+          </Card>
+        </div>
       </section>
     </PageStack>
   )
 }
 
-function InsightGroup({
-  title,
-  icon: Icon,
-  tone,
-  items,
+function InsightItem({
+  name,
+  meta,
+  note,
 }: {
-  title: string
-  icon: typeof TrendingUp
-  tone: string
-  items: Array<{ name: string; meta: string; note: string }>
+  name: string
+  meta: string
+  note: string
 }) {
   return (
-    <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-      <div className={`flex items-center gap-2 ${tone}`}>
-        <Icon className="h-4 w-4" />
-        <p className="text-xs font-semibold uppercase tracking-[0.18em]">{title}</p>
+    <div className="flex flex-col gap-4 rounded-[var(--radius-surface)] bg-slate-50 p-6">
+      <div className="flex flex-col gap-4">
+        <p className="text-base font-semibold text-slate-950">{name}</p>
+        <p className="text-sm text-slate-500">{meta}</p>
       </div>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div key={item.name} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-medium text-slate-950">{item.name}</p>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{item.meta}</p>
-            </div>
-            <p className="mt-2 text-sm text-slate-600">{item.note}</p>
-          </div>
-        ))}
-      </div>
+      <p className="text-sm text-slate-600">{note}</p>
     </div>
   )
 }
 
-function QueueStat({ label, value }: { label: string; value: string }) {
+function GhostCell({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-slate-950">{value}</p>
-    </div>
-  )
-}
-
-function QueueSummaryCard({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <div className="flex min-h-14 flex-col justify-center gap-4 rounded-[var(--radius-surface)] bg-slate-50 p-6">
+      <p className="text-sm font-semibold text-slate-950">{value}</p>
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
-      <p className="mt-1 text-sm text-slate-600">{note}</p>
     </div>
   )
 }
@@ -535,10 +447,10 @@ function QueueSummaryCard({ label, value, note }: { label: string; value: string
 function statusClassName(status: string) {
   switch (status) {
     case 'Completed':
-      return 'bg-emerald-100 text-emerald-700'
+      return 'text-emerald-700'
     case 'In progress':
-      return 'bg-sky-100 text-sky-700'
+      return 'text-sky-700'
     default:
-      return 'bg-amber-100 text-amber-700'
+      return 'text-amber-700'
   }
 }
