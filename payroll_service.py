@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import calendar
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import Enum
@@ -26,6 +26,14 @@ class PayrollStatus(str, Enum):
     PROCESSED = "Processed"
     PAID = "Paid"
     CANCELLED = "Cancelled"
+
+
+class PayrollBatchStatus(str, Enum):
+    PENDING = "Pending"
+    PROCESSED = "Processed"
+    PARTIAL_FAILURE = "PartialFailure"
+    PAID = "Paid"
+    FAILED = "Failed"
 
 
 @dataclass(frozen=True)
@@ -73,6 +81,36 @@ class PayrollRecord:
         }
 
 
+@dataclass
+class PayrollBatch:
+    batch_id: str
+    period_start: date
+    period_end: date
+    status: PayrollBatchStatus
+    record_ids: list[str] = field(default_factory=list)
+    processed_count: int = 0
+    paid_count: int = 0
+    failed_count: int = 0
+    failures: list[dict[str, Any]] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "batch_id": self.batch_id,
+            "period_start": self.period_start.isoformat(),
+            "period_end": self.period_end.isoformat(),
+            "status": self.status.value,
+            "record_ids": list(self.record_ids),
+            "processed_count": self.processed_count,
+            "paid_count": self.paid_count,
+            "failed_count": self.failed_count,
+            "failures": [dict(item) for item in self.failures],
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
 class ServiceError(Exception):
     def __init__(self, code: str, message: str, status: int, details: list[dict[str, Any]] | None = None):
         self.code = code
@@ -98,6 +136,9 @@ class PayrollService:
     def __init__(self):
         self.records: dict[str, PayrollRecord] = {}
         self.period_index: dict[tuple[str, date, date], str] = {}
+        self.batches: dict[str, PayrollBatch] = {}
+        self.batch_index: dict[tuple[date, date], str] = {}
+        self.record_batches: dict[str, str] = {}
         self.events: list[dict[str, Any]] = []
         self.dead_letters = DeadLetterQueue()
         self.error_logger = CentralErrorLogger("payroll-service")
@@ -174,12 +215,114 @@ class PayrollService:
             return
         raise ServiceError("FORBIDDEN", "Insufficient permissions", 403)
 
-    def _key(self, payload: dict[str, Any]) -> tuple[str, date, date]:
-        return (payload.get("employee_id"), date.fromisoformat(payload["pay_period_start"]), date.fromisoformat(payload["pay_period_end"]))
+    @staticmethod
+    def _coerce_period(period_start: str, period_end: str) -> tuple[date, date]:
+        start = date.fromisoformat(period_start)
+        end = date.fromisoformat(period_end)
+        if end < start:
+            raise ServiceError("VALIDATION_ERROR", "period_end must be on or after period_start", 422)
+        return start, end
+
+    @staticmethod
+    def _batch_lookup_key(period_start: date, period_end: date) -> tuple[date, date]:
+        return period_start, period_end
+
+    @staticmethod
+    def _normalize_failure(employee_id: str | None, reason: str, dead_letter_id: str | None = None) -> dict[str, Any]:
+        failure = {"employee_id": employee_id, "reason": reason}
+        if dead_letter_id:
+            failure["dead_letter_id"] = dead_letter_id
+        return failure
 
     def _record_idempotent_result(self, key: str, fingerprint: str, status: int, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         self.idempotency.record(key, fingerprint, status, payload)
         return status, payload
+
+    def _recompute_batch(self, batch: PayrollBatch) -> None:
+        records = [self.records[record_id] for record_id in batch.record_ids if record_id in self.records]
+        batch.processed_count = sum(1 for record in records if record.status in {PayrollStatus.PROCESSED, PayrollStatus.PAID})
+        batch.paid_count = sum(1 for record in records if record.status == PayrollStatus.PAID)
+        batch.failed_count = len(batch.failures)
+        if batch.processed_count == 0 and batch.failed_count > 0:
+            batch.status = PayrollBatchStatus.FAILED
+        elif batch.record_ids and batch.paid_count == len(batch.record_ids) and batch.failed_count == 0:
+            batch.status = PayrollBatchStatus.PAID
+        elif batch.record_ids and batch.paid_count == len(batch.record_ids):
+            batch.status = PayrollBatchStatus.PAID
+        elif batch.failed_count > 0:
+            batch.status = PayrollBatchStatus.PARTIAL_FAILURE if batch.processed_count > 0 else PayrollBatchStatus.FAILED
+        elif batch.processed_count > 0:
+            batch.status = PayrollBatchStatus.PROCESSED
+        else:
+            batch.status = PayrollBatchStatus.PENDING
+        batch.updated_at = self._now()
+
+    def _get_or_create_batch(self, period_start: date, period_end: date) -> PayrollBatch:
+        batch_key = self._batch_lookup_key(period_start, period_end)
+        batch_id = self.batch_index.get(batch_key)
+        if batch_id and batch_id in self.batches:
+            batch = self.batches[batch_id]
+            batch.updated_at = self._now()
+            return batch
+        now = self._now()
+        batch = PayrollBatch(
+            batch_id=str(uuid4()),
+            period_start=period_start,
+            period_end=period_end,
+            status=PayrollBatchStatus.PENDING,
+            created_at=now,
+            updated_at=now,
+        )
+        self.batches[batch.batch_id] = batch
+        self.batch_index[batch_key] = batch.batch_id
+        return batch
+
+    def _attach_record_to_batch(self, batch: PayrollBatch, record_id: str) -> None:
+        if record_id not in batch.record_ids:
+            batch.record_ids.append(record_id)
+        self.record_batches[record_id] = batch.batch_id
+
+    def _validate_batch_consistency(self, batch: PayrollBatch) -> dict[str, Any]:
+        issues: list[str] = []
+        seen_ids: set[str] = set()
+        for record_id in batch.record_ids:
+            if record_id in seen_ids:
+                issues.append(f"duplicate record reference: {record_id}")
+                continue
+            seen_ids.add(record_id)
+            record = self.records.get(record_id)
+            if record is None:
+                issues.append(f"missing record reference: {record_id}")
+                continue
+            if record.pay_period_start != batch.period_start or record.pay_period_end != batch.period_end:
+                issues.append(f"record period mismatch: {record_id}")
+            if self.record_batches.get(record_id) != batch.batch_id:
+                issues.append(f"record batch index mismatch: {record_id}")
+        derived_processed = sum(
+            1
+            for record_id in batch.record_ids
+            if record_id in self.records and self.records[record_id].status in {PayrollStatus.PROCESSED, PayrollStatus.PAID}
+        )
+        derived_paid = sum(
+            1 for record_id in batch.record_ids if record_id in self.records and self.records[record_id].status == PayrollStatus.PAID
+        )
+        if batch.processed_count != derived_processed:
+            issues.append("processed_count mismatch")
+        if batch.paid_count != derived_paid:
+            issues.append("paid_count mismatch")
+        if batch.failed_count != len(batch.failures):
+            issues.append("failed_count mismatch")
+        return {
+            "batch_id": batch.batch_id,
+            "period_start": batch.period_start.isoformat(),
+            "period_end": batch.period_end.isoformat(),
+            "record_count": len(batch.record_ids),
+            "processed_count": batch.processed_count,
+            "paid_count": batch.paid_count,
+            "failed_count": batch.failed_count,
+            "consistent": len(issues) == 0,
+            "issues": issues,
+        }
 
     def create_payroll_record(self, payload: dict[str, Any], authorization: str | None, idempotency_key: str | None = None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
         trace = self._trace(trace_id)
@@ -204,8 +347,8 @@ class PayrollService:
 
                 if key in self.period_index:
                     record = self.records[self.period_index[key]]
-                    self._finalize_observation("create_payroll_record", trace, started, True, {"status": 200, "replayed": True})
-                    return self._record_idempotent_result(replay_key, fingerprint, 200, record.to_dict())
+                    self._finalize_observation("create_payroll_record", trace, started, True, {"status": 201, "replayed": True})
+                    return self._record_idempotent_result(replay_key, fingerprint, 201, record.to_dict())
 
                 base_salary = self._money(payload.get("base_salary"), "base_salary")
                 allowances = self._money(payload.get("allowances"), "allowances")
@@ -255,11 +398,7 @@ class PayrollService:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
             with self._lock:
-                start = date.fromisoformat(period_start)
-                end = date.fromisoformat(period_end)
-                if end < start:
-                    raise ServiceError("VALIDATION_ERROR", "period_end must be on or after period_start", 422)
-
+                start, end = self._coerce_period(period_start, period_end)
                 fingerprint = json.dumps({"period_start": period_start, "period_end": period_end, "records": records or []}, sort_keys=True)
                 replay_key = idempotency_key or f"payroll-run:{period_start}:{period_end}"
                 replay = self.idempotency.replay_or_conflict(replay_key, fingerprint)
@@ -267,43 +406,66 @@ class PayrollService:
                     self._finalize_observation("run_payroll", trace, started, True, {"status": replay.status_code, "replayed": True})
                     return replay.status_code, replay.payload
 
+                batch = self._get_or_create_batch(start, end)
+                batch.failures = []
                 processed_ids: set[str] = set()
-                failures: list[dict[str, Any]] = []
+
                 for item in records or []:
                     if item["pay_period_start"] != period_start or item["pay_period_end"] != period_end:
-                        dead_letter = self.dead_letters.push("payroll_processing", "PayrollRecordRejected", item, "record period does not match run period")
-                        failures.append({"employee_id": item.get("employee_id"), "dead_letter_id": dead_letter.dead_letter_id, "reason": dead_letter.reason})
+                        dead_letter = self.dead_letters.push(
+                            "payroll_processing",
+                            "PayrollRecordRejected",
+                            item,
+                            "record period does not match run period",
+                            trace_id=trace,
+                        )
+                        batch.failures.append(self._normalize_failure(item.get("employee_id"), dead_letter.reason, dead_letter.dead_letter_id))
                         continue
                     try:
                         _, created = self.create_payroll_record(item, authorization, trace_id=trace)
                         record_id = created["payroll_record_id"]
-                    except ServiceError as exc:
+                    except (ServiceError, ValueError) as exc:
                         self.error_logger.log("run_payroll", exc, trace_id=trace, details={"employee_id": item.get("employee_id")})
-                        dead_letter = self.dead_letters.push("payroll_processing", "PayrollRecordFailed", item, exc.message)
-                        failures.append({"employee_id": item.get("employee_id"), "dead_letter_id": dead_letter.dead_letter_id, "reason": exc.message})
+                        dead_letter = self.dead_letters.push(
+                            "payroll_processing",
+                            "PayrollRecordFailed",
+                            item,
+                            str(exc),
+                            trace_id=trace,
+                        )
+                        batch.failures.append(self._normalize_failure(item.get("employee_id"), str(exc), dead_letter.dead_letter_id))
                         continue
                     record = self.records[record_id]
-                    if record.status != PayrollStatus.PAID:
+                    self._attach_record_to_batch(batch, record_id)
+                    if record.status == PayrollStatus.DRAFT:
                         record.status = PayrollStatus.PROCESSED
                         record.updated_at = self._now()
-                        processed_ids.add(record_id)
                         self.events.append({"type": "PayrollProcessed", "payroll_record_id": record_id, "at": record.updated_at.isoformat()})
+                    if record.status in {PayrollStatus.PROCESSED, PayrollStatus.PAID}:
+                        processed_ids.add(record_id)
 
                 for record in self.records.values():
-                    if record.pay_period_start == start and record.pay_period_end == end and record.status == PayrollStatus.DRAFT:
-                        record.status = PayrollStatus.PROCESSED
-                        record.updated_at = self._now()
-                        processed_ids.add(record.payroll_record_id)
-                        self.events.append({"type": "PayrollProcessed", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
+                    if record.pay_period_start == start and record.pay_period_end == end and record.status in {PayrollStatus.DRAFT, PayrollStatus.PROCESSED, PayrollStatus.PAID}:
+                        self._attach_record_to_batch(batch, record.payroll_record_id)
+                        if record.status == PayrollStatus.DRAFT:
+                            record.status = PayrollStatus.PROCESSED
+                            record.updated_at = self._now()
+                            self.events.append({"type": "PayrollProcessed", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
+                        if record.status in {PayrollStatus.PROCESSED, PayrollStatus.PAID}:
+                            processed_ids.add(record.payroll_record_id)
 
+                self._recompute_batch(batch)
+                validation = self._validate_batch_consistency(batch)
                 response = {
                     "data": {
+                        "batch": batch.to_dict(),
                         "period_start": period_start,
                         "period_end": period_end,
                         "processed_count": len(processed_ids),
                         "record_ids": sorted(processed_ids),
-                        "failed_count": len(failures),
-                        "failures": failures,
+                        "failed_count": len(batch.failures),
+                        "failures": [dict(item) for item in batch.failures],
+                        "consistency": validation,
                     }
                 }
             self.observability.logger.audit(
@@ -312,9 +474,20 @@ class PayrollService:
                 actor=ctx.employee_id or ctx.role.value,
                 entity="PayrollRun",
                 entity_id=f"{period_start}:{period_end}",
-                context={"processed_count": len(processed_ids), "failed_count": len(failures)},
+                context={
+                    "batch_id": batch.batch_id,
+                    "processed_count": batch.processed_count,
+                    "failed_count": batch.failed_count,
+                    "status": batch.status.value,
+                },
             )
-            self._finalize_observation("run_payroll", trace, started, True, {"status": 200, "processed_count": len(processed_ids), "failed_count": len(failures)})
+            self._finalize_observation(
+                "run_payroll",
+                trace,
+                started,
+                True,
+                {"status": 200, "processed_count": batch.processed_count, "failed_count": batch.failed_count, "batch_id": batch.batch_id},
+            )
             return self._record_idempotent_result(replay_key, fingerprint, 200, response)
         except Exception as exc:
             self.error_logger.log("run_payroll", exc, trace_id=trace, details={"period_start": period_start, "period_end": period_end})
@@ -383,6 +556,9 @@ class PayrollService:
 
             record.gross_pay, record.net_pay = self._calc(record.base_salary, record.allowances, record.overtime_pay, record.deductions)
             record.updated_at = self._now()
+            batch_id = self.record_batches.get(record.payroll_record_id)
+            if batch_id and batch_id in self.batches:
+                self._recompute_batch(self.batches[batch_id])
         self.observability.logger.audit(
             "payroll_record_adjusted",
             trace_id=trace,
@@ -421,16 +597,56 @@ class PayrollService:
             record.status = PayrollStatus.PAID
             record.updated_at = self._now()
             self.events.append({"type": "PayrollPaid", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
+            batch_id = self.record_batches.get(record.payroll_record_id)
+            batch_payload = None
+            if batch_id and batch_id in self.batches:
+                batch = self.batches[batch_id]
+                self._recompute_batch(batch)
+                batch_payload = batch.to_dict()
         self.observability.logger.audit(
             "payroll_record_paid",
             trace_id=trace,
             actor=ctx.employee_id or ctx.role.value,
             entity="PayrollRecord",
             entity_id=record.payroll_record_id,
-            context={"payment_date": record.payment_date.isoformat()},
+            context={"payment_date": record.payment_date.isoformat(), "batch_id": self.record_batches.get(record.payroll_record_id)},
         )
         self._finalize_observation("mark_paid", trace, started, True, {"status": 200})
-        return self._record_idempotent_result(replay_key, fingerprint, 200, record.to_dict())
+        payload = record.to_dict()
+        if batch_payload is not None:
+            payload["batch"] = batch_payload
+        return self._record_idempotent_result(replay_key, fingerprint, 200, payload)
+
+    def validate_batch_processing(self, batch_id: str, authorization: str | None) -> tuple[int, dict[str, Any]]:
+        ctx = self.decode_bearer_token(authorization)
+        self._require_admin(ctx)
+        with self._lock:
+            batch = self.batches.get(batch_id)
+            if not batch:
+                raise ServiceError("NOT_FOUND", "Payroll batch not found", 404)
+            self._recompute_batch(batch)
+            validation = self._validate_batch_consistency(batch)
+            return 200, {"data": {"batch": batch.to_dict(), "validation": validation}}
+
+    def validate_consistency(self, authorization: str | None) -> tuple[int, dict[str, Any]]:
+        ctx = self.decode_bearer_token(authorization)
+        self._require_admin(ctx)
+        with self._lock:
+            batch_results = []
+            for batch in self.batches.values():
+                self._recompute_batch(batch)
+                batch_results.append(self._validate_batch_consistency(batch))
+            orphan_records = sorted(record_id for record_id in self.records if record_id not in self.record_batches)
+            status = "ok" if all(result["consistent"] for result in batch_results) and not orphan_records else "inconsistent"
+            return 200, {
+                "data": {
+                    "status": status,
+                    "batch_count": len(self.batches),
+                    "record_count": len(self.records),
+                    "orphan_record_ids": orphan_records,
+                    "batches": batch_results,
+                }
+            }
 
     def replay_dead_letters(self, authorization: str | None) -> tuple[int, dict[str, Any]]:
         ctx = self.decode_bearer_token(authorization)
@@ -449,7 +665,11 @@ class PayrollService:
             if not record:
                 raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
             self._assert_read_scope(ctx, record)
-            return 200, {"data": record.to_dict()}
+            payload = record.to_dict()
+            batch_id = self.record_batches.get(payroll_record_id)
+            if batch_id and batch_id in self.batches:
+                payload["batch"] = self.batches[batch_id].to_dict()
+            return 200, {"data": payload}
 
     def list_payroll_records(
         self,
@@ -515,6 +735,7 @@ class PayrollService:
             return self.observability.health_status(
                 checks={
                     "records": len(self.records),
+                    "batches": len(self.batches),
                     "dead_letters": len(self.dead_letters.entries),
                 }
             )

@@ -191,3 +191,82 @@ def test_payroll_observability_captures_metrics_and_audit_logs(service: PayrollS
     assert metrics["request_count"] >= 3
     assert any(record["trace_id"] == "trace-payroll-paid" and record["message"] == "payroll_record_paid" for record in service.observability.logger.records)
     assert service.health_snapshot()["status"] == "ok"
+
+
+def test_run_payroll_returns_batch_and_validates_processing(service: PayrollService):
+    admin = token("Admin")
+
+    status, payload = service.run_payroll(
+        "2026-08-01",
+        "2026-08-31",
+        admin,
+        records=[
+            {
+                "employee_id": "emp-10",
+                "pay_period_start": "2026-08-01",
+                "pay_period_end": "2026-08-31",
+                "base_salary": "1000.00",
+                "currency": "USD",
+            },
+            {
+                "employee_id": "emp-11",
+                "pay_period_start": "2026-07-01",
+                "pay_period_end": "2026-07-31",
+                "base_salary": "1100.00",
+                "currency": "USD",
+            },
+        ],
+    )
+
+    assert status == 200
+    assert payload["data"]["batch"]["status"] == "PartialFailure"
+    assert payload["data"]["batch"]["processed_count"] == 1
+    assert payload["data"]["batch"]["failed_count"] == 1
+    assert payload["data"]["consistency"]["consistent"] is True
+
+    validation_status, validation = service.validate_batch_processing(payload["data"]["batch"]["batch_id"], admin)
+    assert validation_status == 200
+    assert validation["data"]["validation"]["consistent"] is True
+    assert validation["data"]["batch"]["record_ids"] == payload["data"]["batch"]["record_ids"]
+
+
+def test_mark_paid_updates_batch_and_global_consistency(service: PayrollService):
+    admin = token("Admin")
+    _, payload = service.run_payroll(
+        "2026-09-01",
+        "2026-09-30",
+        admin,
+        records=[
+            {
+                "employee_id": "emp-20",
+                "pay_period_start": "2026-09-01",
+                "pay_period_end": "2026-09-30",
+                "base_salary": "1000.00",
+                "currency": "USD",
+            },
+            {
+                "employee_id": "emp-21",
+                "pay_period_start": "2026-09-01",
+                "pay_period_end": "2026-09-30",
+                "base_salary": "1500.00",
+                "currency": "USD",
+            },
+        ],
+    )
+
+    batch = payload["data"]["batch"]
+    for record_id in batch["record_ids"]:
+        status, paid = service.mark_paid(record_id, admin, payment_date="2026-10-01")
+        assert status == 200
+        assert paid["status"] == "Paid"
+
+    validation_status, validation = service.validate_batch_processing(batch["batch_id"], admin)
+    assert validation_status == 200
+    assert validation["data"]["batch"]["status"] == "Paid"
+    assert validation["data"]["batch"]["paid_count"] == 2
+
+    consistency_status, consistency = service.validate_consistency(admin)
+    assert consistency_status == 200
+    assert consistency["data"]["status"] == "ok"
+    assert consistency["data"]["orphan_record_ids"] == []
+    assert consistency["data"]["batches"][0]["consistent"] is True
