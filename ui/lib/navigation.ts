@@ -13,6 +13,7 @@ export type NavigationItem = {
     | 'jobs'
     | 'candidates'
     | 'performance'
+    | 'notifications'
     | 'settings'
   href: string
   label: string
@@ -31,6 +32,7 @@ export type ReadModelKey =
   | 'payroll_summary_view'
   | 'candidate_pipeline_view'
   | 'performance_review_view'
+  | 'notification_delivery_view'
   | 'settings_configuration_view'
 
 export const readModelLabels: Record<ReadModelKey, string> = {
@@ -40,6 +42,7 @@ export const readModelLabels: Record<ReadModelKey, string> = {
   payroll_summary_view: 'Payroll',
   candidate_pipeline_view: 'Candidates',
   performance_review_view: 'Performance',
+  notification_delivery_view: 'Notifications',
   settings_configuration_view: 'Settings',
 }
 
@@ -179,6 +182,16 @@ export const navigationItems: NavigationItem[] = [
     section: 'talent',
     capabilityIds: ['CAP-PRF-001'],
     readModels: ['performance_review_view'],
+  },
+  {
+    key: 'notifications',
+    href: '/notifications',
+    label: 'Notifications',
+    shortLabel: 'Inbox',
+    description: 'Event-driven inbox, delivery visibility, and user notification history.',
+    section: 'admin',
+    capabilityIds: ['CAP-NOT-001', 'CAP-NOT-002'],
+    readModels: ['notification_delivery_view'],
   },
   {
     key: 'settings',

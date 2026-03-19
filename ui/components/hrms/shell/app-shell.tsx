@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Bell,
+  BellRing,
   Building2,
   CalendarDays,
   ClipboardList,
@@ -27,6 +28,7 @@ const navigationItems = [
   { label: 'Attendance', href: '/attendance', icon: CalendarDays },
   { label: 'Leave', href: '/leave', icon: ClipboardList },
   { label: 'Payroll', href: '/payroll', icon: CreditCard },
+  { label: 'Notifications', href: '/notifications', icon: BellRing },
   { label: 'Departments', href: '/departments', icon: Building2 },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
@@ -134,9 +136,11 @@ export default function AppShell({
                 <Input className="border-slate-200 bg-white pl-9" placeholder="Search employees, payroll, or leave requests" />
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" className="border-slate-200 bg-white hover:bg-slate-50" aria-label="Notifications">
-                  <Bell className="h-4 w-4" />
-                </Button>
+                <Link href="/notifications">
+                  <Button variant="outline" size="icon" className="border-slate-200 bg-white hover:bg-slate-50" aria-label="Notifications">
+                    <Bell className="h-4 w-4" />
+                  </Button>
+                </Link>
                 {pageActions ?? null}
               </div>
             </div>

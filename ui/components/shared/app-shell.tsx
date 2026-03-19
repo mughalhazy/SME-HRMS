@@ -39,6 +39,7 @@ const navIcons = {
   jobs: BriefcaseBusiness,
   candidates: TrendingUp,
   performance: TrendingUp,
+  notifications: Bell,
   settings: Settings2,
 }
 
@@ -182,9 +183,11 @@ export function AppShell({
                   <Input className="pl-9" placeholder="Search employees, payroll, or reviews" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button variant="outline" size="icon" aria-label="Notifications">
-                    <Bell className="h-4 w-4" />
-                  </Button>
+                  <Link href="/notifications" onClick={onNavigationStart('/notifications')}>
+                    <Button variant="outline" size="icon" aria-label="Notifications">
+                      <Bell className="h-4 w-4" />
+                    </Button>
+                  </Link>
                   {pageActions ?? (
                     <>
                       <Button variant="outline">Export</Button>
