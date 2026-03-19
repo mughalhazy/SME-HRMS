@@ -26,7 +26,7 @@ Canonical implementation notes for `hiring-service`, aligned to the domain, work
 
 ## Domain rules implemented in code
 - Job postings validate `employment_type`, date boundaries, openings count, and status.
-- Candidates enforce unique `(job_posting_id, email)` and valid stage transitions.
+- Candidates enforce unique `(job_posting_id, email)`, retain external source metadata, and persist stage transition history.
 - Interviews enforce schedule boundaries and enum integrity, with optional Google Calendar sync metadata (`google_calendar_event_id`, `google_calendar_event_link`).
 - LinkedIn import maps source identifiers/profile URLs and records provider-specific import events.
 - Candidate hire finalization allowed only from `Offered` stage.
@@ -36,6 +36,7 @@ Canonical implementation notes for `hiring-service`, aligned to the domain, work
 - `JobPostingClosed`
 - `CandidateApplied`
 - `CandidateStageChanged`
+- `CandidateStageTransitionRecorded`
 - `InterviewScheduled`
 - `InterviewCompleted`
 - `InterviewCalendarSynced`
