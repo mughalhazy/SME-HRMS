@@ -1,6 +1,6 @@
 # Workflow Catalog
 
-This catalog defines deterministic HR workflows and explicitly maps each workflow to canonical services and domain entities.
+This catalog defines deterministic HR workflows and maps each workflow to services, entities, states, and events.
 
 ## Valid service registry
 - `employee-service`
@@ -17,33 +17,43 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 - `employee-service`
 
 ### Participating services
-- `hiring-service` (optional source via `CandidateHired` event)
+- `hiring-service` (optional upstream source)
 - `auth-service`
 - `notification-service`
+- `attendance-service` (consumer of eligibility)
+- `leave-service` (consumer of eligibility)
+- `payroll-service` (consumer of eligibility)
 
 ### Entities referenced
 - `Employee`
 - `Department`
 - `Role`
-- `Candidate` (only when sourced from hiring flow)
+- `Candidate`
+- `UserAccount`
 
 ### Trigger
-- A candidate is marked as **Hired** in recruitment, or HR initiates a direct hire onboarding request.
+- HR initiates a direct hire, or `CandidateHired` is received from `hiring-service`.
+
+### State transitions
+- `Employee: none -> Draft -> Active`
+- `UserAccount: none -> Invited/Active` when access is provisioned as part of onboarding
 
 ### Events
 - Consumes:
-  - `CandidateHired` (when onboarding is sourced from hiring)
+  - `CandidateHired`
 - Publishes:
   - `EmployeeCreated`
   - `EmployeeStatusChanged`
+  - `UserProvisioned` (when access is created during onboarding)
 
 ### Steps
-1. Confirm `Department` and `Role` exist and are active for assignment.
-2. Create `Employee` in `Draft`.
-3. Assign `department_id`, `role_id`, and optional `manager_employee_id`.
-4. Validate uniqueness and required fields (`employee_number`, `email`, `hire_date`, `employment_type`).
-5. Transition `Employee` from `Draft` to `Active` on hire date.
-6. Publish eligibility events to attendance, leave, payroll, and performance consumers.
+1. Validate that `Department` and `Role` exist and are assignable.
+2. Create `Employee` in `Draft` with required employment metadata.
+3. Assign reporting line, department, and role references.
+4. Enforce uniqueness for `employee_number` and `email`.
+5. Activate the employee on the effective hire date.
+6. Optionally provision a linked `UserAccount` and baseline `RoleBinding`.
+7. Notify downstream services and read-model projections.
 
 ## attendance_tracking
 
@@ -60,7 +70,10 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 - `Employee`
 
 ### Trigger
-- Employee check-in/out event (manual, biometric, or API import), or daily sync job.
+- Employee check-in/out event, biometric import, or administrative correction.
+
+### State transitions
+- `AttendanceRecord: none -> Captured -> Validated -> Approved -> Locked`
 
 ### Events
 - Consumes:
@@ -74,12 +87,12 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
   - `AttendancePeriodClosed`
 
 ### Steps
-1. Create/update `AttendanceRecord` in `Captured` state.
-2. Compute `total_hours` from check-in/check-out timestamps.
-3. Classify `attendance_status` (Present, Late, HalfDay, Absent, Holiday).
-4. Validate policy and transition to `Validated`.
-5. Supervisor/time-admin action transitions to `Approved`.
-6. Period close transitions records to `Locked` for payroll safety.
+1. Create or update `AttendanceRecord` in `Captured`.
+2. Normalize timestamps and calculate `total_hours`.
+3. Classify `attendance_status` and validate against policy.
+4. Transition validated records to `Validated`.
+5. Approve records for payroll inclusion.
+6. Lock the pay period and emit a period-closure event.
 
 ## leave_request
 
@@ -90,14 +103,17 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 - `employee-service`
 - `auth-service`
 - `notification-service`
-- `payroll-service` (consumer of approved leave impact)
+- `payroll-service`
 
 ### Entities referenced
 - `LeaveRequest`
 - `Employee`
 
 ### Trigger
-- Employee submits a leave request from draft.
+- Employee creates and submits a leave request.
+
+### State transitions
+- `LeaveRequest: none -> Draft -> Submitted -> Approved/Rejected/Cancelled`
 
 ### Events
 - Consumes:
@@ -110,13 +126,13 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
   - `LeaveRequestCancelled`
 
 ### Steps
-1. Create `LeaveRequest` in `Draft` with leave type, date range, and reason.
-2. Calculate `total_days`; validate overlap and policy constraints.
-3. Submit request (`status=Submitted`, set `submitted_at`).
-4. Notify `approver_employee_id`.
-5. Approver sets `Approved` or `Rejected` and stamps `decision_at`.
-6. If approved, propagate availability impact to dependent consumers.
-7. Allow policy-governed cancellation (`Cancelled`).
+1. Create `LeaveRequest` in `Draft`.
+2. Calculate `total_days` and validate overlap/policy rules.
+3. Submit the request and assign an approver.
+4. Notify the approver.
+5. Approve or reject the request with a decision timestamp.
+6. Allow policy-governed cancellation when applicable.
+7. Propagate approved leave to payroll consumers.
 
 ## payroll_processing
 
@@ -137,7 +153,11 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 - `LeaveRequest`
 
 ### Trigger
-- Payroll period close date, or payroll admin starts off-cycle run.
+- Period close, scheduled payroll run, or off-cycle payroll request.
+
+### State transitions
+- `PayrollRecord: none -> Draft -> Processed -> Paid`
+- `PayrollRecord: Draft/Processed -> Cancelled`
 
 ### Events
 - Consumes:
@@ -151,12 +171,13 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
   - `PayrollCancelled`
 
 ### Steps
-1. Create `PayrollRecord` in `Draft` for eligible active employees.
-2. Pull compensation, attendance summary, and approved leave impacts.
-3. Calculate `gross_pay` and `net_pay`; validate currency/period boundaries.
-4. Transition validated records to `Processed`.
-5. Execute disbursement and stamp `payment_date`.
-6. Transition to `Paid` on success or `Cancelled` if reversed/invalid.
+1. Select eligible employees for the pay period.
+2. Create `PayrollRecord` drafts.
+3. Join approved attendance and leave impacts.
+4. Calculate gross and net pay.
+5. Transition valid records to `Processed`.
+6. Mark paid records on successful disbursement.
+7. Cancel records only for reversal or invalidation scenarios.
 
 ## candidate_hiring
 
@@ -164,7 +185,7 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 - `hiring-service`
 
 ### Participating services
-- `employee-service` (consumes `CandidateHired`)
+- `employee-service`
 - `auth-service`
 - `notification-service`
 
@@ -174,10 +195,16 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 - `Interview`
 - `Department`
 - `Role`
-- `Employee` (conversion target)
+- `Employee`
 
 ### Trigger
-- A `JobPosting` is opened, or a candidate application is received.
+- Recruiter opens a job posting or receives a candidate application.
+
+### State transitions
+- `JobPosting: Draft -> Open -> Closed/Filled` with optional `OnHold`
+- `Candidate: none -> Applied -> Screening -> Interviewing -> Offered -> Hired`
+- `Candidate: Applied/Screening/Interviewing/Offered -> Rejected/Withdrawn`
+- `Interview: none -> Scheduled -> Completed/Cancelled/NoShow`
 
 ### Events
 - Consumes:
@@ -190,16 +217,19 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
   - `CandidateStageChanged`
   - `InterviewScheduled`
   - `InterviewCompleted`
+  - `InterviewCalendarSynced`
+  - `CandidateImported`
+  - `LinkedInCandidatesImported`
   - `CandidateHired`
 
 ### Steps
-1. Publish `JobPosting` in `Open` with department/role/vacancy details.
-2. Capture `Candidate` in `Applied`.
-3. Progress candidate to `Screening`.
-4. Schedule and complete `Interview` rounds (`Scheduled` → `Completed`).
-5. Move qualified candidate to `Offered`.
-6. On acceptance, transition candidate to `Hired`.
-7. Emit `CandidateHired` for employee onboarding.
+1. Create a `JobPosting` and open it for applications.
+2. Capture direct or imported `Candidate` applications.
+3. Progress candidates through screening and interviewing stages.
+4. Schedule `Interview` rounds and optionally sync with Google Calendar.
+5. Capture interview outcomes and recommendations.
+6. Move successful candidates to `Offered`.
+7. Mark accepted candidates as `Hired` and emit `CandidateHired`.
 
 ## performance_review
 
@@ -215,7 +245,10 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
 - `Employee`
 
 ### Trigger
-- Review cycle start date, or manager initiates ad hoc review.
+- Review cycle launch or manager-initiated ad hoc review.
+
+### State transitions
+- `PerformanceReview: none -> Draft -> Submitted -> Acknowledged -> Finalized`
 
 ### Events
 - Publishes:
@@ -223,9 +256,109 @@ This catalog defines deterministic HR workflows and explicitly maps each workflo
   - `PerformanceReviewFinalized`
 
 ### Steps
-1. Create `PerformanceReview` in `Draft`.
-2. Reviewer captures strengths, improvement areas, goals, and optional rating.
-3. Submit review (`Submitted`, set `submitted_at`).
-4. Employee acknowledges (`Acknowledged`, set `acknowledged_at`).
-5. Final closure transitions record to `Finalized`.
-6. Persist outcomes for talent and compensation planning.
+1. Create the `PerformanceReview` in `Draft`.
+2. Capture manager comments, goals, and optional rating.
+3. Submit the review.
+4. Request employee acknowledgement.
+5. Finalize the review after acknowledgement or policy deadline.
+6. Persist outcomes for talent and compensation use.
+
+## access_provisioning
+
+### Owning service
+- `auth-service`
+
+### Participating services
+- `employee-service`
+- `notification-service`
+
+### Entities referenced
+- `UserAccount`
+- `RoleBinding`
+- `PermissionPolicy`
+- `Session`
+- `RefreshToken`
+- `Employee`
+
+### Trigger
+- New employee onboarding, direct admin invitation, or role change requiring access updates.
+
+### State transitions
+- `UserAccount: none -> Invited -> Active -> Locked/Disabled`
+- `RoleBinding: none -> Active -> Revoked/Expired`
+- `Session: none -> Active -> Revoked/Expired`
+- `RefreshToken: none -> Active -> Rotated/Revoked/Expired`
+
+### Events
+- Consumes:
+  - `EmployeeCreated`
+  - `EmployeeStatusChanged`
+- Publishes:
+  - `UserProvisioned`
+  - `UserAuthenticated`
+  - `SessionRevoked`
+  - `AuthorizationPolicyUpdated`
+
+### Steps
+1. Link or create a `UserAccount` for the subject.
+2. Apply baseline `RoleBinding` entries and scope.
+3. Activate the account or issue an invitation.
+4. Issue sessions and refresh tokens on successful authentication.
+5. Revoke sessions on logout, disablement, or compromise response.
+6. Publish policy updates when authorization rules change.
+
+## notification_dispatch
+
+### Owning service
+- `notification-service`
+
+### Participating services
+- `auth-service`
+- all event-producing domain services as upstream publishers
+
+### Entities referenced
+- `NotificationTemplate`
+- `NotificationMessage`
+- `DeliveryAttempt`
+- `NotificationPreference`
+- `Employee`
+- `Candidate`
+- `UserAccount`
+
+### Trigger
+- Domain event received, ad hoc send request created, or preference update requires send suppression/routing changes.
+
+### State transitions
+- `NotificationTemplate: Draft -> Active -> Retired`
+- `NotificationMessage: none -> Queued -> Sent/Failed/Suppressed`
+- `DeliveryAttempt: none -> Deferred/Sent/Failed`
+- `NotificationPreference: Active <-> Disabled`
+
+### Events
+- Consumes:
+  - `LeaveRequestSubmitted`
+  - `LeaveRequestApproved`
+  - `AttendanceCaptured`
+  - `PayrollProcessed`
+  - `PayrollPaid`
+  - `InterviewScheduled`
+  - `InterviewCalendarSynced`
+  - `UserProvisioned`
+  - `SessionRevoked`
+- Publishes:
+  - `NotificationQueued`
+  - `NotificationSent`
+  - `NotificationFailed`
+
+### Steps
+1. Resolve the applicable template and subject preferences.
+2. Build a `NotificationMessage` in `Queued`.
+3. Execute one or more `DeliveryAttempt` records by channel/provider.
+4. Transition the message to `Sent`, `Failed`, or `Suppressed`.
+5. Publish delivery outcome events for dashboards and audit.
+
+## Coverage checklist
+
+- Every service in `docs/canon/service-map.md` owns at least one workflow in this catalog.
+- Every workflow references only entities defined in `docs/canon/domain-model.md`.
+- Every published or consumed event is defined in `docs/canon/event-catalog.md`.
