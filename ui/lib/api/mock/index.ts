@@ -1,4 +1,5 @@
 import { clockInMock, clockOutMock, listAttendanceMock } from './attendance.mock'
+import { loginMock, logoutMock, meMock, refreshMock } from './auth.mock'
 import { createEmployeeMock, getEmployeeMock, listEmployeesMock, updateEmployeeMock } from './employees.mock'
 import {
   createJobPostingMock,
@@ -33,6 +34,22 @@ export async function mockApiRequest<T>(path: string, init?: RequestInit): Promi
   const pathname = url.pathname
   const method = (init?.method ?? 'GET').toUpperCase()
   const body = parseBody(init?.body)
+
+  if (pathname === '/api/v1/auth/login' && method === 'POST') {
+    return response(await loginMock(body as never)) as T
+  }
+
+  if (pathname === '/api/v1/auth/me' && method === 'GET') {
+    return response(await meMock(init?.headers)) as T
+  }
+
+  if (pathname === '/api/v1/auth/refresh' && method === 'POST') {
+    return response(await refreshMock(body as never)) as T
+  }
+
+  if (pathname === '/api/v1/auth/logout' && method === 'POST') {
+    return response(await logoutMock(body as never)) as T
+  }
 
   if (pathname === '/api/v1/employees' && method === 'GET') {
     return response(await listEmployeesMock({
