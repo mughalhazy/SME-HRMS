@@ -13,6 +13,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 | `hiring-service` | Job postings, candidates, interviews, and hire handoff | `/api/v1/hiring` |
 | `auth-service` | Identity, sessions, tokens, role bindings, and policy | `/api/v1/auth` |
 | `notification-service` | Notification templates, queueing, delivery, and preferences | `/api/v1/notifications` |
+| `settings-service` | Administrative HR policy configuration and defaults | `/api/v1/settings` |
 
 ## employee-service
 
@@ -375,9 +376,56 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 ### Read models produced or enriched
 - `notification_delivery_view`
 
+
+
+## settings-service
+
+### Responsibilities
+- Manage attendance rule templates and compliance thresholds.
+- Manage leave policy definitions, accrual defaults, and activation rules.
+- Manage payroll schedule, cutoff, deduction, and approval settings.
+- Publish a consolidated administrative read model for the settings workspace.
+
+### Owned entities
+- `AttendanceRule`
+- `LeavePolicy`
+- `PayrollSettings`
+
+### Canonical APIs
+- `GET /api/v1/settings`
+- `POST /api/v1/settings/attendance-rules`
+- `PATCH /api/v1/settings/attendance-rules/{attendance_rule_id}`
+- `POST /api/v1/settings/leave-policies`
+- `PATCH /api/v1/settings/leave-policies/{leave_policy_id}`
+- `PUT /api/v1/settings/payroll`
+
+### Dependencies
+- `auth-service` for administrative authentication and authorization.
+- `attendance-service` as downstream consumer of attendance defaults.
+- `leave-service` as downstream consumer of leave entitlement defaults.
+- `payroll-service` as downstream consumer of payroll controls.
+
+### Supported workflows
+- `settings_administration`
+
+### Publishes
+- `AttendanceRuleConfigured`
+- `LeavePolicyConfigured`
+- `PayrollSettingsConfigured`
+- `SettingsPublished`
+
+### Subscribes
+- None in the reference implementation.
+
+### Read models produced or enriched
+- `settings_configuration_view`
+- enriches `attendance_dashboard_view`, `leave_requests_view`, and `payroll_summary_view` through configuration defaults
+
+
 ## Coverage checklist
 
 - Every service listed by the API gateway route registry is represented here.
 - Every owned entity is defined in `docs/canon/domain-model.md`.
 - Every published and subscribed event is defined in `docs/canon/event-catalog.md`.
 - Every supported workflow is defined in `docs/canon/workflow-catalog.md`.
+

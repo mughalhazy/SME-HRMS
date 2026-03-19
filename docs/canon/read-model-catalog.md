@@ -75,7 +75,15 @@ This catalog defines query-optimized projections and validates each read model a
 - **Fields:** `performance_review_id`, `employee_id`, `employee_name`, `reviewer_employee_id`, `reviewer_name`, `department_id`, `department_name`, `review_period_start`, `review_period_end`, `overall_rating`, `status`, `submitted_at`, `finalized_at`, `updated_at`
 - **Primary consumers:** performance reviews, employee profile, dashboard
 
-## 9) `access_control_view`
+## 9) `settings_configuration_view`
+- **Source services:** `settings-service`
+- **Source workflows:** `settings_administration`
+- **Source entities:** `AttendanceRule`, `LeavePolicy`, `PayrollSettings`
+- **Key/grain:** one administrative configuration snapshot for the active tenant/workspace
+- **Fields:** `attendance_rules`, `leave_policies`, `payroll_settings`, `updated_at`
+- **Primary consumers:** settings workspace, administrative dashboards
+
+## 10) `access_control_view`
 - **Source services:** `auth-service`, `employee-service`
 - **Source workflows:** `access_provisioning`
 - **Source entities:** `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Employee`, `Session`, `RefreshToken`
@@ -83,7 +91,7 @@ This catalog defines query-optimized projections and validates each read model a
 - **Fields:** `user_id`, `employee_id`, `employee_name`, `username`, `email`, `identity_provider`, `user_status`, `assigned_roles`, `effective_scopes`, `active_session_count`, `active_refresh_token_count`, `last_login_at`, `updated_at`
 - **Primary consumers:** settings, security administration
 
-## 10) `notification_delivery_view`
+## 11) `notification_delivery_view`
 - **Source services:** `notification-service`
 - **Source workflows:** `notification_dispatch`
 - **Source entities:** `NotificationMessage`, `DeliveryAttempt`, `NotificationTemplate`, `NotificationPreference`

@@ -38,6 +38,12 @@ def test_workflow_schema_matches_canonical_operational_tables() -> None:
         'changed_by VARCHAR(120)',
         'CREATE TABLE IF NOT EXISTS interviews',
         'interviewer_employee_ids UUID[]',
+        'CREATE TABLE IF NOT EXISTS attendance_rules',
+        'workdays VARCHAR(20)[] NOT NULL',
+        'CREATE TABLE IF NOT EXISTS leave_policies',
+        'carry_forward_limit_days NUMERIC(5,2) NOT NULL',
+        'CREATE TABLE IF NOT EXISTS payroll_settings',
+        'approval_chain TEXT[] NOT NULL',
         'CREATE TABLE IF NOT EXISTS performance_reviews',
         'reviewer_employee_id UUID NOT NULL',
     ]
