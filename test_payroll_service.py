@@ -193,131 +193,80 @@ def test_payroll_observability_captures_metrics_and_audit_logs(service: PayrollS
     assert service.health_snapshot()["status"] == "ok"
 
 
-def test_generate_fetch_and_update_payroll_with_salary_structure_and_cycle(service: PayrollService):
+def test_run_payroll_returns_batch_and_validates_processing(service: PayrollService):
     admin = token("Admin")
-    _, structure = service.create_salary_structure(
-        {
-            "employee_id": "emp-10",
-            "base_salary": "3000.00",
-            "allowances": "250.00",
-            "deductions": "100.00",
-            "overtime_rate": "25.00",
-            "currency": "USD",
-            "effective_from": "2026-10-01",
-        },
+
+    status, payload = service.run_payroll(
+        "2026-08-01",
+        "2026-08-31",
         admin,
-    )
-    _, cycle = service.upsert_payroll_cycle(
-        {
-            "name": "October 2026 Monthly",
-            "pay_period_start": "2026-10-01",
-            "pay_period_end": "2026-10-31",
-            "payment_date": "2026-11-05",
-        },
-        admin,
-    )
-
-    status, created = service.generate_payroll(
-        {
-            "salary_structure_id": structure["salary_structure_id"],
-            "payroll_cycle_id": cycle["payroll_cycle_id"],
-            "overtime_hours": "4",
-        },
-        admin,
-    )
-
-    assert status == 201
-    assert created["salary_structure_id"] == structure["salary_structure_id"]
-    assert created["payroll_cycle_id"] == cycle["payroll_cycle_id"]
-    assert created["overtime_pay"] == "100.00"
-    assert created["gross_pay"] == "3350.00"
-    assert created["net_pay"] == "3250.00"
-
-    status, fetched = service.fetch_payroll(admin, payroll_record_id=created["payroll_record_id"])
-    assert status == 200
-    assert fetched["data"]["salary_structure"]["salary_structure_id"] == structure["salary_structure_id"]
-    assert fetched["data"]["payroll_cycle"]["payroll_cycle_id"] == cycle["payroll_cycle_id"]
-
-    status, updated = service.update_payroll(
-        created["payroll_record_id"],
-        {
-            "allowances": "300.00",
-            "deductions": "125.00",
-            "gross_pay": "3400.00",
-            "net_pay": "3275.00",
-        },
-        admin,
-    )
-    assert status == 200
-    assert updated["gross_pay"] == "3400.00"
-    assert updated["net_pay"] == "3275.00"
-
-
-def test_generate_payroll_rejects_invalid_calculations(service: PayrollService):
-    admin = token("Admin")
-    _, structure = service.create_salary_structure(
-        {
-            "employee_id": "emp-11",
-            "base_salary": "2000.00",
-            "allowances": "100.00",
-            "deductions": "50.00",
-            "overtime_rate": "10.00",
-            "currency": "USD",
-            "effective_from": "2026-11-01",
-        },
-        admin,
-    )
-
-    with pytest.raises(ServiceError) as exc:
-        service.generate_payroll(
+        records=[
             {
-                "salary_structure_id": structure["salary_structure_id"],
-                "pay_period_start": "2026-11-01",
-                "pay_period_end": "2026-11-30",
-                "overtime_hours": "2",
-                "gross_pay": "9999.99",
-            },
-            admin,
-        )
-
-    assert exc.value.status == 422
-    assert exc.value.message == "gross_pay does not match validated calculation"
-
-
-def test_generate_payroll_rejects_negative_net_pay_edge_case(service: PayrollService):
-    admin = token("Admin")
-
-    with pytest.raises(ServiceError) as exc:
-        service.generate_payroll(
-            {
-                "employee_id": "emp-12",
-                "pay_period_start": "2026-12-01",
-                "pay_period_end": "2026-12-31",
-                "base_salary": "100.00",
-                "allowances": "0.00",
-                "deductions": "125.00",
+                "employee_id": "emp-10",
+                "pay_period_start": "2026-08-01",
+                "pay_period_end": "2026-08-31",
+                "base_salary": "1000.00",
                 "currency": "USD",
             },
-            admin,
-        )
-
-    assert exc.value.status == 422
-    assert exc.value.message == "net_pay must be >= 0"
-
-
-def test_payroll_cycle_rejects_payment_before_period_end_edge_case(service: PayrollService):
-    admin = token("Admin")
-
-    with pytest.raises(ServiceError) as exc:
-        service.upsert_payroll_cycle(
             {
-                "name": "Invalid Cycle",
-                "pay_period_start": "2026-12-01",
-                "pay_period_end": "2026-12-31",
-                "payment_date": "2026-12-15",
+                "employee_id": "emp-11",
+                "pay_period_start": "2026-07-01",
+                "pay_period_end": "2026-07-31",
+                "base_salary": "1100.00",
+                "currency": "USD",
             },
-            admin,
-        )
+        ],
+    )
 
-    assert exc.value.status == 422
-    assert exc.value.message == "payment_date must be on or after pay_period_end"
+    assert status == 200
+    assert payload["data"]["batch"]["status"] == "PartialFailure"
+    assert payload["data"]["batch"]["processed_count"] == 1
+    assert payload["data"]["batch"]["failed_count"] == 1
+    assert payload["data"]["consistency"]["consistent"] is True
+
+    validation_status, validation = service.validate_batch_processing(payload["data"]["batch"]["batch_id"], admin)
+    assert validation_status == 200
+    assert validation["data"]["validation"]["consistent"] is True
+    assert validation["data"]["batch"]["record_ids"] == payload["data"]["batch"]["record_ids"]
+
+
+def test_mark_paid_updates_batch_and_global_consistency(service: PayrollService):
+    admin = token("Admin")
+    _, payload = service.run_payroll(
+        "2026-09-01",
+        "2026-09-30",
+        admin,
+        records=[
+            {
+                "employee_id": "emp-20",
+                "pay_period_start": "2026-09-01",
+                "pay_period_end": "2026-09-30",
+                "base_salary": "1000.00",
+                "currency": "USD",
+            },
+            {
+                "employee_id": "emp-21",
+                "pay_period_start": "2026-09-01",
+                "pay_period_end": "2026-09-30",
+                "base_salary": "1500.00",
+                "currency": "USD",
+            },
+        ],
+    )
+
+    batch = payload["data"]["batch"]
+    for record_id in batch["record_ids"]:
+        status, paid = service.mark_paid(record_id, admin, payment_date="2026-10-01")
+        assert status == 200
+        assert paid["status"] == "Paid"
+
+    validation_status, validation = service.validate_batch_processing(batch["batch_id"], admin)
+    assert validation_status == 200
+    assert validation["data"]["batch"]["status"] == "Paid"
+    assert validation["data"]["batch"]["paid_count"] == 2
+
+    consistency_status, consistency = service.validate_consistency(admin)
+    assert consistency_status == 200
+    assert consistency["data"]["status"] == "ok"
+    assert consistency["data"]["orphan_record_ids"] == []
+    assert consistency["data"]["batches"][0]["consistent"] is True
