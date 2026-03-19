@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, QueryOptimizer } from '../../db/optimization';
 import { CreateRoleInput, EmploymentCategory, Role, RoleFilters, RoleStatus, UpdateRoleInput, resolveRolePermissions } from './role.model';
+import { seedRoles } from './domain-seed';
 
 const ROLE_CACHE_PREFIX = 'roles';
 
@@ -14,6 +15,15 @@ export class RoleRepository {
   private readonly cache = new CacheService({ ttlMs: 15_000, maxEntries: 1_000 });
   private readonly pool = new ConnectionPool(16);
   private readonly optimizer = new QueryOptimizer(10);
+
+  constructor(seedData: Role[] = seedRoles()) {
+    for (const role of seedData) {
+      this.roles.set(role.role_id, { ...role, permissions: [...role.permissions] });
+      this.titleIndex.set(this.normalizeTitle(role.title), role.role_id);
+      this.addToIndex(this.statusIndex, role.status, role.role_id);
+      this.addToIndex(this.categoryIndex, role.employment_category, role.role_id);
+    }
+  }
 
   create(input: CreateRoleInput): Role {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.create' }, () => {

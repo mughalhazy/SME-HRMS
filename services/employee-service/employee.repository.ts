@@ -14,118 +14,13 @@ import {
   Role,
   UpdateEmployeeInput,
 } from './employee.model';
+import { seedDepartments, seedRoles } from './domain-seed';
 
 const EMPLOYEE_CACHE_PREFIX = 'employees';
 
-function timestampSeed(): string {
-  return '2026-01-01T00:00:00.000Z';
-}
-
-function seedDepartments(): Department[] {
-  const createdAt = timestampSeed();
-  return [
-    {
-      department_id: 'dep-hr',
-      name: 'People Operations',
-      code: 'HR',
-      description: 'People operations, talent, and compliance.',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      department_id: 'dep-eng',
-      name: 'Engineering',
-      code: 'ENG',
-      description: 'Product engineering and platform delivery.',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      department_id: 'dep-fin',
-      name: 'Finance',
-      code: 'FIN',
-      description: 'Financial planning, accounting, and reporting.',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      department_id: 'dep-ops',
-      name: 'Operations',
-      code: 'OPS',
-      description: 'Operational readiness and shared services.',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      department_id: 'dep-archive',
-      name: 'Legacy Programs',
-      code: 'LEG',
-      description: 'Archived organizational area retained for history.',
-      status: 'Archived',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-  ];
-}
-
-function seedRoles(): Role[] {
-  const createdAt = timestampSeed();
-  return [
-    {
-      role_id: 'role-hr-director',
-      title: 'HR Director',
-      level: 'Director',
-      description: 'Owns people strategy and HR operations.',
-      employment_category: 'Executive',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      role_id: 'role-frontend-engineer',
-      title: 'Frontend Engineer',
-      level: 'IC3',
-      description: 'Builds and maintains UI applications.',
-      employment_category: 'Staff',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      role_id: 'role-finance-manager',
-      title: 'Finance Manager',
-      level: 'M2',
-      description: 'Leads the finance operating cadence.',
-      employment_category: 'Manager',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      role_id: 'role-ops-lead',
-      title: 'Operations Lead',
-      level: 'M1',
-      description: 'Coordinates operations execution.',
-      employment_category: 'Manager',
-      status: 'Active',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-    {
-      role_id: 'role-legacy-contractor',
-      title: 'Legacy Contractor',
-      level: 'Contract',
-      description: 'Retired contract role retained for compatibility.',
-      employment_category: 'Contractor',
-      status: 'Inactive',
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
-  ];
+export interface EmployeeReferenceRepository {
+  findDepartmentById(departmentId: string): Department | null;
+  findRoleById(roleId: string): Role | null;
 }
 
 export class EmployeeRepository {
@@ -136,11 +31,24 @@ export class EmployeeRepository {
   private readonly roleIndex = new Map<string, Set<string>>();
   private readonly statusIndex = new Map<EmployeeStatus, Set<string>>();
   private readonly managerIndex = new Map<string, Set<string>>();
-  private readonly departments = new Map<string, Department>(seedDepartments().map((department) => [department.department_id, department]));
-  private readonly roles = new Map<string, Role>(seedRoles().map((role) => [role.role_id, role]));
   private readonly cache = new CacheService({ ttlMs: 15_000, maxEntries: 1_000 });
   private readonly pool = new ConnectionPool(16);
   private readonly optimizer = new QueryOptimizer(10);
+  private readonly referenceRepository: EmployeeReferenceRepository;
+
+  constructor(referenceRepository?: EmployeeReferenceRepository) {
+    if (referenceRepository) {
+      this.referenceRepository = referenceRepository;
+      return;
+    }
+
+    const departmentMap = new Map<string, Department>(seedDepartments().map((department) => [department.department_id, department]));
+    const roleMap = new Map<string, Role>(seedRoles().map((role) => [role.role_id, role]));
+    this.referenceRepository = {
+      findDepartmentById: (departmentId: string) => departmentMap.get(departmentId) ?? null,
+      findRoleById: (roleId: string) => roleMap.get(roleId) ?? null,
+    };
+  }
 
   create(input: CreateEmployeeInput): Employee {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.create' }, () => {
@@ -207,11 +115,11 @@ export class EmployeeRepository {
   }
 
   findDepartmentById(departmentId: string): Department | null {
-    return this.departments.get(departmentId) ?? null;
+    return this.referenceRepository.findDepartmentById(departmentId);
   }
 
   findRoleById(roleId: string): Role | null {
-    return this.roles.get(roleId) ?? null;
+    return this.referenceRepository.findRoleById(roleId);
   }
 
   list(filters: EmployeeFilters): PaginatedResult<Employee> {
@@ -308,10 +216,6 @@ export class EmployeeRepository {
     return (this.departmentIndex.get(departmentId)?.size ?? 0);
   }
 
-  hasDirectReports(managerEmployeeId: string): boolean {
-    return [...this.employees.values()].some((employee) => employee.manager_employee_id === managerEmployeeId);
-  }
-
   delete(employeeId: string): boolean {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.delete', expectedIndex: 'pk_employees' }, () => {
       const existing = this.employees.get(employeeId);
@@ -352,8 +256,8 @@ export class EmployeeRepository {
   }
 
   private toEmployeeDirectoryReadModel(employee: Employee): EmployeeDirectoryReadModel {
-    const department = this.departments.get(employee.department_id);
-    const role = this.roles.get(employee.role_id);
+    const department = this.referenceRepository.findDepartmentById(employee.department_id);
+    const role = this.referenceRepository.findRoleById(employee.role_id);
     const manager = employee.manager_employee_id ? this.employees.get(employee.manager_employee_id) : undefined;
 
     return {
@@ -376,8 +280,8 @@ export class EmployeeRepository {
   }
 
   private toOrganizationStructureReadModel(employee: Employee): OrganizationStructureReadModel {
-    const department = this.departments.get(employee.department_id);
-    const role = this.roles.get(employee.role_id);
+    const department = this.referenceRepository.findDepartmentById(employee.department_id);
+    const role = this.referenceRepository.findRoleById(employee.role_id);
     const manager = employee.manager_employee_id ? this.employees.get(employee.manager_employee_id) : undefined;
     const head = department?.head_employee_id ? this.employees.get(department.head_employee_id) : undefined;
 

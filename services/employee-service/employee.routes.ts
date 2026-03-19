@@ -72,12 +72,48 @@ const updateRoleRateLimit = createRateLimitMiddleware({
   maxRequests: 40,
 });
 
+const createDepartmentRateLimit = createRateLimitMiddleware({
+  keyPrefix: 'departments:create',
+  windowMs: 60_000,
+  maxRequests: 20,
+});
+
+const readDepartmentRateLimit = createRateLimitMiddleware({
+  keyPrefix: 'departments:read',
+  windowMs: 60_000,
+  maxRequests: 180,
+});
+
+const listDepartmentRateLimit = createRateLimitMiddleware({
+  keyPrefix: 'departments:list',
+  windowMs: 60_000,
+  maxRequests: 120,
+});
+
+const updateDepartmentRateLimit = createRateLimitMiddleware({
+  keyPrefix: 'departments:update',
+  windowMs: 60_000,
+  maxRequests: 40,
+});
+
+const deleteDepartmentRateLimit = createRateLimitMiddleware({
+  keyPrefix: 'departments:delete',
+  windowMs: 60_000,
+  maxRequests: 20,
+});
+
 export function createEmployeeRouter(): Router {
-  const repository = new EmployeeRepository();
+  const departmentRepository = new DepartmentRepository();
   const roleRepository = new RoleRepository();
+  const repository = new EmployeeRepository({
+    findDepartmentById: (departmentId) => departmentRepository.findById(departmentId),
+    findRoleById: (roleId) => roleRepository.findById(roleId),
+  });
   const roleService = new RoleService(roleRepository);
-  const service = new EmployeeService(repository, roleService);
+  const departmentService = new DepartmentService(departmentRepository, repository);
+  const service = new EmployeeService(repository, roleService, departmentRepository);
   const controller = new EmployeeController(service);
+  const departmentController = new DepartmentController(departmentService);
   const roleController = new RoleController(roleService);
   const healthController = new HealthController('employee-service');
 
@@ -96,16 +132,21 @@ export function createEmployeeRouter(): Router {
   router.use('/api/v1', authenticate);
 
   router.post('/api/v1/employees', createEmployeeRateLimit, authorizeEmployeeAction('create'), controller.createEmployee);
+  router.post('/api/v1/departments', createDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.createDepartment);
   router.post('/api/v1/roles', createRoleRateLimit, authorizeEmployeeAction('createRole'), roleController.createRole);
   router.get('/api/v1/employees/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), controller.getEmployee);
   router.get('/api/v1/employees', listEmployeeRateLimit, authorizeEmployeeAction('list'), controller.listEmployees);
+  router.get('/api/v1/departments/:departmentId', readDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.getDepartment);
+  router.get('/api/v1/departments', listDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.listDepartments);
   router.get('/api/v1/roles/:roleId', readRoleRateLimit, authorizeEmployeeAction('readRole'), roleController.getRole);
   router.get('/api/v1/roles', readRoleRateLimit, authorizeEmployeeAction('listRoles'), roleController.listRoles);
   router.patch('/api/v1/employees/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), controller.updateEmployee);
+  router.patch('/api/v1/departments/:departmentId', updateDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.updateDepartment);
   router.patch('/api/v1/roles/:roleId', updateRoleRateLimit, authorizeEmployeeAction('updateRole'), roleController.updateRole);
   router.patch('/api/v1/employees/:employeeId/department', updateEmployeeRateLimit, authorizeEmployeeAction('manageDepartment'), controller.assignDepartment);
   router.patch('/api/v1/employees/:employeeId/status', updateEmployeeRateLimit, authorizeEmployeeAction('manageStatus'), controller.updateStatus);
   router.delete('/api/v1/employees/:employeeId', deleteEmployeeRateLimit, authorizeEmployeeAction('delete'), controller.deleteEmployee);
+  router.delete('/api/v1/departments/:departmentId', deleteDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.deleteDepartment);
   router.delete('/api/v1/roles/:roleId', updateRoleRateLimit, authorizeEmployeeAction('deleteRole'), roleController.deleteRole);
 
   return router;

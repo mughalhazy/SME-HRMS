@@ -3,7 +3,7 @@ import { ApiError, sendApiError } from '../../middleware/error-handler';
 import { getStructuredLogger } from '../../middleware/logger';
 import { DEPARTMENT_STATUSES } from './department.model';
 import { DepartmentService } from './department.service';
-import { ConflictError, NotFoundError } from './employee.service';
+import { ConflictError, NotFoundError } from './service.errors';
 import { ValidationError } from './employee.validation';
 import { AuthContext } from './rbac.middleware';
 

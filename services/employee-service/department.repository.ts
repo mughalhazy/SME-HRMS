@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, PaginatedResult, QueryOptimizer, applyCursorPagination } from '../../db/optimization';
 import { CreateDepartmentInput, Department, DepartmentFilters, DepartmentStatus, UpdateDepartmentInput } from './department.model';
+import { seedDepartments } from './domain-seed';
 
 const DEPARTMENT_CACHE_PREFIX = 'departments';
 
@@ -15,6 +16,21 @@ export class DepartmentRepository {
   private readonly cache = new CacheService({ ttlMs: 15_000, maxEntries: 1_000 });
   private readonly pool = new ConnectionPool(16);
   private readonly optimizer = new QueryOptimizer(10);
+
+  constructor(seedData: Department[] = seedDepartments()) {
+    for (const department of seedData) {
+      this.departments.set(department.department_id, { ...department });
+      this.nameIndex.set(department.name, department.department_id);
+      this.codeIndex.set(department.code, department.department_id);
+      this.addToIndex(this.statusIndex, department.status, department.department_id);
+      if (department.parent_department_id) {
+        this.addToIndex(this.parentDepartmentIndex, department.parent_department_id, department.department_id);
+      }
+      if (department.head_employee_id) {
+        this.headEmployeeIndex.set(department.head_employee_id, department.department_id);
+      }
+    }
+  }
 
   create(input: CreateDepartmentInput): Department {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.create' }, () => {
