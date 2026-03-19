@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+# Start all backend services in background (all share common_service.py)
+PORT=8001 SERVICE_NAME=employee-service     python /app/common_service.py &
+PORT=8002 SERVICE_NAME=attendance-service   python /app/common_service.py &
+PORT=8003 SERVICE_NAME=leave-service        python /app/common_service.py &
+PORT=8004 SERVICE_NAME=payroll-service      python /app/common_service.py &
+PORT=8005 SERVICE_NAME=hiring-service       python /app/common_service.py &
+PORT=8006 SERVICE_NAME=auth-service         python /app/common_service.py &
+PORT=8007 SERVICE_NAME=notification-service python /app/common_service.py &
+
+# Wait briefly for services to bind their ports
+sleep 2
+
+# Start API gateway in foreground (keeps container alive)
+PORT=8000 python /app/api_gateway_service.py
