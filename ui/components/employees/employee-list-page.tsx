@@ -19,8 +19,6 @@ import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
 
-type QuickStatus = 'all' | 'active' | 'inactive'
-
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value))
 }
@@ -50,32 +48,20 @@ function statusTone(status: Employee['status']) {
   return variants[status]
 }
 
-function matchesQuickStatus(employee: Employee, quickStatus: QuickStatus) {
-  if (quickStatus === 'active') {
-    return employee.status === 'Active'
-  }
-
-  if (quickStatus === 'inactive') {
-    return employee.status !== 'Active'
-  }
-
-  return true
-}
-
 function DirectoryLoadingState() {
   return (
     <section className="min-w-0 border-t border-slate-200">
-      <div className="grid gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto]">
+      <div className="grid gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-[minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto_auto_auto]">
         <span>Employee</span>
         <span>Department</span>
         <span>Role</span>
         <span>Status</span>
-        <span>Join date</span>
+        <span>Start date</span>
         <span className="text-right">Actions</span>
       </div>
       <div className="divide-y divide-slate-100">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="grid gap-3 px-4 py-3.5 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] md:items-center">
+          <div key={index} className="grid gap-3 px-4 py-3.5 md:grid-cols-[minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto_auto_auto] md:items-center">
             <div className="flex items-center gap-3">
               <Skeleton className="h-9 w-9 rounded-full" />
               <div className="space-y-2">
@@ -104,7 +90,6 @@ export function EmployeeListPage() {
   const [status, setStatus] = useState<(typeof EMPLOYEE_STATUSES)[number] | 'all'>('all')
   const [departmentId, setDepartmentId] = useState('all')
   const [roleId, setRoleId] = useState('all')
-  const [quickStatus, setQuickStatus] = useState<QuickStatus>('all')
 
   const query = useInfiniteQuery({
     queryKey: ['employees-directory'],
@@ -154,128 +139,102 @@ export function EmployeeListPage() {
       const matchesDepartment = departmentId === 'all' || employee.department_id === departmentId
       const matchesRole = roleId === 'all' || employee.role_id === roleId
 
-      return matchesSearch && matchesStatusFilter && matchesDepartment && matchesRole && matchesQuickStatus(employee, quickStatus)
+      return matchesSearch && matchesStatusFilter && matchesDepartment && matchesRole
     })
-  }, [departmentId, employees, quickStatus, roleId, search, status])
+  }, [departmentId, employees, roleId, search, status])
 
-  const activeEmployeeCount = useMemo(() => employees.filter((employee) => employee.status === 'Active').length, [employees])
-  const inactiveEmployeeCount = useMemo(() => employees.filter((employee) => employee.status !== 'Active').length, [employees])
-  const hasActiveFilters = search.length > 0 || status !== 'all' || departmentId !== 'all' || roleId !== 'all' || quickStatus !== 'all'
+  const hasActiveFilters = search.length > 0 || status !== 'all' || departmentId !== 'all' || roleId !== 'all'
+  const directoryCountLabel = `${filteredEmployees.length} ${filteredEmployees.length === 1 ? 'employee' : 'employees'}`
 
   const resetFilters = () => {
     setSearch('')
     setStatus('all')
     setDepartmentId('all')
     setRoleId('all')
-    setQuickStatus('all')
   }
 
   return (
-    <PageStack className="gap-4">
-      <section className="space-y-4 border-b border-slate-200 pb-4">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)_auto] xl:items-center">
-          <div className="min-w-0">
+    <PageStack className="gap-6">
+      <section className="space-y-6 border-b border-slate-200 pb-6">
+        <div className="grid gap-4 xl:grid-cols-12 xl:items-center">
+          <div className="min-w-0 xl:col-span-3">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Employees</h1>
             <p className="mt-1 text-sm text-slate-500">
-              <span className="font-medium text-slate-900">{filteredEmployees.length}</span>
-              <span className="ml-1">employees</span>
+              <span className="font-medium text-slate-900">{directoryCountLabel}</span>
+              <span className="ml-1">in directory</span>
             </p>
           </div>
 
-          <label className="relative block">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <label className="relative block xl:col-span-6">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
-              className="h-12 w-full rounded-full border-slate-200 bg-white pl-11 pr-4 text-sm shadow-none"
-              placeholder="Search employees..."
+              className="h-11 border-slate-200 bg-white pl-10"
+              placeholder="Search by name, employee number, email, department, or role"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
 
-          <Button asChild className="justify-self-start xl:justify-self-end">
-            <Link href="/employees/new">
-              <UserPlus className="h-4 w-4" />
-              Add employee
-            </Link>
-          </Button>
+          <div className="xl:col-span-3 xl:justify-self-end">
+            <Button asChild className="h-11 w-full xl:w-auto">
+              <Link href="/employees/new">
+                <UserPlus className="h-4 w-4" />
+                Add employee
+              </Link>
+            </Button>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:grid-cols-[220px_220px_220px_auto] xl:items-center">
-            <Select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
-              <option value="all">All departments</option>
-              {departmentOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
+        <div className="grid gap-3 lg:grid-cols-12 lg:items-center">
+          <Select className="h-10 lg:col-span-3" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
+            <option value="all">All departments</option>
+            {departmentOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </Select>
 
-            <Select value={roleId} onChange={(event) => setRoleId(event.target.value)}>
-              <option value="all">All roles</option>
-              {roleOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
+          <Select className="h-10 lg:col-span-3" value={roleId} onChange={(event) => setRoleId(event.target.value)}>
+            <option value="all">All roles</option>
+            {roleOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </Select>
 
-            <Select value={status} onChange={(event) => setStatus(event.target.value as (typeof EMPLOYEE_STATUSES)[number] | 'all')}>
-              <option value="all">All statuses</option>
-              {EMPLOYEE_STATUSES.map((option) => (
-                <option key={option} value={option}>
-                  {formatStatus(option)}
-                </option>
-              ))}
-            </Select>
+          <Select className="h-10 lg:col-span-3" value={status} onChange={(event) => setStatus(event.target.value as (typeof EMPLOYEE_STATUSES)[number] | 'all')}>
+            <option value="all">All statuses</option>
+            {EMPLOYEE_STATUSES.map((option) => (
+              <option key={option} value={option}>
+                {formatStatus(option)}
+              </option>
+            ))}
+          </Select>
 
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              {([
-                { value: 'all', label: 'All', count: employees.length },
-                { value: 'active', label: 'Active', count: activeEmployeeCount },
-                { value: 'inactive', label: 'Inactive', count: inactiveEmployeeCount },
-              ] as const).map((option) => {
-                const isActive = quickStatus === option.value
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      'inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors',
-                      isActive ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950',
-                    )}
-                    onClick={() => setQuickStatus(option.value)}
-                  >
-                    <span>{option.label}</span>
-                    <span className={cn('text-xs', isActive ? 'text-slate-200' : 'text-slate-400')}>{option.count}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span>
-                Showing <span className="font-medium text-slate-950">{filteredEmployees.length}</span> of{' '}
-                <span className="font-medium text-slate-950">{employees.length}</span> loaded employees
-              </span>
-              {query.isFetching ? <InlineLoading label="Updating directory" /> : null}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {hasActiveFilters ? (
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-slate-600" onClick={resetFilters}>
-                  Clear filters
-                </Button>
-              ) : null}
-              <Button variant="ghost" size="sm" className="h-8 px-2.5 text-slate-600" onClick={() => query.refetch()} disabled={query.isFetching}>
-                <RefreshCw className={cn('h-4 w-4', query.isFetching ? 'animate-spin' : '')} />
-                Refresh
+          <div className="flex flex-wrap items-center gap-3 lg:col-span-3 lg:justify-end">
+            {hasActiveFilters ? (
+              <Button variant="ghost" size="sm" className="h-10 px-3 text-slate-600" onClick={resetFilters}>
+                Clear filters
               </Button>
-            </div>
+            ) : null}
+            <Button variant="ghost" size="sm" className="h-10 px-3 text-slate-600" onClick={() => query.refetch()} disabled={query.isFetching}>
+              <RefreshCw className={cn('h-4 w-4', query.isFetching ? 'animate-spin' : '')} />
+              Refresh
+            </Button>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <span>
+              Showing <span className="font-medium text-slate-950">{filteredEmployees.length}</span> of{' '}
+              <span className="font-medium text-slate-950">{employees.length}</span> loaded employees
+            </span>
+            {query.isFetching ? <InlineLoading label="Updating directory" /> : null}
+          </div>
+          <span>{hasActiveFilters ? 'Filtered view' : 'All loaded records'}</span>
         </div>
       </section>
 
@@ -292,15 +251,15 @@ export function EmployeeListPage() {
               </div>
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-                  {employees.length === 0 ? 'No employees yet' : 'No employees match the current filters'}
+                  {employees.length === 0 ? 'No employees yet' : 'No employees match this search'}
                 </h2>
                 <p className="text-sm leading-6 text-slate-500">
                   {employees.length === 0
                     ? 'Add the first employee to start building the directory.'
-                    : 'Try a broader search or clear filters to see more employees.'}
+                    : 'Try a broader search or adjust the filters to see more employees.'}
                 </p>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
                 {employees.length === 0 ? (
                   <Button asChild>
                     <Link href="/employees/new">
@@ -319,14 +278,14 @@ export function EmployeeListPage() {
         ) : (
           <div className="min-w-0 border-t border-slate-200">
             <Table className="table-fixed">
-              <TableHeader className="bg-slate-50/80 backdrop-blur-none">
+              <TableHeader className="bg-slate-50/80">
                 <TableRow className="h-auto border-b border-slate-200 bg-transparent hover:bg-transparent hover:shadow-none">
                   <TableHead className="w-[34%] px-4 py-3">Employee</TableHead>
-                  <TableHead className="w-[16%] px-4 py-3">Department</TableHead>
-                  <TableHead className="w-[16%] px-4 py-3">Role</TableHead>
+                  <TableHead className="w-[18%] px-4 py-3">Department</TableHead>
+                  <TableHead className="w-[18%] px-4 py-3">Role</TableHead>
                   <TableHead className="w-[12%] px-4 py-3">Status</TableHead>
-                  <TableHead className="w-[12%] px-4 py-3">Join date</TableHead>
-                  <TableHead className="w-[10%] px-4 py-3 text-right">Actions</TableHead>
+                  <TableHead className="w-[12%] px-4 py-3">Start date</TableHead>
+                  <TableHead className="w-[6%] px-4 py-3 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="[&_tr:nth-child(even)]:bg-transparent">
@@ -343,12 +302,12 @@ export function EmployeeListPage() {
                     }}
                     tabIndex={0}
                   >
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="px-4 py-3.5">
                       <div className="flex min-w-0 items-center gap-3">
                         <Avatar className="h-9 w-9 border-slate-200 shadow-none">
                           <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-700">{getInitials(employee)}</AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0">
+                        <div className="min-w-0 space-y-1">
                           <div className="truncate text-sm font-medium text-slate-950">{getEmployeeFullName(employee)}</div>
                           <div className="truncate text-xs text-slate-500">
                             {employee.employee_number} · {employee.email}
@@ -356,15 +315,15 @@ export function EmployeeListPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-slate-600">{employee.department_id}</TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-slate-600">{employee.role_id}</TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{employee.department_id}</TableCell>
+                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{employee.role_id}</TableCell>
+                    <TableCell className="px-4 py-3.5">
                       <Badge variant="outline" className={cn('font-medium', statusTone(employee.status))}>
                         {formatStatus(employee.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-slate-600">{formatDate(employee.hire_date)}</TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{formatDate(employee.hire_date)}</TableCell>
+                    <TableCell className="px-4 py-3.5">
                       <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                         <Button
                           asChild
