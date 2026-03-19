@@ -3,6 +3,10 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# Install postgresql-client for running migrations
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt ./
@@ -12,6 +16,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY resilience.py ./
 COPY docker/api_gateway_service.py ./
 COPY docker/common_service.py ./
+
+# Copy migration files
+COPY deployment/config/postgres-init.sql ./migrations/postgres-init.sql
+COPY deployment/migrations/001_core_schema.sql ./migrations/001_core_schema.sql
+COPY deployment/migrations/002_workflow_schema.sql ./migrations/002_workflow_schema.sql
+
 COPY start.sh ./
 RUN chmod +x /app/start.sh
 
