@@ -285,6 +285,9 @@ class NotificationService:
         return template
 
     def get_or_create_preference(self, *, subject_type: str, subject_id: str, topic_code: str) -> NotificationPreference:
+        self._validate_subject_reference(subject_type=subject_type, subject_id=subject_id)
+        if not topic_code:
+            raise NotificationServiceError('VALIDATION_ERROR', 'topic_code is required', details=[{'field': 'topic_code', 'reason': 'must be a non-empty string'}])
         key = (subject_type, subject_id, topic_code)
         preference = self.preferences.get(key)
         if preference:
@@ -299,21 +302,39 @@ class NotificationService:
         return preference
 
     def update_preferences(self, *, subject_type: str, subject_id: str, topic_code: str, patch: dict[str, Any]) -> NotificationPreference:
+        if not isinstance(patch, dict):
+            raise NotificationServiceError('VALIDATION_ERROR', 'Preference patch must be an object')
         preference = self.get_or_create_preference(subject_type=subject_type, subject_id=subject_id, topic_code=topic_code)
         allowed = {"email_enabled", "sms_enabled", "push_enabled", "in_app_enabled", "quiet_hours"}
         unknown = sorted(set(patch).difference(allowed))
         if unknown:
             raise NotificationServiceError("VALIDATION_ERROR", "Unknown preference fields", details=[{"field": field, "reason": "is not supported"} for field in unknown])
+        details: list[dict[str, Any]] = []
+        for field_name in {'email_enabled', 'sms_enabled', 'push_enabled', 'in_app_enabled'}:
+            if field_name in patch and not isinstance(patch[field_name], bool):
+                details.append({'field': field_name, 'reason': 'must be a boolean'})
+        if 'quiet_hours' in patch and patch['quiet_hours'] is not None and not isinstance(patch['quiet_hours'], dict):
+            details.append({'field': 'quiet_hours', 'reason': 'must be an object when provided'})
+        if details:
+            raise NotificationServiceError('VALIDATION_ERROR', 'Preference patch is invalid', details=details)
         for field_name, value in patch.items():
             setattr(preference, field_name, value)
         preference.updated_at = self._now()
         return preference
 
     def get_preferences(self, *, subject_type: str, subject_id: str, topic_code: str | None = None) -> list[NotificationPreference]:
+        self._validate_subject_reference(subject_type=subject_type, subject_id=subject_id)
         rows = [pref for pref in self.preferences.values() if pref.subject_type == subject_type and pref.subject_id == subject_id]
         if topic_code is not None:
             rows = [pref for pref in rows if pref.topic_code == topic_code]
         return sorted(rows, key=lambda row: row.topic_code)
+
+    def _validate_subject_reference(self, *, subject_type: str, subject_id: str) -> None:
+        allowed_subject_types = {'Employee', 'Candidate', 'UserAccount', 'Service'}
+        if subject_type not in allowed_subject_types:
+            raise NotificationServiceError('VALIDATION_ERROR', 'subject_type is invalid', details=[{'field': 'subject_type', 'reason': 'must be one of: ' + ', '.join(sorted(allowed_subject_types))}])
+        if not isinstance(subject_id, str) or not subject_id.strip():
+            raise NotificationServiceError('VALIDATION_ERROR', 'subject_id is required', details=[{'field': 'subject_id', 'reason': 'must be a non-empty string'}])
 
     def ingest_event(self, event: dict[str, Any]) -> list[NotificationMessage]:
         event_name = str(event.get("event_name") or event.get("type") or "")
@@ -494,6 +515,8 @@ class NotificationService:
         channel: str | None = None,
     ) -> list[dict[str, Any]]:
         rows = list(self.messages.values())
+        if subject_id is not None and (not isinstance(subject_id, str) or not subject_id.strip()):
+            raise NotificationServiceError('VALIDATION_ERROR', 'subject_id filter is invalid', details=[{'field': 'subject_id', 'reason': 'must be a non-empty string'}])
         if subject_id is not None:
             rows = [row for row in rows if row.subject_id == subject_id]
         if status is not None:
@@ -504,6 +527,8 @@ class NotificationService:
         return [self._delivery_view(row) for row in rows]
 
     def get_inbox(self, *, subject_id: str, unread_only: bool = False) -> dict[str, Any]:
+        if not isinstance(subject_id, str) or not subject_id.strip():
+            raise NotificationServiceError('VALIDATION_ERROR', 'subject_id is required', details=[{'field': 'subject_id', 'reason': 'must be a non-empty string'}])
         rows = [
             row for row in self.messages.values()
             if row.subject_id == subject_id and row.channel == NotificationChannel.IN_APP
@@ -525,6 +550,8 @@ class NotificationService:
         }
 
     def mark_inbox_item_read(self, *, subject_id: str, message_id: str) -> NotificationMessage:
+        if not isinstance(subject_id, str) or not subject_id.strip():
+            raise NotificationServiceError('VALIDATION_ERROR', 'subject_id is required', details=[{'field': 'subject_id', 'reason': 'must be a non-empty string'}])
         message = self.get_message(message_id)
         if message.subject_id != subject_id or message.channel != NotificationChannel.IN_APP:
             raise NotificationServiceError("FORBIDDEN", "Inbox item does not belong to subject")

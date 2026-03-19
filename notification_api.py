@@ -90,9 +90,9 @@ def patch_notification_preferences(service: NotificationService, subject_id: str
 def get_notification_delivery(service: NotificationService, query: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
     params = query or {}
     rows = service.list_delivery(
-        subject_id=str(params["subject_id"]) if params.get("subject_id") else None,
-        status=str(params["status"]) if params.get("status") else None,
-        channel=str(params["channel"]) if params.get("channel") else None,
+        subject_id=str(params["subject_id"]) if "subject_id" in params else None,
+        status=str(params["status"]) if "status" in params else None,
+        channel=str(params["channel"]) if "channel" in params else None,
     )
     return 200, {"data": rows}
 

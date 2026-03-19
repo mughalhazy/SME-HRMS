@@ -23,7 +23,37 @@ export class SettingsController {
 
   getSettings = (req: Request, res: Response): void => {
     try {
-      res.status(200).json({ read_models: this.settingsService.getSettingsReadModels() });
+      res.status(200).json({
+        data: this.settingsService.getSettingsConfiguration(),
+        read_models: this.settingsService.getSettingsReadModels(),
+      });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
+  getAttendanceRule = (req: Request, res: Response): void => {
+    try {
+      const data = this.settingsService.getAttendanceRuleById(req.params.attendanceRuleId);
+      res.status(200).json({ data, read_models: this.settingsService.getSettingsReadModels() });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
+  getLeavePolicy = (req: Request, res: Response): void => {
+    try {
+      const data = this.settingsService.getLeavePolicyById(req.params.leavePolicyId);
+      res.status(200).json({ data, read_models: this.settingsService.getSettingsReadModels() });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
+  getPayrollSettings = (req: Request, res: Response): void => {
+    try {
+      const data = this.settingsService.getPayrollSettings();
+      res.status(200).json({ data, read_models: this.settingsService.getSettingsReadModels() });
     } catch (error) {
       this.handleError(req, res, error);
     }

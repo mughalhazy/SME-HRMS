@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from time import perf_counter
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from service import AuthService, AuthServiceError
 
@@ -111,6 +111,7 @@ def get_auth_me(service: AuthService, authorization_header: str | None, trace_id
     try:
         principal = service.authenticate_token(token)
         service.observability.track('get_auth_me', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'role': principal.role})
+        session = service.get_current_session(token)
         return (
             200,
             {
@@ -119,6 +120,8 @@ def get_auth_me(service: AuthService, authorization_header: str | None, trace_id
                     'employee_id': str(principal.employee_id) if principal.employee_id else None,
                     'role': principal.role,
                     'department_id': str(principal.department_id) if principal.department_id else None,
+                    'session_id': session['session_id'],
+                    'session_status': session['status'],
                 }
             },
         )
@@ -140,3 +143,72 @@ def _error_response(code: str, message: str, *, details: list | None = None, tra
             }
         },
     )
+
+
+def get_auth_session(service: AuthService, authorization_header: str | None, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    if not authorization_header or not authorization_header.startswith('Bearer '):
+        service.observability.track('get_auth_session', trace_id=trace_id, started_at=started, success=False, context={'status': 401, 'code': 'TOKEN_INVALID'})
+        return _error_response('TOKEN_INVALID', 'Missing bearer token', trace_id=trace_id)
+
+    token = authorization_header.split(' ', 1)[1]
+    try:
+        data = service.get_current_session(token)
+        service.observability.track('get_auth_session', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'session_id': data['session_id']})
+        return 200, {'data': data}
+    except AuthServiceError as exc:
+        service.observability.logger.error('auth.session_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details})
+        service.observability.track('get_auth_session', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
+        return _error_response(exc.code, exc.message, details=exc.details, trace_id=trace_id)
+
+
+def get_auth_sessions(service: AuthService, query: dict | None = None, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    params = query or {}
+    user_id = params.get('user_id')
+    status = params.get('status')
+
+    parsed_user_id = None
+    if user_id is not None:
+        if not isinstance(user_id, str) or not user_id:
+            service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=False, context={'status': 422, 'code': 'VALIDATION_ERROR'})
+            return _error_response('VALIDATION_ERROR', 'user_id must be a non-empty UUID string', details=[{'field': 'user_id', 'reason': 'must be a non-empty UUID string'}], trace_id=trace_id)
+        try:
+            parsed_user_id = UUID(user_id)
+        except ValueError:
+            service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=False, context={'status': 422, 'code': 'VALIDATION_ERROR'})
+            return _error_response('VALIDATION_ERROR', 'user_id must be a valid UUID', details=[{'field': 'user_id', 'reason': 'must be a valid UUID'}], trace_id=trace_id)
+
+    if status is not None and (not isinstance(status, str) or not status):
+        service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=False, context={'status': 422, 'code': 'VALIDATION_ERROR'})
+        return _error_response('VALIDATION_ERROR', 'status must be a non-empty string', details=[{'field': 'status', 'reason': 'must be a non-empty string'}], trace_id=trace_id)
+
+    try:
+        data = service.list_sessions(user_id=parsed_user_id, status=status)
+        service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'count': len(data)})
+        return 200, {'data': data}
+    except AuthServiceError as exc:
+        service.observability.logger.error('auth.sessions_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details})
+        service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
+        return _error_response(exc.code, exc.message, details=exc.details, trace_id=trace_id)
+
+
+def post_auth_session_revoke(service: AuthService, session_id: str, payload: dict | None = None, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    actor = payload.get('actor') if isinstance(payload, dict) else None
+
+    if not isinstance(session_id, str) or not session_id:
+        service.observability.track('post_auth_session_revoke', trace_id=trace_id, started_at=started, success=False, context={'status': 422, 'code': 'VALIDATION_ERROR'})
+        return _error_response('VALIDATION_ERROR', 'session_id is required', details=[{'field': 'session_id', 'reason': 'must be a non-empty string'}], trace_id=trace_id)
+
+    try:
+        data = service.revoke_session(session_id, actor=actor if isinstance(actor, str) and actor else None)
+        service.observability.track('post_auth_session_revoke', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'session_id': session_id})
+        return 200, {'data': data}
+    except AuthServiceError as exc:
+        service.observability.logger.error('auth.revoke_session_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details, 'session_id': session_id})
+        service.observability.track('post_auth_session_revoke', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
+        return _error_response(exc.code, exc.message, details=exc.details, trace_id=trace_id)

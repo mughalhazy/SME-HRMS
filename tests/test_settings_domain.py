@@ -155,6 +155,12 @@ assert.equal(readModels.settings_configuration_view.leave_policies.length, 2);
 assert.equal(readModels.settings_configuration_view.payroll_settings.pay_schedule, 'Monthly');
 assert.match(readModels.settings_configuration_view.leave_policies[0].entitlement_summary, /days\/year/);
 
+const settingsConfiguration = service.getSettingsConfiguration();
+assert.equal(settingsConfiguration.attendance_rules[0].attendance_rule_id, attendanceRule.attendance_rule_id);
+assert.equal(service.getAttendanceRuleById(attendanceRule.attendance_rule_id).code, 'HQ-GENERAL');
+assert.equal(service.getLeavePolicyById(annualPolicy.leave_policy_id).code, 'ANNUAL-STD');
+assert.equal(service.getPayrollSettings().payroll_setting_id, payroll.payroll_setting_id);
+
 assert.throws(() => service.getAttendanceRuleById('missing-rule'), NotFoundError);
 assert.throws(() => service.getLeavePolicyById('missing-policy'), NotFoundError);
 """
