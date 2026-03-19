@@ -25,7 +25,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
 
     if (isAuthenticated && isPublic) {
-      router.replace('/')
+      router.replace('/dashboard')
     }
   }, [isAuthenticated, isReady, pathname, router])
 

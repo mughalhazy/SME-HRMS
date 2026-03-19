@@ -30,7 +30,7 @@ export function LoginForm() {
 
     try {
       await login({ username, password })
-      router.replace('/')
+      router.replace('/dashboard')
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : 'Unable to sign in at the moment.')
     } finally {
