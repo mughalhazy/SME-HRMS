@@ -9,12 +9,14 @@ WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
     assert 'description TEXT' in CORE_SCHEMA
+    assert 'parent_department_id UUID' in CORE_SCHEMA
     assert 'head_employee_id UUID' in CORE_SCHEMA
     assert 'first_name VARCHAR(100) NOT NULL' in CORE_SCHEMA
     assert 'last_name VARCHAR(100) NOT NULL' in CORE_SCHEMA
     assert 'hire_date DATE NOT NULL' in CORE_SCHEMA
     assert 'employment_type VARCHAR(20) NOT NULL' in CORE_SCHEMA
     assert 'manager_employee_id UUID' in CORE_SCHEMA
+    assert 'fk_departments_parent_department' in CORE_SCHEMA
     assert 'fk_departments_head_employee' in CORE_SCHEMA
 
 

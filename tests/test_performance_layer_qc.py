@@ -40,3 +40,13 @@ def test_payload_and_cursor_validation_are_enforced() -> None:
     assert 'PAYLOAD_TOO_LARGE' in validation
     assert 'applyCursorPagination' in db_optimization
     assert 'ConnectionPool' in db_optimization
+
+
+def test_department_repository_and_routes_cover_relationship_qc() -> None:
+    repository = read('services/employee-service/department.repository.ts')
+    service = read('services/employee-service/department.service.ts')
+    routes = read('services/employee-service/employee.routes.ts')
+    for token in ['parentDepartmentIndex', 'headEmployeeIndex', 'countByDepartmentId', 'hasChildren']:
+        assert token in repository or token in service
+    for token in ['/api/v1/departments', 'createDepartmentRateLimit', 'deleteDepartmentRateLimit']:
+        assert token in routes

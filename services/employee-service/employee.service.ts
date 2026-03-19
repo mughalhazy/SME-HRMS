@@ -6,6 +6,7 @@ import {
   EmployeeStatus,
   UpdateEmployeeInput,
 } from './employee.model';
+import { DepartmentRepository } from './department.repository';
 import { EmployeeRepository } from './employee.repository';
 import { validateCreateEmployee, validateStatus, validateUpdateEmployee, ValidationError } from './employee.validation';
 import { RoleService } from './role.service';
@@ -112,8 +113,9 @@ export class EmployeeService {
       throw new ValidationError([{ field: 'department_id', reason: 'must be a non-empty string' }]);
     }
 
-    const existing = this.getEmployeeById(employeeId);
-    this.ensureDepartmentAndRoleAreAssignable(departmentId, existing.role_id);
+    if (!this.departmentRepository.findById(departmentId)) {
+      throw new ValidationError([{ field: 'department_id', reason: 'department was not found' }]);
+    }
 
     const updated = this.repository.updateDepartment(employeeId, departmentId);
 
