@@ -44,12 +44,26 @@ def _invalid_payload(trace_id: str, message: str = "Invalid request payload.") -
     )
 
 
+def _parse_limit(params: dict) -> int | None:
+    limit = params.get("limit")
+    if limit is None:
+        return None
+    return int(limit)
+
+
+def _ensure_object(payload: dict, service: HiringService, operation: str, trace_id: str, started: float) -> tuple[int, dict] | None:
+    if isinstance(payload, dict):
+        return None
+    service.observability.track(operation, trace_id=trace_id, started_at=started, success=False, context={"status": 422})
+    return _invalid_payload(trace_id, "Request body must be an object")
+
+
 def post_job_postings(service: HiringService, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
     trace_id = trace_id or uuid4().hex
     started = perf_counter()
-    if not isinstance(payload, dict):
-        service.observability.track("post_job_postings", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
-        return _invalid_payload(trace_id, "Request body must be an object")
+    invalid = _ensure_object(payload, service, "post_job_postings", trace_id, started)
+    if invalid:
+        return invalid
     try:
         created = service.create_job_posting(payload)
         service.observability.track("post_job_postings", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
@@ -76,9 +90,7 @@ def get_job_postings(service: HiringService, query: dict | None = None, trace_id
     started = perf_counter()
     params = query or {}
     try:
-        limit = params.get("limit")
-        if limit is not None:
-            limit = int(limit)
+        limit = _parse_limit(params)
         rows = service.list_job_postings(
             status=params.get("status"),
             department_id=params.get("department_id"),
@@ -110,9 +122,9 @@ def get_job_postings(service: HiringService, query: dict | None = None, trace_id
 def patch_job_posting(service: HiringService, job_posting_id: str, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
     trace_id = trace_id or uuid4().hex
     started = perf_counter()
-    if not isinstance(payload, dict):
-        service.observability.track("patch_job_posting", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
-        return _invalid_payload(trace_id, "Request body must be an object")
+    invalid = _ensure_object(payload, service, "patch_job_posting", trace_id, started)
+    if invalid:
+        return invalid
     try:
         updated = service.update_job_posting(job_posting_id, payload)
         service.observability.track("patch_job_posting", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
@@ -131,4 +143,181 @@ def delete_job_posting(service: HiringService, job_posting_id: str, trace_id: st
         return 200, {"data": deleted}
     except HiringValidationError as exc:
         service.observability.track("delete_job_posting", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def post_candidates(service: HiringService, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    invalid = _ensure_object(payload, service, "post_candidates", trace_id, started)
+    if invalid:
+        return invalid
+    try:
+        created = service.create_candidate(payload)
+        service.observability.track("post_candidates", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
+        return 201, {"data": created}
+    except HiringValidationError as exc:
+        service.observability.track("post_candidates", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def post_candidates_import_linkedin(service: HiringService, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    invalid = _ensure_object(payload, service, "post_candidates_import_linkedin", trace_id, started)
+    if invalid:
+        return invalid
+    try:
+        imported = service.import_candidates_from_linkedin(payload)
+        service.observability.track("post_candidates_import_linkedin", trace_id=trace_id, started_at=started, success=True, context={"status": 201, "count": len(imported["imported"])})
+        return 201, {"data": imported}
+    except HiringValidationError as exc:
+        service.observability.track("post_candidates_import_linkedin", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def get_candidate(service: HiringService, candidate_id: str, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    try:
+        payload = service.get_candidate(candidate_id)
+        service.observability.track("get_candidate", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
+        return 200, {"data": payload}
+    except HiringValidationError as exc:
+        service.observability.track("get_candidate", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def get_candidates(service: HiringService, query: dict | None = None, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    params = query or {}
+    try:
+        limit = _parse_limit(params)
+        rows = service.list_candidates(
+            job_posting_id=params.get("job_posting_id"),
+            status=params.get("status"),
+            limit=limit,
+            cursor=params.get("cursor"),
+        )
+        next_cursor = rows[-1]["candidate_id"] if limit is not None and len(rows) == limit else None
+        service.observability.track("get_candidates", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "count": len(rows)})
+        return 200, {"data": rows, "pagination": {"limit": limit, "cursor": params.get("cursor"), "next_cursor": next_cursor, "count": len(rows)}}
+    except (TypeError, ValueError):
+        service.observability.track("get_candidates", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
+        return _invalid_payload(trace_id, "limit must be an integer")
+    except HiringValidationError as exc:
+        service.observability.track("get_candidates", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def patch_candidate(service: HiringService, candidate_id: str, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    invalid = _ensure_object(payload, service, "patch_candidate", trace_id, started)
+    if invalid:
+        return invalid
+    try:
+        updated = service.update_candidate(candidate_id, payload)
+        service.observability.track("patch_candidate", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
+        return 200, {"data": updated}
+    except HiringValidationError as exc:
+        service.observability.track("patch_candidate", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def get_candidate_pipeline(service: HiringService, query: dict | None = None, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    params = query or {}
+    try:
+        rows = service.list_candidate_pipeline_view(
+            pipeline_stage=params.get("pipeline_stage") or params.get("status"),
+            department_id=params.get("department_id"),
+            job_posting_id=params.get("job_posting_id"),
+        )
+        service.observability.track("get_candidate_pipeline", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "count": len(rows)})
+        return 200, {"data": rows, "count": len(rows)}
+    except HiringValidationError as exc:
+        service.observability.track("get_candidate_pipeline", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def post_interviews(service: HiringService, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    invalid = _ensure_object(payload, service, "post_interviews", trace_id, started)
+    if invalid:
+        return invalid
+    try:
+        created = service.create_interview(payload)
+        service.observability.track("post_interviews", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
+        return 201, {"data": created}
+    except HiringValidationError as exc:
+        service.observability.track("post_interviews", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def post_interviews_google_calendar(service: HiringService, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    invalid = _ensure_object(payload, service, "post_interviews_google_calendar", trace_id, started)
+    if invalid:
+        return invalid
+    try:
+        created = service.schedule_interview_with_google_calendar(payload)
+        service.observability.track("post_interviews_google_calendar", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
+        return 201, {"data": created}
+    except HiringValidationError as exc:
+        service.observability.track("post_interviews_google_calendar", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def get_interview(service: HiringService, interview_id: str, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    try:
+        payload = service.get_interview(interview_id)
+        service.observability.track("get_interview", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
+        return 200, {"data": payload}
+    except HiringValidationError as exc:
+        service.observability.track("get_interview", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def get_interviews(service: HiringService, query: dict | None = None, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    params = query or {}
+    try:
+        limit = _parse_limit(params)
+        rows = service.list_interviews(
+            candidate_id=params.get("candidate_id"),
+            status=params.get("status"),
+            limit=limit,
+            cursor=params.get("cursor"),
+        )
+        next_cursor = rows[-1]["interview_id"] if limit is not None and len(rows) == limit else None
+        service.observability.track("get_interviews", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "count": len(rows)})
+        return 200, {"data": rows, "pagination": {"limit": limit, "cursor": params.get("cursor"), "next_cursor": next_cursor, "count": len(rows)}}
+    except (TypeError, ValueError):
+        service.observability.track("get_interviews", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
+        return _invalid_payload(trace_id, "limit must be an integer")
+    except HiringValidationError as exc:
+        service.observability.track("get_interviews", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
+
+
+def patch_interview(service: HiringService, interview_id: str, payload: dict, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    invalid = _ensure_object(payload, service, "patch_interview", trace_id, started)
+    if invalid:
+        return invalid
+    try:
+        updated = service.update_interview(interview_id, payload)
+        service.observability.track("patch_interview", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
+        return 200, {"data": updated}
+    except HiringValidationError as exc:
+        service.observability.track("patch_interview", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)

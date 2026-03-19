@@ -10,15 +10,20 @@ Canonical implementation notes for `hiring-service`, aligned to the domain, work
 ## HTTP surface (`/api/v1`)
 - `POST /api/v1/hiring/job-postings`
 - `PATCH /api/v1/hiring/job-postings/{job_posting_id}`
+- `GET /api/v1/hiring/job-postings/{job_posting_id}`
 - `GET /api/v1/hiring/job-postings?status=&department_id=&limit=&cursor=`
 - `POST /api/v1/hiring/candidates`
+- `POST /api/v1/hiring/candidates/import/linkedin` — import candidates into a posting from LinkedIn payloads.
 - `PATCH /api/v1/hiring/candidates/{candidate_id}`
 - `GET /api/v1/hiring/candidates/{candidate_id}`
+- `GET /api/v1/hiring/candidates?job_posting_id=&status=&limit=&cursor=`
+- `GET /api/v1/hiring/candidate-pipeline?pipeline_stage=&department_id=&job_posting_id=`
 - `POST /api/v1/hiring/interviews`
 - `POST /api/v1/hiring/interviews/google-calendar` — schedule interview + sync to Google Calendar.
 - `PATCH /api/v1/hiring/interviews/{interview_id}`
+- `GET /api/v1/hiring/interviews/{interview_id}`
+- `GET /api/v1/hiring/interviews?candidate_id=&status=&limit=&cursor=`
 - `POST /api/v1/hiring/candidates/{candidate_id}/mark-hired`
-- `POST /api/v1/hiring/candidates/import/linkedin` — import candidates into a posting from LinkedIn payloads.
 
 ## Authorization capabilities
 - `CAP-HIR-001`: manage job postings.
@@ -26,8 +31,10 @@ Canonical implementation notes for `hiring-service`, aligned to the domain, work
 
 ## Domain rules implemented in code
 - Job postings validate `employment_type`, date boundaries, openings count, and status.
-- Candidates enforce unique `(job_posting_id, email)`, retain external source metadata, and persist stage transition history.
-- Interviews enforce schedule boundaries and enum integrity, with optional Google Calendar sync metadata (`google_calendar_event_id`, `google_calendar_event_link`).
+- Candidates enforce existing job posting linkage, unique `(job_posting_id, email)`, initial `Applied` stage, stage transition history, and query support by posting/stage.
+- Interviews enforce candidate linkage, schedule boundaries, enum integrity, and query support by candidate, with optional Google Calendar sync metadata (`google_calendar_event_id`, `google_calendar_event_link`).
+- Candidate detail payloads hydrate linked job posting, stage history, and interviews.
+- Interview detail payloads hydrate linked candidate summary.
 - LinkedIn import maps source identifiers/profile URLs and records provider-specific import events.
 - Candidate hire finalization allowed only from `Offered` stage.
 
