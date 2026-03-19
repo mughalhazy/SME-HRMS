@@ -1,10 +1,5 @@
-import { EnterpriseDashboard } from '@/components/dashboard/enterprise-dashboard'
-import { AppShell } from '@/components/shared/app-shell'
+import { Dashboard } from '@/components/dashboard/Dashboard'
 
 export default function HomePage() {
-  return (
-    <AppShell currentPath="/">
-      <EnterpriseDashboard />
-    </AppShell>
-  )
+  return <Dashboard />
 }
