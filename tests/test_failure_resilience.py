@@ -156,6 +156,10 @@ class FailureResilienceTests(unittest.TestCase):
         self.assertEqual(payload['data']['processed_count'], 1)
         self.assertEqual(payload['data']['failed_count'], 1)
         self.assertEqual(len(service.dead_letters.entries), 1)
+        self.assertEqual(payload['data']['batch']['status'], 'PartialFailure')
+        validation_code, validation_payload = service.validate_batch_processing(payload['data']['batch']['batch_id'], admin)
+        self.assertEqual(validation_code, 200)
+        self.assertTrue(validation_payload['data']['validation']['consistent'])
 
     def test_hiring_calendar_sync_falls_back_to_manual_scheduling(self) -> None:
         service = HiringService()
