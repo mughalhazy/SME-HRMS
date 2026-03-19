@@ -324,6 +324,78 @@ class AttendanceService:
         )
         return {"periodId": period_id, "lockedCount": len(locked_ids)}
 
+    def sync_approved_leave(
+        self,
+        actor: Actor,
+        *,
+        employee_id: UUID,
+        from_date: date,
+        to_date: date,
+        leave_request_id: str,
+        leave_type: str,
+    ) -> list[AttendanceRecord]:
+        self._authorize_validate_and_lock(actor, employee_id)
+        if to_date < from_date:
+            raise AttendanceServiceError("DATE_RANGE_INVALID", "from_date must be on or before to_date")
+
+        records: list[AttendanceRecord] = []
+        current = from_date
+        while current <= to_date:
+            key = (employee_id, current)
+            attendance_id = self._employee_date_index.get(key)
+            if attendance_id is None:
+                record = self.create_record(
+                    actor,
+                    employee_id=employee_id,
+                    attendance_date=current,
+                    attendance_status=AttendanceStatus.ABSENT,
+                    source=AttendanceSource.API_IMPORT,
+                    correction_note=f"Approved leave: {leave_type} ({leave_request_id})",
+                )
+            else:
+                record = self._get_record(attendance_id)
+                if record.attendance_status in {AttendanceStatus.PRESENT, AttendanceStatus.LATE, AttendanceStatus.HALF_DAY} and record.total_hours:
+                    raise AttendanceServiceError(
+                        "ATTENDANCE_CONFLICT",
+                        "Cannot mark approved leave on a worked attendance date",
+                        [{"attendance_id": str(record.attendance_id), "attendance_date": current.isoformat()}],
+                    )
+                record.attendance_status = AttendanceStatus.ABSENT
+                record.source = AttendanceSource.API_IMPORT
+                record.check_in_time = None
+                record.check_out_time = None
+                record.correction_note = f"Approved leave: {leave_type} ({leave_request_id})"
+                self._normalize_record(record)
+                record.lifecycle_state = RecordState.APPROVED
+            records.append(record)
+            current = date.fromordinal(current.toordinal() + 1)
+
+        self.events.append(
+            {
+                "type": "AttendanceSyncedFromLeave",
+                "employee_id": str(employee_id),
+                "leave_request_id": leave_request_id,
+                "from_date": from_date.isoformat(),
+                "to_date": to_date.isoformat(),
+            }
+        )
+        return records
+
+    def get_employee_detail(self, actor: Actor, *, employee_id: UUID, period_start: date, period_end: date) -> dict:
+        employee = self._employee_directory.get(employee_id)
+        summary = self.get_summary(actor, employee_id=employee_id, period_start=period_start, period_end=period_end)
+        records = self.list_records(actor, employee_id=employee_id, from_date=period_start, to_date=period_end)
+        return {
+            "employee": {
+                "employeeId": str(employee.employee_id),
+                "status": employee.status,
+                "departmentId": str(employee.department_id),
+                "managerEmployeeId": str(employee.manager_employee_id) if employee.manager_employee_id else None,
+            },
+            "summary": summary,
+            "records": [self._record_payload(record) for record in records],
+        }
+
     def get_summary(self, actor: Actor, *, employee_id: UUID, period_start: date, period_end: date) -> dict:
         summary = self.aggregate_period(actor, employee_id=employee_id, from_date=period_start, to_date=period_end)
         return {
@@ -416,6 +488,22 @@ class AttendanceService:
                     "anomalies": [anomaly.value for anomaly in record.anomalies],
                 }
             )
+
+    @staticmethod
+    def _record_payload(record: AttendanceRecord) -> dict:
+        return {
+            "attendanceId": str(record.attendance_id),
+            "employeeId": str(record.employee_id),
+            "attendanceDate": record.attendance_date.isoformat(),
+            "attendanceStatus": record.attendance_status.value,
+            "source": record.source.value if record.source else None,
+            "checkInTime": record.check_in_time.isoformat() if record.check_in_time else None,
+            "checkOutTime": record.check_out_time.isoformat() if record.check_out_time else None,
+            "totalHours": str(record.total_hours) if record.total_hours is not None else None,
+            "lifecycleState": record.lifecycle_state.value,
+            "anomalies": [anomaly.value for anomaly in record.anomalies],
+            "correctionNote": record.correction_note,
+        }
 
     def _authorize_capture(self, actor: Actor, target_employee_id: UUID) -> None:
         if actor.role == "Admin":

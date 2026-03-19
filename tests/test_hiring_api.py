@@ -16,6 +16,7 @@ from services.hiring_service.api import (
     patch_interview,
     patch_job_posting,
     post_candidates,
+    post_candidate_hire,
     post_interviews,
     post_job_postings,
 )
@@ -202,6 +203,29 @@ class HiringApiTests(unittest.TestCase):
         )
         self.assertEqual(status, 404)
         self.assertEqual(invalid_interview["error"]["code"], "NOT_FOUND")
+
+    def test_candidate_hire_api_creates_employee_profile(self) -> None:
+        status, created_candidate = post_candidates(
+            self.service,
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Mia",
+                "last_name": "Hart",
+                "email": "mia@example.com",
+                "application_date": "2026-01-03",
+            },
+            trace_id="trace-candidate-create-hire",
+        )
+        self.assertEqual(status, 201)
+        candidate_id = created_candidate["data"]["candidate_id"]
+        patch_candidate(self.service, candidate_id, {"status": "Screening"}, trace_id="trace-screen")
+        patch_candidate(self.service, candidate_id, {"status": "Interviewing"}, trace_id="trace-interview")
+        patch_candidate(self.service, candidate_id, {"status": "Offered"}, trace_id="trace-offer")
+
+        status, hired = post_candidate_hire(self.service, candidate_id, {"employee_id": "emp-300"}, trace_id="trace-hire")
+        self.assertEqual(status, 200)
+        self.assertEqual(hired["data"]["employee_profile"]["employee_id"], "emp-300")
+        self.assertEqual(hired["data"]["status"], "Hired")
 
 
 if __name__ == "__main__":

@@ -438,6 +438,28 @@ class HiringServiceTest(unittest.TestCase):
                 }
             )
 
+    def test_mark_candidate_hired_creates_employee_profile(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Leah",
+                "last_name": "Ford",
+                "email": "leah@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Offered"})
+
+        hired = self.service.mark_candidate_hired(candidate["candidate_id"], {"employee_id": "emp-200", "hire_date": "2026-01-20"})
+
+        self.assertEqual(hired["status"], "Hired")
+        self.assertEqual(hired["employee_profile"]["employee_id"], "emp-200")
+        self.assertEqual(hired["employee_profile"]["department_id"], self.posting["department_id"])
+        self.assertEqual(hired["employee_profile"]["role_id"], self.posting["role_id"])
+        self.assertEqual(self.service.list_employee_profiles(candidate_id=candidate["candidate_id"])[0]["employee_id"], "emp-200")
+
 
 if __name__ == "__main__":
     unittest.main()

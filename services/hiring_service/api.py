@@ -321,3 +321,19 @@ def patch_interview(service: HiringService, interview_id: str, payload: dict, tr
     except HiringValidationError as exc:
         service.observability.track("patch_interview", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
+
+
+def post_candidate_hire(service: HiringService, candidate_id: str, payload: dict | None = None, trace_id: str | None = None) -> tuple[int, dict]:
+    trace_id = trace_id or uuid4().hex
+    started = perf_counter()
+    body = payload or {}
+    invalid = _ensure_object(body, service, "post_candidate_hire", trace_id, started)
+    if invalid:
+        return invalid
+    try:
+        hired = service.mark_candidate_hired(candidate_id, body)
+        service.observability.track("post_candidate_hire", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
+        return 200, {"data": hired}
+    except HiringValidationError as exc:
+        service.observability.track("post_candidate_hire", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
+        return _error_response(exc, trace_id=trace_id)
