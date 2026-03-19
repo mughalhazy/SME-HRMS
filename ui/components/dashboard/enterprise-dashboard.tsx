@@ -5,12 +5,12 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   CheckCircle2,
+  ChevronRight,
   CircleAlert,
   Clock3,
   DollarSign,
   FileCheck2,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   UserPlus,
   Users,
@@ -236,30 +236,36 @@ function statusBadge(status: TeamMember['status'] | ReviewItem['status']) {
 export function EnterpriseDashboard() {
   return (
     <PageStack className="animate-[page-enter_180ms_ease-out] gap-8">
-      <section className="grid gap-6 rounded-[1.75rem] bg-white px-6 py-6 shadow-sm ring-1 ring-slate-200/70 lg:grid-cols-[minmax(0,1.6fr)_auto] lg:items-start lg:px-8 lg:py-8">
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,1.8fr)_auto] lg:items-start">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <Badge>March workforce snapshot</Badge>
             <Badge variant="outline">Command center</Badge>
           </div>
-          <div className="space-y-3">
-            <h2 className="max-w-4xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-              Run workforce operations from one decision-ready HR command center.
+          <div className="space-y-4">
+            <h2 className="max-w-4xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+              Workforce command center for today&apos;s highest-impact decisions.
             </h2>
             <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              Scan workforce health, unblock approvals, and move payroll, hiring, and performance work forward without losing today&apos;s priorities.
+              Monitor workforce health, clear the approval queue, and keep payroll, hiring, and coverage priorities moving without losing operational context.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 lg:min-w-64 lg:items-end">
-          <Button className="w-full lg:w-auto">
-            <UserPlus className="h-4 w-4" />
-            Add employee
+        <div className="flex flex-col gap-3 lg:min-w-72 lg:items-stretch">
+          <Button size="lg" className="w-full justify-center lg:justify-between">
+            <span className="inline-flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Add employee
+            </span>
+            <ArrowRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" className="w-full justify-center lg:w-auto">
-            <FileCheck2 className="h-4 w-4" />
-            Review approvals
+          <Button variant="ghost" size="lg" className="w-full justify-center lg:justify-between">
+            <span className="inline-flex items-center gap-2">
+              <FileCheck2 className="h-4 w-4" />
+              Review approvals
+            </span>
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </section>
@@ -269,15 +275,15 @@ export function EnterpriseDashboard() {
           const Icon = metric.icon
 
           return (
-            <Card key={metric.title} className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70">
+            <Card key={metric.title} className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
               <CardContent className="flex h-full flex-col gap-4 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="rounded-xl bg-slate-100 p-2.5 text-slate-700">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="rounded-2xl bg-slate-100 p-2.5 text-slate-700">
                     <Icon className="h-5 w-5" />
                   </div>
                   <span className="text-xs font-medium text-slate-500">{metric.change}</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
                   <p className="text-sm font-medium text-slate-700">{metric.title}</p>
                   <p className="text-xs leading-5 text-slate-500">{metric.hint}</p>
@@ -288,13 +294,15 @@ export function EnterpriseDashboard() {
         })}
       </PageGrid>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(18rem,0.8fr)]">
-        <div className="space-y-4 rounded-[1.5rem] bg-white px-0 py-0 ring-1 ring-slate-200/70">
-          <div className="flex flex-col gap-4 border-b border-slate-200/80 px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(18rem,0.85fr)]">
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-500">Primary workspace</p>
               <h3 className="text-2xl font-semibold tracking-tight text-slate-950">Workforce overview</h3>
-              <p className="text-sm leading-6 text-slate-600">Track team coverage, role ownership, and employee status with a high-readability working view.</p>
+              <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                Review role ownership, coverage readiness, and employee status from one clear operating view.
+              </p>
             </div>
             <Button variant="outline">
               Open directory
@@ -302,7 +310,7 @@ export function EnterpriseDashboard() {
             </Button>
           </div>
 
-          <div className="px-0 pb-2">
+          <div className="overflow-hidden rounded-[1.5rem] bg-white shadow-sm ring-1 ring-slate-200/60">
             <Table>
               <TableHeader>
                 <TableRow className="border-slate-200/80">
@@ -331,44 +339,68 @@ export function EnterpriseDashboard() {
           </div>
         </div>
 
-        <Card className="border-0 bg-slate-950 text-white shadow-sm">
-          <CardHeader className="space-y-3 pb-2">
-            <div className="flex items-center justify-between gap-3">
+        <div className="rounded-[1.75rem] bg-slate-950 p-5 text-white shadow-sm">
+          <div className="space-y-2 border-b border-white/10 pb-4">
+            <p className="text-sm font-medium text-slate-300">Priority panel</p>
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <CardDescription className="text-slate-300">Priority panel</CardDescription>
-                <CardTitle className="text-2xl text-white">Today&apos;s priorities</CardTitle>
+                <h3 className="text-2xl font-semibold tracking-tight text-white">Today&apos;s priorities</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-300">
+                  Urgent approvals, staffing risks, and blocked work surfaced for immediate action.
+                </p>
               </div>
-              <Sparkles className="h-5 w-5 text-slate-200" />
+              <CircleAlert className="mt-1 h-5 w-5 text-slate-300" />
             </div>
-            <p className="text-sm leading-6 text-slate-300">Approval queue, urgent items, and operational blockers surfaced for immediate action.</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
+          </div>
+
+          <div className="mt-4 space-y-3">
             {priorities.map((item) => {
               const Icon = item.icon
 
               return (
-                <div key={item.title} className="rounded-2xl bg-white/8 p-4 ring-1 ring-white/10">
-                  <div className="flex items-start gap-3">
-                    <div className={`rounded-xl p-2.5 ${item.tone}`}>
-                      <Icon className="h-4 w-4" />
+                <div key={item.title} className="flex items-start gap-3 rounded-2xl bg-white/7 p-4 ring-1 ring-white/8">
+                  <div className={`rounded-xl p-2.5 ${item.tone}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-white">{item.title}</p>
+                      <p className="text-xs font-medium text-slate-400">{item.urgency}</p>
                     </div>
-                    <div className="min-w-0 space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-white">{item.title}</p>
-                        <span className="text-xs text-slate-400">{item.urgency}</span>
-                      </div>
-                      <p className="text-sm leading-6 text-slate-300">{item.description}</p>
-                    </div>
+                    <p className="text-sm leading-6 text-slate-300">{item.description}</p>
                   </div>
                 </div>
               )
             })}
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="mt-5 rounded-2xl bg-white/5 p-4 ring-1 ring-white/8">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-white">Approval queue</p>
+                <p className="text-xs text-slate-400">3 items need action this week</p>
+              </div>
+              <FileCheck2 className="h-4 w-4 text-slate-300" />
+            </div>
+            <div className="mt-3 space-y-3">
+              {reviews.map((review) => (
+                <div key={review.name} className="flex items-center justify-between gap-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white">{review.name}</p>
+                    <p className="text-xs text-slate-400">
+                      {review.manager} · Due {review.dueDate}
+                    </p>
+                  </div>
+                  {statusBadge(review.status)}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       <PageGrid className="gap-4 xl:grid-cols-3">
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70">
+        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
           <CardHeader className="pb-3">
             <CardDescription>Supporting data</CardDescription>
             <CardTitle className="text-lg">Team directory highlights</CardTitle>
@@ -383,7 +415,7 @@ export function EnterpriseDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70">
+        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
           <CardHeader className="pb-3">
             <CardDescription>Supporting data</CardDescription>
             <CardTitle className="text-lg">Leave queue</CardTitle>
@@ -407,7 +439,7 @@ export function EnterpriseDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70">
+        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
           <CardHeader className="pb-3">
             <CardDescription>Supporting data</CardDescription>
             <CardTitle className="text-lg">Performance snapshot</CardTitle>
@@ -440,70 +472,23 @@ export function EnterpriseDashboard() {
                 <div className="h-2 rounded-full bg-amber-500" style={{ width: '61%' }} />
               </div>
             </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <div className="flex items-start gap-3">
-                <TrendingUp className="mt-0.5 h-4 w-4 text-blue-700" />
-                <div>
-                  <p className="text-sm font-medium text-slate-900">Cycle momentum</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">13 reviews are ready for sign-off and 7 still need calibration alignment.</p>
-                </div>
+            <div className="flex gap-3 rounded-xl bg-slate-50 p-4">
+              <TrendingUp className="mt-0.5 h-4 w-4 text-blue-700" />
+              <div>
+                <p className="text-sm font-medium text-slate-900">Cycle momentum</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">13 reviews are ready for sign-off and 7 still need calibration alignment.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-xl bg-slate-50 p-4">
+              <CalendarClock className="mt-0.5 h-4 w-4 text-emerald-700" />
+              <div>
+                <p className="text-sm font-medium text-slate-900">Upcoming cycle lock</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">Managers should complete calibration notes before the April performance freeze.</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </PageGrid>
-
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70">
-          <CardHeader className="pb-3">
-            <CardDescription>Secondary workspace</CardDescription>
-            <CardTitle className="text-lg">Approval queue</CardTitle>
-          </CardHeader>
-          <CardContent className="px-0 pb-2">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-200/80">
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Manager</TableHead>
-                  <TableHead>Due date</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reviews.map((review) => (
-                  <TableRow key={review.name} className="border-slate-200/70">
-                    <TableCell className="font-medium text-slate-900">{review.name}</TableCell>
-                    <TableCell>{review.manager}</TableCell>
-                    <TableCell>{review.dueDate}</TableCell>
-                    <TableCell>{statusBadge(review.status)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70">
-          <CardHeader className="pb-3">
-            <CardDescription>Signals</CardDescription>
-            <CardTitle className="text-lg">Operational reminders</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-3 rounded-xl bg-slate-50 p-4">
-              <CalendarClock className="mt-0.5 h-4 w-4 text-blue-700" />
-              <p className="text-sm leading-6 text-slate-600">Medical insurance renewals are due for dependents by March 29.</p>
-            </div>
-            <div className="flex gap-3 rounded-xl bg-slate-50 p-4">
-              <FileCheck2 className="mt-0.5 h-4 w-4 text-emerald-700" />
-              <p className="text-sm leading-6 text-slate-600">Managers should complete calibration notes before the April performance cycle freeze.</p>
-            </div>
-            <div className="flex gap-3 rounded-xl bg-slate-50 p-4">
-              <BriefcaseBusiness className="mt-0.5 h-4 w-4 text-amber-700" />
-              <p className="text-sm leading-6 text-slate-600">Q2 headcount approvals for Customer Success and RevOps are ready for review.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
     </PageStack>
   )
 }
