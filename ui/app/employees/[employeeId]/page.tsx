@@ -1,12 +1,10 @@
+import { EmployeeDetail } from '@/components/employees/EmployeeDetail'
 import { AppShell } from '@/components/shared/app-shell'
-import { EmployeeProfilePage } from '@/components/employees/employee-profile-page'
 
-export default async function EmployeeProfileRoute({ params }: { params: Promise<{ employeeId: string }> }) {
-  const { employeeId } = await params
-
+export default async function EmployeeProfileRoute() {
   return (
-    <AppShell currentPath="/employee-profile">
-      <EmployeeProfilePage employeeId={employeeId} />
+    <AppShell currentPath="/employees">
+      <EmployeeDetail />
     </AppShell>
   )
 }
