@@ -1,5 +1,5 @@
 import { PaginatedResult } from '../../db/optimization';
-import { ConflictError, NotFoundError } from './employee.service';
+import { ConflictError, NotFoundError } from './service.errors';
 import { ValidationError } from './employee.validation';
 import { CreateDepartmentInput, Department, DepartmentFilters, UpdateDepartmentInput } from './department.model';
 import { DepartmentRepository } from './department.repository';
@@ -32,6 +32,11 @@ export class DepartmentService {
     }
 
     if (input.head_employee_id) {
+      const headEmployee = this.employeeRepository.findById(input.head_employee_id);
+      if (headEmployee?.status === 'Terminated') {
+        throw new ValidationError([{ field: 'head_employee_id', reason: 'head employee cannot be Terminated' }]);
+      }
+
       const currentHeadDepartment = this.repository.findByHeadEmployeeId(input.head_employee_id);
       if (currentHeadDepartment) {
         throw new ConflictError('head employee is already assigned to another department');
@@ -92,6 +97,9 @@ export class DepartmentService {
       if (!headEmployee) {
         throw new ValidationError([{ field: 'head_employee_id', reason: 'head employee was not found' }]);
       }
+      if (headEmployee.status === 'Terminated') {
+        throw new ValidationError([{ field: 'head_employee_id', reason: 'head employee cannot be Terminated' }]);
+      }
 
       const currentHeadDepartment = this.repository.findByHeadEmployeeId(nextHeadEmployeeId);
       if (currentHeadDepartment && currentHeadDepartment.department_id !== departmentId) {
@@ -101,6 +109,11 @@ export class DepartmentService {
       if (headEmployee.department_id !== departmentId) {
         this.employeeRepository.updateDepartment(nextHeadEmployeeId, departmentId);
       }
+    }
+
+    const nextStatus = input.status ?? existing.status;
+    if (nextStatus !== 'Active' && this.employeeRepository.countByDepartmentId(departmentId) > 0) {
+      throw new ConflictError('cannot deactivate or archive a department with assigned employees');
     }
 
     const updated = this.repository.update(departmentId, input);
