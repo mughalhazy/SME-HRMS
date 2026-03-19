@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -38,6 +38,9 @@ class UserAccount:
     employee_id: UUID | None = None
     department_id: UUID | None = None
     active: bool = True
+    last_login_at: datetime | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -46,7 +49,10 @@ class SessionRecord:
     user_id: UUID
     refresh_token_hash: str
     refresh_expires_at: datetime
+    started_at: datetime
+    last_rotated_at: datetime
     revoked: bool = False
+    revoked_at: datetime | None = None
 
 
 class AuthService:
@@ -133,6 +139,7 @@ class AuthService:
         if normalized_username in self._users_by_name:
             raise AuthServiceError('USER_EXISTS', 'User already exists')
 
+        now = datetime.now(timezone.utc)
         user = UserAccount(
             user_id=uuid4(),
             username=normalized_username,
@@ -140,6 +147,8 @@ class AuthService:
             role=role,
             employee_id=employee_id,
             department_id=department_id,
+            created_at=now,
+            updated_at=now,
         )
         self._users_by_name[normalized_username] = user
         self._users_by_id[user.user_id] = user
@@ -161,6 +170,8 @@ class AuthService:
         if not user.active:
             raise AuthServiceError('ACCOUNT_DISABLED', 'User account is disabled')
 
+        user.last_login_at = datetime.now(timezone.utc)
+        user.updated_at = user.last_login_at
         token_payload = self._issue_session_tokens(user=user, ttl_seconds=ttl_seconds, refresh_ttl_seconds=refresh_ttl_seconds)
         self.observability.logger.info(
             'auth.login_succeeded',
@@ -174,17 +185,19 @@ class AuthService:
         if session.revoked:
             raise AuthServiceError('TOKEN_REVOKED', 'Session has been revoked')
         if session.refresh_expires_at <= datetime.now(timezone.utc):
-            session.revoked = True
+            self._revoke_session(session.session_id, actor=str(session.user_id), role=self._users_by_id.get(session.user_id).role if self._users_by_id.get(session.user_id) else None)
             raise AuthServiceError('TOKEN_EXPIRED', 'Refresh token has expired')
 
         user = self._users_by_id.get(session.user_id)
         if not user or not user.active:
-            session.revoked = True
+            self._revoke_session(session.session_id, actor=str(session.user_id), role=user.role if user else None)
             raise AuthServiceError('ACCOUNT_DISABLED', 'User account is disabled')
 
+        now = datetime.now(timezone.utc)
         rotated_refresh_token = self._generate_refresh_token()
         session.refresh_token_hash = self._hash_refresh_token(rotated_refresh_token)
-        session.refresh_expires_at = datetime.now(timezone.utc) + timedelta(seconds=refresh_ttl_seconds)
+        session.refresh_expires_at = now + timedelta(seconds=refresh_ttl_seconds)
+        session.last_rotated_at = now
         token_payload = self._build_token_payload(
             user=user,
             session_id=session.session_id,
@@ -208,7 +221,7 @@ class AuthService:
         if not sid or not session or session.revoked:
             raise AuthServiceError('TOKEN_REVOKED', 'Session has been revoked')
         if session.refresh_expires_at <= datetime.now(timezone.utc):
-            session.revoked = True
+            self._revoke_session(session.session_id, actor=str(session.user_id), role=self._users_by_id.get(session.user_id).role if self._users_by_id.get(session.user_id) else None)
             raise AuthServiceError('TOKEN_EXPIRED', 'Session has expired')
 
         try:
@@ -239,6 +252,43 @@ class AuthService:
         session = self._get_session_by_refresh_token(refresh_token)
         self._revoke_session(session.session_id, actor=str(session.user_id), role=self._users_by_id.get(session.user_id).role if self._users_by_id.get(session.user_id) else None)
 
+    def get_current_session(self, token: str) -> dict[str, Any]:
+        claims = self._decode_token(token)
+        sid = claims.get('sid')
+        if not isinstance(sid, str):
+            raise AuthServiceError('TOKEN_INVALID', 'Token session is invalid')
+        session = self._sessions_by_id.get(sid)
+        if not session or session.revoked:
+            raise AuthServiceError('TOKEN_REVOKED', 'Session has been revoked')
+
+        principal = self.authenticate_token(token)
+        return self._serialize_session(session, principal.role)
+
+    def list_sessions(self, *, user_id: UUID | None = None, status: str | None = None) -> list[dict[str, Any]]:
+        if status is not None and status not in {'Active', 'Revoked', 'Expired'}:
+            raise AuthServiceError('VALIDATION_ERROR', 'status filter is invalid', details=[{'field': 'status', 'reason': 'must be Active, Revoked, or Expired'}])
+
+        rows = []
+        now = datetime.now(timezone.utc)
+        for session in self._sessions_by_id.values():
+            if user_id is not None and session.user_id != user_id:
+                continue
+            session_status = self._session_status(session, now=now)
+            if status is not None and session_status != status:
+                continue
+            user = self._users_by_id.get(session.user_id)
+            rows.append(self._serialize_session(session, user.role if user else None, now=now))
+        rows.sort(key=lambda row: row['started_at'], reverse=True)
+        return rows
+
+    def revoke_session(self, session_id: str, *, actor: str | None = None) -> dict[str, Any]:
+        session = self._sessions_by_id.get(session_id)
+        if not session:
+            raise AuthServiceError('TOKEN_INVALID', 'Session is invalid')
+        user = self._users_by_id.get(session.user_id)
+        self._revoke_session(session_id, actor=actor or str(session.user_id), role=user.role if user else None)
+        return self._serialize_session(session, user.role if user else None)
+
     def validate_role(self, principal: AuthenticatedPrincipal, capability_id: str) -> bool:
         allowed = self._ROLE_CAPABILITY_MAP.get(principal.role, set())
         return capability_id in allowed
@@ -260,11 +310,14 @@ class AuthService:
     def _issue_session_tokens(self, *, user: UserAccount, ttl_seconds: int, refresh_ttl_seconds: int) -> dict[str, Any]:
         session_id = str(uuid4())
         refresh_token = self._generate_refresh_token()
+        now = datetime.now(timezone.utc)
         self._sessions_by_id[session_id] = SessionRecord(
             session_id=session_id,
             user_id=user.user_id,
             refresh_token_hash=self._hash_refresh_token(refresh_token),
-            refresh_expires_at=datetime.now(timezone.utc) + timedelta(seconds=refresh_ttl_seconds),
+            refresh_expires_at=now + timedelta(seconds=refresh_ttl_seconds),
+            started_at=now,
+            last_rotated_at=now,
         )
         return self._build_token_payload(
             user=user,
@@ -310,7 +363,10 @@ class AuthService:
         session = self._sessions_by_id.get(session_id)
         if not session:
             return
+        if session.revoked:
+            return
         session.revoked = True
+        session.revoked_at = datetime.now(timezone.utc)
         self.observability.logger.audit(
             'auth_logout',
             actor=actor,
@@ -327,6 +383,28 @@ class AuthService:
             if hmac.compare_digest(session.refresh_token_hash, hashed):
                 return session
         raise AuthServiceError('TOKEN_INVALID', 'Refresh token is invalid')
+
+
+    def _serialize_session(self, session: SessionRecord, role: str | None, *, now: datetime | None = None) -> dict[str, Any]:
+        current_time = now or datetime.now(timezone.utc)
+        return {
+            'session_id': session.session_id,
+            'user_id': str(session.user_id),
+            'role': role,
+            'status': self._session_status(session, now=current_time),
+            'started_at': session.started_at.isoformat(),
+            'last_rotated_at': session.last_rotated_at.isoformat(),
+            'refresh_expires_at': session.refresh_expires_at.isoformat(),
+            'revoked_at': session.revoked_at.isoformat() if session.revoked_at else None,
+        }
+
+    def _session_status(self, session: SessionRecord, *, now: datetime | None = None) -> str:
+        current_time = now or datetime.now(timezone.utc)
+        if session.revoked:
+            return 'Revoked'
+        if session.refresh_expires_at <= current_time:
+            return 'Expired'
+        return 'Active'
 
     @staticmethod
     def _validate_ttls(ttl_seconds: int, refresh_ttl_seconds: int) -> None:

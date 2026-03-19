@@ -28,6 +28,9 @@ post_auth_login = api_module.post_auth_login
 post_auth_refresh = api_module.post_auth_refresh
 post_auth_logout = api_module.post_auth_logout
 get_auth_me = api_module.get_auth_me
+get_auth_session = api_module.get_auth_session
+get_auth_sessions = api_module.get_auth_sessions
+post_auth_session_revoke = api_module.post_auth_session_revoke
 
 
 class AuthServiceTests(unittest.TestCase):
@@ -135,6 +138,37 @@ class AuthServiceTests(unittest.TestCase):
             self.service.login('broken.hash', 'Password123!')
 
         self.assertEqual(ctx.exception.code, 'INVALID_CREDENTIALS')
+
+
+    def test_current_session_listing_and_revocation_api_support(self) -> None:
+        login_payload = self.service.login('ava.manager', 'Password123!')
+        token = login_payload['access_token']
+
+        session_status, session_payload = get_auth_session(self.service, f'Bearer {token}', trace_id='trace-session')
+        self.assertEqual(session_status, 200)
+        self.assertEqual(session_payload['data']['status'], 'Active')
+        self.assertEqual(session_payload['data']['session_id'], login_payload['session_id'])
+
+        sessions_status, sessions_payload = get_auth_sessions(
+            self.service,
+            {'user_id': str(self.service.authenticate_token(token).user_id), 'status': 'Active'},
+            trace_id='trace-sessions',
+        )
+        self.assertEqual(sessions_status, 200)
+        self.assertEqual(len(sessions_payload['data']), 1)
+
+        revoke_status, revoke_payload = post_auth_session_revoke(
+            self.service,
+            login_payload['session_id'],
+            {'actor': 'security-test'},
+            trace_id='trace-revoke-session',
+        )
+        self.assertEqual(revoke_status, 200)
+        self.assertEqual(revoke_payload['data']['status'], 'Revoked')
+
+        revoked_status, revoked_payload = get_auth_session(self.service, f'Bearer {token}', trace_id='trace-session-revoked')
+        self.assertEqual(revoked_status, 401)
+        self.assertEqual(revoked_payload['error']['code'], 'TOKEN_REVOKED')
 
     def test_auth_observability_tracks_api_calls(self) -> None:
         post_auth_login(

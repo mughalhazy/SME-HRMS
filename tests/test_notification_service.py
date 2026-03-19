@@ -143,6 +143,29 @@ class NotificationServiceTests(unittest.TestCase):
         self.assertEqual(message["data"]["subject_id"], "cand-001")
         self.assertEqual(message["data"]["event_name"], "InterviewScheduled")
 
+
+    def test_invalid_preference_payloads_and_subject_filters_return_validation_errors(self) -> None:
+        status, payload = patch_notification_preferences(
+            self.service,
+            'emp-001',
+            {
+                'subject_type': 'Employee',
+                'topic_code': 'leave.approval',
+                'email_enabled': 'yes',
+            },
+            trace_id='trace-pref-invalid',
+        )
+        self.assertEqual(status, 422)
+        self.assertEqual(payload['error']['code'], 'VALIDATION_ERROR')
+
+        status, payload = get_notification_delivery(
+            self.service,
+            {'subject_id': ''},
+            trace_id='trace-delivery-invalid',
+        )
+        self.assertEqual(status, 422)
+        self.assertEqual(payload['error']['code'], 'VALIDATION_ERROR')
+
     def test_unsupported_events_return_validation_error(self) -> None:
         status, payload = post_notification_event(
             self.service,

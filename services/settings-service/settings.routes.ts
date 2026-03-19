@@ -47,10 +47,13 @@ export function createSettingsRouter(): Router {
   router.get('/metrics', healthController.getMetrics);
 
   router.get('/api/v1/settings', readSettingsRateLimit, controller.getSettings);
+  router.get('/api/v1/settings/attendance-rules/:attendanceRuleId', readSettingsRateLimit, controller.getAttendanceRule);
   router.post('/api/v1/settings/attendance-rules', writeSettingsRateLimit, controller.createAttendanceRule);
   router.patch('/api/v1/settings/attendance-rules/:attendanceRuleId', writeSettingsRateLimit, controller.updateAttendanceRule);
+  router.get('/api/v1/settings/leave-policies/:leavePolicyId', readSettingsRateLimit, controller.getLeavePolicy);
   router.post('/api/v1/settings/leave-policies', writeSettingsRateLimit, controller.createLeavePolicy);
   router.patch('/api/v1/settings/leave-policies/:leavePolicyId', writeSettingsRateLimit, controller.updateLeavePolicy);
+  router.get('/api/v1/settings/payroll', readSettingsRateLimit, controller.getPayrollSettings);
   router.put('/api/v1/settings/payroll', writeSettingsRateLimit, controller.upsertPayrollSettings);
 
   return router;

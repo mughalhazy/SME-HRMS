@@ -149,7 +149,13 @@ export class SettingsService {
     return settings;
   }
 
+
+  getSettingsConfiguration(): SettingsReadModelBundle['settings_configuration_view'] {
+    return this.repository.toReadModelBundle().settings_configuration_view;
+  }
+
   getSettingsReadModels(): SettingsReadModelBundle {
     return this.repository.toReadModelBundle();
   }
 }
+
