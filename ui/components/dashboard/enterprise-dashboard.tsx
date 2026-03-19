@@ -5,11 +5,9 @@ import {
   BriefcaseBusiness,
   CalendarClock,
   CheckCircle2,
-  ChevronRight,
   CircleAlert,
   Clock3,
   DollarSign,
-  FileCheck2,
   ShieldCheck,
   TrendingUp,
   UserPlus,
@@ -18,8 +16,7 @@ import {
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PageGrid, PageStack } from '@/components/ui/page'
+import { PageStack } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 type MetricCard = {
@@ -136,28 +133,28 @@ const priorities: PriorityItem[] = [
     description: 'Finalize overtime approvals and reimbursement adjustments before 5:00 PM.',
     urgency: 'Urgent · Finance coordination',
     icon: Clock3,
-    tone: 'bg-blue-50 text-blue-700',
+    tone: 'text-blue-700',
   },
   {
     title: '13 reviews ready for sign-off',
     description: 'Calibration notes are complete across Product, Finance, and Operations.',
     urgency: 'Today · Approval queue',
     icon: CheckCircle2,
-    tone: 'bg-emerald-50 text-emerald-700',
+    tone: 'text-emerald-700',
   },
   {
     title: 'Coverage review needed',
     description: 'Two leave requests impact Customer Support and Finance operations this week.',
     urgency: 'Needs attention · Staffing risk',
     icon: CircleAlert,
-    tone: 'bg-amber-50 text-amber-700',
+    tone: 'text-amber-700',
   },
   {
     title: 'Priority hiring panels blocked',
     description: 'Engineering interview loops are at capacity for next week’s final panels.',
     urgency: 'Escalate · Hiring velocity',
     icon: BriefcaseBusiness,
-    tone: 'bg-rose-50 text-rose-700',
+    tone: 'text-rose-700',
   },
 ]
 
@@ -235,159 +232,222 @@ function statusBadge(status: TeamMember['status'] | ReviewItem['status']) {
 
 export function EnterpriseDashboard() {
   return (
-    <PageStack className="animate-[page-enter_180ms_ease-out] gap-8">
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,1.8fr)_auto] lg:items-start">
-        <div className="space-y-4">
+    <PageStack className="animate-[page-enter_180ms_ease-out] gap-6">
+      <section className="grid gap-6 border-b border-slate-200 pb-6 lg:grid-cols-12 lg:items-end">
+        <div className="space-y-4 lg:col-span-8">
           <div className="flex flex-wrap items-center gap-2">
             <Badge>March workforce snapshot</Badge>
             <Badge variant="outline">Command center</Badge>
           </div>
-          <div className="space-y-4">
-            <h2 className="max-w-4xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+
+          <div className="space-y-3">
+            <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
               Workforce command center for today&apos;s highest-impact decisions.
-            </h2>
-            <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              Monitor workforce health, clear the approval queue, and keep payroll, hiring, and coverage priorities moving without losing operational context.
+            </h1>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
+              Monitor workforce health, clear approvals, and keep payroll, hiring, and coverage decisions moving from one structured operating view.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 lg:min-w-72 lg:items-stretch">
-          <Button size="lg" className="w-full justify-center lg:justify-between">
+        <div className="lg:col-span-4 lg:justify-self-end">
+          <Button size="lg" className="w-full min-w-56 justify-between lg:w-auto">
             <span className="inline-flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Add employee
             </span>
             <ArrowRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="lg" className="w-full justify-center lg:justify-between">
-            <span className="inline-flex items-center gap-2">
-              <FileCheck2 className="h-4 w-4" />
-              Review approvals
-            </span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
       </section>
 
-      <PageGrid className="gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => {
           const Icon = metric.icon
 
           return (
-            <Card key={metric.title} className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
-              <CardContent className="flex h-full flex-col gap-4 p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="rounded-2xl bg-slate-100 p-2.5 text-slate-700">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <span className="text-xs font-medium text-slate-500">{metric.change}</span>
+            <div
+              key={metric.title}
+              className="flex h-full min-h-40 flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="rounded-xl bg-slate-100 p-2.5 text-slate-700">
+                  <Icon className="h-5 w-5" />
                 </div>
-                <div className="space-y-1.5">
-                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
-                  <p className="text-sm font-medium text-slate-700">{metric.title}</p>
-                  <p className="text-xs leading-5 text-slate-500">{metric.hint}</p>
-                </div>
-              </CardContent>
-            </Card>
+                <p className="text-xs font-medium text-slate-500">{metric.change}</p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-slate-600">{metric.title}</p>
+                <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
+                <p className="text-xs leading-5 text-slate-500">{metric.hint}</p>
+              </div>
+            </div>
           )
         })}
-      </PageGrid>
+      </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(18rem,0.85fr)]">
-        <div className="min-w-0 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-500">Primary workspace</p>
-              <h3 className="text-2xl font-semibold tracking-tight text-slate-950">Workforce overview</h3>
-              <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                Review role ownership, coverage readiness, and employee status from one clear operating view.
-              </p>
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(18rem,0.8fr)]">
+        <div className="min-w-0 space-y-6">
+          <div className="rounded-2xl border border-slate-200 bg-white">
+            <div className="flex flex-col gap-3 border-b border-slate-200 p-6 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-500">Primary workspace</p>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Workforce overview</h2>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                  Review role ownership, status, and location from one operating table built for fast scanning.
+                </p>
+              </div>
+              <Button variant="outline" className="w-full sm:w-auto">
+                Open directory
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="outline">
-              Open directory
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+
+            <div className="overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-200">
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {workforce.map((member) => (
+                    <TableRow key={member.name} className="border-slate-200/80">
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-medium text-slate-900">{member.name}</p>
+                          <p className="text-sm text-slate-500">{member.role}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{member.department}</TableCell>
+                      <TableCell>{member.location}</TableCell>
+                      <TableCell>{statusBadge(member.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
-          <div className="overflow-hidden rounded-[1.5rem] bg-white shadow-sm ring-1 ring-slate-200/60">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-200/80">
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workforce.map((member) => (
-                  <TableRow key={member.name} className="border-slate-200/70">
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-slate-900">{member.name}</p>
-                        <p className="text-sm text-slate-500">{member.role}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{member.department}</TableCell>
-                    <TableCell>{member.location}</TableCell>
-                    <TableCell>{statusBadge(member.status)}</TableCell>
-                  </TableRow>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-500">Activity</p>
+                <h3 className="text-lg font-semibold text-slate-950">Operational signals</h3>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                {directoryHighlights.map((highlight) => (
+                  <div key={highlight.team} className="space-y-1 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
+                    <p className="text-sm font-medium text-slate-900">{highlight.team}</p>
+                    <p className="text-sm leading-6 text-slate-600">{highlight.update}</p>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-500">Performance pulse</p>
+                <h3 className="text-lg font-semibold text-slate-950">Cycle momentum</h3>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-slate-600">Self reviews submitted</p>
+                    <p className="text-sm font-semibold text-slate-950">88%</p>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-200">
+                    <div className="h-2 rounded-full bg-blue-600" style={{ width: '88%' }} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-slate-600">Manager reviews completed</p>
+                    <p className="text-sm font-semibold text-slate-950">74%</p>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-200">
+                    <div className="h-2 rounded-full bg-emerald-600" style={{ width: '74%' }} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-slate-600">Calibration completed</p>
+                    <p className="text-sm font-semibold text-slate-950">61%</p>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-200">
+                    <div className="h-2 rounded-full bg-amber-500" style={{ width: '61%' }} />
+                  </div>
+                </div>
+                <div className="space-y-3 border-t border-slate-200 pt-4">
+                  <div className="flex gap-3">
+                    <TrendingUp className="mt-0.5 h-4 w-4 text-blue-700" />
+                    <p className="text-sm leading-6 text-slate-600">
+                      13 reviews are ready for sign-off and 7 still need calibration alignment.
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <CalendarClock className="mt-0.5 h-4 w-4 text-emerald-700" />
+                    <p className="text-sm leading-6 text-slate-600">
+                      Managers should complete calibration notes before the April performance freeze.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-[1.75rem] bg-slate-950 p-5 text-white shadow-sm">
-          <div className="space-y-2 border-b border-white/10 pb-4">
-            <p className="text-sm font-medium text-slate-300">Priority panel</p>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-2xl font-semibold tracking-tight text-white">Today&apos;s priorities</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-300">
-                  Urgent approvals, staffing risks, and blocked work surfaced for immediate action.
-                </p>
-              </div>
-              <CircleAlert className="mt-1 h-5 w-5 text-slate-300" />
-            </div>
+        <aside className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="space-y-1 border-b border-slate-200 pb-4">
+            <p className="text-sm font-medium text-slate-500">Priorities</p>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-950">Today&apos;s action queue</h2>
+            <p className="text-sm leading-6 text-slate-600">
+              Urgent approvals, staffing risks, and blocked work surfaced for immediate action.
+            </p>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="space-y-4">
             {priorities.map((item) => {
               const Icon = item.icon
 
               return (
-                <div key={item.title} className="flex items-start gap-3 rounded-2xl bg-white/7 p-4 ring-1 ring-white/8">
-                  <div className={`rounded-xl p-2.5 ${item.tone}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 space-y-1.5">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-white">{item.title}</p>
-                      <p className="text-xs font-medium text-slate-400">{item.urgency}</p>
+                <div key={item.title} className="space-y-2 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
+                  <div className="flex items-start gap-3">
+                    <div className={`rounded-lg bg-white p-2 ring-1 ring-slate-200 ${item.tone}`}>
+                      <Icon className="h-4 w-4" />
                     </div>
-                    <p className="text-sm leading-6 text-slate-300">{item.description}</p>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="text-xs font-medium text-slate-500">{item.urgency}</p>
+                    </div>
                   </div>
+                  <p className="text-sm leading-6 text-slate-600">{item.description}</p>
                 </div>
               )
             })}
           </div>
 
-          <div className="mt-5 rounded-2xl bg-white/5 p-4 ring-1 ring-white/8">
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-white">Approval queue</p>
-                <p className="text-xs text-slate-400">3 items need action this week</p>
+                <p className="text-sm font-medium text-slate-900">Approval queue</p>
+                <p className="text-xs text-slate-500">3 items need action this week</p>
               </div>
-              <FileCheck2 className="h-4 w-4 text-slate-300" />
+              <Badge variant="outline">This week</Badge>
             </div>
-            <div className="mt-3 space-y-3">
+
+            <div className="space-y-3">
               {reviews.map((review) => (
-                <div key={review.name} className="flex items-center justify-between gap-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0">
+                <div key={review.name} className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3 first:border-t-0 first:pt-0">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white">{review.name}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-sm font-medium text-slate-900">{review.name}</p>
+                    <p className="text-xs text-slate-500">
                       {review.manager} · Due {review.dueDate}
                     </p>
                   </div>
@@ -396,99 +456,31 @@ export function EnterpriseDashboard() {
               ))}
             </div>
           </div>
-        </div>
-      </section>
 
-      <PageGrid className="gap-4 xl:grid-cols-3">
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
-          <CardHeader className="pb-3">
-            <CardDescription>Supporting data</CardDescription>
-            <CardTitle className="text-lg">Team directory highlights</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {directoryHighlights.map((highlight) => (
-              <div key={highlight.team} className="rounded-xl bg-slate-50 p-4">
-                <p className="text-sm font-medium text-slate-900">{highlight.team}</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">{highlight.update}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div>
+              <p className="text-sm font-medium text-slate-900">Leave coverage watch</p>
+              <p className="text-xs text-slate-500">Upcoming requests that affect staffing continuity</p>
+            </div>
 
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
-          <CardHeader className="pb-3">
-            <CardDescription>Supporting data</CardDescription>
-            <CardTitle className="text-lg">Leave queue</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {leaveRequests.map((request) => (
-              <div key={request.employee} className="rounded-xl bg-slate-50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{request.employee}</p>
-                    <p className="text-sm text-slate-500">{request.type}</p>
+            <div className="space-y-3">
+              {leaveRequests.map((request) => (
+                <div key={request.employee} className="space-y-1 border-t border-slate-200 pt-3 first:border-t-0 first:pt-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">{request.employee}</p>
+                      <p className="text-sm text-slate-500">{request.type}</p>
+                    </div>
+                    <Badge variant="outline">{request.priority}</Badge>
                   </div>
-                  <Badge variant="outline">{request.priority}</Badge>
+                  <p className="text-sm text-slate-600">{request.dates}</p>
+                  <p className="text-xs text-slate-500">Manager: {request.manager}</p>
                 </div>
-                <div className="mt-3 space-y-1 text-sm text-slate-600">
-                  <p>{request.dates}</p>
-                  <p>Manager: {request.manager}</p>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
-          <CardHeader className="pb-3">
-            <CardDescription>Supporting data</CardDescription>
-            <CardTitle className="text-lg">Performance snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-700">Self reviews submitted</p>
-                <p className="text-lg font-semibold text-slate-950">88%</p>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-200">
-                <div className="h-2 rounded-full bg-blue-600" style={{ width: '88%' }} />
-              </div>
+              ))}
             </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-700">Manager reviews completed</p>
-                <p className="text-lg font-semibold text-slate-950">74%</p>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-200">
-                <div className="h-2 rounded-full bg-emerald-600" style={{ width: '74%' }} />
-              </div>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-700">Calibration completed</p>
-                <p className="text-lg font-semibold text-slate-950">61%</p>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-200">
-                <div className="h-2 rounded-full bg-amber-500" style={{ width: '61%' }} />
-              </div>
-            </div>
-            <div className="flex gap-3 rounded-xl bg-slate-50 p-4">
-              <TrendingUp className="mt-0.5 h-4 w-4 text-blue-700" />
-              <div>
-                <p className="text-sm font-medium text-slate-900">Cycle momentum</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">13 reviews are ready for sign-off and 7 still need calibration alignment.</p>
-              </div>
-            </div>
-            <div className="flex gap-3 rounded-xl bg-slate-50 p-4">
-              <CalendarClock className="mt-0.5 h-4 w-4 text-emerald-700" />
-              <div>
-                <p className="text-sm font-medium text-slate-900">Upcoming cycle lock</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">Managers should complete calibration notes before the April performance freeze.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </PageGrid>
+          </div>
+        </aside>
+      </section>
     </PageStack>
   )
 }
