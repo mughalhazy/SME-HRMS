@@ -14,17 +14,19 @@ CREATE INDEX IF NOT EXISTS idx_departments_status ON departments (status);
 
 CREATE TABLE IF NOT EXISTS roles (
   role_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  title VARCHAR(150) NOT NULL,
+  title VARCHAR(150) NOT NULL UNIQUE,
   level VARCHAR(50),
   description TEXT,
   employment_category VARCHAR(20) NOT NULL CHECK (employment_category IN ('Staff', 'Manager', 'Executive', 'Contractor')),
-  status VARCHAR(20) NOT NULL CHECK (status IN ('Active', 'Inactive', 'Archived')),
+  permissions TEXT[] NOT NULL DEFAULT '{}',
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Active', 'Inactive', 'Archived')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_roles_title ON roles (title);
 CREATE INDEX IF NOT EXISTS idx_roles_status ON roles (status);
+CREATE INDEX IF NOT EXISTS idx_roles_employment_category ON roles (employment_category);
 
 CREATE TABLE IF NOT EXISTS employees (
   employee_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

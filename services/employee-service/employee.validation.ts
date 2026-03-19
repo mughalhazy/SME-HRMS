@@ -109,6 +109,10 @@ export function validateUpdateEmployee(input: UpdateEmployeeInput): void {
     });
   }
 
+  if (input.role_id !== undefined && (typeof input.role_id !== 'string' || input.role_id.trim() === '')) {
+    details.push({ field: 'role_id', reason: 'must be a non-empty string when provided' });
+  }
+
   if (details.length > 0) {
     throw new ValidationError(details);
   }
