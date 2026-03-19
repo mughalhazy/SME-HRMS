@@ -5,6 +5,7 @@ import {
   EmployeeStatus,
   UpdateEmployeeInput,
 } from './employee.model';
+import { DepartmentRepository } from './department.repository';
 import { EmployeeRepository } from './employee.repository';
 import { validateCreateEmployee, validateStatus, validateUpdateEmployee, ValidationError } from './employee.validation';
 
@@ -20,7 +21,10 @@ const STATUS_TRANSITIONS: Record<EmployeeStatus, EmployeeStatus[]> = {
 };
 
 export class EmployeeService {
-  constructor(private readonly repository: EmployeeRepository) {}
+  constructor(
+    private readonly repository: EmployeeRepository,
+    private readonly departmentRepository: DepartmentRepository,
+  ) {}
 
   createEmployee(input: CreateEmployeeInput): Employee {
     validateCreateEmployee(input);
@@ -35,6 +39,10 @@ export class EmployeeService {
 
     if (input.manager_employee_id && !this.repository.findById(input.manager_employee_id)) {
       throw new ValidationError([{ field: 'manager_employee_id', reason: 'manager employee was not found' }]);
+    }
+
+    if (!this.departmentRepository.findById(input.department_id)) {
+      throw new ValidationError([{ field: 'department_id', reason: 'department was not found' }]);
     }
 
     return this.repository.create(input);
@@ -78,6 +86,10 @@ export class EmployeeService {
       throw new ValidationError([{ field: 'manager_employee_id', reason: 'manager employee was not found' }]);
     }
 
+    if (input.department_id && !this.departmentRepository.findById(input.department_id)) {
+      throw new ValidationError([{ field: 'department_id', reason: 'department was not found' }]);
+    }
+
     const updated = this.repository.update(employeeId, input);
 
     if (!updated) {
@@ -90,6 +102,10 @@ export class EmployeeService {
   assignDepartment(employeeId: string, departmentId: string): Employee {
     if (!departmentId || departmentId.trim() === '') {
       throw new ValidationError([{ field: 'department_id', reason: 'must be a non-empty string' }]);
+    }
+
+    if (!this.departmentRepository.findById(departmentId)) {
+      throw new ValidationError([{ field: 'department_id', reason: 'department was not found' }]);
     }
 
     const updated = this.repository.updateDepartment(employeeId, departmentId);
@@ -124,6 +140,15 @@ export class EmployeeService {
   }
 
   deleteEmployee(employeeId: string): void {
+    if (this.repository.hasDirectReports(employeeId)) {
+      throw new ConflictError('employee still has direct reports');
+    }
+
+    const headedDepartment = this.departmentRepository.findByHeadEmployeeId(employeeId);
+    if (headedDepartment) {
+      throw new ConflictError('employee is still assigned as a department head');
+    }
+
     if (!this.repository.delete(employeeId)) {
       throw new NotFoundError('employee not found');
     }

@@ -19,6 +19,7 @@ class Route:
 
 ROUTES: tuple[Route, ...] = (
     Route(name="employees", path_prefix="/employees", upstream_service="employee-service"),
+    Route(name="departments", path_prefix="/departments", upstream_service="employee-service"),
     Route(name="attendance", path_prefix="/attendance", upstream_service="attendance-service"),
     Route(name="leave", path_prefix="/leave", upstream_service="leave-service"),
     Route(name="payroll", path_prefix="/payroll", upstream_service="payroll-service"),

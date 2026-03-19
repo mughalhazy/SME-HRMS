@@ -30,6 +30,7 @@ class GatewayApiStandardsTests(unittest.TestCase):
     def test_gateway_resolves_plural_resource_paths(self) -> None:
         test_cases = {
             "/api/v1/employees/123": "employee-service",
+            "/api/v1/departments/123": "employee-service",
             "/api/v1/attendance/records": "attendance-service",
             "/api/v1/notifications/events": "notification-service",
         }

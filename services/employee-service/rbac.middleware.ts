@@ -17,12 +17,17 @@ type EmployeeAction =
   | 'updateProfile'
   | 'manageDepartment'
   | 'manageStatus'
-  | 'delete';
+  | 'delete'
+  | 'createDepartment'
+  | 'readDepartment'
+  | 'listDepartments'
+  | 'updateDepartmentRecord'
+  | 'deleteDepartmentRecord';
 
 const ROLE_ACTIONS: Record<AuthRole, EmployeeAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus'],
-  Employee: ['read', 'list', 'updateProfile'],
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createDepartment', 'readDepartment', 'listDepartments', 'updateDepartmentRecord', 'deleteDepartmentRecord'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readDepartment', 'listDepartments', 'updateDepartmentRecord'],
+  Employee: ['read', 'list', 'updateProfile', 'readDepartment', 'listDepartments'],
 };
 
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;
