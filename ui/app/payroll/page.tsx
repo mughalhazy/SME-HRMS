@@ -1,10 +1,10 @@
-import { AttendancePayrollWorkspace } from '@/components/dashboard/attendance-payroll-workspace'
+import { Payroll } from '@/components/surfaces/Payroll'
 import { AppShell } from '@/components/shared/app-shell'
 
 export default function PayrollPage() {
   return (
     <AppShell currentPath="/payroll">
-      <AttendancePayrollWorkspace />
+      <Payroll />
     </AppShell>
   )
 }
