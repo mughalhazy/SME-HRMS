@@ -23,20 +23,20 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { getNavigationItem, isNavigationItemActive, navigationSections, sidebarNavigationItems, type NavigationItemKey } from '@/lib/navigation'
+import { getNavigationItem, isNavigationItemActive, navigationSections, sidebarNavigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
-const navIcons: Record<NavigationItemKey, typeof LayoutGrid> = {
-  dashboard: LayoutGrid,
-  employees: Users,
-  attendance: CalendarDays,
-  leave: ClipboardList,
-  payroll: Wallet,
-  hiring: BriefcaseBusiness,
-  performance: Target,
-  organization: Building2,
+const navIcons = {
+  layout: LayoutGrid,
+  users: Users,
+  clock: CalendarDays,
+  calendar: ClipboardList,
+  wallet: Wallet,
+  briefcase: BriefcaseBusiness,
+  chart: Target,
+  building: Building2,
   settings: Settings2,
-  notifications: Bell,
+  bell: Bell,
 }
 
 function shouldHandleNavigation(event: MouseEvent<HTMLAnchorElement>, href: string, pathname: string) {
@@ -119,7 +119,7 @@ export function AppShell({
                   <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">{section.title}</p>
                   <div className="space-y-1.5">
                     {section.items.map((item) => {
-                      const Icon = navIcons[item.key]
+                      const Icon = navIcons[item.icon]
                       const active = isNavigationItemActive(activePath, item)
                       const isPending = pendingHref === item.href
 
@@ -176,6 +176,9 @@ export function AppShell({
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-950">{pageTitle ?? activeItem.label}</h1>
+                  <Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-700">
+                    {navigationSections.find((section) => section.key === activeItem.section)?.title ?? 'Workspace'}
+                  </Badge>
                   <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">Live workspace</Badge>
                 </div>
                 <p className="max-w-3xl text-sm leading-6 text-slate-500">

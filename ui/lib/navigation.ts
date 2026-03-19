@@ -17,6 +17,7 @@ export type NavigationItem = {
   href: string
   label: string
   shortLabel: string
+  icon: 'layout' | 'users' | 'clock' | 'calendar' | 'wallet' | 'briefcase' | 'chart' | 'building' | 'settings' | 'bell'
   description: string
   section: NavigationSectionKey
   matcherPrefixes: string[]
@@ -37,6 +38,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/dashboard',
     label: 'Dashboard',
     shortLabel: 'Dashboard',
+    icon: 'layout',
     description: 'Track workforce health, approvals, and operational priorities from one calm command center.',
     section: 'overview',
     matcherPrefixes: ['/dashboard'],
@@ -46,6 +48,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/employees',
     label: 'Employees',
     shortLabel: 'Employees',
+    icon: 'users',
     description: 'Manage employee records, search the directory, and move into detailed profiles without losing context.',
     section: 'workforce',
     matcherPrefixes: ['/employees'],
@@ -55,6 +58,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/organization',
     label: 'Organization',
     shortLabel: 'Organization',
+    icon: 'building',
     description: 'Review departments, role coverage, and staffing structure with clean organizational visibility.',
     section: 'workforce',
     matcherPrefixes: ['/organization', '/departments', '/roles'],
@@ -64,6 +68,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/attendance',
     label: 'Attendance',
     shortLabel: 'Attendance',
+    icon: 'clock',
     description: 'Monitor daily presence, identify exceptions, and keep time-tracking workflows aligned.',
     section: 'operations',
     matcherPrefixes: ['/attendance'],
@@ -73,6 +78,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/leave',
     label: 'Leave',
     shortLabel: 'Leave',
+    icon: 'calendar',
     description: 'Review leave requests, balances, and team coverage with consistent filters and approvals.',
     section: 'operations',
     matcherPrefixes: ['/leave', '/leave-requests'],
@@ -82,6 +88,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/payroll',
     label: 'Payroll',
     shortLabel: 'Payroll',
+    icon: 'wallet',
     description: 'Track payroll cycles, exceptions, and settlement readiness across the organization.',
     section: 'operations',
     matcherPrefixes: ['/payroll'],
@@ -91,6 +98,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/hiring',
     label: 'Hiring',
     shortLabel: 'Hiring',
+    icon: 'briefcase',
     description: 'Keep requisitions and candidate flow in one polished hiring workspace.',
     section: 'talent',
     matcherPrefixes: ['/hiring', '/job-postings', '/candidate-pipeline'],
@@ -100,6 +108,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/performance',
     label: 'Performance',
     shortLabel: 'Performance',
+    icon: 'chart',
     description: 'Review cycle progress, calibration status, and manager follow-up across the business.',
     section: 'talent',
     matcherPrefixes: ['/performance', '/performance-reviews'],
@@ -109,6 +118,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/settings',
     label: 'Settings',
     shortLabel: 'Settings',
+    icon: 'settings',
     description: 'Configure company-wide HR defaults, integrations, and operational controls.',
     section: 'admin',
     matcherPrefixes: ['/settings'],
@@ -118,6 +128,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/notifications',
     label: 'Notifications',
     shortLabel: 'Inbox',
+    icon: 'bell',
     description: 'Review event-driven inbox items, delivery outcomes, and suppressed channels in one place.',
     section: 'admin',
     matcherPrefixes: ['/notifications'],

@@ -1,10 +1,5 @@
-import { LeaveManagement } from '@/components/surfaces/LeaveManagement'
-import AppShell from '@/components/hrms/shell/app-shell'
+import { redirect } from 'next/navigation'
 
 export default function LeaveRequestsRoute() {
-  return (
-    <AppShell pageTitle="Leave" pageDescription="Review leave requests, balances, and team coverage with consistent filters and approvals.">
-      <LeaveManagement />
-    </AppShell>
-  )
+  redirect('/leave')
 }
