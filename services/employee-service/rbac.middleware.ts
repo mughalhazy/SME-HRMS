@@ -10,18 +10,23 @@ export type AuthContext = {
   department_id?: string;
 };
 
-type EmployeeAction =
+type ResourceAction =
   | 'create'
   | 'read'
   | 'list'
   | 'updateProfile'
   | 'manageDepartment'
   | 'manageStatus'
-  | 'delete';
+  | 'delete'
+  | 'createRole'
+  | 'readRole'
+  | 'listRoles'
+  | 'updateRole'
+  | 'deleteRole';
 
-const ROLE_ACTIONS: Record<AuthRole, EmployeeAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus'],
+const ROLE_ACTIONS: Record<AuthRole, ResourceAction[]> = {
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles'],
   Employee: ['read', 'list', 'updateProfile'],
 };
 
@@ -131,7 +136,7 @@ export const authenticate: RequestHandler = (req: Request, res: Response, next: 
   }
 };
 
-export function authorizeEmployeeAction(action: EmployeeAction): RequestHandler {
+export function authorizeEmployeeAction(action: ResourceAction): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     const auth = req.auth;
     if (!auth) {
