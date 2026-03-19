@@ -37,6 +37,13 @@ type AttendanceRow = {
   workHours: string
 }
 
+type CalendarProps = {
+  selectedDate: Date
+  month: Date
+  onMonthChange: (date: Date) => void
+  onSelectDate: (date: Date) => void
+}
+
 const attendanceRows: AttendanceRow[] = [
   { id: '1', name: 'Ariana Flores', employeeId: 'EMP-1042', department: 'Operations', checkIn: '08:54 AM', checkOut: '05:31 PM', status: 'Present', workHours: '8h 37m' },
   { id: '2', name: 'Darnell Price', employeeId: 'EMP-1188', department: 'Finance', checkIn: '09:17 AM', checkOut: '06:04 PM', status: 'Late', workHours: '8h 47m' },
@@ -77,8 +84,10 @@ function getMonthDays(viewDate: Date) {
   const month = viewDate.getMonth()
   const firstDay = new Date(year, month, 1)
   const startOffset = firstDay.getDay()
+
   return Array.from({ length: 42 }, (_, index) => {
     const date = new Date(year, month, index - startOffset + 1)
+
     return {
       date,
       inMonth: date.getMonth() === month,
@@ -138,14 +147,86 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
+function Calendar({ selectedDate, month, onMonthChange, onSelectDate }: CalendarProps) {
+  const monthDays = useMemo(() => getMonthDays(month), [month])
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Date picker</p>
+          <p className="mt-1 text-sm font-medium text-slate-600">{formatShortDate(selectedDate)}</p>
+        </div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500">
+          <CalendarDays className="h-4 w-4" />
+        </div>
+      </div>
+
+      <div className="mb-3 flex items-center justify-between">
+        <Button
+          className="h-8 w-8 rounded-full"
+          size="icon"
+          type="button"
+          variant="ghost"
+          onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <p className="text-sm font-semibold text-slate-700">{month.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</p>
+        <Button
+          className="h-8 w-8 rounded-full"
+          size="icon"
+          type="button"
+          variant="ghost"
+          onClick={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-400">
+        {dayNames.map((day) => (
+          <span key={day} className="py-1 font-medium">
+            {day}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {monthDays.map(({ date, inMonth }) => {
+          const isSelected = date.toDateString() === selectedDate.toDateString()
+          const isToday = date.toDateString() === new Date('2026-03-19T00:00:00').toDateString()
+
+          return (
+            <button
+              key={date.toISOString()}
+              className={cn(
+                'flex h-9 items-center justify-center rounded-lg text-sm transition-colors',
+                inMonth ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-300',
+                isToday && !isSelected && 'font-semibold text-slate-950',
+                isSelected && 'bg-slate-900 font-semibold text-white hover:bg-slate-900',
+              )}
+              type="button"
+              onClick={() => {
+                onSelectDate(date)
+                onMonthChange(new Date(date.getFullYear(), date.getMonth(), 1))
+              }}
+            >
+              {date.getDate()}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function Attendance() {
   const [selectedDate, setSelectedDate] = useState(() => new Date('2026-03-19T00:00:00'))
   const [calendarMonth, setCalendarMonth] = useState(() => new Date('2026-03-01T00:00:00'))
   const [department, setDepartment] = useState('All departments')
   const [status, setStatus] = useState('All statuses')
   const [search, setSearch] = useState('')
-
-  const monthDays = useMemo(() => getMonthDays(calendarMonth), [calendarMonth])
 
   const filteredRows = useMemo(() => {
     return attendanceRows.filter((row) => {
@@ -171,6 +252,7 @@ export function Attendance() {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {kpis.map((item) => {
             const Icon = item.icon
+
             return (
               <Card key={item.label} className="border-slate-200 bg-white shadow-sm">
                 <CardContent className="flex items-center justify-between p-5">
@@ -190,101 +272,46 @@ export function Attendance() {
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
             <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-[260px_1fr_1fr_1fr] xl:items-center">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Date picker</p>
-                      <p className="mt-1 text-sm font-medium text-slate-600">{formatShortDate(selectedDate)}</p>
+              <CardContent className="grid gap-4 p-5 lg:grid-cols-2 xl:grid-cols-[280px_minmax(0,1fr)]">
+                <Calendar
+                  month={calendarMonth}
+                  selectedDate={selectedDate}
+                  onMonthChange={setCalendarMonth}
+                  onSelectDate={setSelectedDate}
+                />
+
+                <div className="grid content-start gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-600">Department</label>
+                    <Select value={department} onChange={(event) => setDepartment(event.target.value)}>
+                      {departments.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-600">Status</label>
+                    <Select value={status} onChange={(event) => setStatus(event.target.value)}>
+                      {statuses.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-medium text-slate-600">Search employee</label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name or employee ID" />
+                      <Button className="shrink-0" type="button" variant="outline">
+                        <Download className="h-4 w-4" />
+                        Export
+                      </Button>
                     </div>
-                    <CalendarDays className="h-4 w-4 text-slate-400" />
-                  </div>
-
-                  <div className="mb-3 flex items-center justify-between">
-                    <Button
-                      className="h-8 w-8 rounded-full"
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <p className="text-sm font-semibold text-slate-700">
-                      {calendarMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                    </p>
-                    <Button
-                      className="h-8 w-8 rounded-full"
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-400">
-                    {dayNames.map((day) => (
-                      <span key={day} className="py-1 font-medium">
-                        {day}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-1 grid grid-cols-7 gap-1">
-                    {monthDays.map(({ date, inMonth }) => {
-                      const isSelected = date.toDateString() === selectedDate.toDateString()
-                      return (
-                        <button
-                          key={date.toISOString()}
-                          className={cn(
-                            'flex h-9 items-center justify-center rounded-lg text-sm transition-colors',
-                            inMonth ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-300',
-                            isSelected && 'bg-slate-900 font-semibold text-white hover:bg-slate-900',
-                          )}
-                          type="button"
-                          onClick={() => {
-                            setSelectedDate(date)
-                            setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1))
-                          }}
-                        >
-                          {date.getDate()}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-600">Department</label>
-                  <Select value={department} onChange={(event) => setDepartment(event.target.value)}>
-                    {departments.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-600">Status</label>
-                  <Select value={status} onChange={(event) => setStatus(event.target.value)}>
-                    {statuses.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-600">Search employee</label>
-                  <div className="flex gap-2">
-                    <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name or employee ID" />
-                    <Button type="button" variant="outline">
-                      <Download className="h-4 w-4" />
-                      Export
-                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -319,7 +346,7 @@ export function Attendance() {
                       <TableRow key={row.id} className="border-slate-100 hover:bg-slate-50/80">
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border-slate-200 bg-slate-50">
+                            <Avatar className="h-10 w-10 border border-slate-200 bg-slate-50">
                               <AvatarFallback>{getInitials(row.name)}</AvatarFallback>
                             </Avatar>
                             <div>
