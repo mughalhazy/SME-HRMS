@@ -27,8 +27,11 @@ function getAuth(req: Request): AuthContext {
 
 export class EmployeeController {
   private readonly logger = getStructuredLogger('employee-service');
+  private readonly employeeService: EmployeeService;
 
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(employeeService: EmployeeService) {
+    this.employeeService = employeeService;
+  }
 
   private ensureManagerScope(req: Request, res: Response, auth: AuthContext, employeeId: string): boolean {
     if (auth.role !== 'Manager' || !auth.department_id) {
@@ -53,12 +56,13 @@ export class EmployeeController {
       }
 
       const employee = this.employeeService.createEmployee(req.body);
+      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
       this.logger.audit('employee_created', req.traceId ?? 'missing-trace-id', {
         actor: auth.employee_id ?? auth.role,
         employee_id: employee.employee_id,
         department_id: employee.department_id,
       });
-      res.status(201).json({ data: employee });
+      res.status(201).json({ data: employee, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
@@ -71,7 +75,8 @@ export class EmployeeController {
         return;
       }
       const employee = this.employeeService.getEmployeeById(req.params.employeeId);
-      res.status(200).json({ data: employee });
+      const readModels = this.employeeService.getEmployeeReadModels(req.params.employeeId);
+      res.status(200).json({ data: employee, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
@@ -99,6 +104,7 @@ export class EmployeeController {
 
       const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
       let departmentFilter = typeof req.query.department_id === 'string' ? req.query.department_id : undefined;
+      const roleFilter = typeof req.query.role_id === 'string' ? req.query.role_id : undefined;
       let employeeFilter: string | undefined;
       if (auth.role === 'Employee') {
         departmentFilter = undefined;
@@ -108,25 +114,26 @@ export class EmployeeController {
         departmentFilter = auth.department_id;
       }
 
-      const page = this.employeeService.listEmployees({
+      const filters = {
         employee_id: employeeFilter,
         department_id: departmentFilter,
+        role_id: roleFilter,
         status: typeof status === 'string' ? (status as never) : undefined,
         limit: rawLimit,
         cursor,
-      });
+      };
 
-      const employees = page.data;
-      const hasNext = page.page.hasNext;
-      const nextCursor = page.page.nextCursor;
+      const page = this.employeeService.listEmployees(filters);
+      const readModels = this.employeeService.listEmployeeReadModels(filters);
 
       res.status(200).json({
-        data: employees,
+        data: page.data,
         page: {
-          nextCursor,
-          hasNext,
+          nextCursor: page.page.nextCursor,
+          hasNext: page.page.hasNext,
           limit: page.page.limit,
         },
+        read_models: readModels,
       });
     } catch (error) {
       this.handleError(req, res, error);
@@ -146,12 +153,13 @@ export class EmployeeController {
         return;
       }
       const employee = this.employeeService.updateEmployee(req.params.employeeId, req.body);
+      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
       this.logger.audit('employee_updated', req.traceId ?? 'missing-trace-id', {
         actor: auth.employee_id ?? auth.role,
         employee_id: employee.employee_id,
         fields: Object.keys(req.body ?? {}).sort(),
       });
-      res.status(200).json({ data: employee });
+      res.status(200).json({ data: employee, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
@@ -168,12 +176,13 @@ export class EmployeeController {
         return;
       }
       const employee = this.employeeService.assignDepartment(req.params.employeeId, req.body.department_id);
+      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
       this.logger.audit('employee_department_assigned', req.traceId ?? 'missing-trace-id', {
         actor: auth.employee_id ?? auth.role,
         employee_id: employee.employee_id,
         department_id: employee.department_id,
       });
-      res.status(200).json({ data: employee });
+      res.status(200).json({ data: employee, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
@@ -186,12 +195,13 @@ export class EmployeeController {
         return;
       }
       const employee = this.employeeService.updateStatus(req.params.employeeId, req.body.status);
+      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
       this.logger.audit('employee_status_updated', req.traceId ?? 'missing-trace-id', {
         actor: auth.employee_id ?? auth.role,
         employee_id: employee.employee_id,
         status: employee.status,
       });
-      res.status(200).json({ data: employee });
+      res.status(200).json({ data: employee, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
