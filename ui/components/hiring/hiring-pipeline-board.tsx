@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 type CandidateStatus = 'Applied' | 'Screening' | 'Interviewing' | 'Offered' | 'Hired'
 type BoardStage = 'Applied' | 'Interview' | 'Offer' | 'Hired'
 type InterviewType = 'PhoneScreen' | 'Technical' | 'Behavioral' | 'Panel' | 'Final'
+type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'NoShow'
 
 type CandidateRecord = {
   id: string
@@ -43,12 +44,16 @@ type InterviewRecord = {
   candidateId: string
   interviewType: InterviewType
   scheduledAt: string
+  scheduledEndAt: string
   location: string
+  status: InterviewStatus
+  updatedAt: string
 }
 
 type DraftInterview = {
   interviewType: InterviewType
   scheduledAt: string
+  scheduledEndAt: string
   location: string
 }
 
@@ -70,7 +75,10 @@ type InterviewApiRow = {
   candidate_id: string
   interview_type: InterviewType
   scheduled_at: string
+  scheduled_end_at: string
   location: string
+  status: InterviewStatus
+  updated_at: string
 }
 
 type StageDefinition = {
@@ -115,6 +123,7 @@ const STAGES: StageDefinition[] = [
 const EMPTY_INTERVIEW_DRAFT: DraftInterview = {
   interviewType: 'Technical',
   scheduledAt: '',
+  scheduledEndAt: '',
   location: '',
 }
 
@@ -139,7 +148,10 @@ function mapInterview(row: InterviewApiRow): InterviewRecord {
     candidateId: row.candidate_id,
     interviewType: row.interview_type,
     scheduledAt: row.scheduled_at,
+    scheduledEndAt: row.scheduled_end_at,
     location: row.location,
+    status: row.status,
+    updatedAt: row.updated_at,
   }
 }
 
@@ -170,6 +182,11 @@ function formatDateLabel(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(value))
+}
+
+function defaultInterviewEnd(startAt: string) {
+  if (!startAt) return ''
+  return new Date(new Date(startAt).getTime() + 1000 * 60 * 60).toISOString().slice(0, 16)
 }
 
 function getDropHint(fromStage: BoardStage | null, toStage: BoardStage) {
@@ -226,8 +243,21 @@ export function HiringPipelineBoard() {
         body: JSON.stringify({
           interview_type: draft.interviewType,
           scheduled_at: draft.scheduledAt,
+          scheduled_end_at: draft.scheduledEndAt,
           location: draft.location,
         }),
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['hiring-candidates'] })
+      void queryClient.invalidateQueries({ queryKey: ['hiring-interviews'] })
+    },
+  })
+
+  const interviewStatusMutation = useMutation({
+    mutationFn: ({ interviewId, status }: { interviewId: string; status: InterviewStatus }) =>
+      apiRequest(`/api/v1/hiring/interviews/${interviewId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
       }),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['hiring-candidates'] })
@@ -262,7 +292,7 @@ export function HiringPipelineBoard() {
 
   const metrics = useMemo(() => {
     const total = candidates.length
-    const scheduledCount = interviews.length
+    const scheduledCount = interviews.filter((interview) => interview.status === 'Scheduled').length
     const hiredCount = candidatesByStage.Hired.length
     const activeOffers = candidatesByStage.Offer.length
 
@@ -305,11 +335,13 @@ export function HiringPipelineBoard() {
     })
 
     if (targetStage === 'Interview' && (drafts[candidateId]?.scheduledAt?.length ?? 0) === 0) {
+      const scheduledAt = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().slice(0, 16)
       setDrafts((current) => ({
         ...current,
         [candidateId]: {
           ...EMPTY_INTERVIEW_DRAFT,
-          scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().slice(0, 16),
+          scheduledAt,
+          scheduledEndAt: defaultInterviewEnd(scheduledAt),
           location: 'Google Meet',
         },
       }))
@@ -334,12 +366,25 @@ export function HiringPipelineBoard() {
       return
     }
 
+    if (!draft.scheduledEndAt) {
+      setMessage(`Add an interview end time for ${candidate.name} before scheduling.`)
+      return
+    }
+
+    if (new Date(draft.scheduledEndAt).getTime() <= new Date(draft.scheduledAt).getTime()) {
+      setMessage(`Interview end time must be after the start time for ${candidate.name}.`)
+      return
+    }
+
     const interview: InterviewRecord = {
       id: `local-${candidateId}`,
       candidateId,
       interviewType: draft.interviewType,
       scheduledAt: new Date(draft.scheduledAt).toISOString(),
+      scheduledEndAt: new Date(draft.scheduledEndAt).toISOString(),
       location: draft.location.trim(),
+      status: 'Scheduled',
+      updatedAt: new Date().toISOString(),
     }
 
     setInterviews((current) => [...current, interview])
@@ -358,6 +403,45 @@ export function HiringPipelineBoard() {
 
     void interviewMutation.mutateAsync({ candidateId, draft }).catch((error) => {
       setMessage(error instanceof Error ? error.message : `Unable to schedule an interview for ${candidate.name}.`)
+      void queryClient.invalidateQueries({ queryKey: ['hiring-candidates'] })
+      void queryClient.invalidateQueries({ queryKey: ['hiring-interviews'] })
+    })
+  }
+
+  function handleInterviewStatusUpdate(interviewId: string, status: InterviewStatus) {
+    const interview = interviews.find((entry) => entry.id === interviewId)
+    if (!interview) return
+
+    const candidate = candidates.find((entry) => entry.id === interview.candidateId)
+
+    setInterviews((current) =>
+      current.map((entry) =>
+        entry.id === interviewId
+          ? {
+              ...entry,
+              status,
+              updatedAt: new Date().toISOString(),
+            }
+          : entry,
+      ),
+    )
+
+    if (candidate) {
+      setCandidates((current) =>
+        current.map((entry) =>
+          entry.id === candidate.id
+            ? {
+                ...entry,
+                updatedAt: new Date().toISOString(),
+              }
+            : entry,
+        ),
+      )
+      setMessage(`Interview status updated to ${status} for ${candidate.name}.`)
+    }
+
+    void interviewStatusMutation.mutateAsync({ interviewId, status }).catch((error) => {
+      setMessage(error instanceof Error ? error.message : 'Unable to update interview status.')
       void queryClient.invalidateQueries({ queryKey: ['hiring-candidates'] })
       void queryClient.invalidateQueries({ queryKey: ['hiring-interviews'] })
     })
@@ -479,8 +563,9 @@ export function HiringPipelineBoard() {
                   <div className="space-y-3">
                     {candidatesByStage[stage.id].map((candidate) => {
                       const candidateStage = statusToStage(candidate.status)
-                      const nextInterview = interviewsByCandidate[candidate.id]?.[0]
-                      const interviewCount = interviewsByCandidate[candidate.id]?.length ?? 0
+                      const candidateInterviews = interviewsByCandidate[candidate.id] ?? []
+                      const nextInterview = candidateInterviews.find((entry) => entry.status === 'Scheduled') ?? candidateInterviews[0]
+                      const interviewCount = candidateInterviews.length
                       const draft = drafts[candidate.id] ?? EMPTY_INTERVIEW_DRAFT
                       const isDragging = draggedCandidateId === candidate.id
 
@@ -552,6 +637,48 @@ export function HiringPipelineBoard() {
                             </div>
                           </div>
 
+                          {candidateInterviews.length > 0 ? (
+                            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                              <div className="mb-3 flex items-center justify-between gap-3">
+                                <div>
+                                  <h5 className="text-sm font-semibold text-slate-950">Interview schedule</h5>
+                                  <p className="text-xs text-slate-600">Update the live status without leaving the pipeline board.</p>
+                                </div>
+                                <span className="rounded-md bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
+                                  {candidateInterviews.length} total
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {candidateInterviews.map((interview) => (
+                                  <div key={interview.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                      <div>
+                                        <p className="text-sm font-semibold text-slate-900">{interview.interviewType}</p>
+                                        <p className="text-xs text-slate-600">
+                                          {formatDateLabel(interview.scheduledAt)} · {interview.location}
+                                        </p>
+                                      </div>
+                                      <label className="grid gap-1 text-xs font-medium text-slate-700">
+                                        Status
+                                        <Select
+                                          value={interview.status}
+                                          onChange={(event) => handleInterviewStatusUpdate(interview.id, event.target.value as InterviewStatus)}
+                                          disabled={interviewStatusMutation.isPending}
+                                          className="min-w-36 border-slate-200"
+                                        >
+                                          <option value="Scheduled">Scheduled</option>
+                                          <option value="Completed">Completed</option>
+                                          <option value="Cancelled">Cancelled</option>
+                                          <option value="NoShow">No show</option>
+                                        </Select>
+                                      </label>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
                           {candidateStage === 'Interview' ? (
                             <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 p-3">
                               <div className="mb-3">
@@ -592,6 +719,25 @@ export function HiringPipelineBoard() {
                                         [candidate.id]: {
                                           ...draft,
                                           scheduledAt: event.target.value,
+                                          scheduledEndAt:
+                                            draft.scheduledEndAt.length > 0 ? draft.scheduledEndAt : defaultInterviewEnd(event.target.value),
+                                        },
+                                      }))
+                                    }
+                                    className="border-violet-200"
+                                  />
+                                </label>
+                                <label className="grid gap-1 text-xs font-medium text-slate-700">
+                                  End time
+                                  <Input
+                                    type="datetime-local"
+                                    value={draft.scheduledEndAt}
+                                    onChange={(event) =>
+                                      setDrafts((current) => ({
+                                        ...current,
+                                        [candidate.id]: {
+                                          ...draft,
+                                          scheduledEndAt: event.target.value,
                                         },
                                       }))
                                     }

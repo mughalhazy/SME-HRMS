@@ -127,7 +127,10 @@ export type InterviewMockRecord = {
   candidate_id: string
   interview_type: 'PhoneScreen' | 'Technical' | 'Behavioral' | 'Panel' | 'Final'
   scheduled_at: string
+  scheduled_end_at: string
   location: string
+  status: 'Scheduled' | 'Completed' | 'Cancelled' | 'NoShow'
+  updated_at: string
 }
 
 export type MockDatabase = {
@@ -669,7 +672,10 @@ function interviewSeed(): InterviewMockRecord[] {
       candidate_id: 'cand-003',
       interview_type: 'Panel',
       scheduled_at: `${daysFromToday(1)}T14:30:00.000Z`,
+      scheduled_end_at: `${daysFromToday(1)}T15:15:00.000Z`,
       location: 'Zoom · Hiring Panel',
+      status: 'Scheduled',
+      updated_at: new Date().toISOString(),
     },
   ]
 }
