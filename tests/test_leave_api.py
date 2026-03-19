@@ -78,7 +78,7 @@ class LeaveApiTests(unittest.TestCase):
 
         self.assertEqual(status, 422)
         self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
-        self.assertEqual(payload["error"]["traceId"], "trace-leave-invalid")
+        self.assertEqual(payload["error"]["trace_id"], "trace-leave-invalid")
 
     def test_get_leave_requests_lists_filtered_requests(self) -> None:
         _, created = self.service.create_request(

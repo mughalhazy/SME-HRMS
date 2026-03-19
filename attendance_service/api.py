@@ -8,6 +8,7 @@ from uuid import UUID
 
 from attendance_service.models import AttendanceLogEvent, AttendanceSource, AttendanceStatus
 from attendance_service.service import Actor, AttendanceService, AttendanceServiceError
+from api_contract import error_payload
 from resilience import new_trace_id
 
 
@@ -20,14 +21,7 @@ def _parse_datetime(raw: str | None) -> datetime | None:
 
 
 def error_envelope(trace_id: str, exc: AttendanceServiceError) -> dict:
-    return {
-        "error": {
-            "code": exc.code,
-            "message": exc.message,
-            "details": exc.details,
-            "traceId": trace_id,
-        }
-    }
+    return error_payload(exc.code, exc.message, trace_id, exc.details)
 
 
 def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[..., tuple[int, dict]]:
@@ -71,14 +65,7 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
             service.observability.track(operation, trace_id=trace_id, started_at=started, success=False, context={"status": 422, "code": "VALIDATION_ERROR"})
             return (
                 422,
-                {
-                    "error": {
-                        "code": "VALIDATION_ERROR",
-                        "message": "Invalid request payload.",
-                        "details": [],
-                        "traceId": trace_id,
-                    }
-                },
+                error_payload("VALIDATION_ERROR", "Invalid request payload.", trace_id),
             )
 
     return wrapped

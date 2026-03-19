@@ -6,6 +6,7 @@ import os
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from api_contract import error_payload
 from resilience import Observability
 
 
@@ -20,14 +21,7 @@ OBSERVABILITY = Observability(SERVICE_NAME)
 
 
 def _error_payload(code: str, message: str, trace_id: str, details: list[dict] | None = None) -> dict[str, object]:
-    return {
-        "error": {
-            "code": code,
-            "message": message,
-            "details": details or [],
-            "traceId": trace_id,
-        }
-    }
+    return error_payload(code, message, trace_id, details)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -40,14 +34,14 @@ class Handler(BaseHTTPRequestHandler):
                     "service": SERVICE_NAME,
                     "status": "ok",
                     "database_configured": bool(DATABASE_URL),
-                    "traceId": trace_id,
+                    "trace_id": trace_id,
                     "metrics": OBSERVABILITY.metrics.snapshot(),
                 }
                 self._send_json(payload)
                 return
 
             if self.path == "/":
-                self._send_json({"service": SERVICE_NAME, "message": "running", "traceId": trace_id})
+                self._send_json({"service": SERVICE_NAME, "message": "running", "trace_id": trace_id})
                 return
 
             self._send_json(_error_payload("NOT_FOUND", "Resource not found", trace_id), status=404)
@@ -68,8 +62,9 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("X-Trace-Id", str(payload.get("traceId", "")))
-        self.send_header("X-Request-Id", str(payload.get("traceId", "")))
+        trace_id = str(payload.get("trace_id", payload.get("meta", {}).get("trace_id", "")))
+        self.send_header("X-Trace-Id", trace_id)
+        self.send_header("X-Request-Id", trace_id)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Cache-Control", "no-store")

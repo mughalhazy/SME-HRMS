@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import Any, Callable
 
 from notification_service import NotificationService, NotificationServiceError, serialize_message, serialize_preference
+from api_contract import error_response
 from resilience import new_trace_id
 
 _ERROR_STATUS_BY_CODE = {
@@ -16,17 +17,7 @@ _ERROR_STATUS_BY_CODE = {
 
 
 def _error_response(code: str, message: str, *, details: list[dict[str, Any]] | None = None, trace_id: str) -> tuple[int, dict[str, Any]]:
-    return (
-        _ERROR_STATUS_BY_CODE.get(code, 400),
-        {
-            "error": {
-                "code": code,
-                "message": message,
-                "details": details or [],
-                "traceId": trace_id,
-            }
-        },
-    )
+    return error_response(_ERROR_STATUS_BY_CODE.get(code, 400), code, message, trace_id=trace_id, details=details)
 
 
 def with_error_handling(handler: Callable[..., tuple[int, dict[str, Any]]]) -> Callable[..., tuple[int, dict[str, Any]]]:

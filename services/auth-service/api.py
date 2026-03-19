@@ -3,6 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 from uuid import UUID, uuid4
 
+from api_contract import error_response
 from service import AuthService, AuthServiceError
 
 _ERROR_STATUS_BY_CODE = {
@@ -132,17 +133,7 @@ def get_auth_me(service: AuthService, authorization_header: str | None, trace_id
 
 
 def _error_response(code: str, message: str, *, details: list | None = None, trace_id: str) -> tuple[int, dict]:
-    return (
-        _ERROR_STATUS_BY_CODE.get(code, 400),
-        {
-            'error': {
-                'code': code,
-                'message': message,
-                'details': details or [],
-                'traceId': trace_id,
-            }
-        },
-    )
+    return error_response(_ERROR_STATUS_BY_CODE.get(code, 400), code, message, trace_id=trace_id, details=details)
 
 
 def get_auth_session(service: AuthService, authorization_header: str | None, trace_id: str | None = None) -> tuple[int, dict]:
