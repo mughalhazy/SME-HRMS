@@ -128,7 +128,7 @@ class AuthServiceTests(unittest.TestCase):
             trace_id='trace-bad',
         )
         self.assertEqual(bad_status, 401)
-        self.assertEqual(bad_payload['error']['traceId'], 'trace-bad')
+        self.assertEqual(bad_payload['error']['trace_id'], 'trace-bad')
 
     def test_malformed_password_hash_is_treated_as_invalid_credentials(self) -> None:
         user = self.service.register_user(username='broken.hash', password='Password123!', role='Employee')

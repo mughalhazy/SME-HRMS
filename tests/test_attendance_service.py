@@ -272,7 +272,7 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-1",
         )
         self.assertEqual(status, 403)
-        self.assertEqual(payload["error"]["traceId"], "trace-1")
+        self.assertEqual(payload["error"]["trace_id"], "trace-1")
 
     def test_api_maps_employee_not_found_to_404(self) -> None:
         admin = Actor(employee_id=self.emp_1, role="Admin")
@@ -287,7 +287,7 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-404",
         )
         self.assertEqual(status, 404)
-        self.assertEqual(payload["error"]["traceId"], "trace-404")
+        self.assertEqual(payload["error"]["trace_id"], "trace-404")
 
     def test_api_maps_invalid_payload_to_422(self) -> None:
         admin = Actor(employee_id=self.emp_1, role="Admin")

@@ -28,10 +28,10 @@ class AttendanceApiStandardsUnitTests(unittest.TestCase):
         self.assertEqual(set(payload.keys()), {"error"})
         self.assertEqual(
             set(payload["error"].keys()),
-            {"code", "message", "details", "traceId"},
+            {"code", "message", "details", "trace_id"},
         )
         self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
-        self.assertEqual(payload["error"]["traceId"], "trace-unit-1")
+        self.assertEqual(payload["error"]["trace_id"], "trace-unit-1")
 
     def test_bad_request_payload_returns_422_with_trace_id(self) -> None:
         actor = Actor(employee_id=self.employee_id, role="Employee")
@@ -48,7 +48,7 @@ class AttendanceApiStandardsUnitTests(unittest.TestCase):
 
         self.assertEqual(status, 422)
         self.assertEqual(payload["error"]["code"], "VALIDATION_ERROR")
-        self.assertEqual(payload["error"]["traceId"], "trace-unit-422")
+        self.assertEqual(payload["error"]["trace_id"], "trace-unit-422")
 
     def test_log_endpoint_uses_domain_validation_error_shape(self) -> None:
         actor = Actor(employee_id=self.employee_id, role="Employee")
@@ -63,7 +63,7 @@ class AttendanceApiStandardsUnitTests(unittest.TestCase):
             trace_id="trace-unit-log",
         )
         self.assertEqual(status, 422)
-        self.assertEqual(payload["error"]["traceId"], "trace-unit-log")
+        self.assertEqual(payload["error"]["trace_id"], "trace-unit-log")
 
     def test_fetch_endpoint_returns_records_and_aggregation(self) -> None:
         actor = Actor(employee_id=self.employee_id, role="Employee")

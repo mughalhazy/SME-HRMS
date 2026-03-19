@@ -69,7 +69,7 @@ class HiringApiTests(unittest.TestCase):
         status, missing = get_job_posting(self.service, self.posting["job_posting_id"], trace_id="trace-missing")
         self.assertEqual(status, 404)
         self.assertEqual(missing["error"]["code"], "NOT_FOUND")
-        self.assertEqual(missing["error"]["traceId"], "trace-missing")
+        self.assertEqual(missing["error"]["trace_id"], "trace-missing")
 
     def test_candidate_and_interview_api_flow(self) -> None:
         status, created_candidate = post_candidates(
@@ -161,7 +161,7 @@ class HiringApiTests(unittest.TestCase):
     def test_api_reports_validation_and_conflict_errors(self) -> None:
         status, invalid = get_job_postings(self.service, {"limit": "abc"}, trace_id="trace-invalid-limit")
         self.assertEqual(status, 422)
-        self.assertEqual(invalid["error"]["traceId"], "trace-invalid-limit")
+        self.assertEqual(invalid["error"]["trace_id"], "trace-invalid-limit")
 
         self.service.create_candidate(
             {
@@ -175,7 +175,7 @@ class HiringApiTests(unittest.TestCase):
         status, conflict = delete_job_posting(self.service, self.posting["job_posting_id"], trace_id="trace-conflict")
         self.assertEqual(status, 409)
         self.assertEqual(conflict["error"]["code"], "CONFLICT")
-        self.assertEqual(conflict["error"]["traceId"], "trace-conflict")
+        self.assertEqual(conflict["error"]["trace_id"], "trace-conflict")
 
         status, missing_candidate = post_candidates(
             self.service,

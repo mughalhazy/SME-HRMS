@@ -119,7 +119,7 @@ class LeaveServiceError(Exception):
                 "code": code,
                 "message": message,
                 "details": details or [],
-                "traceId": trace_id,
+                "trace_id": trace_id,
             }
         }
         super().__init__(message)

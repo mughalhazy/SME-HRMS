@@ -3,6 +3,8 @@ from __future__ import annotations
 from time import perf_counter
 from uuid import uuid4
 
+from api_contract import error_payload
+
 from .service import HiringService, HiringValidationError
 
 
@@ -17,31 +19,15 @@ def _error_status(exc: HiringValidationError) -> int:
 
 def _error_response(exc: HiringValidationError, *, trace_id: str) -> tuple[int, dict]:
     status = _error_status(exc)
-    return (
-        status,
-        {
-            "error": {
-                "code": "NOT_FOUND" if status == 404 else "VALIDATION_ERROR" if status == 422 else "CONFLICT",
-                "message": str(exc),
-                "details": [],
-                "traceId": trace_id,
-            }
-        },
+    return status, error_payload(
+        "NOT_FOUND" if status == 404 else "VALIDATION_ERROR" if status == 422 else "CONFLICT",
+        str(exc),
+        trace_id,
     )
 
 
 def _invalid_payload(trace_id: str, message: str = "Invalid request payload.") -> tuple[int, dict]:
-    return (
-        422,
-        {
-            "error": {
-                "code": "VALIDATION_ERROR",
-                "message": message,
-                "details": [],
-                "traceId": trace_id,
-            }
-        },
-    )
+    return 422, error_payload("VALIDATION_ERROR", message, trace_id)
 
 
 def _parse_limit(params: dict) -> int | None:

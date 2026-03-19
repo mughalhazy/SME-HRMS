@@ -8,6 +8,7 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 
+from api_contract import error_payload
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, Observability, run_with_retry
 
 
@@ -35,14 +36,7 @@ def _check_socket(host: str, port: int) -> bool:
 
 
 def _error_payload(code: str, message: str, trace_id: str, details: list[dict] | None = None) -> dict[str, object]:
-    return {
-        "error": {
-            "code": code,
-            "message": message,
-            "details": details or [],
-            "traceId": trace_id,
-        }
-    }
+    return error_payload(code, message, trace_id, details)
 
 
 def _check_service_health(service: str, url: str, trace_id: str) -> dict[str, object]:
@@ -76,16 +70,16 @@ class Handler(BaseHTTPRequestHandler):
         trace_id = OBSERVABILITY.trace_id(self.headers.get("X-Trace-Id") or self.headers.get("X-Request-Id"))
         try:
             if self.path == "/health":
-                self._send_json({"service": "api-gateway", "status": "ok", "routes": ROUTES, "traceId": trace_id, "metrics": OBSERVABILITY.metrics.snapshot()})
+                self._send_json({"service": "api-gateway", "status": "ok", "routes": ROUTES, "trace_id": trace_id, "metrics": OBSERVABILITY.metrics.snapshot()})
                 return
 
             if self.path == "/ready":
                 checks = {svc: _check_service_health(svc, url, trace_id) for svc, url in ROUTES.items()}
                 overall_status = "ok" if all(item["status"] == "ok" for item in checks.values()) else "degraded"
-                self._send_json({"service": "api-gateway", "status": overall_status, "connectivity": checks, "traceId": trace_id})
+                self._send_json({"service": "api-gateway", "status": overall_status, "connectivity": checks, "trace_id": trace_id})
                 return
 
-            self._send_json({"service": "api-gateway", "message": "route placeholder", "traceId": trace_id})
+            self._send_json({"service": "api-gateway", "message": "route placeholder", "trace_id": trace_id})
         except Exception:  # noqa: BLE001
             LOGGER.exception("Unhandled gateway error path=%s trace_id=%s", self.path, trace_id)
             OBSERVABILITY.logger.error("request.error", trace_id=trace_id, message=self.path, context={"method": "GET"})
@@ -103,8 +97,9 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("X-Trace-Id", str(payload.get("traceId", "")))
-        self.send_header("X-Request-Id", str(payload.get("traceId", "")))
+        trace_id = str(payload.get("trace_id", payload.get("meta", {}).get("trace_id", "")))
+        self.send_header("X-Trace-Id", trace_id)
+        self.send_header("X-Request-Id", trace_id)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Cache-Control", "no-store")

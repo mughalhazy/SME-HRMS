@@ -4,6 +4,7 @@ from datetime import date
 from time import perf_counter
 from typing import Any, Callable, Dict
 
+from api_contract import error_payload
 from leave_service import LeaveService, LeaveServiceError
 from resilience import new_trace_id
 
@@ -13,7 +14,8 @@ def _parse_date(raw: str) -> date:
 
 
 def error_envelope(trace_id: str, exc: LeaveServiceError) -> dict:
-    return exc.payload
+    error = exc.payload["error"]
+    return error_payload(error["code"], error["message"], trace_id, error.get("details"))
 
 
 def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[..., tuple[int, dict]]:
@@ -57,14 +59,7 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
             )
             return (
                 422,
-                {
-                    "error": {
-                        "code": "VALIDATION_ERROR",
-                        "message": "Invalid request payload.",
-                        "details": [],
-                        "traceId": trace_id,
-                    }
-                },
+                error_payload("VALIDATION_ERROR", "Invalid request payload.", trace_id),
             )
 
     return wrapped

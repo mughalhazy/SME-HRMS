@@ -203,7 +203,7 @@ class ServiceError(Exception):
                 "code": self.code,
                 "message": self.message,
                 "details": self.details,
-                "traceId": trace_id or uuid4().hex,
+                "trace_id": trace_id or uuid4().hex,
             }
         }
 
