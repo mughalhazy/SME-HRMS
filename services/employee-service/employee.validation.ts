@@ -66,8 +66,8 @@ export function validateCreateEmployee(input: CreateEmployeeInput): void {
     });
   }
 
-  if (input.manager_employee_id !== undefined && typeof input.manager_employee_id !== 'string') {
-    details.push({ field: 'manager_employee_id', reason: 'must be a string when provided' });
+  if (input.manager_employee_id !== undefined && (typeof input.manager_employee_id !== 'string' || input.manager_employee_id.trim() === '')) {
+    details.push({ field: 'manager_employee_id', reason: 'must be a non-empty string when provided' });
   }
 
   if (details.length > 0) {
@@ -100,6 +100,18 @@ export function validateUpdateEmployee(input: UpdateEmployeeInput): void {
 
   if (input.hire_date !== undefined && !isIsoDate(input.hire_date)) {
     details.push({ field: 'hire_date', reason: 'must be an ISO date (YYYY-MM-DD)' });
+  }
+
+  if (input.department_id !== undefined && (typeof input.department_id !== 'string' || input.department_id.trim() === '')) {
+    details.push({ field: 'department_id', reason: 'must be a non-empty string' });
+  }
+
+  if (input.role_id !== undefined && (typeof input.role_id !== 'string' || input.role_id.trim() === '')) {
+    details.push({ field: 'role_id', reason: 'must be a non-empty string' });
+  }
+
+  if (input.manager_employee_id !== undefined && (typeof input.manager_employee_id !== 'string' || input.manager_employee_id.trim() === '')) {
+    details.push({ field: 'manager_employee_id', reason: 'must be a non-empty string when provided' });
   }
 
   if (input.employment_type !== undefined && !EMPLOYMENT_TYPES.includes(input.employment_type)) {
