@@ -363,6 +363,81 @@ class HiringServiceTest(unittest.TestCase):
         self.assertEqual(len(surfaces["candidate_pipeline"]), 1)
         self.assertEqual(surfaces["candidate_pipeline"][0]["candidate_id"], candidate["candidate_id"])
 
+    def test_candidate_and_interview_query_support(self) -> None:
+        first = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Rae",
+                "last_name": "West",
+                "email": "rae@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        second = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Sol",
+                "last_name": "Hart",
+                "email": "sol@example.com",
+                "application_date": "2026-01-04",
+            }
+        )
+        self.service.update_candidate(first["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(first["candidate_id"], {"status": "Interviewing"})
+        interview = self.service.create_interview(
+            {
+                "candidate_id": first["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-08T10:00:00Z",
+                "scheduled_end": "2026-01-08T11:00:00Z",
+            }
+        )
+
+        by_job = self.service.list_candidates(job_posting_id=self.posting["job_posting_id"])
+        self.assertEqual({row["candidate_id"] for row in by_job}, {first["candidate_id"], second["candidate_id"]})
+
+        by_stage = self.service.list_candidates(status="Interviewing")
+        self.assertEqual([row["candidate_id"] for row in by_stage], [first["candidate_id"]])
+
+        interviews = self.service.list_interviews(candidate_id=first["candidate_id"])
+        self.assertEqual(len(interviews), 1)
+        self.assertEqual(interviews[0]["interview_id"], interview["interview_id"])
+        self.assertEqual(interviews[0]["candidate"]["candidate_id"], first["candidate_id"])
+
+    def test_validation_rejects_invalid_references_and_initial_status(self) -> None:
+        with self.assertRaises(HiringValidationError):
+            self.service.create_candidate(
+                {
+                    "job_posting_id": "missing-job",
+                    "first_name": "Bad",
+                    "last_name": "Ref",
+                    "email": "bad@example.com",
+                    "application_date": "2026-01-03",
+                }
+            )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.create_candidate(
+                {
+                    "job_posting_id": self.posting["job_posting_id"],
+                    "first_name": "Skip",
+                    "last_name": "Stage",
+                    "email": "skip@example.com",
+                    "application_date": "2026-01-03",
+                    "status": "Interviewing",
+                }
+            )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.create_interview(
+                {
+                    "candidate_id": "missing-candidate",
+                    "interview_type": "Technical",
+                    "scheduled_start": "2026-01-08T10:00:00Z",
+                    "scheduled_end": "2026-01-08T11:00:00Z",
+                }
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -262,7 +262,11 @@ class HiringService:
             if source is not None:
                 self._validate_value(source, self.CANDIDATE_SOURCES, "source")
 
-            # unique (job_posting_id, email)
+            initial_status = payload.get("status", "Applied")
+            self._validate_value(initial_status, self.CANDIDATE_STATUSES, "status")
+            if initial_status != "Applied":
+                raise HiringValidationError("candidate status must start as Applied")
+
             for existing in self.candidates.values():
                 if existing.job_posting_id == payload["job_posting_id"] and existing.email.lower() == payload["email"].lower():
                     raise HiringValidationError("candidate email must be unique within the job posting")
@@ -279,11 +283,10 @@ class HiringService:
                 source_candidate_id=payload.get("source_candidate_id"),
                 source_profile_url=payload.get("source_profile_url"),
                 application_date=self._coerce_date(payload["application_date"], "application_date"),
-                status=payload.get("status", "Applied"),
+                status=initial_status,
                 created_at=self._now(),
                 updated_at=self._now(),
             )
-            self._validate_value(candidate.status, self.CANDIDATE_STATUSES, "status")
             self.candidates[candidate.candidate_id] = candidate
             self._record_candidate_stage_transition(
                 candidate_id=candidate.candidate_id,
@@ -295,7 +298,40 @@ class HiringService:
             )
             self._emit("CandidateApplied", {"candidate_id": candidate.candidate_id, "job_posting_id": candidate.job_posting_id})
         self.observability.track("create_candidate", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "candidate_id": candidate.candidate_id})
-        return self._serialize(candidate)
+        return self.get_candidate(candidate.candidate_id)
+
+    def list_candidates(
+        self,
+        *,
+        job_posting_id: str | None = None,
+        status: str | None = None,
+        limit: int | None = None,
+        cursor: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if job_posting_id is not None:
+            self._require_job_posting(job_posting_id)
+        if status is not None:
+            self._validate_value(status, self.CANDIDATE_STATUSES, "status")
+        if limit is not None and limit < 1:
+            raise HiringValidationError("limit must be >= 1")
+
+        rows = list(self.candidates.values())
+        if job_posting_id:
+            rows = [row for row in rows if row.job_posting_id == job_posting_id]
+        if status:
+            rows = [row for row in rows if row.status == status]
+        rows.sort(key=lambda row: (row.application_date, row.updated_at, row.candidate_id), reverse=True)
+
+        if cursor is not None:
+            cursor_index = next((index for index, row in enumerate(rows) if row.candidate_id == cursor), None)
+            if cursor_index is None:
+                raise HiringValidationError("cursor does not exist")
+            rows = rows[cursor_index + 1 :]
+
+        if limit is not None:
+            rows = rows[:limit]
+
+        return [self.get_candidate(row.candidate_id) for row in rows]
 
     def health_snapshot(self) -> dict[str, Any]:
         return self.observability.health_status(
@@ -324,10 +360,23 @@ class HiringService:
             if key in patch:
                 if key == "source" and patch[key] is not None:
                     self._validate_value(patch[key], self.CANDIDATE_SOURCES, "source")
+                if key == "email":
+                    for existing in self.candidates.values():
+                        if existing.candidate_id != candidate_id and existing.job_posting_id == candidate.job_posting_id and existing.email.lower() == patch[key].lower():
+                            raise HiringValidationError("candidate email must be unique within the job posting")
                 setattr(candidate, key, patch[key])
 
         if "application_date" in patch:
             candidate.application_date = self._coerce_date(patch["application_date"], "application_date")
+
+        if "job_posting_id" in patch and patch["job_posting_id"] != candidate.job_posting_id:
+            new_job_posting = self._require_job_posting(patch["job_posting_id"])
+            if new_job_posting.status not in {"Open", "OnHold"}:
+                raise HiringValidationError("candidates can only be assigned to Open/OnHold job postings")
+            for existing in self.candidates.values():
+                if existing.candidate_id != candidate_id and existing.job_posting_id == patch["job_posting_id"] and existing.email.lower() == candidate.email.lower():
+                    raise HiringValidationError("candidate email must be unique within the job posting")
+            candidate.job_posting_id = patch["job_posting_id"]
 
         if "status" in patch:
             next_status = patch["status"]
@@ -358,19 +407,14 @@ class HiringService:
                 },
             )
 
-        return self._serialize(candidate)
+        return self.get_candidate(candidate.candidate_id)
 
     def get_candidate(self, candidate_id: str) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
         payload = self._serialize(candidate)
+        payload["job_posting"] = self.get_job_posting(candidate.job_posting_id)
         payload["stage_history"] = self.list_candidate_stage_history(candidate_id)
-        payload["interviews"] = [
-            self._serialize(x)
-            for x in sorted(
-                (i for i in self.interviews.values() if i.candidate_id == candidate_id),
-                key=lambda row: (row.scheduled_start, row.interview_id),
-            )
-        ]
+        payload["interviews"] = self.list_interviews(candidate_id=candidate_id)
         return payload
 
     def create_interview(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -405,7 +449,46 @@ class HiringService:
 
         self.interviews[interview.interview_id] = interview
         self._emit("InterviewScheduled", {"interview_id": interview.interview_id, "candidate_id": interview.candidate_id})
-        return self._serialize(interview)
+        return self.get_interview(interview.interview_id)
+
+    def get_interview(self, interview_id: str) -> dict[str, Any]:
+        interview = self._require_interview(interview_id)
+        payload = self._serialize(interview)
+        payload["candidate"] = self.get_candidate_summary(interview.candidate_id)
+        return payload
+
+    def list_interviews(
+        self,
+        *,
+        candidate_id: str | None = None,
+        status: str | None = None,
+        limit: int | None = None,
+        cursor: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if candidate_id is not None:
+            self._require_candidate(candidate_id)
+        if status is not None:
+            self._validate_value(status, self.INTERVIEW_STATUSES, "status")
+        if limit is not None and limit < 1:
+            raise HiringValidationError("limit must be >= 1")
+
+        rows = list(self.interviews.values())
+        if candidate_id:
+            rows = [row for row in rows if row.candidate_id == candidate_id]
+        if status:
+            rows = [row for row in rows if row.status == status]
+        rows.sort(key=lambda row: (row.scheduled_start, row.updated_at, row.interview_id), reverse=False)
+
+        if cursor is not None:
+            cursor_index = next((index for index, row in enumerate(rows) if row.interview_id == cursor), None)
+            if cursor_index is None:
+                raise HiringValidationError("cursor does not exist")
+            rows = rows[cursor_index + 1 :]
+
+        if limit is not None:
+            rows = rows[:limit]
+
+        return [self.get_interview(row.interview_id) for row in rows]
 
     def schedule_interview_with_google_calendar(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Schedule interview and simulate synchronization to Google Calendar."""
@@ -450,7 +533,7 @@ class HiringService:
             self.error_logger.log("schedule_interview_with_google_calendar", exc, details={"candidate_id": interview_model.candidate_id})
             self.dead_letters.push("candidate_hiring", "InterviewCalendarSyncDeferred", {"interview_id": interview_model.interview_id, "candidate_id": interview_model.candidate_id}, str(exc))
             interview_model.location_or_link = interview_model.location_or_link or "manual-scheduling-required"
-        return self._serialize(interview_model)
+        return self.get_interview(interview_model.interview_id)
 
     def import_candidates_from_linkedin(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Import candidates from LinkedIn payloads for a target job posting."""
@@ -528,6 +611,12 @@ class HiringService:
         interview = self._require_interview(interview_id)
         previous_status = interview.status
 
+        if "candidate_id" in patch and patch["candidate_id"] != interview.candidate_id:
+            candidate = self._require_candidate(patch["candidate_id"])
+            if candidate.status not in {"Interviewing", "Offered"}:
+                raise HiringValidationError("interviews can only be assigned to Interviewing/Offered candidates")
+            interview.candidate_id = patch["candidate_id"]
+
         if "interview_type" in patch:
             self._validate_value(patch["interview_type"], self.INTERVIEW_TYPES, "interview_type")
             interview.interview_type = patch["interview_type"]
@@ -536,7 +625,10 @@ class HiringService:
             if key in patch:
                 value = patch[key]
                 if key == "interviewer_employee_ids":
-                    value = list(value)
+                    if value is None:
+                        value = []
+                    else:
+                        value = list(value)
                 setattr(interview, key, value)
 
         if "scheduled_start" in patch:
@@ -561,7 +653,7 @@ class HiringService:
         if previous_status != interview.status and interview.status == "Completed":
             self._emit("InterviewCompleted", {"interview_id": interview.interview_id, "candidate_id": interview.candidate_id})
 
-        return self._serialize(interview)
+        return self.get_interview(interview.interview_id)
 
     def mark_candidate_hired(self, candidate_id: str) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
@@ -580,7 +672,7 @@ class HiringService:
         )
         self._emit("CandidateStageChanged", {"candidate_id": candidate_id, "from_status": "Offered", "to_status": "Hired"})
         self._emit("CandidateHired", {"candidate_id": candidate_id, "job_posting_id": candidate.job_posting_id})
-        return self._serialize(candidate)
+        return self.get_candidate(candidate_id)
 
     def list_candidate_stage_history(self, candidate_id: str) -> list[dict[str, Any]]:
         self._require_candidate(candidate_id)
@@ -601,6 +693,8 @@ class HiringService:
     ) -> list[dict[str, Any]]:
         if pipeline_stage is not None:
             self._validate_value(pipeline_stage, self.CANDIDATE_STATUSES, "pipeline_stage")
+        if job_posting_id is not None:
+            self._require_job_posting(job_posting_id)
 
         rows: list[dict[str, Any]] = []
         for candidate in self.candidates.values():
@@ -661,6 +755,19 @@ class HiringService:
                 department_id=department_id,
                 job_posting_id=job_posting_id,
             ),
+        }
+
+    def get_candidate_summary(self, candidate_id: str) -> dict[str, Any]:
+        candidate = self._require_candidate(candidate_id)
+        job_posting = self._require_job_posting(candidate.job_posting_id)
+        return {
+            "candidate_id": candidate.candidate_id,
+            "job_posting_id": candidate.job_posting_id,
+            "job_posting_title": job_posting.title,
+            "first_name": candidate.first_name,
+            "last_name": candidate.last_name,
+            "email": candidate.email,
+            "status": candidate.status,
         }
 
     def _candidate_count(self, job_posting_id: str) -> int:
