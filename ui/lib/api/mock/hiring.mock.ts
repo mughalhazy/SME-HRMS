@@ -1,5 +1,29 @@
 import { clone, getMockDb, nowIso, randomId, simulateLatency } from './shared'
 
+type CandidateStage = 'Applied' | 'Screening' | 'Interviewing' | 'Offered' | 'Hired'
+type InterviewType = 'PhoneScreen' | 'Technical' | 'Behavioral' | 'Panel' | 'Final'
+type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'NoShow'
+
+function syncCandidateInterviewSnapshot(candidateId: string) {
+  const db = getMockDb()
+  const candidate = db.candidates.find((entry) => entry.candidate_id === candidateId)
+  if (!candidate) {
+    throw new Error('Candidate not found')
+  }
+
+  const candidateInterviews = db.interviews
+    .filter((entry) => entry.candidate_id === candidateId)
+    .sort((left, right) => left.scheduled_at.localeCompare(right.scheduled_at))
+
+  const nextScheduledInterview = candidateInterviews.find((entry) => entry.status === 'Scheduled')
+  candidate.interview_count = candidateInterviews.length
+  candidate.next_interview_at = nextScheduledInterview?.scheduled_at ?? null
+  candidate.stage_updated_at = nowIso()
+  candidate.updated_at = candidate.stage_updated_at
+
+  return candidate
+}
+
 export async function listJobPostingsMock(params: { status?: string; limit?: number } = {}) {
   await simulateLatency()
 
@@ -69,7 +93,7 @@ export async function listInterviewsMock() {
   return { data: clone(getMockDb().interviews.sort((left, right) => left.scheduled_at.localeCompare(right.scheduled_at))) }
 }
 
-export async function updateCandidateStageMock(candidateId: string, pipelineStage: 'Applied' | 'Screening' | 'Interviewing' | 'Offered' | 'Hired', options?: { failRate?: number }) {
+export async function updateCandidateStageMock(candidateId: string, pipelineStage: CandidateStage, options?: { failRate?: number }) {
   await simulateLatency({ failRate: options?.failRate ?? 0.05 })
 
   const candidate = getMockDb().candidates.find((entry) => entry.candidate_id === candidateId)
@@ -84,7 +108,7 @@ export async function updateCandidateStageMock(candidateId: string, pipelineStag
   return { data: clone(candidate) }
 }
 
-export async function scheduleInterviewMock(candidateId: string, payload: { interviewType: 'PhoneScreen' | 'Technical' | 'Behavioral' | 'Panel' | 'Final'; scheduledAt: string; location: string }, options?: { failRate?: number }) {
+export async function scheduleInterviewMock(candidateId: string, payload: { interviewType: InterviewType; scheduledAt: string; scheduledEndAt: string; location: string }, options?: { failRate?: number }) {
   await simulateLatency({ failRate: options?.failRate ?? 0.06 })
 
   const db = getMockDb()
@@ -93,19 +117,39 @@ export async function scheduleInterviewMock(candidateId: string, payload: { inte
     throw new Error('Candidate not found')
   }
 
+  if (new Date(payload.scheduledEndAt).getTime() <= new Date(payload.scheduledAt).getTime()) {
+    throw new Error('Interview end time must be after the start time')
+  }
+
   const interview = {
     interview_id: randomId('int'),
     candidate_id: candidateId,
     interview_type: payload.interviewType,
     scheduled_at: new Date(payload.scheduledAt).toISOString(),
+    scheduled_end_at: new Date(payload.scheduledEndAt).toISOString(),
     location: payload.location.trim(),
+    status: 'Scheduled' as const,
+    updated_at: nowIso(),
   }
 
   db.interviews.push(interview)
-  candidate.next_interview_at = interview.scheduled_at
-  candidate.interview_count += 1
-  candidate.stage_updated_at = nowIso()
-  candidate.updated_at = candidate.stage_updated_at
+  syncCandidateInterviewSnapshot(candidateId)
+
+  return { data: clone(interview) }
+}
+
+export async function updateInterviewStatusMock(interviewId: string, status: InterviewStatus, options?: { failRate?: number }) {
+  await simulateLatency({ failRate: options?.failRate ?? 0.05 })
+
+  const db = getMockDb()
+  const interview = db.interviews.find((entry) => entry.interview_id === interviewId)
+  if (!interview) {
+    throw new Error('Interview not found')
+  }
+
+  interview.status = status
+  interview.updated_at = nowIso()
+  syncCandidateInterviewSnapshot(interview.candidate_id)
 
   return { data: clone(interview) }
 }

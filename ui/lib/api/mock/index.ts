@@ -6,6 +6,7 @@ import {
   listInterviewsMock,
   listJobPostingsMock,
   scheduleInterviewMock,
+  updateInterviewStatusMock,
   updateCandidateStageMock,
 } from './hiring.mock'
 import { approveLeaveRequestMock, listLeaveRequestsMock } from './leave.mock'
@@ -127,8 +128,14 @@ export async function mockApiRequest<T>(path: string, init?: RequestInit): Promi
     return response(await scheduleInterviewMock(parts[5] ?? '', {
       interviewType: String(body.interview_type) as never,
       scheduledAt: String(body.scheduled_at),
+      scheduledEndAt: String(body.scheduled_end_at),
       location: String(body.location ?? ''),
     })) as T
+  }
+
+  if (pathname.match(/^\/api\/v1\/hiring\/interviews\/[^/]+$/) && method === 'PATCH') {
+    const parts = pathname.split('/')
+    return response(await updateInterviewStatusMock(parts[5] ?? '', String(body.status) as never)) as T
   }
 
   throw new Error(`No mock handler registered for ${method} ${pathname}`)
