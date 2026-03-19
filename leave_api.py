@@ -85,6 +85,17 @@ def post_leave_requests(service: LeaveService, actor_role: str, actor_employee_i
 
 
 @with_error_handling
+def post_leave_submit(service: LeaveService, actor_role: str, actor_employee_id: str, leave_request_id: str, payload: dict | None = None) -> tuple[int, dict]:
+    body = payload or {}
+    return service.submit_request(
+        actor_role=actor_role,
+        actor_employee_id=actor_employee_id,
+        leave_request_id=leave_request_id,
+        idempotency_key=body.get("idempotency_key"),
+    )
+
+
+@with_error_handling
 def post_leave_decision(service: LeaveService, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, payload: dict | None = None) -> tuple[int, dict]:
     body = payload or {}
     return service.decide_request(
@@ -93,6 +104,26 @@ def post_leave_decision(service: LeaveService, action: str, actor_role: str, act
         actor_employee_id=actor_employee_id,
         leave_request_id=leave_request_id,
         reason=body.get("reason"),
+        idempotency_key=body.get("idempotency_key"),
+    )
+
+
+@with_error_handling
+def get_leave_request(service: LeaveService, actor_role: str, actor_employee_id: str, leave_request_id: str) -> tuple[int, dict]:
+    return service.get_request(
+        actor_role=actor_role,
+        actor_employee_id=actor_employee_id,
+        leave_request_id=leave_request_id,
+    )
+
+
+@with_error_handling
+def patch_leave_request(service: LeaveService, actor_role: str, actor_employee_id: str, leave_request_id: str, payload: dict) -> tuple[int, dict]:
+    return service.patch_request(
+        actor_role=actor_role,
+        actor_employee_id=actor_employee_id,
+        leave_request_id=leave_request_id,
+        patch=payload,
     )
 
 

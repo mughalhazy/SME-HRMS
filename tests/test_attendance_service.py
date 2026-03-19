@@ -14,7 +14,17 @@ from attendance_service import (
     InMemoryEmployeeDirectory,
     RecordState,
 )
-from attendance_service.api import get_attendance_records, patch_attendance_record, post_attendance_log, post_attendance_records
+from attendance_service.api import (
+    get_attendance_absence_alerts,
+    get_attendance_record,
+    get_attendance_records,
+    get_attendance_summary,
+    patch_attendance_record,
+    post_attendance_approval,
+    post_attendance_log,
+    post_attendance_period_lock,
+    post_attendance_records,
+)
 
 
 class AttendanceServiceTests(unittest.TestCase):
@@ -65,6 +75,22 @@ class AttendanceServiceTests(unittest.TestCase):
         )
         updated = self.service.approve_record(manager, record.attendance_id)
         self.assertEqual(updated.lifecycle_state, RecordState.APPROVED)
+
+    def test_cannot_approve_incomplete_captured_record(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        record = self.service.create_record(
+            admin,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 2, 11),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 2, 11, 9, 0),
+        )
+
+        with self.assertRaises(AttendanceServiceError) as context:
+            self.service.approve_record(admin, record.attendance_id)
+
+        self.assertEqual(context.exception.code, "APPROVAL_REQUIRES_VALIDATED")
+        self.assertEqual(record.lifecycle_state, RecordState.CAPTURED)
 
     def test_period_lock_requires_approval(self) -> None:
         admin = Actor(employee_id=uuid4(), role="Admin")
@@ -365,6 +391,94 @@ class AttendanceServiceTests(unittest.TestCase):
         self.assertEqual(metrics["request_count"], 1)
         self.assertEqual(metrics["recent_requests"][0]["trace_id"], "trace-attendance")
         self.assertEqual(self.service.health_snapshot()["status"], "ok")
+
+    def test_api_supports_read_approve_summary_alerts_and_lock_workflow(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        status, created = post_attendance_records(
+            self.service,
+            admin,
+            {
+                "employee_id": str(self.emp_1),
+                "attendance_date": "2026-05-06",
+                "attendance_status": "Absent",
+            },
+            trace_id="trace-create-api",
+        )
+        self.assertEqual(status, 201)
+
+        status, fetched = get_attendance_record(
+            self.service,
+            admin,
+            created["attendance_id"],
+            trace_id="trace-get-api",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(fetched["attendance_id"], created["attendance_id"])
+
+        status, approved = post_attendance_approval(
+            self.service,
+            admin,
+            created["attendance_id"],
+            trace_id="trace-approve-api",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(approved["lifecycle_state"], "Approved")
+
+        status, summary = get_attendance_summary(
+            self.service,
+            admin,
+            {
+                "employee_id": str(self.emp_1),
+                "period_start": "2026-05-01",
+                "period_end": "2026-05-31",
+            },
+            trace_id="trace-summary-api",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(summary["records"], 1)
+
+        status, alerts = get_attendance_absence_alerts(
+            self.service,
+            admin,
+            {"attendance_date": "2026-05-06"},
+            trace_id="trace-alerts-api",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(alerts["count"], 1)
+
+        status, payload = post_attendance_period_lock(
+            self.service,
+            admin,
+            {
+                "period_id": "2026-05",
+                "from_date": "2026-05-01",
+                "to_date": "2026-05-31",
+            },
+            trace_id="trace-lock-api",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["lockedCount"], 1)
+
+    def test_api_approval_rejects_incomplete_record(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        record = self.service.create_record(
+            admin,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 5, 7),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 5, 7, 9, 0),
+        )
+
+        status, payload = post_attendance_approval(
+            self.service,
+            admin,
+            str(record.attendance_id),
+            trace_id="trace-approve-invalid",
+        )
+
+        self.assertEqual(status, 409)
+        self.assertEqual(payload["error"]["code"], "APPROVAL_REQUIRES_VALIDATED")
+
 
 
 if __name__ == "__main__":
