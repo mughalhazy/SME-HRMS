@@ -1,7 +1,19 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { Building2, ChevronDown, ChevronsLeft, ChevronsRight, MapPin, MoreHorizontal, Plus, Search, UserCircle2 } from 'lucide-react'
+import {
+  Building2,
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+  MapPin,
+  MoreHorizontal,
+  Plus,
+  Search,
+  UserCircle2,
+  Users,
+} from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -182,11 +194,55 @@ function statusVariant(status: EmployeeStatus) {
   switch (status) {
     case 'Active':
       return 'success'
-    case 'Remote':
-      return 'default'
-    default:
+    case 'On Leave':
       return 'outline'
+    case 'Probation':
+      return 'outline'
+    default:
+      return 'default'
   }
+}
+
+function statusClassName(status: EmployeeStatus) {
+  switch (status) {
+    case 'Active':
+      return 'border-transparent bg-emerald-50 text-emerald-700'
+    case 'Remote':
+      return 'border-transparent bg-sky-50 text-sky-700'
+    case 'On Leave':
+      return 'border-transparent bg-amber-50 text-amber-700'
+    case 'Probation':
+      return 'border-transparent bg-rose-50 text-rose-700'
+  }
+}
+
+function summaryMetrics(records: EmployeeRecord[]) {
+  const activeCount = records.filter((employee) => employee.status === 'Active').length
+  const remoteCount = records.filter((employee) => employee.status === 'Remote').length
+  const departmentsCount = new Set(records.map((employee) => employee.department)).size
+
+  return [
+    {
+      label: 'Total employees',
+      value: records.length,
+      tone: 'text-slate-950',
+    },
+    {
+      label: 'Active employees',
+      value: activeCount,
+      tone: 'text-emerald-700',
+    },
+    {
+      label: 'Remote employees',
+      value: remoteCount,
+      tone: 'text-sky-700',
+    },
+    {
+      label: 'Departments',
+      value: departmentsCount,
+      tone: 'text-slate-950',
+    },
+  ]
 }
 
 export function EmployeeList() {
@@ -221,208 +277,269 @@ export function EmployeeList() {
 
   const startResult = filteredEmployees.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const endResult = Math.min(currentPage * PAGE_SIZE, filteredEmployees.length)
+  const metrics = useMemo(() => summaryMetrics(filteredEmployees), [filteredEmployees])
 
   return (
-    <section className="space-y-6 rounded-[var(--radius-surface)] border border-slate-200 bg-white p-6 shadow-sm">
-      <header className="flex flex-col gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Employee directory</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Employees</h1>
+    <div className="space-y-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="space-y-3">
+            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">
+              Employee directory
+            </Badge>
+            <div className="space-y-2">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-3xl font-semibold tracking-tight text-slate-950">Employees</h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                    Review workforce coverage, scan headcount changes quickly, and move into employee actions without losing context.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <Button variant="outline" className="border-slate-200 bg-white hover:bg-slate-50">
+              Export roster
+            </Button>
+            <Button asChild className="shadow-sm">
+              <Link href="/employees/new">
+                <Plus className="h-4 w-4" />
+                Add Employee
+              </Link>
+            </Button>
+          </div>
         </div>
-        <Button className="bg-slate-950 text-white hover:bg-slate-800">
-          <Plus className="h-4 w-4" />
-          Add Employee
-        </Button>
-      </header>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.7fr)_repeat(3,minmax(0,0.85fr))]">
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          <span>Search</span>
-          <span className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              className="border-slate-200 bg-white pl-9"
-              onChange={(event) => {
-                setSearch(event.target.value)
-                setPage(1)
-              }}
-              placeholder="Search by employee, role, ID, or manager"
-              value={search}
-            />
-          </span>
-        </label>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => (
+            <div key={metric.label} className="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+              <p className={cn('mt-2 text-2xl font-semibold tracking-tight', metric.tone)}>{metric.value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          <span>Department</span>
-          <div className="relative">
-            <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Select
-              className="border-slate-200 bg-white pl-9"
-              onChange={(event) => {
-                setDepartment(event.target.value as (typeof departments)[number])
-                setPage(1)
-              }}
-              value={department}
-            >
-              {departments.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <section className="space-y-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-6">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-slate-950">Filters</h3>
+              <p className="text-sm text-slate-500">Refine by employee, status, department, or location.</p>
+            </div>
+            <div className="text-sm text-slate-500">
+              Showing <span className="font-semibold text-slate-950">{startResult}-{endResult}</span> of{' '}
+              <span className="font-semibold text-slate-950">{filteredEmployees.length}</span> employees
+            </div>
           </div>
-        </label>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          <span>Status</span>
-          <div className="relative">
-            <UserCircle2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Select
-              className="border-slate-200 bg-white pl-9"
-              onChange={(event) => {
-                setStatus(event.target.value as (typeof statuses)[number])
-                setPage(1)
-              }}
-              value={status}
-            >
-              {statuses.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,0.85fr))]">
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <span>Search</span>
+              <span className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  className="border-slate-200 bg-white pl-9"
+                  onChange={(event) => {
+                    setSearch(event.target.value)
+                    setPage(1)
+                  }}
+                  placeholder="Search by employee, role, ID, or manager"
+                  value={search}
+                />
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <span>Department</span>
+              <div className="relative">
+                <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Select
+                  className="border-slate-200 bg-white pl-9 pr-10"
+                  onChange={(event) => {
+                    setDepartment(event.target.value as (typeof departments)[number])
+                    setPage(1)
+                  }}
+                  value={department}
+                >
+                  {departments.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </Select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <span>Status</span>
+              <div className="relative">
+                <UserCircle2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Select
+                  className="border-slate-200 bg-white pl-9 pr-10"
+                  onChange={(event) => {
+                    setStatus(event.target.value as (typeof statuses)[number])
+                    setPage(1)
+                  }}
+                  value={status}
+                >
+                  {statuses.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </Select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <span>Location</span>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Select
+                  className="border-slate-200 bg-white pl-9 pr-10"
+                  onChange={(event) => {
+                    setLocation(event.target.value as (typeof locations)[number])
+                    setPage(1)
+                  }}
+                  value={location}
+                >
+                  {locations.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </Select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </label>
           </div>
-        </label>
+        </div>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          <span>Location</span>
-          <div className="relative">
-            <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Select
-              className="border-slate-200 bg-white pl-9"
-              onChange={(event) => {
-                setLocation(event.target.value as (typeof locations)[number])
-                setPage(1)
-              }}
-              value={location}
-            >
-              {locations.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          </div>
-        </label>
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-slate-200">
-        <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow className="hover:bg-transparent hover:shadow-none">
-              <TableHead>Name</TableHead>
-              <TableHead>Employee ID</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Manager</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Join Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="[&_tr:nth-child(even)]:bg-white">
-            {paginatedEmployees.length > 0 ? (
-              paginatedEmployees.map((employee) => (
-                <TableRow key={employee.id} className="bg-white hover:bg-slate-50">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 border-slate-200 bg-slate-50">
-                        <AvatarFallback className="bg-slate-100 text-slate-700">{initials(employee.name)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-slate-950">{employee.name}</p>
-                        <p className="text-xs text-slate-500">{employee.email}</p>
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow className="hover:bg-slate-50">
+                <TableHead className="w-[28%]">Employee</TableHead>
+                <TableHead className="w-[16%]">Department</TableHead>
+                <TableHead className="w-[20%]">Role & Manager</TableHead>
+                <TableHead className="w-[14%]">Status</TableHead>
+                <TableHead className="w-[14%]">Joined</TableHead>
+                <TableHead className="w-[8%] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedEmployees.length > 0 ? (
+                paginatedEmployees.map((employee) => (
+                  <TableRow key={employee.id} className="hover:bg-gray-50">
+                    <TableCell className="py-4 align-top">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="mt-0.5 h-10 w-10 border border-slate-200 bg-slate-100">
+                          <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-700">{initials(employee.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <p className="font-semibold text-slate-950">{employee.name}</p>
+                            <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">{employee.id}</span>
+                          </div>
+                          <p className="truncate text-sm text-slate-600">{employee.email}</p>
+                          <p className="text-sm text-slate-500">{employee.location}</p>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium text-slate-700">{employee.id}</TableCell>
-                  <TableCell className="text-slate-600">{employee.department}</TableCell>
-                  <TableCell className="text-slate-600">{employee.role}</TableCell>
-                  <TableCell className="text-slate-600">{employee.manager}</TableCell>
-                  <TableCell>
-                    <Badge
-                      className={cn(
-                        'border px-2.5 py-1 font-medium',
-                        employee.status === 'On Leave' && 'border-amber-200 bg-amber-50 text-amber-700',
-                        employee.status === 'Probation' && 'border-slate-200 bg-slate-100 text-slate-700',
-                        employee.status === 'Remote' && 'border-blue-200 bg-blue-50 text-blue-700',
-                      )}
-                      variant={statusVariant(employee.status)}
-                    >
-                      {employee.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-slate-600">{formatJoinDate(employee.joinDate)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button className="border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-950" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Edit Employee</DropdownMenuItem>
-                        <DropdownMenuItem>Send Message</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    </TableCell>
+                    <TableCell className="py-4 align-top">
+                      <div className="space-y-1">
+                        <p className="font-medium text-slate-900">{employee.department}</p>
+                        <p className="text-sm text-slate-500">Regional team</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 align-top">
+                      <div className="space-y-1">
+                        <p className="font-medium text-slate-900">{employee.role}</p>
+                        <p className="text-sm text-slate-500">Manager: {employee.manager}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 align-top">
+                      <Badge className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', statusClassName(employee.status))} variant={statusVariant(employee.status)}>
+                        {employee.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4 align-top text-sm text-slate-600">{formatJoinDate(employee.joinDate)}</TableCell>
+                    <TableCell className="py-4 align-top">
+                      <div className="flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label={`Open actions for ${employee.name}`}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem>View profile</DropdownMenuItem>
+                            <DropdownMenuItem>Edit employee</DropdownMenuItem>
+                            <DropdownMenuItem>Assign review</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow className="hover:bg-white">
+                  <TableCell colSpan={6} className="py-12 text-center text-sm text-slate-500">
+                    No employees match the selected filters.
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow className="bg-white hover:bg-white">
-                <TableCell className="py-12 text-center text-sm text-slate-500" colSpan={8}>
-                  No employees match the selected filters.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <footer className="flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-slate-500">
-          Showing <span className="font-medium text-slate-900">{startResult}-{endResult}</span> of{' '}
-          <span className="font-medium text-slate-900">{filteredEmployees.length}</span> employees
-        </p>
-
-        <div className="flex items-center gap-2">
-          <Button
-            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            disabled={currentPage === 1}
-            onClick={() => setPage((value) => Math.max(1, value - 1))}
-            variant="outline"
-          >
-            <ChevronsLeft className="h-4 w-4" />
-            Previous
-          </Button>
-          <div className="rounded-[var(--radius-control)] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
-            Page {currentPage} of {totalPages}
-          </div>
-          <Button
-            className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            disabled={currentPage === totalPages}
-            onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-            variant="outline"
-          >
-            Next
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
+              )}
+            </TableBody>
+          </Table>
         </div>
-      </footer>
-    </section>
+
+        <div className="flex flex-col gap-4 border-t border-slate-200 pt-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="rounded-full bg-white p-2 text-slate-500 shadow-sm">
+              <Users className="h-4 w-4" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-900">Directory coverage</p>
+              <p className="text-sm text-slate-500">
+                Showing {startResult}-{endResult} of {filteredEmployees.length} matching employees across {totalPages} pages.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <p className="text-sm text-slate-500">
+              Page <span className="font-semibold text-slate-950">{currentPage}</span> of <span className="font-semibold text-slate-950">{totalPages}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-200 bg-white hover:bg-slate-50"
+                disabled={currentPage === 1}
+                onClick={() => setPage((previous) => Math.max(1, previous - 1))}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-200 bg-white hover:bg-slate-50"
+                disabled={currentPage === totalPages}
+                onClick={() => setPage((previous) => Math.min(totalPages, previous + 1))}
+              >
+                Next
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   )
 }
