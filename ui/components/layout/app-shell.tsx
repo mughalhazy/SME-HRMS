@@ -19,6 +19,7 @@ const navIcons = {
   jobs: BriefcaseBusiness,
   candidates: TrendingUp,
   performance: Bell,
+  notifications: Bell,
   settings: Settings2,
 }
 

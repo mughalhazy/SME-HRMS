@@ -10,6 +10,7 @@ import {
   updateCandidateStageMock,
 } from './hiring.mock'
 import { approveLeaveRequestMock, listLeaveRequestsMock } from './leave.mock'
+import { ingestNotificationEventMock, getInboxMock, listNotificationDeliveryMock, markInboxMessageReadMock } from './notifications.mock'
 import { listPayrollMock, runPayrollMock } from './payroll.mock'
 
 function parseBody(body?: BodyInit | null) {
@@ -136,6 +137,31 @@ export async function mockApiRequest<T>(path: string, init?: RequestInit): Promi
   if (pathname.match(/^\/api\/v1\/hiring\/interviews\/[^/]+$/) && method === 'PATCH') {
     const parts = pathname.split('/')
     return response(await updateInterviewStatusMock(parts[5] ?? '', String(body.status) as never)) as T
+  }
+
+  if (pathname.match(/^\/api\/v1\/notifications\/inbox\/[^/]+$/) && method === 'GET') {
+    const parts = pathname.split('/')
+    return response(await getInboxMock({
+      subjectId: parts[5] ?? '',
+      unreadOnly: url.searchParams.get('unread_only') === 'true',
+    })) as T
+  }
+
+  if (pathname.match(/^\/api\/v1\/notifications\/inbox\/[^/]+\/read\/[^/]+$/) && method === 'POST') {
+    const parts = pathname.split('/')
+    return response(await markInboxMessageReadMock(parts[5] ?? '', parts[7] ?? '')) as T
+  }
+
+  if (pathname === '/api/v1/notifications/delivery' && method === 'GET') {
+    return response(await listNotificationDeliveryMock({
+      subjectId: url.searchParams.get('subject_id') ?? undefined,
+      channel: url.searchParams.get('channel') ?? undefined,
+      status: url.searchParams.get('status') ?? undefined,
+    })) as T
+  }
+
+  if (pathname === '/api/v1/notifications/events' && method === 'POST') {
+    return response(await ingestNotificationEventMock(body)) as T
   }
 
   throw new Error(`No mock handler registered for ${method} ${pathname}`)

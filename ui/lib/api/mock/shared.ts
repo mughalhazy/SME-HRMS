@@ -133,6 +133,22 @@ export type InterviewMockRecord = {
   updated_at: string
 }
 
+export type NotificationMockRecord = {
+  message_id: string
+  subject_id: string
+  subject_name: string
+  event_name: string
+  topic_code: string
+  channel: 'InApp' | 'Email'
+  destination: string
+  status: 'Sent' | 'Suppressed'
+  title: string
+  body: string
+  queued_at: string
+  read_at: string | null
+  updated_at: string
+}
+
 export type MockDatabase = {
   employees: EmployeeMockRecord[]
   attendance: AttendanceMockRecord[]
@@ -141,6 +157,7 @@ export type MockDatabase = {
   jobs: JobPostingMockRecord[]
   candidates: CandidateMockRecord[]
   interviews: InterviewMockRecord[]
+  notifications: NotificationMockRecord[]
 }
 
 function withTime(date: string, hour: number, minute: number) {
@@ -680,16 +697,87 @@ function interviewSeed(): InterviewMockRecord[] {
   ]
 }
 
+function notificationSeed(employees: EmployeeMockRecord[], candidates: CandidateMockRecord[]): NotificationMockRecord[] {
+  const hrLead = employees.find((employee) => employee.employee_id === 'emp-004') ?? employees[0]
+  const financeManager = employees.find((employee) => employee.employee_id === 'emp-001') ?? employees[0]
+  const candidate = candidates.find((row) => row.candidate_id === 'cand-003') ?? candidates[0]
+
+  return [
+    {
+      message_id: 'msg-001',
+      subject_id: hrLead.employee_id,
+      subject_name: hrLead.full_name,
+      event_name: 'LeaveRequestSubmitted',
+      topic_code: 'leave.submission',
+      channel: 'InApp',
+      destination: `inbox:${hrLead.employee_id}`,
+      status: 'Sent',
+      title: 'Leave request awaiting approval',
+      body: 'Jordan Kim submitted Annual leave for next week and is awaiting your approval.',
+      queued_at: `${daysFromToday(-1)}T08:45:00.000Z`,
+      read_at: null,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      message_id: 'msg-002',
+      subject_id: financeManager.employee_id,
+      subject_name: financeManager.full_name,
+      event_name: 'PayrollProcessed',
+      topic_code: 'payroll.processed',
+      channel: 'InApp',
+      destination: `inbox:${financeManager.employee_id}`,
+      status: 'Sent',
+      title: 'Payroll ready for review',
+      body: 'Payroll for March has been processed with net pay of 5,190.00 USD.',
+      queued_at: `${daysFromToday(-2)}T14:05:00.000Z`,
+      read_at: `${daysFromToday(-2)}T14:20:00.000Z`,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      message_id: 'msg-003',
+      subject_id: candidate.candidate_id,
+      subject_name: candidate.candidate_name,
+      event_name: 'InterviewScheduled',
+      topic_code: 'hiring.interview_scheduled',
+      channel: 'InApp',
+      destination: `inbox:${candidate.candidate_id}`,
+      status: 'Sent',
+      title: 'Interview scheduled',
+      body: 'Your final panel interview is confirmed for tomorrow at 2:30 PM UTC.',
+      queued_at: `${daysFromToday(0)}T09:10:00.000Z`,
+      read_at: null,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      message_id: 'msg-004',
+      subject_id: hrLead.employee_id,
+      subject_name: hrLead.full_name,
+      event_name: 'PayrollProcessed',
+      topic_code: 'payroll.processed',
+      channel: 'Email',
+      destination: hrLead.email,
+      status: 'Suppressed',
+      title: 'Payroll processed',
+      body: 'Email delivery was skipped because this channel is disabled for payroll updates.',
+      queued_at: `${daysFromToday(-3)}T16:00:00.000Z`,
+      read_at: null,
+      updated_at: new Date().toISOString(),
+    },
+  ]
+}
+
 function createMockDatabase(): MockDatabase {
   const employees = employeeSeed()
+  const candidates = candidateSeed()
   return {
     employees,
     attendance: attendanceSeed(employees),
     leave: leaveSeed(employees),
     payroll: payrollSeed(employees),
     jobs: jobsSeed(),
-    candidates: candidateSeed(),
+    candidates,
     interviews: interviewSeed(),
+    notifications: notificationSeed(employees, candidates),
   }
 }
 
