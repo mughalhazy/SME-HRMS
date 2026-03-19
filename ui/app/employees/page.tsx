@@ -1,10 +1,10 @@
 import { AppShell } from '@/components/shared/app-shell'
-import { EmployeeListPage } from '@/components/employees/employee-list-page'
+import { EmployeeList } from '@/components/employees/EmployeeList'
 
 export default function EmployeesPage() {
   return (
     <AppShell currentPath="/employees">
-      <EmployeeListPage />
+      <EmployeeList />
     </AppShell>
   )
 }
