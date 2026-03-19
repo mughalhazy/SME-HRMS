@@ -72,7 +72,7 @@ This catalog defines query-optimized projections and validates each read model a
 - **Source workflows:** `performance_review`
 - **Source entities:** `PerformanceReview`, `Employee`, `Department`
 - **Key/grain:** one row per performance review (`performance_review_id`)
-- **Fields:** `performance_review_id`, `employee_id`, `employee_name`, `reviewer_employee_id`, `reviewer_name`, `department_id`, `department_name`, `review_period_start`, `review_period_end`, `overall_rating`, `status`, `submitted_at`, `acknowledged_at`, `updated_at`
+- **Fields:** `performance_review_id`, `employee_id`, `employee_name`, `reviewer_employee_id`, `reviewer_name`, `department_id`, `department_name`, `review_period_start`, `review_period_end`, `overall_rating`, `status`, `submitted_at`, `finalized_at`, `updated_at`
 - **Primary consumers:** performance reviews, employee profile, dashboard
 
 ## 9) `access_control_view`

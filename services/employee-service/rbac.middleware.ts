@@ -22,12 +22,18 @@ type ResourceAction =
   | 'readRole'
   | 'listRoles'
   | 'updateRole'
-  | 'deleteRole';
+  | 'deleteRole'
+  | 'createReview'
+  | 'readReview'
+  | 'listReviews'
+  | 'updateReview'
+  | 'submitReview'
+  | 'finalizeReview';
 
 const ROLE_ACTIONS: Record<AuthRole, ResourceAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles'],
-  Employee: ['read', 'list', 'updateProfile'],
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview'],
+  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews'],
 };
 
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;

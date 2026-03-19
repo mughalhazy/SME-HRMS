@@ -252,21 +252,19 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - Review cycle launch or manager-initiated ad hoc review.
 
 ### State transitions
-- `PerformanceReview: none -> Draft -> Submitted -> Acknowledged -> Finalized`
+- `PerformanceReview: none -> Draft -> Submitted -> Finalized`
 
 ### Events
 - Publishes:
   - `PerformanceReviewSubmitted`
-  - `PerformanceReviewAcknowledged`
   - `PerformanceReviewFinalized`
 
 ### Steps
 1. Create the `PerformanceReview` in `Draft`.
 2. Capture manager comments, goals, and optional rating.
 3. Submit the review.
-4. Request employee acknowledgement.
-5. Finalize the review after acknowledgement or policy deadline.
-6. Persist outcomes for talent and compensation use.
+4. Finalize the review once the submitted assessment is complete and policy checks pass.
+5. Persist outcomes for talent and compensation use.
 
 ## access_provisioning
 

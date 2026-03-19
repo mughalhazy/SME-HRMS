@@ -92,9 +92,9 @@ This document maps the canonical domain model to a relational data architecture 
 | strengths | TEXT | Yes |  | Strength narrative. |
 | improvement_areas | TEXT | Yes |  | Development areas. |
 | goals_next_period | TEXT | Yes |  | Goals for next cycle. |
-| status | VARCHAR(20) | No |  | `Draft`, `Submitted`, `Acknowledged`, `Finalized`. |
+| status | VARCHAR(20) | No |  | `Draft`, `Submitted`, `Finalized`. |
 | submitted_at | TIMESTAMPTZ | Yes |  | Reviewer submission time. |
-| acknowledged_at | TIMESTAMPTZ | Yes |  | Employee acknowledgement time. |
+| finalized_at | TIMESTAMPTZ | Yes |  | Review finalization time. |
 | created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
 | updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
 
