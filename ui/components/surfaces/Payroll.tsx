@@ -209,7 +209,7 @@ export function Payroll() {
           </div>
         </div>
 
-        <div className="space-y-4 xl:col-span-4 xl:pl-6">
+        <div className="space-y-4 xl:col-span-4">
           <div className={filterFieldClassName}>
             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-foreground)]" htmlFor="payroll-cycle-selector">
               Payroll cycle
