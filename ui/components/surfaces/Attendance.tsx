@@ -156,7 +156,7 @@ function getStatusTone(status: AttendanceStatus) {
     case 'Present':
       return {
         variant: 'success' as const,
-        className: '',
+        className: 'border-transparent bg-emerald-50 text-emerald-700',
       }
     case 'Late':
       return {
@@ -187,6 +187,32 @@ function getFlagTone(flag: AttendanceFlag) {
     case 'Attendance anomaly':
       return 'border-sky-200 bg-sky-50 text-sky-700'
   }
+}
+
+function SummaryMetric({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string
+  value: number
+  icon: typeof CheckCircle2
+  tone: string
+}) {
+  return (
+    <Card className="border-slate-200 bg-white shadow-sm">
+      <CardContent className="flex items-center justify-between p-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+          <p className="text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
+        </div>
+        <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', tone)}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 export function Attendance() {
@@ -244,72 +270,31 @@ export function Attendance() {
     <div className="min-h-full bg-[#f5f7fb] px-6 py-6 text-slate-900">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <section className="grid gap-6 xl:grid-cols-12">
-          <div className="xl:col-span-8">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Attendance monitoring</p>
-                <div className="space-y-1">
-                  <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Attendance</h1>
-                  <p className="text-sm text-slate-500">Monitor workforce presence, spot exceptions, and respond to incomplete logs.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 self-start lg:self-auto">
-                <Badge className="border-slate-200 bg-white text-slate-600" variant="outline">
-                  {formatDateLabel(selectedDate)}
-                </Badge>
-                <Button type="button">
-                  <Download className="h-4 w-4" />
-                  Export log
-                </Button>
+          <div className="space-y-4 xl:col-span-8">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Attendance monitoring</p>
+              <div className="space-y-1">
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Attendance</h1>
+                <p className="text-sm text-slate-500">Monitor workforce presence, spot exceptions, and respond to incomplete logs.</p>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3 xl:col-span-12 xl:grid-cols-4">
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Present</p>
-                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{summary.present}</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Absent</p>
-                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{summary.absent}</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                  <UserRoundX className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Late</p>
-                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{summary.late}</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                  <Clock3 className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Exceptions</p>
-                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{summary.exceptions}</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                  <TriangleAlert className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex flex-col gap-3 xl:col-span-4 xl:items-end xl:justify-start">
+            <Badge className="justify-center border-slate-200 bg-white px-3 py-1 text-slate-600" variant="outline">
+              {formatDateLabel(selectedDate)}
+            </Badge>
+            <Button className="w-full sm:w-auto" type="button">
+              <Download className="h-4 w-4" />
+              Export log
+            </Button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:col-span-12 xl:grid-cols-4">
+            <SummaryMetric label="Present" value={summary.present} icon={CheckCircle2} tone="bg-emerald-50 text-emerald-600" />
+            <SummaryMetric label="Absent" value={summary.absent} icon={UserRoundX} tone="bg-rose-50 text-rose-600" />
+            <SummaryMetric label="Late" value={summary.late} icon={Clock3} tone="bg-amber-50 text-amber-600" />
+            <SummaryMetric label="Exceptions" value={summary.exceptions} icon={TriangleAlert} tone="bg-slate-100 text-slate-700" />
           </div>
         </section>
 
@@ -317,7 +302,7 @@ export function Attendance() {
           <div className="xl:col-span-12">
             <Card className="border-slate-200 bg-white shadow-sm">
               <CardContent className="p-4">
-                <div className="grid gap-3 xl:grid-cols-[220px_220px_220px_minmax(0,1fr)_auto]">
+                <div className="grid gap-4 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_160px] xl:items-end">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Date</label>
                     <div className="relative">
@@ -349,21 +334,19 @@ export function Attendance() {
                     <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Find employee</label>
                     <Input placeholder="Search by name or employee ID" value={search} onChange={(event) => setSearch(event.target.value)} />
                   </div>
-                  <div className="flex items-end">
-                    <Button
-                      className="w-full xl:w-auto"
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedDate('2026-03-19')
-                        setDepartment('All departments')
-                        setStatus('All statuses')
-                        setSearch('')
-                      }}
-                    >
-                      Reset filters
-                    </Button>
-                  </div>
+                  <Button
+                    className="w-full xl:w-full"
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedDate('2026-03-19')
+                      setDepartment('All departments')
+                      setStatus('All statuses')
+                      setSearch('')
+                    }}
+                  >
+                    Reset filters
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -372,28 +355,36 @@ export function Attendance() {
           <div className="xl:col-span-12">
             <Card className="border-slate-200 bg-white shadow-sm">
               <CardContent className="p-0">
-                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
+                <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
                   <div className="space-y-1">
                     <h2 className="text-lg font-semibold text-slate-950">Daily attendance log</h2>
                     <p className="text-sm text-slate-500">Table-first view of attendance status, time records, and operational flags.</p>
                   </div>
-                  <Badge className="border-slate-200 bg-slate-50 text-slate-600" variant="outline">
+                  <Badge className="justify-center border-slate-200 bg-slate-50 px-3 py-1 text-slate-600" variant="outline">
                     {filteredRows.length} employees
                   </Badge>
                 </div>
 
-                <Table>
+                <Table className="table-fixed">
+                  <colgroup>
+                    <col className="w-[32%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[20%]" />
+                  </colgroup>
                   <TableHeader>
-                    <TableRow className="border-slate-100">
-                      <TableHead className="w-[280px]">Employee</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead>Check-out</TableHead>
-                      <TableHead>Hours worked</TableHead>
-                      <TableHead className="w-[300px]">Flags</TableHead>
+                    <TableRow className="border-slate-100 hover:bg-transparent hover:shadow-none">
+                      <TableHead className="px-6">Employee</TableHead>
+                      <TableHead className="px-6">Status</TableHead>
+                      <TableHead className="px-6">Check-in</TableHead>
+                      <TableHead className="px-6">Check-out</TableHead>
+                      <TableHead className="px-6">Hours worked</TableHead>
+                      <TableHead className="px-6">Flags</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="[&_tr:nth-child(even)]:bg-transparent">
                     {filteredRows.length > 0 ? (
                       filteredRows.map((row) => {
                         const statusTone = getStatusTone(row.status)
@@ -402,33 +393,36 @@ export function Attendance() {
                         return (
                           <TableRow
                             key={row.id}
-                            className={cn('border-slate-100 transition-colors hover:bg-slate-50', isSelected && 'bg-slate-50')}
+                            className={cn(
+                              'cursor-pointer border-slate-100 bg-white hover:bg-slate-50 hover:shadow-none',
+                              isSelected && 'bg-slate-50',
+                            )}
                             onClick={() => setSelectedRowId(row.id)}
                           >
-                            <TableCell>
+                            <TableCell className="px-6 py-4">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10 border border-slate-200 bg-slate-50">
                                   <AvatarFallback>{getInitials(row.name)}</AvatarFallback>
                                 </Avatar>
-                                <div className="space-y-1">
-                                  <p className="font-medium text-slate-900">{row.name}</p>
-                                  <p className="text-xs text-slate-500">{row.employeeId} · {row.department}</p>
+                                <div className="min-w-0 space-y-1">
+                                  <p className="truncate text-sm font-semibold text-slate-950">{row.name}</p>
+                                  <p className="truncate text-xs text-slate-500">{row.employeeId} · {row.department}</p>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <Badge className={statusTone.className} variant={statusTone.variant}>
+                            <TableCell className="px-6 py-4 align-middle">
+                              <Badge className={cn('min-w-[88px] justify-center px-3 py-1 text-xs font-semibold', statusTone.className)} variant={statusTone.variant}>
                                 {row.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-slate-600">{row.checkIn}</TableCell>
-                            <TableCell className="text-sm text-slate-600">{row.checkOut}</TableCell>
-                            <TableCell className="text-sm text-slate-600">{row.workHours}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-2">
+                            <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.checkIn}</TableCell>
+                            <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.checkOut}</TableCell>
+                            <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.workHours}</TableCell>
+                            <TableCell className="px-6 py-4">
+                              <div className="flex min-h-8 flex-wrap items-center gap-2">
                                 {row.flags.length > 0 ? (
                                   row.flags.map((flag) => (
-                                    <Badge key={flag} className={getFlagTone(flag)} variant="outline">
+                                    <Badge key={flag} className={cn('px-3 py-1 text-xs font-medium', getFlagTone(flag))} variant="outline">
                                       {flag}
                                     </Badge>
                                   ))
@@ -441,8 +435,8 @@ export function Attendance() {
                         )
                       })
                     ) : (
-                      <TableRow className="border-slate-100">
-                        <TableCell className="px-4 py-12 text-center" colSpan={6}>
+                      <TableRow className="border-slate-100 bg-white hover:bg-white hover:shadow-none">
+                        <TableCell className="px-6 py-12 text-center" colSpan={6}>
                           <div className="flex flex-col items-center gap-2">
                             <p className="text-sm font-medium text-slate-900">No attendance records match the current filters.</p>
                             <p className="text-sm text-slate-500">Adjust date, department, or status filters to restore the monitoring view.</p>
@@ -456,7 +450,7 @@ export function Attendance() {
             </Card>
           </div>
 
-          <div className="grid gap-6 xl:col-span-12 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-6 xl:col-span-12 xl:grid-cols-[minmax(0,1fr)_320px]">
             <Card className="border-slate-200 bg-white shadow-sm">
               <CardContent className="p-4">
                 <div className="space-y-4">
@@ -466,7 +460,10 @@ export function Attendance() {
                       <h3 className="text-lg font-semibold text-slate-950">{selectedRow?.name ?? 'No employee selected'}</h3>
                     </div>
                     {selectedRow ? (
-                      <Badge className={getStatusTone(selectedRow.status).className} variant={getStatusTone(selectedRow.status).variant}>
+                      <Badge
+                        className={cn('min-w-[88px] justify-center px-3 py-1 text-xs font-semibold', getStatusTone(selectedRow.status).className)}
+                        variant={getStatusTone(selectedRow.status).variant}
+                      >
                         {selectedRow.status}
                       </Badge>
                     ) : null}
@@ -481,15 +478,15 @@ export function Attendance() {
                       </div>
                       <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Check-in</p>
-                        <p className="text-sm font-medium text-slate-900">{selectedRow.checkIn}</p>
+                        <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.checkIn}</p>
                       </div>
                       <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Check-out</p>
-                        <p className="text-sm font-medium text-slate-900">{selectedRow.checkOut}</p>
+                        <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.checkOut}</p>
                       </div>
                       <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Hours worked</p>
-                        <p className="text-sm font-medium text-slate-900">{selectedRow.workHours}</p>
+                        <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.workHours}</p>
                       </div>
                     </div>
                   ) : null}
@@ -519,13 +516,13 @@ export function Attendance() {
                           type="button"
                           onClick={() => setSelectedRowId(row.id)}
                         >
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-slate-900">{row.name}</p>
-                            <p className="text-sm text-slate-500">{row.employeeId} · {row.department}</p>
+                          <div className="min-w-0 space-y-1">
+                            <p className="truncate text-sm font-medium text-slate-900">{row.name}</p>
+                            <p className="truncate text-sm text-slate-500">{row.employeeId} · {row.department}</p>
                           </div>
-                          <div className="flex flex-wrap justify-end gap-2">
+                          <div className="flex max-w-[144px] flex-wrap justify-end gap-2">
                             {row.flags.map((flag) => (
-                              <Badge key={`${row.id}-${flag}`} className={getFlagTone(flag)} variant="outline">
+                              <Badge key={`${row.id}-${flag}`} className={cn('px-3 py-1 text-xs font-medium', getFlagTone(flag))} variant="outline">
                                 {flag}
                               </Badge>
                             ))}
