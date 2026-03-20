@@ -8,6 +8,7 @@ import { HiringPipelineBoard } from '@/components/hiring/hiring-pipeline-board'
 import { JobPostingsPage } from '@/components/surfaces/job-postings-page'
 import { Button } from '@/components/ui/button'
 import { apiRequest } from '@/lib/api/client'
+import { cn } from '@/lib/utils'
 
 const EMPTY_COUNTS = {
   activeCandidates: 0,
@@ -49,23 +50,25 @@ export function HiringPage() {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Pipeline</p>
+      <section className="space-y-6 rounded-lg border border-slate-200 bg-white p-6">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Hiring</h1>
-              <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-                Move candidates through a single hiring flow with clear stage progression, lightweight review,
-                and supporting details kept alongside the pipeline.
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Pipeline</p>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Hiring</h1>
+                <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
+                  Move candidates through a single hiring flow with clear stage progression, lightweight review,
+                  and supporting details kept alongside the pipeline.
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
                 <BriefcaseBusiness className="h-4 w-4 text-slate-500" />
                 <span>{context.openRoles} open roles</span>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
                 <Users className="h-4 w-4 text-slate-500" />
                 <span>{context.activeCandidates} active candidates</span>
               </div>
@@ -85,13 +88,14 @@ export function HiringPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="grid h-auto w-full max-w-md grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          <div className="inline-grid w-full max-w-md grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
             <button
               type="button"
               onClick={() => setTab('pipeline')}
-              className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
-                tab === 'pipeline' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-white hover:text-slate-900'
-              }`}
+              className={cn(
+                'inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                tab === 'pipeline' ? 'bg-white text-slate-900' : 'text-slate-500 hover:bg-white hover:text-slate-900',
+              )}
             >
               <Users className="h-4 w-4" />
               Candidate pipeline
@@ -99,9 +103,10 @@ export function HiringPage() {
             <button
               type="button"
               onClick={() => setTab('postings')}
-              className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
-                tab === 'postings' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-white hover:text-slate-900'
-              }`}
+              className={cn(
+                'inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                tab === 'postings' ? 'bg-white text-slate-900' : 'text-slate-500 hover:bg-white hover:text-slate-900',
+              )}
             >
               <BriefcaseBusiness className="h-4 w-4" />
               Job postings
