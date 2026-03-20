@@ -21,7 +21,6 @@ export type NavigationItem = {
   description: string
   section: NavigationSectionKey
   matcherPrefixes: string[]
-  showInSidebar?: boolean
 }
 
 export const navigationSections: { key: NavigationSectionKey; title: string }[] = [
@@ -132,11 +131,14 @@ export const navigationItems: NavigationItem[] = [
     description: 'Review event-driven inbox items, delivery outcomes, and suppressed channels in one place.',
     section: 'admin',
     matcherPrefixes: ['/notifications'],
-    showInSidebar: false,
   },
 ]
 
-export const sidebarNavigationItems = navigationItems.filter((item) => item.showInSidebar !== false)
+export const primaryNavigationItems = navigationItems.filter((item) =>
+  ['dashboard', 'employees', 'organization', 'attendance', 'leave', 'payroll', 'hiring', 'performance'].includes(item.key),
+)
+
+export const utilityNavigationItems = navigationItems.filter((item) => ['notifications', 'settings'].includes(item.key))
 
 export function isNavigationItemActive(pathname: string | undefined, item: NavigationItem) {
   if (!pathname) {
