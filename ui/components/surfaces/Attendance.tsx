@@ -267,281 +267,279 @@ export function Attendance() {
   const exceptionRows = useMemo(() => filteredRows.filter((row) => row.flags.length > 0), [filteredRows])
 
   return (
-    <div className="min-h-full bg-[#f5f7fb] px-6 py-6 text-slate-900">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <section className="grid gap-6 xl:grid-cols-12">
-          <div className="space-y-4 xl:col-span-8">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Attendance monitoring</p>
-              <div className="space-y-1">
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Attendance</h1>
-                <p className="text-sm text-slate-500">Monitor workforce presence, spot exceptions, and respond to incomplete logs.</p>
-              </div>
+    <div className="space-y-6 text-slate-900">
+      <section className="grid gap-6 xl:grid-cols-12">
+        <div className="space-y-4 xl:col-span-8">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Attendance monitoring</p>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Attendance</h1>
+              <p className="text-sm text-slate-500">Monitor workforce presence, spot exceptions, and respond to incomplete logs.</p>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-3 xl:col-span-4 xl:items-end xl:justify-start">
-            <Badge className="justify-center border-slate-200 bg-white px-3 py-1 text-slate-600" variant="outline">
-              {formatDateLabel(selectedDate)}
-            </Badge>
-            <Button className="w-full sm:w-auto" type="button">
-              <Download className="h-4 w-4" />
-              Export log
-            </Button>
-          </div>
+        <div className="flex flex-col gap-3 xl:col-span-4 xl:items-end xl:justify-start">
+          <Badge className="justify-center border-slate-200 bg-white px-3 py-1 text-slate-600" variant="outline">
+            {formatDateLabel(selectedDate)}
+          </Badge>
+          <Button className="w-full sm:w-auto" type="button">
+            <Download className="h-4 w-4" />
+            Export log
+          </Button>
+        </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:col-span-12 xl:grid-cols-4">
-            <SummaryMetric label="Present" value={summary.present} icon={CheckCircle2} tone="bg-emerald-50 text-emerald-600" />
-            <SummaryMetric label="Absent" value={summary.absent} icon={UserRoundX} tone="bg-rose-50 text-rose-600" />
-            <SummaryMetric label="Late" value={summary.late} icon={Clock3} tone="bg-amber-50 text-amber-600" />
-            <SummaryMetric label="Exceptions" value={summary.exceptions} icon={TriangleAlert} tone="bg-slate-100 text-slate-700" />
-          </div>
-        </section>
+        <div className="grid gap-4 sm:grid-cols-2 xl:col-span-12 xl:grid-cols-4">
+          <SummaryMetric label="Present" value={summary.present} icon={CheckCircle2} tone="bg-emerald-50 text-emerald-600" />
+          <SummaryMetric label="Absent" value={summary.absent} icon={UserRoundX} tone="bg-rose-50 text-rose-600" />
+          <SummaryMetric label="Late" value={summary.late} icon={Clock3} tone="bg-amber-50 text-amber-600" />
+          <SummaryMetric label="Exceptions" value={summary.exceptions} icon={TriangleAlert} tone="bg-slate-100 text-slate-700" />
+        </div>
+      </section>
 
-        <section className="grid gap-6 xl:grid-cols-12">
-          <div className="xl:col-span-12">
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="p-4">
-                <div className="grid gap-4 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_160px] xl:items-end">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Date</label>
-                    <div className="relative">
-                      <Input className="pr-10" type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} />
-                      <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Department</label>
-                    <Select value={department} onChange={(event) => setDepartment(event.target.value)}>
-                      {departments.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Status</label>
-                    <Select value={status} onChange={(event) => setStatus(event.target.value)}>
-                      {statuses.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Find employee</label>
-                    <Input placeholder="Search by name or employee ID" value={search} onChange={(event) => setSearch(event.target.value)} />
-                  </div>
-                  <Button
-                    className="w-full xl:w-full"
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedDate('2026-03-19')
-                      setDepartment('All departments')
-                      setStatus('All statuses')
-                      setSearch('')
-                    }}
-                  >
-                    Reset filters
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="xl:col-span-12">
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="p-0">
-                <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-slate-950">Daily attendance log</h2>
-                    <p className="text-sm text-slate-500">Table-first view of attendance status, time records, and operational flags.</p>
-                  </div>
-                  <Badge className="justify-center border-slate-200 bg-slate-50 px-3 py-1 text-slate-600" variant="outline">
-                    {filteredRows.length} employees
-                  </Badge>
-                </div>
-
-                <Table className="table-fixed">
-                  <colgroup>
-                    <col className="w-[32%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[20%]" />
-                  </colgroup>
-                  <TableHeader>
-                    <TableRow className="border-slate-100 hover:bg-transparent hover:shadow-none">
-                      <TableHead className="px-6">Employee</TableHead>
-                      <TableHead className="px-6">Status</TableHead>
-                      <TableHead className="px-6">Check-in</TableHead>
-                      <TableHead className="px-6">Check-out</TableHead>
-                      <TableHead className="px-6">Hours worked</TableHead>
-                      <TableHead className="px-6">Flags</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="[&_tr:nth-child(even)]:bg-transparent">
-                    {filteredRows.length > 0 ? (
-                      filteredRows.map((row) => {
-                        const statusTone = getStatusTone(row.status)
-                        const isSelected = selectedRow?.id === row.id
-
-                        return (
-                          <TableRow
-                            key={row.id}
-                            className={cn(
-                              'cursor-pointer border-slate-100 bg-white hover:bg-slate-50 hover:shadow-none',
-                              isSelected && 'bg-slate-50',
-                            )}
-                            onClick={() => setSelectedRowId(row.id)}
-                          >
-                            <TableCell className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 border border-slate-200 bg-slate-50">
-                                  <AvatarFallback>{getInitials(row.name)}</AvatarFallback>
-                                </Avatar>
-                                <div className="min-w-0 space-y-1">
-                                  <p className="truncate text-sm font-semibold text-slate-950">{row.name}</p>
-                                  <p className="truncate text-xs text-slate-500">{row.employeeId} · {row.department}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-6 py-4 align-middle">
-                              <Badge className={cn('min-w-[88px] justify-center px-3 py-1 text-xs font-semibold', statusTone.className)} variant={statusTone.variant}>
-                                {row.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.checkIn}</TableCell>
-                            <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.checkOut}</TableCell>
-                            <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.workHours}</TableCell>
-                            <TableCell className="px-6 py-4">
-                              <div className="flex min-h-8 flex-wrap items-center gap-2">
-                                {row.flags.length > 0 ? (
-                                  row.flags.map((flag) => (
-                                    <Badge key={flag} className={cn('px-3 py-1 text-xs font-medium', getFlagTone(flag))} variant="outline">
-                                      {flag}
-                                    </Badge>
-                                  ))
-                                ) : (
-                                  <span className="text-sm text-slate-400">No flags</span>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })
-                    ) : (
-                      <TableRow className="border-slate-100 bg-white hover:bg-white hover:shadow-none">
-                        <TableCell className="px-6 py-12 text-center" colSpan={6}>
-                          <div className="flex flex-col items-center gap-2">
-                            <p className="text-sm font-medium text-slate-900">No attendance records match the current filters.</p>
-                            <p className="text-sm text-slate-500">Adjust date, department, or status filters to restore the monitoring view.</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-6 xl:col-span-12 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="p-4">
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Selected record</p>
-                      <h3 className="text-lg font-semibold text-slate-950">{selectedRow?.name ?? 'No employee selected'}</h3>
-                    </div>
-                    {selectedRow ? (
-                      <Badge
-                        className={cn('min-w-[88px] justify-center px-3 py-1 text-xs font-semibold', getStatusTone(selectedRow.status).className)}
-                        variant={getStatusTone(selectedRow.status).variant}
-                      >
-                        {selectedRow.status}
-                      </Badge>
-                    ) : null}
-                  </div>
-
-                  {selectedRow ? (
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                      <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Employee</p>
-                        <p className="text-sm font-medium text-slate-900">{selectedRow.employeeId}</p>
-                        <p className="text-sm text-slate-500">{selectedRow.department}</p>
-                      </div>
-                      <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Check-in</p>
-                        <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.checkIn}</p>
-                      </div>
-                      <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Check-out</p>
-                        <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.checkOut}</p>
-                      </div>
-                      <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Hours worked</p>
-                        <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.workHours}</p>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Operational note</p>
-                    <p className="text-sm leading-6 text-slate-600">{selectedRow?.note ?? 'Select a row to inspect attendance details and exceptions.'}</p>
+      <section className="grid gap-6 xl:grid-cols-12">
+        <div className="xl:col-span-12">
+          <Card className="border-slate-200 bg-white shadow-sm">
+            <CardContent className="p-4">
+              <div className="grid gap-4 xl:grid-cols-[180px_180px_180px_minmax(0,1fr)_160px] xl:items-end">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Date</label>
+                  <div className="relative">
+                    <Input className="pr-10" type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} />
+                    <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Department</label>
+                  <Select value={department} onChange={(event) => setDepartment(event.target.value)}>
+                    {departments.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Status</label>
+                  <Select value={status} onChange={(event) => setStatus(event.target.value)}>
+                    {statuses.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Find employee</label>
+                  <Input placeholder="Search by name or employee ID" value={search} onChange={(event) => setSearch(event.target.value)} />
+                </div>
+                <Button
+                  className="w-full xl:w-full"
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedDate('2026-03-19')
+                    setDepartment('All departments')
+                    setStatus('All statuses')
+                    setSearch('')
+                  }}
+                >
+                  Reset filters
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            <Card className="border-slate-200 bg-white shadow-sm">
-              <CardContent className="p-4">
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Exceptions</p>
-                    <h3 className="text-lg font-semibold text-slate-950">Requires follow-up</h3>
-                  </div>
+        <div className="xl:col-span-12">
+          <Card className="border-slate-200 bg-white shadow-sm">
+            <CardContent className="p-0">
+              <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-semibold text-slate-950">Daily attendance log</h2>
+                  <p className="text-sm text-slate-500">Table-first view of attendance status, time records, and operational flags.</p>
+                </div>
+                <Badge className="justify-center border-slate-200 bg-slate-50 px-3 py-1 text-slate-600" variant="outline">
+                  {filteredRows.length} employees
+                </Badge>
+              </div>
 
-                  <div className="space-y-3">
-                    {exceptionRows.length > 0 ? (
-                      exceptionRows.map((row) => (
-                        <button
+              <Table className="table-fixed">
+                <colgroup>
+                  <col className="w-[32%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[20%]" />
+                </colgroup>
+                <TableHeader>
+                  <TableRow className="border-slate-100 hover:bg-transparent hover:shadow-none">
+                    <TableHead className="px-6">Employee</TableHead>
+                    <TableHead className="px-6">Status</TableHead>
+                    <TableHead className="px-6">Check-in</TableHead>
+                    <TableHead className="px-6">Check-out</TableHead>
+                    <TableHead className="px-6">Hours worked</TableHead>
+                    <TableHead className="px-6">Flags</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="[&_tr:nth-child(even)]:bg-transparent">
+                  {filteredRows.length > 0 ? (
+                    filteredRows.map((row) => {
+                      const statusTone = getStatusTone(row.status)
+                      const isSelected = selectedRow?.id === row.id
+
+                      return (
+                        <TableRow
                           key={row.id}
-                          className="flex w-full items-start justify-between gap-3 rounded-2xl bg-slate-50 p-4 text-left transition-colors hover:bg-slate-100"
-                          type="button"
+                          className={cn(
+                            'cursor-pointer border-slate-100 bg-white hover:bg-slate-50 hover:shadow-none',
+                            isSelected && 'bg-slate-50',
+                          )}
                           onClick={() => setSelectedRowId(row.id)}
                         >
-                          <div className="min-w-0 space-y-1">
-                            <p className="truncate text-sm font-medium text-slate-900">{row.name}</p>
-                            <p className="truncate text-sm text-slate-500">{row.employeeId} · {row.department}</p>
-                          </div>
-                          <div className="flex max-w-[144px] flex-wrap justify-end gap-2">
-                            {row.flags.map((flag) => (
-                              <Badge key={`${row.id}-${flag}`} className={cn('px-3 py-1 text-xs font-medium', getFlagTone(flag))} variant="outline">
-                                {flag}
-                              </Badge>
-                            ))}
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <p className="text-sm font-medium text-slate-900">No attendance exceptions detected.</p>
-                        <p className="mt-1 text-sm text-slate-500">Monitoring queue is clear for the current filter set.</p>
-                      </div>
-                    )}
+                          <TableCell className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10 border border-slate-200 bg-slate-50">
+                                <AvatarFallback>{getInitials(row.name)}</AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 space-y-1">
+                                <p className="truncate text-sm font-semibold text-slate-950">{row.name}</p>
+                                <p className="truncate text-xs text-slate-500">{row.employeeId} · {row.department}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 align-middle">
+                            <Badge className={cn('min-w-[88px] justify-center px-3 py-1 text-xs font-semibold', statusTone.className)} variant={statusTone.variant}>
+                              {row.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.checkIn}</TableCell>
+                          <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.checkOut}</TableCell>
+                          <TableCell className="px-6 py-4 text-sm font-medium tabular-nums text-slate-700">{row.workHours}</TableCell>
+                          <TableCell className="px-6 py-4">
+                            <div className="flex min-h-8 flex-wrap items-center gap-2">
+                              {row.flags.length > 0 ? (
+                                row.flags.map((flag) => (
+                                  <Badge key={flag} className={cn('px-3 py-1 text-xs font-medium', getFlagTone(flag))} variant="outline">
+                                    {flag}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-sm text-slate-400">No flags</span>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  ) : (
+                    <TableRow className="border-slate-100 bg-white hover:bg-white hover:shadow-none">
+                      <TableCell className="px-6 py-12 text-center" colSpan={6}>
+                        <div className="flex flex-col items-center gap-2">
+                          <p className="text-sm font-medium text-slate-900">No attendance records match the current filters.</p>
+                          <p className="text-sm text-slate-500">Adjust date, department, or status filters to restore the monitoring view.</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 xl:col-span-12 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <Card className="border-slate-200 bg-white shadow-sm">
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Selected record</p>
+                    <h3 className="text-lg font-semibold text-slate-950">{selectedRow?.name ?? 'No employee selected'}</h3>
                   </div>
+                  {selectedRow ? (
+                    <Badge
+                      className={cn('min-w-[88px] justify-center px-3 py-1 text-xs font-semibold', getStatusTone(selectedRow.status).className)}
+                      variant={getStatusTone(selectedRow.status).variant}
+                    >
+                      {selectedRow.status}
+                    </Badge>
+                  ) : null}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      </div>
+
+                {selectedRow ? (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Employee</p>
+                      <p className="text-sm font-medium text-slate-900">{selectedRow.employeeId}</p>
+                      <p className="text-sm text-slate-500">{selectedRow.department}</p>
+                    </div>
+                    <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Check-in</p>
+                      <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.checkIn}</p>
+                    </div>
+                    <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Check-out</p>
+                      <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.checkOut}</p>
+                    </div>
+                    <div className="space-y-2 rounded-2xl bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Hours worked</p>
+                      <p className="text-sm font-medium tabular-nums text-slate-900">{selectedRow.workHours}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Operational note</p>
+                  <p className="text-sm leading-6 text-slate-600">{selectedRow?.note ?? 'Select a row to inspect attendance details and exceptions.'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 bg-white shadow-sm">
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Exceptions</p>
+                  <h3 className="text-lg font-semibold text-slate-950">Requires follow-up</h3>
+                </div>
+
+                <div className="space-y-3">
+                  {exceptionRows.length > 0 ? (
+                    exceptionRows.map((row) => (
+                      <button
+                        key={row.id}
+                        className="flex w-full items-start justify-between gap-3 rounded-2xl bg-slate-50 p-4 text-left transition-colors hover:bg-slate-100"
+                        type="button"
+                        onClick={() => setSelectedRowId(row.id)}
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <p className="truncate text-sm font-medium text-slate-900">{row.name}</p>
+                          <p className="truncate text-sm text-slate-500">{row.employeeId} · {row.department}</p>
+                        </div>
+                        <div className="flex max-w-[144px] flex-wrap justify-end gap-2">
+                          {row.flags.map((flag) => (
+                            <Badge key={`${row.id}-${flag}`} className={cn('px-3 py-1 text-xs font-medium', getFlagTone(flag))} variant="outline">
+                              {flag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-900">No attendance exceptions detected.</p>
+                      <p className="mt-1 text-sm text-slate-500">Monitoring queue is clear for the current filter set.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </div>
   )
 }

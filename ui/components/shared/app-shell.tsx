@@ -92,8 +92,8 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-        <div className="grid grid-cols-12 items-center gap-4 px-4 py-4 sm:px-6 xl:px-8">
-          <div className="col-span-12 flex min-w-0 items-center gap-3 lg:col-span-3 xl:col-span-2">
+        <div className="grid min-h-20 grid-cols-12 items-center gap-x-6 gap-y-4 px-4 py-4 sm:px-6 xl:px-8">
+          <div className="col-span-12 flex min-w-0 items-center lg:col-span-3 xl:col-span-2">
             <Link href="/dashboard" onClick={onNavigationStart('/dashboard')} className="flex min-w-0 items-center gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]">
                 HR
@@ -106,8 +106,11 @@ export function AppShell({
           </div>
 
           <div className="col-span-12 min-w-0 lg:col-span-6 xl:col-span-7">
-            <nav aria-label="Primary navigation" className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex min-w-max items-center justify-start gap-2 lg:justify-center">
+            <nav
+              aria-label="Primary navigation"
+              className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              <div className="flex min-w-max items-center gap-1.5 lg:justify-center">
                 {primaryNavigationItems.map((item) => {
                   const active = isNavigationItemActive(activePath, item)
                   const isPending = pendingHref === item.href
@@ -120,10 +123,10 @@ export function AppShell({
                       aria-current={active ? 'page' : undefined}
                       aria-busy={isPending}
                       className={cn(
-                        'inline-flex h-11 items-center gap-2 rounded-t-xl border-b-2 px-4 text-sm font-medium whitespace-nowrap transition-colors',
+                        'inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-transparent px-4 text-sm font-medium whitespace-nowrap transition-colors duration-150',
                         active
-                          ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]'
-                          : 'border-transparent text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-950',
+                          ? 'bg-slate-100 text-[var(--primary)] shadow-[inset_0_-2px_0_0_var(--primary)]'
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
                       )}
                     >
                       {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
@@ -135,7 +138,7 @@ export function AppShell({
             </nav>
           </div>
 
-          <div className="col-span-12 flex min-w-0 items-center justify-between gap-3 lg:col-span-3 xl:col-span-3 lg:justify-end">
+          <div className="col-span-12 flex min-w-0 items-center justify-between gap-3 lg:col-span-3 lg:justify-end xl:col-span-3">
             <div className="flex items-center gap-2">
               {utilityNavigationItems.map((item) => {
                 const Icon = item.icon === 'bell' ? Bell : Settings2
@@ -148,8 +151,8 @@ export function AppShell({
                       variant="outline"
                       size="icon"
                       className={cn(
-                        'h-10 w-10 rounded-xl border-slate-200 bg-white text-slate-600 shadow-none hover:bg-slate-100 hover:text-slate-950',
-                        active && 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]',
+                        'h-10 w-10 rounded-xl border-slate-200 bg-white text-slate-600 shadow-none transition-colors duration-150 hover:bg-slate-100 hover:text-slate-950',
+                        active && 'border-slate-200 bg-slate-100 text-[var(--primary)] shadow-[inset_0_0_0_1px_var(--primary-soft)]',
                       )}
                     >
                       {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
@@ -172,11 +175,11 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="px-4 py-6 sm:px-6 sm:py-6 xl:px-8">
-        <div className="grid grid-cols-12 gap-6">
-          <section className="col-span-12 min-w-0 space-y-6">
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 xl:flex-row xl:items-end xl:justify-between">
-              <div className="min-w-0 space-y-2">
+      <main className="px-4 pb-6 pt-6 sm:px-6 xl:px-8">
+        <section className="grid grid-cols-12 gap-6">
+          <div className="col-span-12 min-w-0 space-y-6">
+            <div className="grid grid-cols-12 gap-4 border-b border-slate-200 pb-6 xl:gap-6">
+              <div className="col-span-12 min-w-0 space-y-2 xl:col-span-7">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-950">{pageTitle ?? activeItem.label}</h1>
                   <Badge variant="outline" className="border-slate-200 bg-slate-100 text-slate-700">
@@ -188,20 +191,20 @@ export function AppShell({
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-                <div className="relative min-w-[280px] max-w-full">
+              <div className="col-span-12 flex flex-col gap-3 xl:col-span-5 xl:items-end xl:justify-end">
+                <div className="relative w-full xl:max-w-[360px]">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input className="h-11 rounded-xl border-slate-200 bg-white pl-9 shadow-none" placeholder="Search employees, payroll, reviews, or policies" />
                 </div>
-                <div className="flex items-center gap-3">{pageActions ?? <Button className="h-11 rounded-xl shadow-none">New request</Button>}</div>
+                <div className="flex w-full flex-wrap items-center gap-3 xl:w-auto xl:justify-end">{pageActions ?? <Button className="h-11 rounded-xl shadow-none">New request</Button>}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-12 gap-6">
               <div className="col-span-12 min-w-0">{children}</div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </main>
     </div>
   )
