@@ -4,40 +4,15 @@ import type { MouseEvent, ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Bell,
-  BriefcaseBusiness,
-  Building2,
-  CalendarDays,
-  ClipboardList,
-  LayoutGrid,
-  LoaderCircle,
-  Search,
-  Settings2,
-  Sparkles,
-  Target,
-  Users,
-  Wallet,
-} from 'lucide-react'
+import { Bell, LoaderCircle, Search, Settings2 } from 'lucide-react'
 
+import { useAuth } from '@/components/auth/auth-provider'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { getNavigationItem, isNavigationItemActive, navigationSections, sidebarNavigationItems } from '@/lib/navigation'
+import { getNavigationItem, isNavigationItemActive, navigationSections, primaryNavigationItems, utilityNavigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
-
-const navIcons = {
-  layout: LayoutGrid,
-  users: Users,
-  clock: CalendarDays,
-  calendar: ClipboardList,
-  wallet: Wallet,
-  briefcase: BriefcaseBusiness,
-  chart: Target,
-  building: Building2,
-  settings: Settings2,
-  bell: Bell,
-}
 
 function shouldHandleNavigation(event: MouseEvent<HTMLAnchorElement>, href: string, pathname: string) {
   if (event.defaultPrevented) {
@@ -55,6 +30,30 @@ function shouldHandleNavigation(event: MouseEvent<HTMLAnchorElement>, href: stri
   return href !== pathname
 }
 
+function formatProfileLabel(role: string | undefined) {
+  if (!role) {
+    return 'HR workspace'
+  }
+
+  return role
+    .split('_')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
+    .join(' ')
+}
+
+function getProfileInitials(identifier: string | null | undefined) {
+  if (!identifier) {
+    return 'HR'
+  }
+
+  return identifier
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((segment) => segment.charAt(0).toUpperCase())
+    .join('')
+}
+
 export function AppShell({
   children,
   currentPath,
@@ -70,6 +69,7 @@ export function AppShell({
 }) {
   const pathname = usePathname() ?? currentPath ?? '/dashboard'
   const activePath = currentPath ?? pathname
+  const { session } = useAuth()
   const [pendingHref, setPendingHref] = useState<string | null>(null)
 
   useEffect(() => {
@@ -77,17 +77,9 @@ export function AppShell({
   }, [pathname])
 
   const activeItem = useMemo(() => getNavigationItem(activePath), [activePath])
-
-  const groupedNavigation = useMemo(
-    () =>
-      navigationSections
-        .map((section) => ({
-          ...section,
-          items: sidebarNavigationItems.filter((item) => item.section === section.key),
-        }))
-        .filter((section) => section.items.length > 0),
-    [],
-  )
+  const activeSection = navigationSections.find((section) => section.key === activeItem.section)?.title ?? 'Workspace'
+  const profileName = session?.user.user_id ?? 'workspace.user'
+  const profileRole = formatProfileLabel(session?.user.role)
 
   const onNavigationStart = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (!shouldHandleNavigation(event, href, pathname)) {
@@ -98,121 +90,119 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.09),_transparent_28%),linear-gradient(180deg,#f8fafc_0%,#f8fafc_45%,#eef2ff_100%)] text-slate-950">
-      <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[19rem_minmax(0,1fr)]">
-        <aside className="border-b border-slate-200/80 bg-white/90 backdrop-blur xl:border-b-0 xl:border-r">
-          <div className="sticky top-0 flex h-full max-h-screen flex-col gap-6 overflow-y-auto p-6">
-            <div className="space-y-3">
-              <Badge className="w-fit bg-slate-950 text-white hover:bg-slate-950">Enterprise HRMS</Badge>
-              <div className="space-y-2">
-                <Link href="/dashboard" onClick={onNavigationStart('/dashboard')} className="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-200">HR</span>
-                  <span>SME HRMS</span>
-                </Link>
-                <p className="text-sm leading-6 text-slate-500">People, payroll, attendance, hiring, and performance operations in one refined workspace.</p>
+    <div className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+        <div className="grid grid-cols-12 items-center gap-4 px-4 py-4 sm:px-6 xl:px-8">
+          <div className="col-span-12 flex min-w-0 items-center gap-3 lg:col-span-3 xl:col-span-2">
+            <Link href="/dashboard" onClick={onNavigationStart('/dashboard')} className="flex min-w-0 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]">
+                HR
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold tracking-[0.18em] text-slate-500">Enterprise HRMS</span>
+                <span className="block truncate text-lg font-semibold tracking-tight text-slate-950">SME HRMS</span>
+              </span>
+            </Link>
+          </div>
+
+          <div className="col-span-12 min-w-0 lg:col-span-6 xl:col-span-7">
+            <nav aria-label="Primary navigation" className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-max items-center justify-start gap-2 lg:justify-center">
+                {primaryNavigationItems.map((item) => {
+                  const active = isNavigationItemActive(activePath, item)
+                  const isPending = pendingHref === item.href
+
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      onClick={onNavigationStart(item.href)}
+                      aria-current={active ? 'page' : undefined}
+                      aria-busy={isPending}
+                      className={cn(
+                        'inline-flex h-11 items-center gap-2 rounded-t-xl border-b-2 px-4 text-sm font-medium whitespace-nowrap transition-colors',
+                        active
+                          ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]'
+                          : 'border-transparent text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-950',
+                      )}
+                    >
+                      {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                      <span>{item.label}</span>
+                    </Link>
+                  )
+                })}
               </div>
+            </nav>
+          </div>
+
+          <div className="col-span-12 flex min-w-0 items-center justify-between gap-3 lg:col-span-3 xl:col-span-3 lg:justify-end">
+            <div className="flex items-center gap-2">
+              {utilityNavigationItems.map((item) => {
+                const Icon = item.icon === 'bell' ? Bell : Settings2
+                const active = isNavigationItemActive(activePath, item)
+                const isPending = pendingHref === item.href
+
+                return (
+                  <Link key={item.key} href={item.href} onClick={onNavigationStart(item.href)} aria-label={item.label} aria-current={active ? 'page' : undefined}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className={cn(
+                        'h-10 w-10 rounded-xl border-slate-200 bg-white text-slate-600 shadow-none hover:bg-slate-100 hover:text-slate-950',
+                        active && 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]',
+                      )}
+                    >
+                      {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+                    </Button>
+                  </Link>
+                )
+              })}
             </div>
 
-            <nav aria-label="Primary navigation" className="space-y-6">
-              {groupedNavigation.map((section) => (
-                <div key={section.key} className="space-y-2.5">
-                  <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">{section.title}</p>
-                  <div className="space-y-1.5">
-                    {section.items.map((item) => {
-                      const Icon = navIcons[item.icon]
-                      const active = isNavigationItemActive(activePath, item)
-                      const isPending = pendingHref === item.href
-
-                      return (
-                        <Link
-                          key={item.key}
-                          href={item.href}
-                          onClick={onNavigationStart(item.href)}
-                          aria-busy={isPending}
-                          className={cn(
-                            'group flex items-start gap-3 rounded-2xl border px-3.5 py-3 text-sm transition-all',
-                            active
-                              ? 'border-blue-100 bg-gradient-to-br from-blue-50 via-indigo-50 to-white text-slate-950 shadow-sm'
-                              : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-950',
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'mt-0.5 rounded-xl p-2.5 transition-colors',
-                              active ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100' : 'bg-slate-100 text-slate-500 group-hover:bg-white',
-                            )}
-                          >
-                            {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
-                          </span>
-                          <span className="min-w-0 space-y-1">
-                            <span className="block font-medium">{item.label}</span>
-                            <span className="block text-xs leading-5 text-slate-500">{item.description}</span>
-                          </span>
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </nav>
-
-            <div className="mt-auto rounded-3xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-white p-3 text-blue-700 shadow-sm ring-1 ring-slate-200">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-slate-950">Workspace quality pass</p>
-                  <p className="text-xs leading-5 text-slate-500">Consistent route flow, nested active states, and polished module navigation are now enforced from one config.</p>
-                </div>
+            <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+              <Avatar className="h-10 w-10 border-slate-200">
+                <AvatarFallback>{getProfileInitials(profileName)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950">{profileName}</p>
+                <p className="truncate text-xs text-slate-500">{profileRole}</p>
               </div>
             </div>
           </div>
-        </aside>
+        </div>
+      </header>
 
-        <div className="flex min-w-0 flex-col">
-          <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
-              <div className="min-w-0 space-y-1.5">
+      <main className="px-4 py-6 sm:px-6 sm:py-6 xl:px-8">
+        <div className="grid grid-cols-12 gap-6">
+          <section className="col-span-12 min-w-0 space-y-6">
+            <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-950">{pageTitle ?? activeItem.label}</h1>
-                  <Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-700">
-                    {navigationSections.find((section) => section.key === activeItem.section)?.title ?? 'Workspace'}
+                  <Badge variant="outline" className="border-slate-200 bg-slate-100 text-slate-700">
+                    {activeSection}
                   </Badge>
-                  <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">Live workspace</Badge>
                 </div>
-                <p className="max-w-3xl text-sm leading-6 text-slate-500">
-                  {pendingHref ? `Opening ${sidebarNavigationItems.find((item) => item.href === pendingHref)?.label ?? 'page'}…` : pageDescription ?? activeItem.description}
+                <p className="max-w-4xl text-sm leading-6 text-slate-600">
+                  {pendingHref ? `Opening ${primaryNavigationItems.find((item) => item.href === pendingHref)?.label ?? 'page'}…` : pageDescription ?? activeItem.description}
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <div className="relative min-w-[280px]">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+                <div className="relative min-w-[280px] max-w-full">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input className="h-11 rounded-xl border-slate-200 bg-white pl-9 shadow-sm" placeholder="Search employees, payroll, reviews, or policies" />
+                  <Input className="h-11 rounded-xl border-slate-200 bg-white pl-9 shadow-none" placeholder="Search employees, payroll, reviews, or policies" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <Link href="/notifications" onClick={onNavigationStart('/notifications')}>
-                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl border-slate-200 bg-white shadow-sm hover:bg-slate-50" aria-label="Notifications">
-                      <Bell className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  {pageActions ?? (
-                    <>
-                      <Button variant="outline" className="h-11 rounded-xl border-slate-200 bg-white shadow-sm hover:bg-slate-50">Export</Button>
-                      <Button className="h-11 rounded-xl shadow-sm">New request</Button>
-                    </>
-                  )}
-                </div>
+                <div className="flex items-center gap-3">{pageActions ?? <Button className="h-11 rounded-xl shadow-none">New request</Button>}</div>
               </div>
             </div>
-          </header>
 
-          <main className="flex-1">
-            <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">{children}</div>
-          </main>
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 min-w-0">{children}</div>
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
