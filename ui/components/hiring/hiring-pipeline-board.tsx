@@ -3,26 +3,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  BriefcaseBusiness,
   CalendarDays,
-  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CircleDotDashed,
   GripVertical,
   LoaderCircle,
-  MoveRight,
-  Sparkles,
+  RefreshCcw,
   Users,
 } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input, Select } from '@/components/ui/input'
 import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
+import { Input, Select } from '@/components/ui/input'
 import { PageStack } from '@/components/ui/page'
-import { apiRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
+import { apiRequest } from '@/lib/api/client'
 
 type CandidateStatus = 'Applied' | 'Screening' | 'Interviewing' | 'Offered' | 'Hired'
-type BoardStage = 'Applied' | 'Interview' | 'Offer' | 'Hired'
+type BoardStage = 'Applied' | 'Screening' | 'Interview' | 'Offer' | 'Hired'
 type InterviewType = 'PhoneScreen' | 'Technical' | 'Behavioral' | 'Panel' | 'Final'
 type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'NoShow'
 
@@ -85,38 +85,33 @@ type StageDefinition = {
   id: BoardStage
   title: string
   description: string
-  panelClassName: string
-  badgeClassName: string
 }
 
 const STAGES: StageDefinition[] = [
   {
     id: 'Applied',
     title: 'Applied',
-    description: 'New applicants and recruiter screening stay here before interviews.',
-    panelClassName: 'border-sky-200 bg-sky-50',
-    badgeClassName: 'bg-sky-100 text-sky-700 border-sky-200',
+    description: 'New candidates ready for first review.',
+  },
+  {
+    id: 'Screening',
+    title: 'Screening',
+    description: 'Initial recruiter review and qualification.',
   },
   {
     id: 'Interview',
     title: 'Interview',
-    description: 'Active interview loop with scheduling, panels, and next-step coordination.',
-    panelClassName: 'border-violet-200 bg-violet-50',
-    badgeClassName: 'bg-violet-100 text-violet-700 border-violet-200',
+    description: 'Active interview planning and feedback.',
   },
   {
     id: 'Offer',
     title: 'Offer',
-    description: 'Finalists with extended offers awaiting closeout and acceptance.',
-    panelClassName: 'border-amber-200 bg-amber-50',
-    badgeClassName: 'bg-amber-100 text-amber-700 border-amber-200',
+    description: 'Final terms and closeout coordination.',
   },
   {
     id: 'Hired',
     title: 'Hired',
-    description: 'Accepted candidates ready for employee onboarding handoff.',
-    panelClassName: 'border-emerald-200 bg-emerald-50',
-    badgeClassName: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    description: 'Accepted candidates ready for handoff.',
   },
 ]
 
@@ -158,21 +153,31 @@ function mapInterview(row: InterviewApiRow): InterviewRecord {
 function statusToStage(status: CandidateStatus): BoardStage {
   if (status === 'Interviewing') return 'Interview'
   if (status === 'Offered') return 'Offer'
-  if (status === 'Hired') return 'Hired'
-  return 'Applied'
+  return status
+}
+
+function stageToStatus(stage: BoardStage): CandidateStatus {
+  if (stage === 'Interview') return 'Interviewing'
+  if (stage === 'Offer') return 'Offered'
+  return stage
 }
 
 function canMoveStage(from: BoardStage, to: BoardStage) {
-  const stageOrder: BoardStage[] = ['Applied', 'Interview', 'Offer', 'Hired']
+  const stageOrder: BoardStage[] = ['Applied', 'Screening', 'Interview', 'Offer', 'Hired']
   const delta = stageOrder.indexOf(to) - stageOrder.indexOf(from)
   return Math.abs(delta) === 1
 }
 
-function nextStatusForDrop(currentStatus: CandidateStatus, targetStage: BoardStage): CandidateStatus {
-  if (targetStage === 'Interview') return 'Interviewing'
-  if (targetStage === 'Offer') return 'Offered'
-  if (targetStage === 'Hired') return 'Hired'
-  return currentStatus === 'Applied' ? 'Applied' : 'Screening'
+function getPreviousStage(stage: BoardStage) {
+  const stageOrder: BoardStage[] = ['Applied', 'Screening', 'Interview', 'Offer', 'Hired']
+  const index = stageOrder.indexOf(stage)
+  return index > 0 ? stageOrder[index - 1] : null
+}
+
+function getNextStage(stage: BoardStage) {
+  const stageOrder: BoardStage[] = ['Applied', 'Screening', 'Interview', 'Offer', 'Hired']
+  const index = stageOrder.indexOf(stage)
+  return index < stageOrder.length - 1 ? stageOrder[index + 1] : null
 }
 
 function formatDateLabel(value: string) {
@@ -184,6 +189,13 @@ function formatDateLabel(value: string) {
   }).format(new Date(value))
 }
 
+function formatShortDateLabel(value: string) {
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value))
+}
+
 function defaultInterviewEnd(startAt: string) {
   if (!startAt) return ''
   return new Date(new Date(startAt).getTime() + 1000 * 60 * 60).toISOString().slice(0, 16)
@@ -191,8 +203,15 @@ function defaultInterviewEnd(startAt: string) {
 
 function getDropHint(fromStage: BoardStage | null, toStage: BoardStage) {
   if (!fromStage) return 'Drop candidate here'
-  if (fromStage === toStage) return 'Already in this column'
-  return canMoveStage(fromStage, toStage) ? `Move ${fromStage} → ${toStage}` : 'Workflow blocks this move'
+  if (fromStage === toStage) return 'Already in this stage'
+  return canMoveStage(fromStage, toStage) ? `Move ${fromStage} → ${toStage}` : 'Only adjacent stage moves are allowed'
+}
+
+function getStatusBadgeClassName(status: CandidateStatus | InterviewStatus) {
+  if (status === 'Hired' || status === 'Completed') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  if (status === 'Offered' || status === 'Scheduled') return 'border-blue-200 bg-blue-50 text-blue-700'
+  if (status === 'Cancelled' || status === 'NoShow') return 'border-rose-200 bg-rose-50 text-rose-700'
+  return 'border-slate-200 bg-slate-50 text-slate-700'
 }
 
 export function HiringPipelineBoard() {
@@ -208,9 +227,10 @@ export function HiringPipelineBoard() {
 
   const [candidates, setCandidates] = useState<CandidateRecord[]>([])
   const [interviews, setInterviews] = useState<InterviewRecord[]>([])
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null)
   const [draggedCandidateId, setDraggedCandidateId] = useState<string | null>(null)
   const [hoverStage, setHoverStage] = useState<BoardStage | null>(null)
-  const [message, setMessage] = useState('Drag a candidate card to the next workflow column to keep the pipeline in sync.')
+  const [message, setMessage] = useState('Drag candidates forward one stage at a time or review details from the side panel.')
   const [drafts, setDrafts] = useState<Record<string, DraftInterview>>({})
 
   useEffect(() => {
@@ -224,6 +244,17 @@ export function HiringPipelineBoard() {
       setInterviews(interviewsQuery.data.data.map(mapInterview))
     }
   }, [interviewsQuery.data])
+
+  useEffect(() => {
+    if (candidates.length === 0) {
+      setSelectedCandidateId(null)
+      return
+    }
+
+    if (!selectedCandidateId || !candidates.some((candidate) => candidate.id === selectedCandidateId)) {
+      setSelectedCandidateId(candidates[0]?.id ?? null)
+    }
+  }, [candidates, selectedCandidateId])
 
   const stageMutation = useMutation({
     mutationFn: ({ candidateId, pipelineStage }: { candidateId: string; pipelineStage: CandidateStatus }) =>
@@ -286,24 +317,17 @@ export function HiringPipelineBoard() {
         accumulator[stage.id] = rows
         return accumulator
       },
-      { Applied: [], Interview: [], Offer: [], Hired: [] },
+      { Applied: [], Screening: [], Interview: [], Offer: [], Hired: [] },
     )
   }, [candidates])
 
-  const metrics = useMemo(() => {
-    const total = candidates.length
-    const scheduledCount = interviews.filter((interview) => interview.status === 'Scheduled').length
-    const hiredCount = candidatesByStage.Hired.length
-    const activeOffers = candidatesByStage.Offer.length
-
-    return {
-      total,
-      scheduledCount,
-      hiredCount,
-      activeOffers,
-      conversion: total === 0 ? 0 : Math.round((hiredCount / total) * 100),
-    }
-  }, [candidates.length, candidatesByStage.Hired.length, candidatesByStage.Offer.length, interviews.length])
+  const selectedCandidate = selectedCandidateId ? candidates.find((candidate) => candidate.id === selectedCandidateId) ?? null : null
+  const selectedStage = selectedCandidate ? statusToStage(selectedCandidate.status) : null
+  const selectedCandidateInterviews = selectedCandidate ? interviewsByCandidate[selectedCandidate.id] ?? [] : []
+  const selectedDraft = selectedCandidate ? drafts[selectedCandidate.id] ?? EMPTY_INTERVIEW_DRAFT : EMPTY_INTERVIEW_DRAFT
+  const upcomingInterview = selectedCandidateInterviews.find((entry) => entry.status === 'Scheduled') ?? selectedCandidateInterviews[0] ?? null
+  const previousStage = selectedStage ? getPreviousStage(selectedStage) : null
+  const nextStage = selectedStage ? getNextStage(selectedStage) : null
 
   function moveCandidate(candidateId: string, targetStage: BoardStage) {
     const candidate = candidates.find((entry) => entry.id === candidateId)
@@ -315,7 +339,7 @@ export function HiringPipelineBoard() {
       return
     }
 
-    const updatedStatus = nextStatusForDrop(candidate.status, targetStage)
+    const updatedStatus = stageToStatus(targetStage)
 
     setCandidates((current) =>
       current.map((entry) =>
@@ -328,11 +352,6 @@ export function HiringPipelineBoard() {
           : entry,
       ),
     )
-
-    void stageMutation.mutateAsync({ candidateId, pipelineStage: updatedStatus }).catch((error) => {
-      setMessage(error instanceof Error ? error.message : `Unable to move ${candidate.name}.`)
-      void queryClient.invalidateQueries({ queryKey: ['hiring-candidates'] })
-    })
 
     if (targetStage === 'Interview' && (drafts[candidateId]?.scheduledAt?.length ?? 0) === 0) {
       const scheduledAt = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().slice(0, 16)
@@ -347,7 +366,12 @@ export function HiringPipelineBoard() {
       }))
     }
 
-    setMessage(`${candidate.name} moved to ${targetStage}. Underlying state is now ${updatedStatus}.`)
+    setMessage(`${candidate.name} moved to ${targetStage}.`)
+
+    void stageMutation.mutateAsync({ candidateId, pipelineStage: updatedStatus }).catch((error) => {
+      setMessage(error instanceof Error ? error.message : `Unable to move ${candidate.name}.`)
+      void queryClient.invalidateQueries({ queryKey: ['hiring-candidates'] })
+    })
   }
 
   function handleScheduleInterview(candidateId: string) {
@@ -357,7 +381,7 @@ export function HiringPipelineBoard() {
     if (!candidate) return
 
     if (statusToStage(candidate.status) !== 'Interview') {
-      setMessage(`Schedule interviews from the Interview column only for ${candidate.name}.`)
+      setMessage(`Schedule interviews from the Interview stage only for ${candidate.name}.`)
       return
     }
 
@@ -452,362 +476,424 @@ export function HiringPipelineBoard() {
   const errorMessage = candidatesQuery.error?.message ?? interviewsQuery.error?.message
 
   return (
-    <PageStack className="rounded-lg border border-slate-200 bg-white p-6 text-slate-950">
-        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.7fr_1fr] lg:px-8">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-1 text-sm font-medium text-violet-700">
-                <Sparkles className="h-4 w-4" />
-                CAP-HIR-002 · Candidate pipeline and interviews
-              </div>
-              <div className="space-y-3">
-                <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500">Hiring pipeline</p>
-                <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-950 md:text-5xl">
-                  Kanban hiring board with workflow-safe drag and drop.
-                </h1>
-                <p className="max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
-                  The board follows the canonical candidate hiring workflow: Applied and Screening feed Interview,
-                  Interview feeds Offer, and Offer hands off cleanly into Hired for onboarding.
-                </p>
-              </div>
+    <PageStack className="gap-6">
+      <section className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {STAGES.map((stage, index) => (
+                <div key={stage.id} className="flex items-center gap-2">
+                  <span>{stage.title}</span>
+                  {index < STAGES.length - 1 ? <ChevronRight className="h-3.5 w-3.5 text-slate-400" /> : null}
+                </div>
+              ))}
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <MetricCard icon={Users} label="Active candidates" value={metrics.total} detail="All cards stay derived from candidate state." />
-              <MetricCard icon={CalendarDays} label="Scheduled interviews" value={metrics.scheduledCount} detail="Interview scheduling updates candidate freshness instantly." />
-              <MetricCard icon={BriefcaseBusiness} label="Offers in flight" value={metrics.activeOffers} detail="Offer stage stays separate from interview activity." />
-              <MetricCard icon={CheckCircle2} label="Hired conversion" value={`${metrics.conversion}%`} detail={`${metrics.hiredCount} candidates are ready for onboarding handoff.`} />
-            </div>
+            <p className="text-sm text-slate-600">{isLoading ? 'Loading pipeline…' : isError ? errorMessage : message}</p>
           </div>
-        </section>
-
-        <section className="rounded-lg border border-slate-200 bg-white p-4 md:p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 rounded-md bg-slate-900 p-2 text-white">
-                <CircleDotDashed className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900 md:text-base">State sync + workflow validation</h2>
-                <p className="text-sm text-slate-600">
-                  {isLoading ? 'Loading mock pipeline data…' : isError ? errorMessage : message}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-              <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">Only adjacent stage moves are allowed</span>
-              <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">Interview scheduling is available inside Interview</span>
-              <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5">UI columns are derived from canonical candidate status</span>
-            </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">Compact cards</span>
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">Subtle status badges</span>
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">Adjacent stage moves only</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void candidatesQuery.refetch()
+                void interviewsQuery.refetch()
+              }}
+              disabled={candidatesQuery.isFetching || interviewsQuery.isFetching}
+            >
+              <RefreshCcw className="h-4 w-4" />
+              Refresh
+            </Button>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {isLoading ? (
-          <SurfaceSkeleton lines={6} />
-        ) : isError ? (
-          <ErrorState title="Unable to load candidate pipeline" message={errorMessage ?? 'Unknown error'} onRetry={() => { void candidatesQuery.refetch(); void interviewsQuery.refetch() }} />
-        ) : candidates.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No candidates in pipeline"
-            message="Candidate cards will appear here once new applications are created. Refresh the board or create a new candidate from the hiring workflow."
-            action={<Button variant="outline" onClick={() => { void candidatesQuery.refetch(); void interviewsQuery.refetch() }} disabled={candidatesQuery.isFetching || interviewsQuery.isFetching}>Refresh board</Button>}
-          />
-        ) : (
-          <section className="grid gap-4 xl:grid-cols-4">
-            {STAGES.map((stage) => {
-              const draggedCandidate = candidates.find((candidate) => candidate.id === draggedCandidateId)
-              const draggedStage = draggedCandidate ? statusToStage(draggedCandidate.status) : null
-              const canDrop = draggedStage ? canMoveStage(draggedStage, stage.id) : false
-              const isHovered = hoverStage === stage.id
+      {isLoading ? (
+        <SurfaceSkeleton lines={6} />
+      ) : isError ? (
+        <ErrorState
+          title="Unable to load candidate pipeline"
+          message={errorMessage ?? 'Unknown error'}
+          onRetry={() => {
+            void candidatesQuery.refetch()
+            void interviewsQuery.refetch()
+          }}
+        />
+      ) : candidates.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No candidates in pipeline"
+          message="Candidate cards will appear here once applications are created. Refresh the board to sync the latest hiring data."
+          action={
+            <Button
+              variant="outline"
+              onClick={() => {
+                void candidatesQuery.refetch()
+                void interviewsQuery.refetch()
+              }}
+              disabled={candidatesQuery.isFetching || interviewsQuery.isFetching}
+            >
+              Refresh board
+            </Button>
+          }
+        />
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <section className="min-w-0 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex min-w-[1340px] gap-4">
+              {STAGES.map((stage) => {
+                const draggedCandidate = candidates.find((candidate) => candidate.id === draggedCandidateId)
+                const draggedStage = draggedCandidate ? statusToStage(draggedCandidate.status) : null
+                const canDrop = draggedStage ? canMoveStage(draggedStage, stage.id) : false
+                const isHovered = hoverStage === stage.id
 
-              return (
-                <div
-                  key={stage.id}
-                  className={cn(
-                    'min-h-[540px] rounded-lg border bg-white p-4 transition-colors',
-                    isHovered && canDrop && 'border-slate-950 bg-slate-50',
-                    isHovered && !canDrop && draggedStage && 'border-rose-300 bg-rose-50',
-                    !isHovered && 'border-slate-200',
-                  )}
-                  onDragOver={(event) => {
-                    event.preventDefault()
-                    setHoverStage(stage.id)
-                  }}
-                  onDragLeave={() => setHoverStage((current) => (current === stage.id ? null : current))}
-                  onDrop={(event) => {
-                    event.preventDefault()
-                    const candidateId = event.dataTransfer.getData('text/plain')
-                    setHoverStage(null)
-                    setDraggedCandidateId(null)
-                    if (candidateId) {
-                      moveCandidate(candidateId, stage.id)
-                    }
-                  }}
-                >
-                  <div className={cn('mb-4 rounded-lg border p-4', stage.panelClassName)}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-950">{stage.title}</h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-600">{stage.description}</p>
+                return (
+                  <section
+                    key={stage.id}
+                    className={cn(
+                      'flex min-h-[640px] min-w-[252px] flex-1 flex-col rounded-lg border border-slate-200 bg-slate-50 p-4 transition-colors',
+                      isHovered && canDrop && 'border-slate-300 bg-slate-100',
+                      isHovered && !canDrop && draggedStage && 'border-rose-200 bg-rose-50',
+                    )}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      setHoverStage(stage.id)
+                    }}
+                    onDragLeave={() => setHoverStage((current) => (current === stage.id ? null : current))}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      const candidateId = event.dataTransfer.getData('text/plain')
+                      setHoverStage(null)
+                      setDraggedCandidateId(null)
+                      if (candidateId) {
+                        moveCandidate(candidateId, stage.id)
+                      }
+                    }}
+                  >
+                    <header className="space-y-3 border-b border-slate-200 pb-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <h2 className="text-sm font-semibold text-slate-950">{stage.title}</h2>
+                          <p className="text-xs leading-5 text-slate-600">{stage.description}</p>
+                        </div>
+                        <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">
+                          {candidatesByStage[stage.id].length}
+                        </Badge>
                       </div>
-                      <span className={cn('inline-flex min-w-11 items-center justify-center rounded-md border px-3 py-1 text-sm font-semibold', stage.badgeClassName)}>
-                        {candidatesByStage[stage.id].length}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-xs font-medium uppercase tracking-[0.22em] text-slate-500">
-                      {getDropHint(draggedStage, stage.id)}
-                    </p>
-                  </div>
+                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                        {getDropHint(draggedStage, stage.id)}
+                      </p>
+                    </header>
 
-                  <div className="space-y-3">
-                    {candidatesByStage[stage.id].map((candidate) => {
-                      const candidateStage = statusToStage(candidate.status)
-                      const candidateInterviews = interviewsByCandidate[candidate.id] ?? []
-                      const nextInterview = candidateInterviews.find((entry) => entry.status === 'Scheduled') ?? candidateInterviews[0]
-                      const interviewCount = candidateInterviews.length
-                      const draft = drafts[candidate.id] ?? EMPTY_INTERVIEW_DRAFT
-                      const isDragging = draggedCandidateId === candidate.id
+                    <div className="flex-1 space-y-3 pt-4">
+                      {candidatesByStage[stage.id].map((candidate) => {
+                        const candidateInterviews = interviewsByCandidate[candidate.id] ?? []
+                        const nextInterview = candidateInterviews.find((entry) => entry.status === 'Scheduled') ?? candidateInterviews[0] ?? null
+                        const isSelected = selectedCandidateId === candidate.id
+                        const isDragging = draggedCandidateId === candidate.id
 
-                      return (
-                        <article
-                          key={candidate.id}
-                          draggable
-                          onDragStart={(event) => {
-                            event.dataTransfer.setData('text/plain', candidate.id)
-                            event.dataTransfer.effectAllowed = 'move'
-                            setDraggedCandidateId(candidate.id)
-                          }}
-                          onDragEnd={() => {
-                            setDraggedCandidateId(null)
-                            setHoverStage(null)
-                          }}
-                          className={cn(
-                            'rounded-lg border border-slate-200 bg-white p-4 transition duration-200',
-                            isDragging && 'rotate-[1deg] scale-[0.99] border-slate-900 opacity-70',
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-slate-400">
-                                <GripVertical className="h-4 w-4" />
-                                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                                  {candidate.status}
-                                </span>
+                        return (
+                          <article
+                            key={candidate.id}
+                            draggable
+                            onClick={() => setSelectedCandidateId(candidate.id)}
+                            onDragStart={(event) => {
+                              event.dataTransfer.setData('text/plain', candidate.id)
+                              event.dataTransfer.effectAllowed = 'move'
+                              setDraggedCandidateId(candidate.id)
+                            }}
+                            onDragEnd={() => {
+                              setDraggedCandidateId(null)
+                              setHoverStage(null)
+                            }}
+                            className={cn(
+                              'cursor-pointer rounded-lg border border-slate-200 bg-white p-3 transition duration-150 hover:border-slate-300',
+                              isSelected && 'border-slate-900 ring-1 ring-slate-900/10',
+                              isDragging && 'border-slate-300 opacity-70',
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 space-y-2">
+                                <div className="flex items-center gap-2 text-slate-400">
+                                  <GripVertical className="h-4 w-4" />
+                                  <Badge className={cn('rounded-full', getStatusBadgeClassName(candidate.status))}>{candidate.status}</Badge>
+                                </div>
+                                <div className="space-y-1">
+                                  <h3 className="truncate text-sm font-semibold text-slate-950">{candidate.name}</h3>
+                                  <p className="truncate text-sm text-slate-600">{candidate.role}</p>
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="text-base font-semibold text-slate-950">{candidate.name}</h4>
-                                <p className="text-sm text-slate-600">{candidate.role}</p>
-                              </div>
+                              <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                                Score {candidate.score}
+                              </Badge>
                             </div>
-                            <div className="rounded-md bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">
-                              {candidate.score}
-                            </div>
-                          </div>
 
-                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
-                            <span className="rounded-md bg-slate-100 px-2.5 py-1">{candidate.source}</span>
-                            <span className="rounded-md bg-slate-100 px-2.5 py-1">Applied {candidate.appliedDate}</span>
-                            <span className="rounded-md bg-slate-100 px-2.5 py-1">{candidate.email}</span>
-                          </div>
-
-                          <p className="mt-3 text-sm leading-6 text-slate-600">{candidate.summary}</p>
-
-                          <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-medium text-slate-900">Pipeline state</span>
-                              <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                                Updated {formatDateLabel(candidate.updatedAt)}
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">{candidate.source}</span>
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">Applied {formatShortDateLabel(candidate.appliedDate)}</span>
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                                {nextInterview ? `Next ${formatShortDateLabel(nextInterview.scheduledAt)}` : 'No interview yet'}
                               </span>
                             </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                              <span>{candidateStage}</span>
-                              {candidateStage !== 'Hired' && <MoveRight className="h-3.5 w-3.5" />}
-                              <span>{candidate.status}</span>
-                            </div>
-                            <div className="mt-3 grid gap-2 text-xs text-slate-600">
-                              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                                <span>Interview count</span>
-                                <span className="font-semibold text-slate-900">{interviewCount}</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                                <span>Next interview</span>
-                                <span className="font-semibold text-slate-900">{nextInterview ? formatDateLabel(nextInterview.scheduledAt) : 'Not scheduled'}</span>
-                              </div>
-                            </div>
-                          </div>
 
-                          {candidateInterviews.length > 0 ? (
-                            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                              <div className="mb-3 flex items-center justify-between gap-3">
-                                <div>
-                                  <h5 className="text-sm font-semibold text-slate-950">Interview schedule</h5>
-                                  <p className="text-xs text-slate-600">Update the live status without leaving the pipeline board.</p>
-                                </div>
-                                <span className="rounded-md bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
-                                  {candidateInterviews.length} total
-                                </span>
-                              </div>
-                              <div className="space-y-2">
-                                {candidateInterviews.map((interview) => (
-                                  <div key={interview.id} className="rounded-xl border border-slate-200 bg-white p-3">
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                      <div>
-                                        <p className="text-sm font-semibold text-slate-900">{interview.interviewType}</p>
-                                        <p className="text-xs text-slate-600">
-                                          {formatDateLabel(interview.scheduledAt)} · {interview.location}
-                                        </p>
-                                      </div>
-                                      <label className="grid gap-1 text-xs font-medium text-slate-700">
-                                        Status
-                                        <Select
-                                          value={interview.status}
-                                          onChange={(event) => handleInterviewStatusUpdate(interview.id, event.target.value as InterviewStatus)}
-                                          disabled={interviewStatusMutation.isPending}
-                                          className="min-w-36 border-slate-200"
-                                        >
-                                          <option value="Scheduled">Scheduled</option>
-                                          <option value="Completed">Completed</option>
-                                          <option value="Cancelled">Cancelled</option>
-                                          <option value="NoShow">No show</option>
-                                        </Select>
-                                      </label>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                              <span>Updated {formatDateLabel(candidate.updatedAt)}</span>
+                              <Button type="button" size="sm" variant="ghost" className="h-auto px-2 py-1 text-xs" onClick={() => setSelectedCandidateId(candidate.id)}>
+                                Review
+                              </Button>
                             </div>
-                          ) : null}
+                          </article>
+                        )
+                      })}
 
-                          {candidateStage === 'Interview' ? (
-                            <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 p-3">
-                              <div className="mb-3">
-                                <h5 className="text-sm font-semibold text-violet-950">Schedule interview</h5>
-                                <p className="text-xs text-violet-800">Keep the interview plan on the card so the board and schedule stay synchronized.</p>
-                              </div>
-                              <div className="grid gap-2">
-                                <label className="grid gap-1 text-xs font-medium text-slate-700">
-                                  Interview type
-                                  <Select
-                                    value={draft.interviewType}
-                                    onChange={(event) =>
-                                      setDrafts((current) => ({
-                                        ...current,
-                                        [candidate.id]: {
-                                          ...draft,
-                                          interviewType: event.target.value as InterviewType,
-                                        },
-                                      }))
-                                    }
-                                    className="border-violet-200"
-                                  >
-                                    <option value="PhoneScreen">Phone screen</option>
-                                    <option value="Technical">Technical</option>
-                                    <option value="Behavioral">Behavioral</option>
-                                    <option value="Panel">Panel</option>
-                                    <option value="Final">Final</option>
-                                  </Select>
-                                </label>
-                                <label className="grid gap-1 text-xs font-medium text-slate-700">
-                                  Date and time
-                                  <Input
-                                    type="datetime-local"
-                                    value={draft.scheduledAt}
-                                    onChange={(event) =>
-                                      setDrafts((current) => ({
-                                        ...current,
-                                        [candidate.id]: {
-                                          ...draft,
-                                          scheduledAt: event.target.value,
-                                          scheduledEndAt:
-                                            draft.scheduledEndAt.length > 0 ? draft.scheduledEndAt : defaultInterviewEnd(event.target.value),
-                                        },
-                                      }))
-                                    }
-                                    className="border-violet-200"
-                                  />
-                                </label>
-                                <label className="grid gap-1 text-xs font-medium text-slate-700">
-                                  End time
-                                  <Input
-                                    type="datetime-local"
-                                    value={draft.scheduledEndAt}
-                                    onChange={(event) =>
-                                      setDrafts((current) => ({
-                                        ...current,
-                                        [candidate.id]: {
-                                          ...draft,
-                                          scheduledEndAt: event.target.value,
-                                        },
-                                      }))
-                                    }
-                                    className="border-violet-200"
-                                  />
-                                </label>
-                                <label className="grid gap-1 text-xs font-medium text-slate-700">
-                                  Location or meeting link
-                                  <Input
-                                    type="text"
-                                    placeholder="Google Meet / Zoom / HQ Room 4"
-                                    value={draft.location}
-                                    onChange={(event) =>
-                                      setDrafts((current) => ({
-                                        ...current,
-                                        [candidate.id]: {
-                                          ...draft,
-                                          location: event.target.value,
-                                        },
-                                      }))
-                                    }
-                                    className="border-violet-200"
-                                  />
-                                </label>
-                                <Button className="mt-1 w-full" onClick={() => handleScheduleInterview(candidate.id)} disabled={interviewMutation.isPending}>
-                                  {interviewMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                                  Schedule interview
-                                </Button>
-                              </div>
-                            </div>
-                          ) : null}
-                        </article>
-                      )
-                    })}
+                      {candidatesByStage[stage.id].length === 0 ? (
+                        <div className="flex min-h-[140px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                          No candidates in {stage.title}.
+                        </div>
+                      ) : null}
+                    </div>
+                  </section>
+                )
+              })}
+            </div>
+          </section>
 
-                    {candidatesByStage[stage.id].length === 0 ? (
-                      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                        No candidates in {stage.title}. Drop a card here to progress the workflow.
+          <aside className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+            {selectedCandidate ? (
+              <>
+                <div className="space-y-3 border-b border-slate-200 pb-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Candidate details</p>
+                      <h2 className="text-lg font-semibold text-slate-950">{selectedCandidate.name}</h2>
+                      <p className="text-sm text-slate-600">{selectedCandidate.role}</p>
+                    </div>
+                    <Badge className={cn('rounded-full', getStatusBadgeClassName(selectedCandidate.status))}>{selectedCandidate.status}</Badge>
+                  </div>
+                  <p className="text-sm leading-6 text-slate-600">{selectedCandidate.summary}</p>
+                </div>
+
+                <div className="space-y-3 border-b border-slate-200 pb-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-slate-950">Progression</h3>
+                    <span className="text-xs text-slate-500">Updated {formatDateLabel(selectedCandidate.updatedAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {STAGES.map((stage, index) => (
+                      <div key={stage.id} className="flex items-center gap-2">
+                        <span className={cn(statusToStage(selectedCandidate.status) === stage.id && 'text-slate-900')}>{stage.title}</span>
+                        {index < STAGES.length - 1 ? <ChevronRight className="h-3.5 w-3.5 text-slate-300" /> : null}
                       </div>
-                    ) : null}
+                    ))}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Email</p>
+                      <p className="mt-2 text-sm text-slate-700">{selectedCandidate.email}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Source</p>
+                      <p className="mt-2 text-sm text-slate-700">{selectedCandidate.source}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Applied</p>
+                      <p className="mt-2 text-sm text-slate-700">{formatShortDateLabel(selectedCandidate.appliedDate)}</p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Score</p>
+                      <p className="mt-2 text-sm text-slate-700">{selectedCandidate.score}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => previousStage && moveCandidate(selectedCandidate.id, previousStage)}
+                      disabled={!previousStage || stageMutation.isPending}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Move back
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => nextStage && moveCandidate(selectedCandidate.id, nextStage)}
+                      disabled={!nextStage || stageMutation.isPending}
+                    >
+                      Move next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              )
-            })}
-          </section>
-        )}
+
+                <div className="space-y-3 border-b border-slate-200 pb-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-slate-950">Activity</h3>
+                    <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+                      {selectedCandidateInterviews.length} items
+                    </Badge>
+                  </div>
+                  {upcomingInterview ? (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950">Next interview</p>
+                          <p className="mt-1 text-sm text-slate-600">{formatDateLabel(upcomingInterview.scheduledAt)} · {upcomingInterview.location}</p>
+                        </div>
+                        <Badge className={cn('rounded-full', getStatusBadgeClassName(upcomingInterview.status))}>{upcomingInterview.status}</Badge>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                      No interview activity recorded yet.
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {selectedCandidateInterviews.map((interview) => (
+                      <div key={interview.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-slate-950">{interview.interviewType}</p>
+                            <p className="text-xs text-slate-600">{formatDateLabel(interview.scheduledAt)}</p>
+                          </div>
+                          <Badge className={cn('rounded-full', getStatusBadgeClassName(interview.status))}>{interview.status}</Badge>
+                        </div>
+                        <div className="mt-3 grid gap-2">
+                          <p className="text-xs text-slate-600">{interview.location}</p>
+                          <Select
+                            value={interview.status}
+                            onChange={(event) => handleInterviewStatusUpdate(interview.id, event.target.value as InterviewStatus)}
+                            disabled={interviewStatusMutation.isPending}
+                            className="border-slate-200"
+                          >
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="NoShow">No show</option>
+                          </Select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-950">Notes and scheduling</h3>
+                      <p className="text-xs text-slate-600">Keep secondary actions here so the board stays focused on progression.</p>
+                    </div>
+                    <div className="rounded-full bg-slate-100 p-2 text-slate-500">
+                      <CircleDotDashed className="h-4 w-4" />
+                    </div>
+                  </div>
+
+                  {selectedStage === 'Interview' ? (
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <label className="grid gap-1 text-xs font-medium text-slate-700">
+                        Interview type
+                        <Select
+                          value={selectedDraft.interviewType}
+                          onChange={(event) =>
+                            setDrafts((current) => ({
+                              ...current,
+                              [selectedCandidate.id]: {
+                                ...selectedDraft,
+                                interviewType: event.target.value as InterviewType,
+                              },
+                            }))
+                          }
+                          className="border-slate-200 bg-white"
+                        >
+                          <option value="PhoneScreen">Phone screen</option>
+                          <option value="Technical">Technical</option>
+                          <option value="Behavioral">Behavioral</option>
+                          <option value="Panel">Panel</option>
+                          <option value="Final">Final</option>
+                        </Select>
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-slate-700">
+                        Date and time
+                        <Input
+                          type="datetime-local"
+                          value={selectedDraft.scheduledAt}
+                          onChange={(event) =>
+                            setDrafts((current) => ({
+                              ...current,
+                              [selectedCandidate.id]: {
+                                ...selectedDraft,
+                                scheduledAt: event.target.value,
+                                scheduledEndAt:
+                                  selectedDraft.scheduledEndAt.length > 0
+                                    ? selectedDraft.scheduledEndAt
+                                    : defaultInterviewEnd(event.target.value),
+                              },
+                            }))
+                          }
+                          className="border-slate-200 bg-white"
+                        />
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-slate-700">
+                        End time
+                        <Input
+                          type="datetime-local"
+                          value={selectedDraft.scheduledEndAt}
+                          onChange={(event) =>
+                            setDrafts((current) => ({
+                              ...current,
+                              [selectedCandidate.id]: {
+                                ...selectedDraft,
+                                scheduledEndAt: event.target.value,
+                              },
+                            }))
+                          }
+                          className="border-slate-200 bg-white"
+                        />
+                      </label>
+                      <label className="grid gap-1 text-xs font-medium text-slate-700">
+                        Location or meeting link
+                        <Input
+                          type="text"
+                          placeholder="Google Meet / Zoom / HQ Room 4"
+                          value={selectedDraft.location}
+                          onChange={(event) =>
+                            setDrafts((current) => ({
+                              ...current,
+                              [selectedCandidate.id]: {
+                                ...selectedDraft,
+                                location: event.target.value,
+                              },
+                            }))
+                          }
+                          className="border-slate-200 bg-white"
+                        />
+                      </label>
+                      <Button type="button" onClick={() => handleScheduleInterview(selectedCandidate.id)} disabled={interviewMutation.isPending}>
+                        {interviewMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}
+                        Schedule interview
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                      Move this candidate into Interview to schedule a session, or keep reviewing progress from the board.
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+                Select a candidate card to review details, activity, and next actions.
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
     </PageStack>
-  )
-}
-
-type MetricCardProps = {
-  icon: typeof Users
-  label: string
-  value: number | string
-  detail: string
-}
-
-function MetricCard({ icon: Icon, label, value, detail }: MetricCardProps) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
-        </div>
-        <div className="rounded-2xl bg-white p-3 text-slate-900 shadow-sm">
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{detail}</p>
-    </div>
   )
 }
