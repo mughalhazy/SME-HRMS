@@ -50,8 +50,8 @@ function statusTone(status: Employee['status']) {
 
 function DirectoryLoadingState() {
   return (
-    <section className="min-w-0 border-t border-slate-200">
-      <div className="grid gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-[minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto_auto_auto]">
+    <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-[minmax(0,2.8fr)_minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(116px,1fr)_minmax(116px,1fr)_88px] md:px-6">
         <span>Employee</span>
         <span>Department</span>
         <span>Role</span>
@@ -59,11 +59,11 @@ function DirectoryLoadingState() {
         <span>Start date</span>
         <span className="text-right">Actions</span>
       </div>
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-slate-200">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="grid gap-3 px-4 py-3.5 md:grid-cols-[minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto_auto_auto] md:items-center">
+          <div key={index} className="grid min-h-[72px] gap-3 px-4 py-4 md:grid-cols-[minmax(0,2.8fr)_minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(116px,1fr)_minmax(116px,1fr)_88px] md:items-center md:px-6">
             <div className="flex items-center gap-3">
-              <Skeleton className="h-9 w-9 rounded-full" />
+              <Skeleton className="h-10 w-10 rounded-full" />
               <div className="space-y-2">
                 <Skeleton className="h-4 w-40" />
                 <Skeleton className="h-3 w-56 max-w-full" />
@@ -155,96 +155,96 @@ export function EmployeeListPage() {
 
   return (
     <PageStack className="gap-6">
-      <section className="space-y-6 border-b border-slate-200 pb-6">
-        <div className="grid gap-4 xl:grid-cols-12 xl:items-center">
-          <div className="min-w-0 xl:col-span-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Employees</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              <span className="font-medium text-slate-900">{directoryCountLabel}</span>
-              <span className="ml-1">in directory</span>
-            </p>
-          </div>
+      <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="grid gap-6 px-4 py-6 md:px-6">
+          <div className="grid gap-4 xl:grid-cols-12 xl:items-center">
+            <div className="min-w-0 xl:col-span-3">
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Employees</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                <span className="font-medium text-slate-950">{directoryCountLabel}</span>
+                <span className="ml-1">in directory</span>
+              </p>
+            </div>
 
-          <label className="relative block xl:col-span-6">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              className="h-11 border-slate-200 bg-white pl-10"
-              placeholder="Search by name, employee number, email, department, or role"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </label>
+            <label className="relative block xl:col-span-6">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                className="h-11 border-slate-200 bg-white pl-11"
+                placeholder="Search by name, employee number, email, department, or role"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </label>
 
-          <div className="xl:col-span-3 xl:justify-self-end">
-            <Button asChild className="h-11 w-full xl:w-auto">
-              <Link href="/employees/new">
-                <UserPlus className="h-4 w-4" />
-                Add employee
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-12 lg:items-center">
-          <Select className="h-10 lg:col-span-3" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
-            <option value="all">All departments</option>
-            {departmentOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </Select>
-
-          <Select className="h-10 lg:col-span-3" value={roleId} onChange={(event) => setRoleId(event.target.value)}>
-            <option value="all">All roles</option>
-            {roleOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </Select>
-
-          <Select className="h-10 lg:col-span-3" value={status} onChange={(event) => setStatus(event.target.value as (typeof EMPLOYEE_STATUSES)[number] | 'all')}>
-            <option value="all">All statuses</option>
-            {EMPLOYEE_STATUSES.map((option) => (
-              <option key={option} value={option}>
-                {formatStatus(option)}
-              </option>
-            ))}
-          </Select>
-
-          <div className="flex flex-wrap items-center gap-3 lg:col-span-3 lg:justify-end">
-            {hasActiveFilters ? (
-              <Button variant="ghost" size="sm" className="h-10 px-3 text-slate-600" onClick={resetFilters}>
-                Clear filters
+            <div className="xl:col-span-3 xl:flex xl:justify-end">
+              <Button asChild className="h-11 w-full xl:w-auto xl:min-w-[152px]">
+                <Link href="/employees/new">
+                  <UserPlus className="h-4 w-4" />
+                  Add employee
+                </Link>
               </Button>
-            ) : null}
-            <Button variant="ghost" size="sm" className="h-10 px-3 text-slate-600" onClick={() => query.refetch()} disabled={query.isFetching}>
-              <RefreshCw className={cn('h-4 w-4', query.isFetching ? 'animate-spin' : '')} />
-              Refresh
-            </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 border-b border-slate-200 pb-6 xl:grid-cols-12 xl:items-center">
+            <Select className="h-11 xl:col-span-2 xl:col-start-4" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
+              <option value="all">All departments</option>
+              {departmentOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+
+            <Select className="h-11 xl:col-span-2" value={roleId} onChange={(event) => setRoleId(event.target.value)}>
+              <option value="all">All roles</option>
+              {roleOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+
+            <Select className="h-11 xl:col-span-2" value={status} onChange={(event) => setStatus(event.target.value as (typeof EMPLOYEE_STATUSES)[number] | 'all')}>
+              <option value="all">All statuses</option>
+              {EMPLOYEE_STATUSES.map((option) => (
+                <option key={option} value={option}>
+                  {formatStatus(option)}
+                </option>
+              ))}
+            </Select>
+
+            <div className="flex flex-wrap items-center gap-3 xl:col-span-3 xl:justify-end">
+              {hasActiveFilters ? (
+                <Button variant="ghost" size="sm" className="h-11 px-4 text-slate-600" onClick={resetFilters}>
+                  Clear filters
+                </Button>
+              ) : null}
+              <Button variant="ghost" size="sm" className="h-11 px-4 text-slate-600" onClick={() => query.refetch()} disabled={query.isFetching}>
+                <RefreshCw className={cn('h-4 w-4', query.isFetching ? 'animate-spin' : '')} />
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <span>
+                Showing <span className="font-medium text-slate-950">{filteredEmployees.length}</span> of{' '}
+                <span className="font-medium text-slate-950">{employees.length}</span> loaded employees
+              </span>
+              {query.isFetching ? <InlineLoading label="Updating directory" /> : null}
+            </div>
+            <span>{hasActiveFilters ? 'Filtered view' : 'All loaded records'}</span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <span>
-              Showing <span className="font-medium text-slate-950">{filteredEmployees.length}</span> of{' '}
-              <span className="font-medium text-slate-950">{employees.length}</span> loaded employees
-            </span>
-            {query.isFetching ? <InlineLoading label="Updating directory" /> : null}
-          </div>
-          <span>{hasActiveFilters ? 'Filtered view' : 'All loaded records'}</span>
-        </div>
-      </section>
-
-      <section className="min-w-0">
         {query.isLoading ? (
           <DirectoryLoadingState />
         ) : query.isError ? (
           <ErrorState className="rounded-none border-x-0 border-b-0 border-t border-rose-200 bg-rose-50/60 px-0 py-6 shadow-none" message={query.error.message} onRetry={() => query.refetch()} />
         ) : filteredEmployees.length === 0 ? (
-          <div className="border-t border-slate-200 px-4 py-12">
+          <div className="border-t border-slate-200 px-4 py-12 md:px-6">
             <div className="mx-auto flex max-w-md flex-col items-center gap-4 text-center">
               <div className="rounded-full bg-slate-100 p-3 text-slate-600">
                 <Users className="h-5 w-5" />
@@ -278,21 +278,29 @@ export function EmployeeListPage() {
         ) : (
           <div className="min-w-0 border-t border-slate-200">
             <Table className="table-fixed">
+              <colgroup>
+                <col className="w-[34%]" />
+                <col className="w-[18%]" />
+                <col className="w-[18%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[6%]" />
+              </colgroup>
               <TableHeader className="bg-slate-50/80">
                 <TableRow className="h-auto border-b border-slate-200 bg-transparent hover:bg-transparent hover:shadow-none">
-                  <TableHead className="w-[34%] px-4 py-3">Employee</TableHead>
-                  <TableHead className="w-[18%] px-4 py-3">Department</TableHead>
-                  <TableHead className="w-[18%] px-4 py-3">Role</TableHead>
-                  <TableHead className="w-[12%] px-4 py-3">Status</TableHead>
-                  <TableHead className="w-[12%] px-4 py-3">Start date</TableHead>
-                  <TableHead className="w-[6%] px-4 py-3 text-right">Actions</TableHead>
+                  <TableHead className="px-4 py-3 md:px-6">Employee</TableHead>
+                  <TableHead className="px-4 py-3 md:px-6">Department</TableHead>
+                  <TableHead className="px-4 py-3 md:px-6">Role</TableHead>
+                  <TableHead className="px-4 py-3 md:px-6">Status</TableHead>
+                  <TableHead className="px-4 py-3 md:px-6">Start date</TableHead>
+                  <TableHead className="px-4 py-3 text-right md:px-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="[&_tr:nth-child(even)]:bg-transparent">
                 {filteredEmployees.map((employee) => (
                   <TableRow
                     key={employee.employee_id}
-                    className="group h-auto cursor-pointer border-b border-slate-100 hover:bg-slate-50/80"
+                    className="group h-[72px] cursor-pointer border-b border-slate-200 hover:bg-slate-50/70"
                     onClick={() => router.push(`/employees/${employee.employee_id}`)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -302,34 +310,34 @@ export function EmployeeListPage() {
                     }}
                     tabIndex={0}
                   >
-                    <TableCell className="px-4 py-3.5">
+                    <TableCell className="px-4 py-4 align-middle md:px-6">
                       <div className="flex min-w-0 items-center gap-3">
-                        <Avatar className="h-9 w-9 border-slate-200 shadow-none">
+                        <Avatar className="h-10 w-10 border border-slate-200 shadow-none">
                           <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-700">{getInitials(employee)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 space-y-1">
-                          <div className="truncate text-sm font-medium text-slate-950">{getEmployeeFullName(employee)}</div>
+                          <div className="truncate text-sm font-semibold text-slate-950">{getEmployeeFullName(employee)}</div>
                           <div className="truncate text-xs text-slate-500">
                             {employee.employee_number} · {employee.email}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{employee.department_id}</TableCell>
-                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{employee.role_id}</TableCell>
-                    <TableCell className="px-4 py-3.5">
-                      <Badge variant="outline" className={cn('font-medium', statusTone(employee.status))}>
+                    <TableCell className="px-4 py-4 align-middle text-sm text-slate-600 md:px-6">{employee.department_id}</TableCell>
+                    <TableCell className="px-4 py-4 align-middle text-sm text-slate-600 md:px-6">{employee.role_id}</TableCell>
+                    <TableCell className="px-4 py-4 align-middle md:px-6">
+                      <Badge variant="outline" className={cn('min-w-[84px] justify-center font-medium', statusTone(employee.status))}>
                         {formatStatus(employee.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3.5 text-sm text-slate-600">{formatDate(employee.hire_date)}</TableCell>
-                    <TableCell className="px-4 py-3.5">
+                    <TableCell className="px-4 py-4 align-middle text-sm text-slate-600 md:px-6">{formatDate(employee.hire_date)}</TableCell>
+                    <TableCell className="px-4 py-4 align-middle md:px-6">
                       <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                         <Button
                           asChild
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-slate-500"
+                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <Link href={`/employees/${employee.employee_id}`} aria-label={`View ${getEmployeeFullName(employee)}`}>
@@ -340,7 +348,7 @@ export function EmployeeListPage() {
                           asChild
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-slate-500"
+                          className="h-8 w-8 text-slate-500 hover:text-slate-900"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <Link href={`/employees/${employee.employee_id}/edit`} aria-label={`Edit ${getEmployeeFullName(employee)}`}>
@@ -354,7 +362,7 @@ export function EmployeeListPage() {
               </TableBody>
             </Table>
 
-            <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 px-4 py-4 text-sm text-slate-500 md:px-6 sm:flex-row sm:items-center sm:justify-between">
               <span>{query.hasNextPage ? 'Load more employees to expand the directory.' : 'End of loaded employee results.'}</span>
               {query.hasNextPage ? (
                 <Button variant="outline" onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
