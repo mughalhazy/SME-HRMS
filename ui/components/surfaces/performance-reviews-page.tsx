@@ -116,6 +116,9 @@ const quickInsights = [
   { label: 'Spread', value: 'Rating variance is 1.1 pts', note: 'Differentiation is wider than last cycle and needs calibration focus.' },
 ]
 
+const primarySurfaceClassName = 'rounded-[var(--radius-surface)] border border-slate-200 bg-white'
+const secondarySurfaceClassName = 'rounded-[var(--radius-surface)] border border-slate-200 bg-slate-50/40'
+
 export function PerformanceReviewsPage() {
   return (
     <PageStack className="gap-6">
@@ -124,18 +127,19 @@ export function PerformanceReviewsPage() {
           <div className="flex flex-col gap-3">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Performance</p>
             <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div className="flex flex-col gap-3">
+              <div className="flex max-w-3xl flex-col gap-3">
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Performance reviews</h1>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                <p className="text-sm leading-6 text-slate-600">
                   Spring 2026 cycle with active calibration in progress and pending reviews prioritized for manager follow-up.
                 </p>
               </div>
             </div>
           </div>
+
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700">Cycle: Spring 2026</span>
-            <span className="rounded-full bg-amber-50 px-3 py-1.5 font-medium text-amber-700">Status: In progress</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700">Period: Mar 1 — Apr 15</span>
+            <span className="rounded-full bg-slate-100 px-3 py-2 font-medium text-slate-700">Cycle: Spring 2026</span>
+            <span className="rounded-full bg-amber-50 px-3 py-2 font-medium text-amber-700">Status: In progress</span>
+            <span className="rounded-full bg-slate-100 px-3 py-2 font-medium text-slate-700">Period: Mar 1 — Apr 15</span>
           </div>
         </div>
 
@@ -149,20 +153,22 @@ export function PerformanceReviewsPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-12 gap-4">
         {metrics.map((metric) => {
           const Icon = metric.icon
 
           return (
-            <Card key={metric.label} className="h-full border-slate-200 shadow-none">
-              <CardContent className="flex h-full items-start justify-between gap-4 p-4">
-                <div className="flex min-h-24 flex-col justify-between gap-2">
+            <Card key={metric.label} className="col-span-12 h-full border-slate-200 shadow-none md:col-span-6 xl:col-span-3">
+              <CardContent className="flex h-full min-h-[160px] flex-col justify-between gap-4 p-4">
+                <div className="flex items-start justify-between gap-4">
                   <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+                  <div className="rounded-[var(--radius-surface)] bg-slate-100 p-3 text-slate-600">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
                   <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
                   <p className="text-sm text-slate-600">{metric.note}</p>
-                </div>
-                <div className="rounded-[var(--radius-surface)] bg-slate-100 p-3 text-slate-600">
-                  <Icon className="h-4 w-4" />
                 </div>
               </CardContent>
             </Card>
@@ -170,9 +176,9 @@ export function PerformanceReviewsPage() {
         })}
       </section>
 
-      <section className="grid grid-cols-12 gap-6">
+      <section className="grid grid-cols-12 gap-6 xl:items-start">
         <div className="col-span-12 xl:col-span-8">
-          <div className="rounded-[var(--radius-surface)] border border-slate-200 bg-white">
+          <div className={primarySurfaceClassName}>
             <div className="flex flex-col gap-4 border-b border-slate-200 p-6">
               <div className="flex items-center gap-2 text-slate-500">
                 <Clock3 className="h-4 w-4" />
@@ -180,16 +186,16 @@ export function PerformanceReviewsPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <h2 className="text-lg font-semibold text-slate-950">Prioritized reviews for action</h2>
-                <p className="text-sm text-slate-600">
-                  Structured around current status, stage, and due date so managers can move the cycle forward without table-heavy scanning.
+                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                  Structured by status, score, and due date so managers can move the cycle forward without table-heavy scanning.
                 </p>
               </div>
             </div>
 
-            <div className="hidden border-b border-slate-200 px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 md:grid md:grid-cols-[minmax(0,2.6fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto] md:gap-4">
+            <div className="hidden border-b border-slate-200 px-6 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 md:grid md:grid-cols-[minmax(0,2.8fr)_minmax(140px,1.1fr)_minmax(120px,0.9fr)_auto] md:items-center md:gap-4">
               <span>Employee</span>
               <span>Status</span>
-              <span>Score / stage</span>
+              <span>Score</span>
               <span className="text-right">Action</span>
             </div>
 
@@ -197,30 +203,28 @@ export function PerformanceReviewsPage() {
               {reviewQueue.map((review) => (
                 <div
                   key={review.id}
-                  className="grid gap-4 px-6 py-4 md:grid-cols-[minmax(0,2.6fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto] md:items-center"
+                  className="grid min-h-[120px] gap-4 px-6 py-4 md:grid-cols-[minmax(0,2.8fr)_minmax(140px,1.1fr)_minmax(120px,0.9fr)_auto] md:items-center"
                 >
-                  <div className="flex min-w-0 flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 flex-col justify-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-slate-950">{review.employee}</p>
-                      <span className="text-xs font-medium text-slate-500">{review.department}</span>
+                      <span className="text-sm text-slate-500">{review.department}</span>
                     </div>
-                    <div className="flex flex-col gap-1 text-sm text-slate-600">
-                      <p>{review.role}</p>
-                      <p className="truncate">{review.note}</p>
-                    </div>
+                    <p className="text-sm text-slate-600">{review.role}</p>
+                    <p className="truncate text-sm text-slate-500">{review.note}</p>
                   </div>
 
-                  <div className="flex flex-col gap-2">
+                  <div className="flex h-full flex-col justify-center gap-2">
                     <span className={badgeClassName(review.status)}>{review.status}</span>
                     <p className="text-sm text-slate-500">Due {review.dueDate}</p>
                   </div>
 
-                  <div className="flex flex-col gap-2 text-sm">
+                  <div className="flex h-full flex-col justify-center gap-2 text-sm">
                     <p className="font-semibold text-slate-950">{review.score}</p>
                     <p className="text-slate-500">{review.stage}</p>
                   </div>
 
-                  <div className="flex justify-start md:justify-end">
+                  <div className="flex items-center justify-start md:justify-end">
                     <Button variant="ghost" asChild className="h-9 px-3 text-slate-700">
                       <Link href={`/performance/${review.id}`}>Open review</Link>
                     </Button>
@@ -231,44 +235,50 @@ export function PerformanceReviewsPage() {
           </div>
         </div>
 
-        <aside className="col-span-12 flex flex-col gap-6 xl:col-span-4">
-          <div className="flex flex-col gap-4 rounded-[var(--radius-surface)] border border-slate-200 bg-slate-50/60 p-4">
-            <div className="flex items-center gap-2 text-slate-500">
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-sm font-semibold uppercase tracking-[0.18em]">Top performers</span>
-            </div>
-            <div className="flex flex-col gap-3">
-              {topPerformers.map((item) => (
-                <InsightItem key={item.name} name={item.name} meta={item.meta} note={item.note} />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-4 rounded-[var(--radius-surface)] border border-slate-200 bg-slate-50/60 p-4">
-            <div className="flex items-center gap-2 text-slate-500">
-              <TrendingDown className="h-4 w-4" />
-              <span className="text-sm font-semibold uppercase tracking-[0.18em]">Low performers</span>
-            </div>
-            <div className="flex flex-col gap-3">
-              {lowPerformers.map((item) => (
-                <InsightItem key={item.name} name={item.name} meta={item.meta} note={item.note} />
-              ))}
+        <aside className="col-span-12 flex flex-col gap-4 xl:col-span-4">
+          <div className={secondarySurfaceClassName}>
+            <div className="flex flex-col gap-4 p-4">
+              <div className="flex items-center gap-2 text-slate-500">
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Top performers</span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {topPerformers.map((item) => (
+                  <InsightItem key={item.name} name={item.name} meta={item.meta} note={item.note} />
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-[var(--radius-surface)] border border-slate-200 bg-slate-50/60 p-4">
-            <div className="flex items-center gap-2 text-slate-500">
-              <Sparkles className="h-4 w-4" />
-              <span className="text-sm font-semibold uppercase tracking-[0.18em]">Quick insights</span>
+          <div className={secondarySurfaceClassName}>
+            <div className="flex flex-col gap-4 p-4">
+              <div className="flex items-center gap-2 text-slate-500">
+                <TrendingDown className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Low performers</span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {lowPerformers.map((item) => (
+                  <InsightItem key={item.name} name={item.name} meta={item.meta} note={item.note} />
+                ))}
+              </div>
             </div>
-            <div className="flex flex-col gap-3">
-              {quickInsights.map((item) => (
-                <div key={item.label} className="flex flex-col gap-2 border-b border-slate-200 pb-3 last:border-b-0 last:pb-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
-                  <p className="text-sm font-semibold text-slate-950">{item.value}</p>
-                  <p className="text-sm text-slate-600">{item.note}</p>
-                </div>
-              ))}
+          </div>
+
+          <div className={secondarySurfaceClassName}>
+            <div className="flex flex-col gap-4 p-4">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Sparkles className="h-4 w-4" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Quick insights</span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {quickInsights.map((item) => (
+                  <div key={item.label} className="flex flex-col gap-2 border-b border-slate-200 pb-3 last:border-b-0 last:pb-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
+                    <p className="text-sm font-semibold text-slate-950">{item.value}</p>
+                    <p className="text-sm leading-6 text-slate-600">{item.note}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </aside>
@@ -290,7 +300,7 @@ function InsightItem({
     <div className="flex flex-col gap-2 border-b border-slate-200 pb-3 last:border-b-0 last:pb-0">
       <p className="text-sm font-semibold text-slate-950">{name}</p>
       <p className="text-sm text-slate-500">{meta}</p>
-      <p className="text-sm text-slate-600">{note}</p>
+      <p className="text-sm leading-6 text-slate-600">{note}</p>
     </div>
   )
 }
@@ -298,10 +308,10 @@ function InsightItem({
 function badgeClassName(status: string) {
   switch (status) {
     case 'Completed':
-      return 'inline-flex w-fit rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700'
+      return 'inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'
     case 'In progress':
-      return 'inline-flex w-fit rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700'
+      return 'inline-flex w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700'
     default:
-      return 'inline-flex w-fit rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700'
+      return 'inline-flex w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'
   }
 }
