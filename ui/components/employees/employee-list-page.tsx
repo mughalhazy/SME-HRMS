@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ErrorState, InlineLoading, Skeleton } from '@/components/ui/feedback'
 import { Input, Select } from '@/components/ui/input'
-import { PageStack } from '@/components/ui/page'
+import { PageSection, PageSectionHeader, PageStack, pageSurfaceClassName } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { getEmployeeFullName, listEmployees } from '@/lib/employees/api'
 import { EMPLOYEE_STATUSES, type Employee } from '@/lib/employees/types'
@@ -50,7 +50,7 @@ function statusTone(status: Employee['status']) {
 
 function DirectoryLoadingState() {
   return (
-    <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <section className={cn('min-w-0 overflow-hidden', pageSurfaceClassName)}>
       <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-[minmax(0,2.8fr)_minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(116px,1fr)_minmax(116px,1fr)_88px] md:px-6">
         <span>Employee</span>
         <span>Department</span>
@@ -155,18 +155,29 @@ export function EmployeeListPage() {
 
   return (
     <PageStack className="gap-6">
-      <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="grid gap-6 px-4 py-6 md:px-6">
-          <div className="grid gap-4 xl:grid-cols-12 xl:items-center">
-            <div className="min-w-0 xl:col-span-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Employees</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                <span className="font-medium text-slate-950">{directoryCountLabel}</span>
-                <span className="ml-1">in directory</span>
-              </p>
-            </div>
+      <PageSection className="min-w-0 overflow-hidden">
+        <PageSectionHeader
+          eyebrow="Directory workspace"
+          title="Employee directory"
+          description={
+            <span>
+              <span className="font-semibold text-[var(--foreground)]">{directoryCountLabel}</span>
+              <span className="ml-1">currently match the loaded directory controls.</span>
+            </span>
+          }
+          actions={
+            <Button asChild className="h-11 w-full xl:w-auto xl:min-w-[152px]">
+              <Link href="/employees/new">
+                <UserPlus className="h-4 w-4" />
+                Add employee
+              </Link>
+            </Button>
+          }
+        />
 
-            <label className="relative block xl:col-span-6">
+        <div className="grid gap-6 px-4 py-4 sm:px-5 sm:py-5">
+          <div className="grid gap-4 xl:grid-cols-12 xl:items-center">
+            <label className="relative block xl:col-span-9">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 className="h-11 border-slate-200 bg-white pl-11"
@@ -175,18 +186,9 @@ export function EmployeeListPage() {
                 onChange={(event) => setSearch(event.target.value)}
               />
             </label>
-
-            <div className="xl:col-span-3 xl:flex xl:justify-end">
-              <Button asChild className="h-11 w-full xl:w-auto xl:min-w-[152px]">
-                <Link href="/employees/new">
-                  <UserPlus className="h-4 w-4" />
-                  Add employee
-                </Link>
-              </Button>
-            </div>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-200 pb-6 xl:grid-cols-12 xl:items-center">
+          <div className="grid gap-4 border-b border-[var(--border)] pb-6 xl:grid-cols-12 xl:items-center">
             <Select className="h-11 xl:col-span-2 xl:col-start-4" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
               <option value="all">All departments</option>
               {departmentOptions.map((option) => (
@@ -372,7 +374,7 @@ export function EmployeeListPage() {
             </div>
           </div>
         )}
-      </section>
+      </PageSection>
     </PageStack>
   )
 }
