@@ -87,6 +87,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `organization_structure_view`
 - `employee_reporting_view`
 - enriches `attendance_dashboard_view`, `leave_requests_view`, `payroll_summary_view`, `job_posting_directory_view`, and `candidate_pipeline_view`
+- produces `employee_compensation_view` and payroll-context projections consumed by `payroll-service`
 
 ## performance-service
 

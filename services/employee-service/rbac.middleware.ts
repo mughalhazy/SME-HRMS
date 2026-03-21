@@ -258,7 +258,7 @@ export function authorizeEmployeeAction(action: ResourceAction): RequestHandler 
       return;
     }
 
-    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles' && action !== 'readOrgStructure' && action !== 'listOrgStructure') {
+    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles' && action !== 'readOrgStructure' && action !== 'listOrgStructure' && action !== 'readCompensation' && action !== 'listCompensation' && action !== 'manageCompensation') {
       sendError(req, res, 403, 'FORBIDDEN', 'Insufficient permissions');
       return;
     }

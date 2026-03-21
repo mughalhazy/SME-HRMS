@@ -168,6 +168,54 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Minimum payload:** `pip_id`, `employee_id`, `milestone_index`, `status`, `updated_at`.
 - **Consumers:** HR operations, dashboards, audit.
 
+### `CompensationBandCreated`
+- **Aggregate:** `CompensationBand`
+- **Transition:** compensation band created.
+- **Minimum payload:** `compensation_band_id`, `grade_band_id`, `code`, `status`.
+- **Consumers:** compensation planning, payroll context builders.
+
+### `CompensationBandUpdated`
+- **Aggregate:** `CompensationBand`
+- **Transition:** compensation band metadata or status updated.
+- **Minimum payload:** `compensation_band_id`, `grade_band_id`, `changed_fields`, `status`, `updated_at`.
+- **Consumers:** compensation planning, payroll context builders.
+
+### `SalaryRevisionCreated`
+- **Aggregate:** `SalaryRevision`
+- **Transition:** salary revision created or materially updated.
+- **Minimum payload:** `salary_revision_id`, `employee_id`, `effective_from`, `base_salary`, `currency`, `status`.
+- **Consumers:** `payroll-service`, analytics, audit.
+
+### `BenefitsPlanCreated`
+- **Aggregate:** `BenefitsPlan`
+- **Transition:** benefits plan created.
+- **Minimum payload:** `benefits_plan_id`, `code`, `plan_type`, `status`.
+- **Consumers:** enrollment workflows, payroll context builders.
+
+### `BenefitsPlanUpdated`
+- **Aggregate:** `BenefitsPlan`
+- **Transition:** benefits plan updated.
+- **Minimum payload:** `benefits_plan_id`, `changed_fields`, `status`, `updated_at`.
+- **Consumers:** enrollment workflows, payroll context builders.
+
+### `BenefitsEnrollmentCreated`
+- **Aggregate:** `BenefitsEnrollment`
+- **Transition:** enrollment created or materially updated.
+- **Minimum payload:** `benefits_enrollment_id`, `employee_id`, `benefits_plan_id`, `employee_contribution`, `status`, `effective_from`.
+- **Consumers:** `payroll-service`, benefits analytics, audit.
+
+### `AllowanceCreated`
+- **Aggregate:** `Allowance`
+- **Transition:** allowance created.
+- **Minimum payload:** `allowance_id`, `employee_id`, `code`, `amount`, `status`, `effective_from`.
+- **Consumers:** `payroll-service`, analytics, audit.
+
+### `AllowanceUpdated`
+- **Aggregate:** `Allowance`
+- **Transition:** allowance updated.
+- **Minimum payload:** `allowance_id`, `employee_id`, `code`, `amount`, `status`, `updated_at`.
+- **Consumers:** `payroll-service`, analytics, audit.
+
 ## attendance-service events
 
 ### `AttendanceCaptured`

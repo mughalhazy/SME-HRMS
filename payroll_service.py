@@ -614,6 +614,66 @@ class PayrollService:
             "paid_record_count": sum(1 for record in self.records.values() if record.employee_id == employee_id and record.status == PayrollStatus.PAID),
         }
 
+    def sync_compensation_context(self, payload: dict[str, Any]) -> dict[str, Any]:
+        employee_id = str(self._require_field(payload, "employee_id"))
+        effective_from = self._coerce_date(self._require_field(payload, "effective_from"), "effective_from")
+        currency = self._validate_currency(payload.get("currency", "USD"))
+        base_salary = self._money(payload.get("base_salary"), "base_salary")
+        allowances = self._money(payload.get("allowances", "0.00"), "allowances")
+        deductions = self._money(payload.get("deductions", "0.00"), "deductions")
+        overtime_rate = self._money(payload.get("overtime_rate", "0.00"), "overtime_rate")
+        effective_to_value = payload.get("effective_to")
+        effective_to = self._coerce_date(effective_to_value, "effective_to") if effective_to_value else None
+        if effective_to and effective_to < effective_from:
+            raise ServiceError("VALIDATION_ERROR", "effective_to must be on or after effective_from", 422)
+
+        profile = self.register_employee_profile(
+            employee_id,
+            department_id=payload.get("department_id"),
+            role_id=payload.get("role_id"),
+            status=str(payload.get("employee_status", payload.get("status", "Active"))),
+        )
+
+        existing = None
+        for structure_id in self.salary_structure_index.get(employee_id, []):
+            structure = self.salary_structures[structure_id]
+            if structure.effective_from == effective_from and structure.currency == currency:
+                existing = structure
+                break
+
+        ts = self._now()
+        if existing is None:
+            structure = SalaryStructure(
+                salary_structure_id=str(uuid4()),
+                employee_id=employee_id,
+                base_salary=base_salary,
+                allowances=allowances,
+                deductions=deductions,
+                overtime_rate=overtime_rate,
+                currency=currency,
+                effective_from=effective_from,
+                effective_to=effective_to,
+                created_at=ts,
+                updated_at=ts,
+            )
+            self.salary_structures[structure.salary_structure_id] = structure
+            self.salary_structure_index.setdefault(employee_id, []).append(structure.salary_structure_id)
+        else:
+            existing.base_salary = base_salary
+            existing.allowances = allowances
+            existing.deductions = deductions
+            existing.overtime_rate = overtime_rate
+            existing.effective_to = effective_to
+            existing.updated_at = ts
+            structure = existing
+            self.salary_structures[structure.salary_structure_id] = structure
+
+        return {
+            "employee": profile,
+            "salary_structure": structure.to_dict(),
+            "source": "employee-service.compensation",
+        }
+
     def _validate_declared_totals(self, payload: dict[str, Any], gross: Decimal, net: Decimal) -> None:
         if "gross_pay" in payload and self._money(payload["gross_pay"], "gross_pay") != gross:
             raise ServiceError("VALIDATION_ERROR", "gross_pay does not match validated calculation", 422)
