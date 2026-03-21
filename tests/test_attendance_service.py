@@ -272,7 +272,8 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-1",
         )
         self.assertEqual(status, 403)
-        self.assertEqual(payload["error"]["trace_id"], "trace-1")
+        self.assertEqual(payload["status"], "error")
+        self.assertEqual(payload["meta"]["request_id"], "trace-1")
 
     def test_api_maps_employee_not_found_to_404(self) -> None:
         admin = Actor(employee_id=self.emp_1, role="Admin")
@@ -287,7 +288,8 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-404",
         )
         self.assertEqual(status, 404)
-        self.assertEqual(payload["error"]["trace_id"], "trace-404")
+        self.assertEqual(payload["status"], "error")
+        self.assertEqual(payload["meta"]["request_id"], "trace-404")
 
     def test_api_maps_invalid_payload_to_422(self) -> None:
         admin = Actor(employee_id=self.emp_1, role="Admin")
@@ -317,8 +319,9 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-log",
         )
         self.assertEqual(status, 200)
-        self.assertIn("Late", payload["anomalies"])
-        self.assertIn("MissingCheckOut", payload["anomalies"])
+        self.assertEqual(payload["status"], "success")
+        self.assertIn("Late", payload["data"]["anomalies"])
+        self.assertIn("MissingCheckOut", payload["data"]["anomalies"])
 
     def test_api_fetch_records_returns_aggregation(self) -> None:
         admin = Actor(employee_id=uuid4(), role="Admin")
@@ -348,8 +351,9 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-fetch",
         )
         self.assertEqual(status, 200)
-        self.assertEqual(len(payload["records"]), 2)
-        self.assertEqual(payload["aggregation"]["anomalyBreakdown"]["MissingCheckOut"], 1)
+        self.assertEqual(len(payload["data"]["records"]), 2)
+        self.assertEqual(payload["data"]["aggregation"]["anomalyBreakdown"]["MissingCheckOut"], 1)
+        self.assertEqual(payload["meta"]["pagination"]["count"], 2)
 
     def test_api_update_correction_returns_cleared_anomalies(self) -> None:
         admin = Actor(employee_id=uuid4(), role="Admin")
@@ -371,8 +375,8 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-patch",
         )
         self.assertEqual(status, 200)
-        self.assertEqual(payload["anomalies"], [])
-        self.assertEqual(payload["correction_note"], "Backfilled missing check-out")
+        self.assertEqual(payload["data"]["anomalies"], [])
+        self.assertEqual(payload["data"]["correction_note"], "Backfilled missing check-out")
 
     def test_attendance_observability_records_metrics_and_health(self) -> None:
         admin = Actor(employee_id=self.emp_1, role="Admin")
@@ -409,20 +413,20 @@ class AttendanceServiceTests(unittest.TestCase):
         status, fetched = get_attendance_record(
             self.service,
             admin,
-            created["attendance_id"],
+            created["data"]["attendance_id"],
             trace_id="trace-get-api",
         )
         self.assertEqual(status, 200)
-        self.assertEqual(fetched["attendance_id"], created["attendance_id"])
+        self.assertEqual(fetched["data"]["attendance_id"], created["data"]["attendance_id"])
 
         status, approved = post_attendance_approval(
             self.service,
             admin,
-            created["attendance_id"],
+            created["data"]["attendance_id"],
             trace_id="trace-approve-api",
         )
         self.assertEqual(status, 200)
-        self.assertEqual(approved["lifecycle_state"], "Approved")
+        self.assertEqual(approved["data"]["lifecycle_state"], "Approved")
 
         status, summary = get_attendance_summary(
             self.service,
@@ -435,7 +439,7 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-summary-api",
         )
         self.assertEqual(status, 200)
-        self.assertEqual(summary["records"], 1)
+        self.assertEqual(summary["data"]["records"], 1)
 
         status, alerts = get_attendance_absence_alerts(
             self.service,
@@ -444,7 +448,7 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-alerts-api",
         )
         self.assertEqual(status, 200)
-        self.assertEqual(alerts["count"], 1)
+        self.assertEqual(alerts["data"]["count"], 1)
 
         status, payload = post_attendance_period_lock(
             self.service,
@@ -457,7 +461,7 @@ class AttendanceServiceTests(unittest.TestCase):
             trace_id="trace-lock-api",
         )
         self.assertEqual(status, 200)
-        self.assertEqual(payload["lockedCount"], 1)
+        self.assertEqual(payload["data"]["lockedCount"], 1)
 
     def test_api_approval_rejects_incomplete_record(self) -> None:
         admin = Actor(employee_id=uuid4(), role="Admin")

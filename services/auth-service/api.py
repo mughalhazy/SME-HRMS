@@ -3,7 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 from uuid import UUID, uuid4
 
-from api_contract import error_response
+from api_contract import error_response, success_response
 from service import AuthService, AuthServiceError
 
 _ERROR_STATUS_BY_CODE = {
@@ -40,7 +40,7 @@ def post_auth_login(service: AuthService, payload: dict, trace_id: str | None = 
     try:
         token_payload = service.login(username=username, password=password)
         service.observability.track('post_auth_login', trace_id=trace_id, started_at=started, success=True, context={'status': 200})
-        return 200, {'data': token_payload}
+        return success_response(200, token_payload, request_id=trace_id)
     except AuthServiceError as exc:
         service.observability.logger.error('auth.login_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details, 'username': username})
         service.observability.track('post_auth_login', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
@@ -67,7 +67,7 @@ def post_auth_refresh(service: AuthService, payload: dict, trace_id: str | None 
     try:
         token_payload = service.refresh_session(refresh_token=refresh_token)
         service.observability.track('post_auth_refresh', trace_id=trace_id, started_at=started, success=True, context={'status': 200})
-        return 200, {'data': token_payload}
+        return success_response(200, token_payload, request_id=trace_id)
     except AuthServiceError as exc:
         service.observability.logger.error('auth.refresh_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details})
         service.observability.track('post_auth_refresh', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
@@ -94,7 +94,7 @@ def post_auth_logout(service: AuthService, payload: dict, trace_id: str | None =
     try:
         service.logout_refresh_token(refresh_token=refresh_token)
         service.observability.track('post_auth_logout', trace_id=trace_id, started_at=started, success=True, context={'status': 200})
-        return 200, {'data': {'logged_out': True}}
+        return success_response(200, {'logged_out': True}, request_id=trace_id)
     except AuthServiceError as exc:
         service.observability.logger.error('auth.logout_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details})
         service.observability.track('post_auth_logout', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
@@ -113,18 +113,17 @@ def get_auth_me(service: AuthService, authorization_header: str | None, trace_id
         principal = service.authenticate_token(token)
         service.observability.track('get_auth_me', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'role': principal.role})
         session = service.get_current_session(token)
-        return (
+        return success_response(
             200,
             {
-                'data': {
-                    'user_id': str(principal.user_id),
-                    'employee_id': str(principal.employee_id) if principal.employee_id else None,
-                    'role': principal.role,
-                    'department_id': str(principal.department_id) if principal.department_id else None,
-                    'session_id': session['session_id'],
-                    'session_status': session['status'],
-                }
+                'user_id': str(principal.user_id),
+                'employee_id': str(principal.employee_id) if principal.employee_id else None,
+                'role': principal.role,
+                'department_id': str(principal.department_id) if principal.department_id else None,
+                'session_id': session['session_id'],
+                'session_status': session['status'],
             },
+            request_id=trace_id,
         )
     except AuthServiceError as exc:
         service.observability.logger.error('auth.me_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details})
@@ -133,7 +132,7 @@ def get_auth_me(service: AuthService, authorization_header: str | None, trace_id
 
 
 def _error_response(code: str, message: str, *, details: list | None = None, trace_id: str) -> tuple[int, dict]:
-    return error_response(_ERROR_STATUS_BY_CODE.get(code, 400), code, message, trace_id=trace_id, details=details)
+    return error_response(_ERROR_STATUS_BY_CODE.get(code, 400), code, message, request_id=trace_id, details=details)
 
 
 def get_auth_session(service: AuthService, authorization_header: str | None, trace_id: str | None = None) -> tuple[int, dict]:
@@ -147,7 +146,7 @@ def get_auth_session(service: AuthService, authorization_header: str | None, tra
     try:
         data = service.get_current_session(token)
         service.observability.track('get_auth_session', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'session_id': data['session_id']})
-        return 200, {'data': data}
+        return success_response(200, data, request_id=trace_id)
     except AuthServiceError as exc:
         service.observability.logger.error('auth.session_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details})
         service.observability.track('get_auth_session', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
@@ -179,7 +178,7 @@ def get_auth_sessions(service: AuthService, query: dict | None = None, trace_id:
     try:
         data = service.list_sessions(user_id=parsed_user_id, status=status)
         service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'count': len(data)})
-        return 200, {'data': data}
+        return success_response(200, data, request_id=trace_id)
     except AuthServiceError as exc:
         service.observability.logger.error('auth.sessions_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details})
         service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
@@ -198,7 +197,7 @@ def post_auth_session_revoke(service: AuthService, session_id: str, payload: dic
     try:
         data = service.revoke_session(session_id, actor=actor if isinstance(actor, str) and actor else None)
         service.observability.track('post_auth_session_revoke', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'session_id': session_id})
-        return 200, {'data': data}
+        return success_response(200, data, request_id=trace_id)
     except AuthServiceError as exc:
         service.observability.logger.error('auth.revoke_session_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details, 'session_id': session_id})
         service.observability.track('post_auth_session_revoke', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})

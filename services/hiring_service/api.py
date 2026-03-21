@@ -3,7 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 from uuid import uuid4
 
-from api_contract import error_payload
+from api_contract import error_payload, success_response
 
 from .service import HiringService, HiringValidationError
 
@@ -53,7 +53,7 @@ def post_job_postings(service: HiringService, payload: dict, trace_id: str | Non
     try:
         created = service.create_job_posting(payload)
         service.observability.track("post_job_postings", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
-        return 201, {"data": service.get_job_posting(created["job_posting_id"])}
+        return success_response(201, service.get_job_posting(created["job_posting_id"]), request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("post_job_postings", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -65,7 +65,7 @@ def get_job_posting(service: HiringService, job_posting_id: str, trace_id: str |
     try:
         payload = service.get_job_posting(job_posting_id)
         service.observability.track("get_job_posting", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": payload}
+        return success_response(200, payload, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("get_job_posting", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -85,16 +85,15 @@ def get_job_postings(service: HiringService, query: dict | None = None, trace_id
         )
         next_cursor = rows[-1]["job_posting_id"] if limit is not None and len(rows) == limit else None
         service.observability.track("get_job_postings", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "count": len(rows)})
-        return (
+        return success_response(
             200,
-            {
-                "data": rows,
-                "pagination": {
-                    "limit": limit,
-                    "cursor": params.get("cursor"),
-                    "next_cursor": next_cursor,
-                    "count": len(rows),
-                },
+            rows,
+            request_id=trace_id,
+            pagination={
+                "limit": limit,
+                "cursor": params.get("cursor"),
+                "next_cursor": next_cursor,
+                "count": len(rows),
             },
         )
     except (TypeError, ValueError):
@@ -114,7 +113,7 @@ def patch_job_posting(service: HiringService, job_posting_id: str, payload: dict
     try:
         updated = service.update_job_posting(job_posting_id, payload)
         service.observability.track("patch_job_posting", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": service.get_job_posting(updated["job_posting_id"])}
+        return success_response(200, service.get_job_posting(updated["job_posting_id"]), request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("patch_job_posting", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -126,7 +125,7 @@ def delete_job_posting(service: HiringService, job_posting_id: str, trace_id: st
     try:
         deleted = service.delete_job_posting(job_posting_id)
         service.observability.track("delete_job_posting", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": deleted}
+        return success_response(200, deleted, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("delete_job_posting", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -141,7 +140,7 @@ def post_candidates(service: HiringService, payload: dict, trace_id: str | None 
     try:
         created = service.create_candidate(payload)
         service.observability.track("post_candidates", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
-        return 201, {"data": created}
+        return success_response(201, created, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("post_candidates", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -156,7 +155,7 @@ def post_candidates_import_linkedin(service: HiringService, payload: dict, trace
     try:
         imported = service.import_candidates_from_linkedin(payload)
         service.observability.track("post_candidates_import_linkedin", trace_id=trace_id, started_at=started, success=True, context={"status": 201, "count": len(imported["imported"])})
-        return 201, {"data": imported}
+        return success_response(201, imported, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("post_candidates_import_linkedin", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -168,7 +167,7 @@ def get_candidate(service: HiringService, candidate_id: str, trace_id: str | Non
     try:
         payload = service.get_candidate(candidate_id)
         service.observability.track("get_candidate", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": payload}
+        return success_response(200, payload, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("get_candidate", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -188,7 +187,7 @@ def get_candidates(service: HiringService, query: dict | None = None, trace_id: 
         )
         next_cursor = rows[-1]["candidate_id"] if limit is not None and len(rows) == limit else None
         service.observability.track("get_candidates", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "count": len(rows)})
-        return 200, {"data": rows, "pagination": {"limit": limit, "cursor": params.get("cursor"), "next_cursor": next_cursor, "count": len(rows)}}
+        return success_response(200, rows, request_id=trace_id, pagination={"limit": limit, "cursor": params.get("cursor"), "next_cursor": next_cursor, "count": len(rows)})
     except (TypeError, ValueError):
         service.observability.track("get_candidates", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
         return _invalid_payload(trace_id, "limit must be an integer")
@@ -206,7 +205,7 @@ def patch_candidate(service: HiringService, candidate_id: str, payload: dict, tr
     try:
         updated = service.update_candidate(candidate_id, payload)
         service.observability.track("patch_candidate", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": updated}
+        return success_response(200, updated, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("patch_candidate", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -223,7 +222,7 @@ def get_candidate_pipeline(service: HiringService, query: dict | None = None, tr
             job_posting_id=params.get("job_posting_id"),
         )
         service.observability.track("get_candidate_pipeline", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "count": len(rows)})
-        return 200, {"data": rows, "count": len(rows)}
+        return success_response(200, rows, request_id=trace_id, pagination={"count": len(rows)})
     except HiringValidationError as exc:
         service.observability.track("get_candidate_pipeline", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -238,7 +237,7 @@ def post_interviews(service: HiringService, payload: dict, trace_id: str | None 
     try:
         created = service.create_interview(payload)
         service.observability.track("post_interviews", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
-        return 201, {"data": created}
+        return success_response(201, created, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("post_interviews", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -253,7 +252,7 @@ def post_interviews_google_calendar(service: HiringService, payload: dict, trace
     try:
         created = service.schedule_interview_with_google_calendar(payload)
         service.observability.track("post_interviews_google_calendar", trace_id=trace_id, started_at=started, success=True, context={"status": 201})
-        return 201, {"data": created}
+        return success_response(201, created, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("post_interviews_google_calendar", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -265,7 +264,7 @@ def get_interview(service: HiringService, interview_id: str, trace_id: str | Non
     try:
         payload = service.get_interview(interview_id)
         service.observability.track("get_interview", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": payload}
+        return success_response(200, payload, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("get_interview", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -285,7 +284,7 @@ def get_interviews(service: HiringService, query: dict | None = None, trace_id: 
         )
         next_cursor = rows[-1]["interview_id"] if limit is not None and len(rows) == limit else None
         service.observability.track("get_interviews", trace_id=trace_id, started_at=started, success=True, context={"status": 200, "count": len(rows)})
-        return 200, {"data": rows, "pagination": {"limit": limit, "cursor": params.get("cursor"), "next_cursor": next_cursor, "count": len(rows)}}
+        return success_response(200, rows, request_id=trace_id, pagination={"limit": limit, "cursor": params.get("cursor"), "next_cursor": next_cursor, "count": len(rows)})
     except (TypeError, ValueError):
         service.observability.track("get_interviews", trace_id=trace_id, started_at=started, success=False, context={"status": 422})
         return _invalid_payload(trace_id, "limit must be an integer")
@@ -303,7 +302,7 @@ def patch_interview(service: HiringService, interview_id: str, payload: dict, tr
     try:
         updated = service.update_interview(interview_id, payload)
         service.observability.track("patch_interview", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": updated}
+        return success_response(200, updated, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("patch_interview", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)
@@ -319,7 +318,7 @@ def post_candidate_hire(service: HiringService, candidate_id: str, payload: dict
     try:
         hired = service.mark_candidate_hired(candidate_id, body)
         service.observability.track("post_candidate_hire", trace_id=trace_id, started_at=started, success=True, context={"status": 200})
-        return 200, {"data": hired}
+        return success_response(200, hired, request_id=trace_id)
     except HiringValidationError as exc:
         service.observability.track("post_candidate_hire", trace_id=trace_id, started_at=started, success=False, context={"status": _error_status(exc)})
         return _error_response(exc, trace_id=trace_id)

@@ -4,7 +4,7 @@ from datetime import date
 from time import perf_counter
 from typing import Any, Callable, Dict
 
-from api_contract import error_payload
+from api_contract import error_payload, success_response
 from leave_service import LeaveService, LeaveServiceError
 from resilience import new_trace_id
 
@@ -26,8 +26,9 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
         started = perf_counter()
         try:
             status, payload = handler(*args, **kwargs)
-            service.observability.track(operation, trace_id=trace_id, started_at=started, success=True, context={"status": status})
-            return status, payload
+            service.observability.track(operation, trace_id=trace_id, started_at=started, success=True, context={'status': status})
+            pagination = payload.pop('_pagination', None) if isinstance(payload, dict) else None
+            return success_response(status, payload, request_id=trace_id, pagination=pagination)
         except LeaveServiceError as exc:
             service.observability.logger.error(
                 "leave.error",
