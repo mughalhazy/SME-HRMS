@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import { Select } from '@/components/ui/input'
+import { PageGrid, PageStack, StatCard } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -139,18 +140,6 @@ function statusClassName(status: PayrollStatus) {
   }
 }
 
-function SummaryMetric({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className={metricClassName}>
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-foreground)]">{label}</p>
-        <p className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">{value}</p>
-        <p className="text-sm text-slate-600">{hint}</p>
-      </div>
-    </div>
-  )
-}
-
 function NumericCell({ value, detail, emphasized = false }: { value: string; detail: string; emphasized?: boolean }) {
   return (
     <div className="space-y-2">
@@ -195,18 +184,15 @@ export function Payroll() {
   }, [filteredEntries])
 
   return (
-    <div className="space-y-6 text-slate-900">
+    <PageStack className="text-slate-900">
       <section className="grid gap-6 xl:grid-cols-12 xl:items-start">
         <div className="space-y-4 xl:col-span-8">
           <Badge variant="outline" className="w-fit border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--muted-foreground)]">
             Payroll control
           </Badge>
-          <div className="space-y-3">
-            <h2 className="text-3xl font-semibold tracking-tight text-[var(--foreground)]">Payroll</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">
-              Review each payroll line with financial clarity, confirm settlement readiness, and process the active pay cycle from a controlled register.
-            </p>
-          </div>
+          <p className="max-w-3xl text-sm leading-6 text-slate-600">
+            Review each payroll line with financial clarity, confirm settlement readiness, and keep the active cycle controlled from one register.
+          </p>
         </div>
 
         <div className="space-y-4 xl:col-span-4">
@@ -230,11 +216,11 @@ export function Payroll() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <SummaryMetric label="Total payroll" value={formatCurrency(summary.totalPayroll)} hint={`${filteredEntries.length} employees in current register`} />
-        <SummaryMetric label="Processed" value={String(summary.processed).padStart(2, '0')} hint="Ready for settlement release" />
-        <SummaryMetric label="Pending" value={String(summary.pending + summary.flagged).padStart(2, '0')} hint="Requires processing or review" />
-      </section>
+      <PageGrid className="md:grid-cols-3">
+        <StatCard title="Total payroll" value={formatCurrency(summary.totalPayroll)} hint={`${filteredEntries.length} employees in current register.`} icon={Wallet} />
+        <StatCard title="Processed" value={String(summary.processed).padStart(2, '0')} hint="Registers ready for settlement release." icon={BadgeDollarSign} />
+        <StatCard title="Pending" value={String(summary.pending + summary.flagged).padStart(2, '0')} hint="Processing or review items still open in this cycle." icon={RefreshCw} />
+      </PageGrid>
 
       <section className="space-y-4">
         <div className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-surface)]">
@@ -422,6 +408,6 @@ export function Payroll() {
           </div>
         </div>
       </section>
-    </div>
+    </PageStack>
   )
 }

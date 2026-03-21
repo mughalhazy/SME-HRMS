@@ -11,6 +11,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { PageStack } from '@/components/ui/page'
 
 const metrics = [
@@ -126,20 +127,15 @@ export function PerformanceReviewsPage() {
         <div className="col-span-12 flex flex-col gap-4 xl:col-span-9">
           <div className="flex flex-col gap-3">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Performance</p>
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-              <div className="flex max-w-3xl flex-col gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Performance reviews</h1>
-                <p className="text-sm leading-6 text-slate-600">
-                  Spring 2026 cycle with active calibration in progress and pending reviews prioritized for manager follow-up.
-                </p>
-              </div>
-            </div>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              Spring 2026 cycle with active calibration in progress and pending reviews prioritized for manager follow-up.
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            <span className="rounded-full bg-slate-100 px-3 py-2 font-medium text-slate-700">Cycle: Spring 2026</span>
-            <span className="rounded-full bg-amber-50 px-3 py-2 font-medium text-amber-700">Status: In progress</span>
-            <span className="rounded-full bg-slate-100 px-3 py-2 font-medium text-slate-700">Period: Mar 1 — Apr 15</span>
+            <Badge variant="outline" className="px-3 py-2 text-sm">Cycle: Spring 2026</Badge>
+            <Badge variant="warning" className="px-3 py-2 text-sm">Status: In progress</Badge>
+            <Badge variant="outline" className="px-3 py-2 text-sm">Period: Mar 1 — Apr 15</Badge>
           </div>
         </div>
 
@@ -308,10 +304,10 @@ function InsightItem({
 function badgeClassName(status: string) {
   switch (status) {
     case 'Completed':
-      return 'inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'
+      return 'inline-flex w-fit rounded-full border border-transparent bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'
     case 'In progress':
-      return 'inline-flex w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700'
+      return 'inline-flex w-fit rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700'
     default:
-      return 'inline-flex w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'
+      return 'inline-flex w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'
   }
 }

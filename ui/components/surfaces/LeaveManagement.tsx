@@ -20,6 +20,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input, Select } from '@/components/ui/input'
+import { PageGrid, PageStack, StatCard } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -114,10 +115,10 @@ const leaveRequests: LeaveRequest[] = [
 ]
 
 const kpis = [
-  { label: 'Pending Approvals', value: '18', icon: Clock3, tone: 'text-amber-600 bg-amber-50 border-amber-200' },
-  { label: 'Approved This Month', value: '64', icon: CheckCircle2, tone: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  { label: 'Rejected', value: '9', icon: XCircle, tone: 'text-rose-600 bg-rose-50 border-rose-200' },
-  { label: 'On Leave Today', value: '42', icon: UserCheck, tone: 'text-blue-600 bg-blue-50 border-blue-200' },
+  { label: 'Pending Approvals', value: '18', icon: Clock3 },
+  { label: 'Approved This Month', value: '64', icon: CheckCircle2 },
+  { label: 'Rejected', value: '9', icon: XCircle },
+  { label: 'On Leave Today', value: '42', icon: UserCheck },
 ] as const
 
 const balanceSummary = [
@@ -133,16 +134,10 @@ const calendarEvents = [
   { date: '2026-04-05', label: 'Mason Brown annual leave' },
 ]
 
-const statusVariant: Record<LeaveStatus, 'default' | 'success' | 'outline'> = {
-  Pending: 'default',
+const statusVariant: Record<LeaveStatus, 'warning' | 'success' | 'danger'> = {
+  Pending: 'warning',
   Approved: 'success',
-  Rejected: 'outline',
-}
-
-const statusClassName: Record<LeaveStatus, string> = {
-  Pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  Approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Rejected: 'bg-rose-50 text-rose-700 border-rose-200',
+  Rejected: 'danger',
 }
 
 function formatDate(value: string) {
@@ -179,42 +174,28 @@ export function LeaveManagement() {
     leaveRequests[0]
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 rounded-[var(--radius-surface)] border border-[var(--border)] bg-white p-6 shadow-[var(--shadow-surface)] lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Time off operations</p>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Leave Management</h1>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              Review requests, prioritize pending approvals, and keep employee leave balances visible in one clean workspace.
-            </p>
-          </div>
+    <PageStack>
+      <section className="grid gap-6 xl:grid-cols-12 xl:items-end">
+        <div className="space-y-2 xl:col-span-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Time off operations</p>
+          <p className="max-w-3xl text-sm leading-6 text-slate-600">
+            Keep approval queues, leave balances, and upcoming absences aligned without adding visual weight to routine review.
+          </p>
         </div>
 
-        <Button className="w-full lg:w-auto">
-          Request Leave
-        </Button>
-      </div>
+        <div className="xl:col-span-4 xl:flex xl:justify-end">
+          <Button className="w-full lg:w-auto">
+            Request Leave
+          </Button>
+        </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <PageGrid className="md:grid-cols-2 xl:grid-cols-4">
         {kpis.map((item) => {
           const Icon = item.icon
-
-          return (
-            <Card key={item.label} className={cn('border', item.label === 'Pending Approvals' && 'ring-2 ring-amber-200/70')}>
-              <CardContent className="flex items-center justify-between p-5">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                  <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{item.value}</p>
-                </div>
-                <div className={cn('rounded-2xl border p-3', item.tone)}>
-                  <Icon className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
-          )
+          return <StatCard key={item.label} title={item.label} value={item.value} hint="Operational view aligned to the active leave queue." icon={Icon} />
         })}
-      </div>
+      </PageGrid>
 
       <Card>
         <CardContent className="p-4">
@@ -274,7 +255,7 @@ export function LeaveManagement() {
                 <CardTitle>Leave Requests</CardTitle>
                 <CardDescription>Pending requests are highlighted to keep the approval queue easy to scan.</CardDescription>
               </div>
-              <Badge className="w-fit bg-amber-50 text-amber-700">{filteredRequests.filter((request) => request.status === 'Pending').length} pending</Badge>
+              <Badge variant="warning" className="w-fit">{filteredRequests.filter((request) => request.status === 'Pending').length} pending</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -318,7 +299,7 @@ export function LeaveManagement() {
                     <TableCell className="text-slate-600">{formatDate(request.toDate)}</TableCell>
                     <TableCell className="text-slate-600">{request.days}</TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant[request.status]} className={statusClassName[request.status]}>
+                      <Badge variant={statusVariant[request.status]}>
                         {request.status}
                       </Badge>
                     </TableCell>
@@ -328,7 +309,7 @@ export function LeaveManagement() {
                         {request.status === 'Pending' ? (
                           <>
                             <Button size="sm" className="h-8">Approve</Button>
-                            <Button size="sm" variant="outline" className="h-8 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+                            <Button size="sm" variant="outline" className="h-8">
                               Reject
                             </Button>
                           </>
@@ -424,6 +405,6 @@ export function LeaveManagement() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageStack>
   )
 }

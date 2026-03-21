@@ -3,7 +3,7 @@ import type { ComponentType, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export function PageStack({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex flex-col gap-8', className)} {...props} />
+  return <div className={cn('flex flex-col gap-6', className)} {...props} />
 }
 
 export function PageGrid({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -54,13 +54,13 @@ export function StatCard({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-lg border border-slate-200 bg-white p-4 shadow-sm', className)}>
-      <div className="w-fit rounded-lg bg-slate-100 p-2 text-slate-700">
+    <div className={cn('rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-surface)]', className)}>
+      <div className="w-fit rounded-[var(--radius-control)] bg-[var(--surface-subtle)] p-2 text-slate-700">
         <Icon className="h-4 w-4" />
       </div>
-      <p className="mt-3 text-sm font-medium text-slate-500">{title}</p>
-      <p className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
-      <p className="mt-1 text-sm text-slate-600">{hint}</p>
+      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{hint}</p>
     </div>
   )
 }
@@ -75,10 +75,10 @@ export function SectionHeading({
   badge?: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-2 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h3 className="font-semibold text-slate-950">{title}</h3>
-        <div className="text-sm text-slate-600">{description}</div>
+        <div className="text-sm leading-6 text-slate-600">{description}</div>
       </div>
       {badge ? <div>{badge}</div> : null}
     </div>

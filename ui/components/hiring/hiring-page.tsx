@@ -7,6 +7,7 @@ import { BriefcaseBusiness, Plus, Users } from 'lucide-react'
 import { HiringPipelineBoard } from '@/components/hiring/hiring-pipeline-board'
 import { JobPostingsPage } from '@/components/surfaces/job-postings-page'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { apiRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -50,28 +51,24 @@ export function HiringPage() {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-6 rounded-lg border border-slate-200 bg-white p-6">
+      <section className="space-y-6 rounded-[var(--radius-surface)] border border-slate-200 bg-white p-6 shadow-[var(--shadow-surface)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-4">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Pipeline</p>
-              <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Hiring</h1>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-                  Move candidates through a single hiring flow with clear stage progression, lightweight review,
-                  and supporting details kept alongside the pipeline.
-                </p>
-              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Pipeline</p>
+              <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                Move candidates through a single hiring flow with clear stage progression and supporting context kept beside the main pipeline.
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
+              <Badge variant="outline" className="gap-2 px-3 py-2 text-sm">
                 <BriefcaseBusiness className="h-4 w-4 text-slate-500" />
-                <span>{context.openRoles} open roles</span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
+                {context.openRoles} open roles
+              </Badge>
+              <Badge variant="outline" className="gap-2 px-3 py-2 text-sm">
                 <Users className="h-4 w-4 text-slate-500" />
-                <span>{context.activeCandidates} active candidates</span>
-              </div>
+                {context.activeCandidates} active candidates
+              </Badge>
             </div>
           </div>
 

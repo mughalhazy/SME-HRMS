@@ -86,12 +86,9 @@ export function Settings() {
               <Settings2 className="h-3.5 w-3.5 text-blue-700" />
               System settings
             </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">HRMS Settings</h1>
-              <p className="max-w-3xl text-sm leading-6 text-slate-500">
-                Configure company-wide HR defaults, keep system behavior controlled, and maintain a consistent setup for every team.
-              </p>
-            </div>
+            <p className="max-w-3xl text-sm leading-6 text-slate-500">
+              Configure company-wide HR defaults, keep system behavior controlled, and maintain a consistent setup for every team.
+            </p>
           </div>
 
           <div className="flex items-center justify-start gap-3 xl:col-span-4 xl:justify-end">
