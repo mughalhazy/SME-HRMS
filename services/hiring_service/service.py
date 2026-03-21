@@ -8,9 +8,11 @@ from typing import Any
 from uuid import uuid4
 
 from event_contract import EventRegistry, emit_canonical_event
+from notification_service import NotificationService
 
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, Observability, run_with_retry
+from workflow_service import WorkflowService, WorkflowServiceError
 
 
 class HiringValidationError(ValueError):
@@ -48,6 +50,7 @@ class Candidate:
     status: str
     created_at: datetime
     updated_at: datetime
+    hire_workflow_id: str | None = None
     source_candidate_id: str | None = None
     source_profile_url: str | None = None
 
@@ -129,7 +132,7 @@ class HiringService:
         "Withdrawn": set(),
     }
 
-    def __init__(self, db_path: str | None = None) -> None:
+    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None) -> None:
         self.job_postings = PersistentKVStore[str, JobPosting](service='hiring-service', namespace='job_postings', db_path=db_path)
         self.candidates = PersistentKVStore[str, Candidate](service='hiring-service', namespace='candidates', db_path=db_path)
         self.candidate_stage_transitions = PersistentKVStore[str, CandidateStageTransition](service='hiring-service', namespace='candidate_stage_transitions', db_path=db_path)
@@ -139,6 +142,8 @@ class HiringService:
         self.events: list[dict[str, Any]] = []
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
+        self.notification_service = notification_service or NotificationService()
+        self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
         self.error_logger = CentralErrorLogger("hiring-service")
         self.dead_letters = DeadLetterQueue()
         self.observability = Observability("hiring-service")
@@ -147,6 +152,22 @@ class HiringService:
             "linkedin": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
         }
         self._lock = RLock()
+        self.workflow_service.register_definition(
+            tenant_id=self.tenant_id,
+            code="candidate_hiring_approval",
+            source_service="hiring-service",
+            subject_type="Candidate",
+            description="Centralized candidate hiring approval workflow.",
+            steps=[
+                {
+                    "name": "hire-approval",
+                    "type": "approval",
+                    "assignee_template": "{approver_assignee}",
+                    "sla": "PT48H",
+                    "escalation_assignee_template": "{escalation_assignee}",
+                }
+            ],
+        )
 
     def create_job_posting(self, payload: dict[str, Any]) -> dict[str, Any]:
         started = perf_counter()
@@ -686,8 +707,39 @@ class HiringService:
         candidate = self._require_candidate(candidate_id)
         if candidate.status != "Offered":
             raise HiringValidationError("candidate can only be hired from Offered status")
+        payload = employee_payload or {}
+        approver_id = str(payload.get("changed_by") or "role:Admin")
+        approver_role = str(payload.get("approver_role") or "Admin")
+        if not candidate.hire_workflow_id:
+            workflow = self.workflow_service.start_workflow(
+                tenant_id=self.tenant_id,
+                definition_code="candidate_hiring_approval",
+                source_service="hiring-service",
+                subject_type="Candidate",
+                subject_id=candidate_id,
+                actor_id=approver_id,
+                actor_type="user",
+                context={
+                    "approver_assignee": approver_id if approver_id.startswith("role:") else f"role:{approver_role}",
+                    "escalation_assignee": "role:Admin",
+                },
+            )
+            candidate.hire_workflow_id = workflow["workflow_id"]
+        try:
+            workflow = self.workflow_service.approve_step(
+                candidate.hire_workflow_id,
+                tenant_id=self.tenant_id,
+                actor_id=approver_id,
+                actor_type="user",
+                actor_role=approver_role,
+                comment="Candidate hire approved",
+            )
+        except WorkflowServiceError as exc:
+            raise HiringValidationError(exc.message) from exc
+        if workflow.get("metadata", {}).get("terminal_result") != "approved":
+            raise HiringValidationError("candidate hiring workflow did not complete")
 
-        employee_profile = self._upsert_employee_profile_for_candidate(candidate, employee_payload or {})
+        employee_profile = self._upsert_employee_profile_for_candidate(candidate, payload)
         candidate.status = "Hired"
         candidate.updated_at = self._now()
 
@@ -695,7 +747,7 @@ class HiringService:
             candidate_id=candidate_id,
             from_status="Offered",
             to_status="Hired",
-            changed_by=(employee_payload or {}).get("changed_by"),
+            changed_by=payload.get("changed_by"),
             reason="candidate accepted offer",
             notes=None,
         )
