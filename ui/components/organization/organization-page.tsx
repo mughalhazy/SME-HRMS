@@ -209,12 +209,9 @@ export function OrganizationPage() {
             <Badge variant="outline" className={`w-fit ${badgeClassName}`}>
               Organization
             </Badge>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Organization</h1>
-              <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-                View company structure by department, team, role, and reporting line with a single organized hierarchy.
-              </p>
-            </div>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              View company structure by department, team, role, and reporting line with a single organized hierarchy.
+            </p>
             <div className={statsClassName}>
               <div className={summaryItemClassName}>
                 <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Departments</p>

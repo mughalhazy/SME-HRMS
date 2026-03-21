@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/input'
+import { PageGrid, PageStack, StatCard } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -189,32 +190,6 @@ function getFlagTone(flag: AttendanceFlag) {
   }
 }
 
-function SummaryMetric({
-  label,
-  value,
-  icon: Icon,
-  tone,
-}: {
-  label: string
-  value: number
-  icon: typeof CheckCircle2
-  tone: string
-}) {
-  return (
-    <Card className="border-slate-200 bg-white shadow-sm">
-      <CardContent className="flex items-center justify-between p-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-          <p className="text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
-        </div>
-        <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', tone)}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 export function Attendance() {
   const [selectedDate, setSelectedDate] = useState('2026-03-19')
   const [department, setDepartment] = useState('All departments')
@@ -267,19 +242,16 @@ export function Attendance() {
   const exceptionRows = useMemo(() => filteredRows.filter((row) => row.flags.length > 0), [filteredRows])
 
   return (
-    <div className="space-y-6 text-slate-900">
-      <section className="grid gap-6 xl:grid-cols-12">
-        <div className="space-y-4 xl:col-span-8">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Attendance monitoring</p>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Attendance</h1>
-              <p className="text-sm text-slate-500">Monitor workforce presence, spot exceptions, and respond to incomplete logs.</p>
-            </div>
-          </div>
+    <PageStack className="text-slate-900">
+      <section className="grid gap-6 xl:grid-cols-12 xl:items-end">
+        <div className="space-y-2 xl:col-span-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Attendance monitoring</p>
+          <p className="max-w-3xl text-sm leading-6 text-slate-600">
+            Use the daily register to focus on presence, missing time events, and exceptions that require immediate follow-up.
+          </p>
         </div>
 
-        <div className="flex flex-col gap-3 xl:col-span-4 xl:items-end xl:justify-start">
+        <div className="flex flex-col gap-3 xl:col-span-4 xl:items-end">
           <Badge className="justify-center border-slate-200 bg-white px-3 py-1 text-slate-600" variant="outline">
             {formatDateLabel(selectedDate)}
           </Badge>
@@ -288,14 +260,14 @@ export function Attendance() {
             Export log
           </Button>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:col-span-12 xl:grid-cols-4">
-          <SummaryMetric label="Present" value={summary.present} icon={CheckCircle2} tone="bg-emerald-50 text-emerald-600" />
-          <SummaryMetric label="Absent" value={summary.absent} icon={UserRoundX} tone="bg-rose-50 text-rose-600" />
-          <SummaryMetric label="Late" value={summary.late} icon={Clock3} tone="bg-amber-50 text-amber-600" />
-          <SummaryMetric label="Exceptions" value={summary.exceptions} icon={TriangleAlert} tone="bg-slate-100 text-slate-700" />
-        </div>
       </section>
+
+      <PageGrid className="md:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Present" value={String(summary.present)} hint="Employees with complete records for the selected date." icon={CheckCircle2} />
+        <StatCard title="Absent" value={String(summary.absent)} hint="No attendance event captured for the active day." icon={UserRoundX} />
+        <StatCard title="Late" value={String(summary.late)} hint="Clock-ins that started behind schedule and need review." icon={Clock3} />
+        <StatCard title="Exceptions" value={String(summary.exceptions)} hint="Open anomalies or incomplete logs that need action." icon={TriangleAlert} />
+      </PageGrid>
 
       <section className="grid gap-6 xl:grid-cols-12">
         <div className="xl:col-span-12">
@@ -540,6 +512,6 @@ export function Attendance() {
           </Card>
         </div>
       </section>
-    </div>
+    </PageStack>
   )
 }
