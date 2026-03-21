@@ -266,6 +266,42 @@ class NotificationServiceTests(unittest.TestCase):
         self.assertEqual(rejected_status, 422)
         self.assertEqual(rejected_payload["error"]["code"], "VALIDATION_ERROR")
 
+    def test_duplicate_event_delivery_is_idempotent_for_notification_consumers(self) -> None:
+        payload = {
+            "event_id": "33333333-3333-3333-3333-333333333333",
+            "event_type": "leave.request.approved",
+            "tenant_id": "tenant-acme",
+            "timestamp": "2026-03-21T00:00:00+00:00",
+            "source": "leave-service",
+            "data": {
+                "leave_request_id": "leave-dup-1",
+                "employee_id": "emp-001",
+                "employee_email": "amina.yusuf@example.com",
+                "approver_employee_id": "mgr-1",
+                "leave_type": "Annual",
+                "start_date": "2026-03-21",
+                "end_date": "2026-03-25",
+            },
+            "metadata": {
+                "version": "v1",
+                "correlation_id": "corr-dup-1",
+                "idempotency_key": "leave-dup-1",
+            },
+        }
+
+        first_status, first_response = post_notification_event(self.service, payload, trace_id="trace-notification-dup-1")
+        second_status, second_response = post_notification_event(self.service, payload, trace_id="trace-notification-dup-2")
+
+        self.assertEqual(first_status, 202)
+        self.assertEqual(second_status, 202)
+        self.assertEqual(first_response["data"]["count"], 2)
+        self.assertEqual(second_response["data"]["count"], 2)
+        self.assertEqual(len(self.service.messages), 2)
+        self.assertEqual(
+            {item["message_id"] for item in first_response["data"]["notifications"]},
+            {item["message_id"] for item in second_response["data"]["notifications"]},
+        )
+
     def test_delivery_retries_and_dead_letter_tracking_are_recorded(self) -> None:
         status, response = post_notification_event(
             self.service,

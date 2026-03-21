@@ -192,13 +192,14 @@ class AuthService:
         self._role_bindings_by_id = PersistentKVStore[str, RoleBindingRecord](service='auth-service', namespace='role_bindings_by_id', db_path=shared_db_path)
         self._permission_policies_by_id = PersistentKVStore[str, PermissionPolicyRecord](service='auth-service', namespace='permission_policies_by_id', db_path=shared_db_path)
         self.observability = Observability('auth-service')
+        self.outbox_observability = Observability('auth-service-outbox')
         self.events: list[dict[str, Any]] = []
         self.event_registry = EventRegistry()
         self.outbox = OutboxManager(
             service_name='auth-service',
             tenant_id=DEFAULT_TENANT_ID,
             db_path=shared_db_path,
-            observability=self.observability,
+            observability=self.outbox_observability,
             event_registry=self.event_registry,
         )
 
@@ -747,15 +748,15 @@ class AuthService:
         raise AuthServiceError('TOKEN_INVALID', 'Refresh token is invalid')
 
     def _emit_event(self, event_name: str, data: dict[str, Any], *, tenant_id: str, idempotency_key: str) -> None:
-        self.events.append(
-            {
-                'event_type': self._legacy_event_name(event_name),
-                'tenant_id': normalize_tenant_id(tenant_id),
-                'data': self._sanitize_value(data),
-                'idempotency_key': idempotency_key,
-                'occurred_at': datetime.now(timezone.utc).isoformat(),
-            }
+        normalized_tenant = normalize_tenant_id(tenant_id)
+        self.outbox.tenant_id = normalized_tenant
+        self.outbox.enqueue(
+            legacy_event_name=self._legacy_event_name(event_name),
+            data=self._sanitize_value({**data, 'tenant_id': normalized_tenant}),
+            idempotency_key=idempotency_key,
+            metadata={'occurred_at': datetime.now(timezone.utc).isoformat()},
         )
+        self.outbox.dispatch_pending(self.events.append)
 
 
     def _serialize_session(self, session: SessionRecord, role: str | None, tenant_id: str | None = None, *, now: datetime | None = None) -> dict[str, Any]:

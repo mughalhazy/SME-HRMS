@@ -266,3 +266,28 @@ def test_reporting_background_jobs_generate_exports_and_dispatch_scheduled_repor
     refreshed_schedule = reporting.list_schedules(active_only=True)[0]
     assert refreshed_schedule['last_enqueued_at'] == '2026-03-21T12:00:00+00:00'
     assert refreshed_schedule['next_run_at'] > '2026-03-21T12:00:00+00:00'
+
+
+def test_reporting_event_ingestion_is_replay_safe_and_tenant_scoped() -> None:
+    reporting, hiring = _seed_reporting_service()
+    hire_event = next(event for event in hiring.events if event['event_type'] == 'hiring.candidate.hired')
+
+    baseline = len(reporting.processed_events)
+    reporting.ingest_event(hire_event)
+    reporting.ingest_event(hire_event)
+
+    assert len(reporting.processed_events) == baseline
+
+    cross_tenant_event = {
+        **hire_event,
+        'event_id': 'evt-cross-tenant',
+        'tenant_id': 'tenant-other',
+        'data': {**hire_event['data'], 'tenant_id': 'tenant-other'},
+    }
+
+    try:
+        reporting.ingest_event(cross_tenant_event)
+    except ValueError as exc:
+        assert str(exc) == 'cross_tenant_event_blocked'
+    else:
+        raise AssertionError('expected reporting to reject cross-tenant events')

@@ -7,7 +7,7 @@ from time import monotonic
 from typing import Any, Iterable, Mapping
 from uuid import uuid4
 
-from event_contract import normalize_event_type
+from event_contract import EventContractError, EventRegistry, ensure_event_contract, normalize_event_type
 from persistent_store import PersistentKVStore
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
 from resilience import Observability
@@ -127,6 +127,7 @@ class SearchIndexingService:
         self.projection_state = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='projection_state', db_path=db_path)
         self.query_audit = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='query_audit', db_path=db_path)
         self.observability = Observability("search-service")
+        self.event_registry = EventRegistry()
         self._query_cache: dict[str, CachedSearchResult] = {}
         self._tenant_doc_ids: dict[str, set[str]] = {}
         self.cache_ttl_seconds = 5.0
@@ -596,13 +597,21 @@ class SearchIndexingService:
         return normalize_event_type(LEGACY_EVENT_OVERRIDES.get(raw, raw))
 
     def consume_event(self, event: Mapping[str, Any], *, background_jobs: Any | None = None) -> dict[str, Any]:
-        event_id = self._normalize_string(event.get('event_id')) or str(uuid4())
-        if self.processed_events.get(event_id) is not None:
-            payload = dict(self.processed_events[event_id])
+        try:
+            canonical_event, _ = ensure_event_contract(dict(event), source=self._normalize_string(event.get('source')) or 'search-indexing', registry=self.event_registry)
+        except EventContractError as exc:
+            if str(exc) == 'missing_tenant_context':
+                raise SearchServiceError(422, 'VALIDATION_ERROR', 'tenant_id is required') from exc
+            raise SearchServiceError(422, 'INVALID_EVENT', f'Event contract validation failed: {exc}') from exc
+
+        event_id = self._normalize_string(canonical_event.get('event_id')) or str(uuid4())
+        processed_key = f"{self._tenant(canonical_event.get('tenant_id'))}:{event_id}"
+        if self.processed_events.get(processed_key) is not None:
+            payload = dict(self.processed_events[processed_key])
             payload['duplicate'] = True
             return payload
-        tenant = self._tenant(event.get('tenant_id'))
-        event_type = self._normalize_event_name(event)
+        tenant = self._tenant(canonical_event.get('tenant_id'))
+        event_type = self._normalize_event_name(canonical_event)
         model_names = list(EVENT_MODEL_MAP.get(event_type, ()))
         if not model_names:
             raise SearchServiceError(422, 'UNSUPPORTED_EVENT', f'{event_type} is not supported by search indexing')
@@ -611,10 +620,10 @@ class SearchIndexingService:
             'tenant_id': tenant,
             'event_type': event_type,
             'model_names': model_names,
-            'occurred_at': self._normalize_string(event.get('timestamp') or event.get('occurred_at')) or self._now(),
+            'occurred_at': self._normalize_string(canonical_event.get('timestamp') or canonical_event.get('occurred_at')) or self._now(),
             'enqueued_at': self._now(),
         }
-        self.processed_events[event_id] = payload
+        self.processed_events[processed_key] = payload
         self.projection_state[f'event:{event_id}'] = payload
         if background_jobs is None:
             result = self.process_reindex_job(payload)
@@ -629,8 +638,8 @@ class SearchIndexingService:
                 'model_names': model_names,
             },
             actor_type='service',
-            trace_id=self._normalize_string(event.get('trace_id')) or event_id,
-            correlation_id=self._normalize_string(event.get('trace_id')) or event_id,
+            trace_id=self._normalize_string(canonical_event.get('trace_id')) or event_id,
+            correlation_id=self._normalize_string(canonical_event.get('trace_id')) or event_id,
             idempotency_key=f'search:{tenant}:{event_id}',
         )
         payload['job_id'] = job.job_id
