@@ -183,7 +183,8 @@ def test_outbox_dispatch_job_marks_notification_events_published() -> None:
     assert completed.last_result['dispatched_count'] == 1
     pending = jobs.outbox.pending_events(tenant_id='tenant-default')
     assert pending == []
-    assert notification.get_inbox(subject_id='emp-001')['summary']['total'] >= 1
+    inbox, _ = notification.get_inbox(tenant_id='tenant-default', subject_id='emp-001')
+    assert inbox['summary']['total'] >= 1
 
 
 def test_workflow_escalation_job_stages_escalation_event() -> None:

@@ -3,13 +3,15 @@ from __future__ import annotations
 import base64
 import json
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timezone
 from enum import Enum
 from threading import RLock
 from time import perf_counter
+from typing import Any
 
-from event_contract import EventRegistry, emit_canonical_event
+from audit_service.service import emit_audit_record
+from event_contract import EventRegistry
 from notification_service import NotificationService
 from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
@@ -48,6 +50,13 @@ class LeaveStatus(str, Enum):
     CANCELLED = "Cancelled"
 
 
+class AccrualFrequency(str, Enum):
+    NONE = "None"
+    MONTHLY = "Monthly"
+    QUARTERLY = "Quarterly"
+    YEARLY = "Yearly"
+
+
 BALANCE_CAPS: dict[LeaveType, float | None] = {
     LeaveType.ANNUAL: 18.0,
     LeaveType.SICK: 10.0,
@@ -64,6 +73,56 @@ class EmployeeRecord:
     department_id: str
     manager_employee_id: str | None
     status: EmployeeStatus
+    location_code: str = "GLOBAL"
+    grade_code: str = "G7"
+    hire_date: date = field(default_factory=lambda: date(2026, 1, 1))
+
+
+@dataclass
+class LeavePolicy:
+    tenant_id: str
+    leave_policy_id: str
+    code: str
+    name: str
+    leave_type: LeaveType
+    location_codes: list[str]
+    grade_codes: list[str]
+    annual_entitlement_days: float | None
+    accrual_frequency: AccrualFrequency
+    accrual_rate_days: float
+    carry_forward_limit_days: float | None
+    requires_approval: bool
+    allow_negative_balance: bool
+    allow_partial_days: bool
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["leave_type"] = self.leave_type.value
+        payload["accrual_frequency"] = self.accrual_frequency.value
+        payload["created_at"] = self.created_at.isoformat()
+        payload["updated_at"] = self.updated_at.isoformat()
+        return payload
+
+
+@dataclass
+class HolidayCalendar:
+    tenant_id: str
+    calendar_id: str
+    location_code: str
+    name: str
+    holidays: dict[str, str]
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["created_at"] = self.created_at.isoformat()
+        payload["updated_at"] = self.updated_at.isoformat()
+        payload["holidays"] = dict(sorted(self.holidays.items()))
+        return payload
 
 
 @dataclass
@@ -74,23 +133,55 @@ class LeaveBalance:
     entitlement_days: float | None
     reserved_days: float
     approved_days: float
+    accrued_days: float = 0.0
+    carried_forward_days: float = 0.0
+    policy_id: str | None = None
+    last_accrual_at: str | None = None
+    last_carry_forward_at: str | None = None
 
     @property
     def remaining_days(self) -> float | None:
         if self.entitlement_days is None:
             return None
-        return float(self.entitlement_days - self.reserved_days - self.approved_days)
+        return float(self.entitlement_days + self.accrued_days + self.carried_forward_days - self.reserved_days - self.approved_days)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "tenant_id": self.tenant_id,
             "employee_id": self.employee_id,
             "leave_type": self.leave_type.value,
+            "policy_id": self.policy_id,
             "entitlement_days": self.entitlement_days,
+            "accrued_days": self.accrued_days,
+            "carried_forward_days": self.carried_forward_days,
             "reserved_days": self.reserved_days,
             "approved_days": self.approved_days,
             "remaining_days": self.remaining_days,
+            "last_accrual_at": self.last_accrual_at,
+            "last_carry_forward_at": self.last_carry_forward_at,
         }
+
+
+@dataclass
+class LeaveLedgerEntry:
+    tenant_id: str
+    ledger_entry_id: str
+    employee_id: str
+    leave_type: LeaveType
+    entry_type: str
+    delta_days: float
+    balance_after: float | None
+    effective_on: str
+    created_at: datetime
+    leave_request_id: str | None = None
+    policy_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["leave_type"] = self.leave_type.value
+        payload["created_at"] = self.created_at.isoformat()
+        return payload
 
 
 @dataclass
@@ -110,10 +201,12 @@ class LeaveRequest:
     decision_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    partial_day_portion: float = 1.0
+    policy_id: str | None = None
+    holiday_dates: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         payload = asdict(self)
-        payload["tenant_id"] = self.tenant_id
         payload["leave_type"] = self.leave_type.value
         payload["status"] = self.status.value
         for f in ["start_date", "end_date"]:
@@ -137,8 +230,133 @@ class LeaveServiceError(Exception):
         super().__init__(message)
 
 
+class LeavePolicyEngine:
+    """Centralizes policy resolution, leave-day calculation, accrual, and carry-forward rules."""
+
+    def resolve_policy(
+        self,
+        *,
+        tenant_id: str,
+        employee: EmployeeRecord,
+        leave_type: LeaveType,
+        policies: list[LeavePolicy],
+        assignments: dict[tuple[str, LeaveType], str],
+    ) -> LeavePolicy:
+        assigned_policy_id = assignments.get((employee.employee_id, leave_type))
+        active = [
+            policy
+            for policy in policies
+            if policy.tenant_id == tenant_id and policy.leave_type == leave_type and policy.status == "Active"
+        ]
+        if assigned_policy_id:
+            for policy in active:
+                if policy.leave_policy_id == assigned_policy_id:
+                    return policy
+        for policy in active:
+            if self._scope_matches(policy.location_codes, employee.location_code) and self._scope_matches(policy.grade_codes, employee.grade_code):
+                return policy
+        raise ValueError(f"No active leave policy configured for {employee.employee_id} / {leave_type.value}")
+
+    @staticmethod
+    def _scope_matches(scope_values: list[str], employee_value: str) -> bool:
+        if not scope_values:
+            return True
+        normalized = {value.upper() for value in scope_values}
+        return "*" in normalized or employee_value.upper() in normalized
+
+    def calculate_leave_days(
+        self,
+        *,
+        start: date,
+        end: date,
+        policy: LeavePolicy,
+        partial_day_portion: float,
+        holiday_calendar: HolidayCalendar | None,
+    ) -> tuple[float, list[str]]:
+        if end < start:
+            raise ValueError("end_date must be >= start_date")
+        if partial_day_portion not in {0.5, 1.0}:
+            raise ValueError("partial_day_portion must be 0.5 or 1.0")
+        if partial_day_portion != 1.0 and not policy.allow_partial_days:
+            raise ValueError("policy does not allow partial-day leave")
+
+        holiday_dates: list[str] = []
+        if holiday_calendar is not None:
+            holiday_dates = [
+                current.isoformat()
+                for current in self._date_range(start, end)
+                if current.isoformat() in holiday_calendar.holidays
+            ]
+        working_days = float((end - start).days + 1 - len(holiday_dates))
+        if working_days <= 0:
+            raise ValueError("leave range resolves entirely to holidays")
+        if start != end and partial_day_portion != 1.0:
+            raise ValueError("partial-day leave is only supported for single-day requests")
+        total_days = partial_day_portion if start == end and partial_day_portion != 1.0 else working_days
+        return total_days, holiday_dates
+
+    def ensure_balance_capacity(self, *, balance: LeaveBalance, policy: LeavePolicy, days: float) -> None:
+        remaining = balance.remaining_days
+        if policy.allow_negative_balance or remaining is None:
+            return
+        if remaining < days:
+            raise ValueError(f"Requested leave exceeds available balance ({remaining} < {days})")
+
+    def accrued_days_between(self, *, policy: LeavePolicy, last_accrual_on: date | None, as_of: date) -> float:
+        if policy.accrual_frequency == AccrualFrequency.NONE or policy.accrual_rate_days <= 0:
+            return 0.0
+        anchor = last_accrual_on or date(as_of.year, 1, 1)
+        periods = 0
+        cursor = anchor
+        while True:
+            next_cursor = self._advance(cursor, policy.accrual_frequency)
+            if next_cursor > as_of:
+                break
+            periods += 1
+            cursor = next_cursor
+        return round(periods * policy.accrual_rate_days, 2)
+
+    def apply_carry_forward(self, *, balance: LeaveBalance, policy: LeavePolicy) -> float:
+        if balance.entitlement_days is None:
+            return 0.0
+        carry_limit = policy.carry_forward_limit_days or 0.0
+        unused = max(0.0, balance.remaining_days or 0.0)
+        return round(min(unused, carry_limit), 2)
+
+    @staticmethod
+    def _advance(anchor: date, frequency: AccrualFrequency) -> date:
+        if frequency == AccrualFrequency.MONTHLY:
+            month = anchor.month + 1
+            year = anchor.year + (month - 1) // 12
+            month = ((month - 1) % 12) + 1
+            return date(year, month, 1)
+        if frequency == AccrualFrequency.QUARTERLY:
+            month = anchor.month + 3
+            year = anchor.year + (month - 1) // 12
+            month = ((month - 1) % 12) + 1
+            return date(year, month, 1)
+        if frequency == AccrualFrequency.YEARLY:
+            return date(anchor.year + 1, 1, 1)
+        return anchor
+
+    @staticmethod
+    def _date_range(start: date, end: date) -> list[date]:
+        cursor = start
+        rows: list[date] = []
+        while cursor <= end:
+            rows.append(cursor)
+            cursor = date.fromordinal(cursor.toordinal() + 1)
+        return rows
+
+
 class LeaveService:
-    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None):
+    def __init__(
+        self,
+        db_path: str | None = None,
+        *,
+        workflow_service: WorkflowService | None = None,
+        notification_service: NotificationService | None = None,
+    ):
         self.requests = PersistentKVStore[str, LeaveRequest](service='leave-service', namespace='requests', db_path=db_path)
         shared_db_path = self.requests.db_path
         self.events: list[dict] = []
@@ -159,18 +377,17 @@ class LeaveService:
             event_registry=self.event_registry,
         )
         self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=db_path)
-        seeded_employees = {
-            "emp-admin": EmployeeRecord(self.tenant_id, "emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
-            "emp-manager": EmployeeRecord(self.tenant_id, "emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE),
-            "emp-001": EmployeeRecord(self.tenant_id, "emp-001", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
-            "emp-002": EmployeeRecord(self.tenant_id, "emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
-        }
-        for employee_id, employee in seeded_employees.items():
-            if employee_id not in self.employees:
-                self.employees[employee_id] = employee
         self.leave_balances = PersistentKVStore[tuple[str, LeaveType], LeaveBalance](service='leave-service', namespace='leave_balances', db_path=shared_db_path)
+        self.leave_policies = PersistentKVStore[str, LeavePolicy](service='leave-service', namespace='leave_policies', db_path=shared_db_path)
+        self.employee_policy_assignments = PersistentKVStore[tuple[str, LeaveType], str](service='leave-service', namespace='leave_policy_assignments', db_path=shared_db_path)
+        self.holiday_calendars = PersistentKVStore[str, HolidayCalendar](service='leave-service', namespace='holiday_calendars', db_path=shared_db_path)
+        self.leave_balance_ledger = PersistentKVStore[str, LeaveLedgerEntry](service='leave-service', namespace='leave_balance_ledger', db_path=shared_db_path)
         self.attendance_impacts = PersistentKVStore[str, list[dict]](service='leave-service', namespace='attendance_impacts', db_path=shared_db_path)
         self._lock = RLock()
+        self.policy_engine = LeavePolicyEngine()
+
+        self._seed_employees()
+        self._seed_leave_policies()
         self._seed_leave_balances()
         self.workflow_service.register_definition(
             tenant_id=self.tenant_id,
@@ -189,18 +406,65 @@ class LeaveService:
             ],
         )
 
+    def _seed_employees(self) -> None:
+        seeded_employees = {
+            "emp-admin": EmployeeRecord(self.tenant_id, "emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE, location_code="US-HQ", grade_code="G10"),
+            "emp-manager": EmployeeRecord(self.tenant_id, "emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE, location_code="US-NY", grade_code="G9"),
+            "emp-001": EmployeeRecord(self.tenant_id, "emp-001", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE, location_code="US-NY", grade_code="G7"),
+            "emp-002": EmployeeRecord(self.tenant_id, "emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE, location_code="US-CA", grade_code="G6"),
+        }
+        for employee_id, employee in seeded_employees.items():
+            if employee_id not in self.employees:
+                self.employees[employee_id] = employee
+
+    def _seed_leave_policies(self) -> None:
+        if self.leave_policies:
+            return
+        now = self._now()
+        defaults = [
+            (LeaveType.ANNUAL, "ANNUAL-STD", "Annual Standard", 18.0, AccrualFrequency.MONTHLY, 1.5, 5.0, True, False, True),
+            (LeaveType.SICK, "SICK-STD", "Sick Standard", 10.0, AccrualFrequency.NONE, 0.0, 0.0, True, False, True),
+            (LeaveType.CASUAL, "CASUAL-STD", "Casual Standard", 7.0, AccrualFrequency.NONE, 0.0, 0.0, True, False, True),
+            (LeaveType.UNPAID, "UNPAID-STD", "Unpaid Standard", None, AccrualFrequency.NONE, 0.0, None, False, True, True),
+            (LeaveType.OTHER, "OTHER-STD", "Other Standard", 5.0, AccrualFrequency.NONE, 0.0, 0.0, True, False, True),
+        ]
+        for leave_type, code, name, entitlement, frequency, rate, carry_limit, requires_approval, allow_negative, allow_partial in defaults:
+            policy = LeavePolicy(
+                tenant_id=self.tenant_id,
+                leave_policy_id=str(uuid.uuid4()),
+                code=code,
+                name=name,
+                leave_type=leave_type,
+                location_codes=["*"],
+                grade_codes=["*"],
+                annual_entitlement_days=entitlement,
+                accrual_frequency=frequency,
+                accrual_rate_days=rate,
+                carry_forward_limit_days=carry_limit,
+                requires_approval=requires_approval,
+                allow_negative_balance=allow_negative,
+                allow_partial_days=allow_partial,
+                status="Active",
+                created_at=now,
+                updated_at=now,
+            )
+            self.leave_policies[policy.leave_policy_id] = policy
+
     def _seed_leave_balances(self) -> None:
         for employee_id in self.employees:
-            for leave_type, entitlement_days in BALANCE_CAPS.items():
-                self.leave_balances[(employee_id, leave_type)] = LeaveBalance(
-                    tenant_id=self.tenant_id,
-                    employee_id=employee_id,
-                    leave_type=leave_type,
-                    entitlement_days=entitlement_days,
-                    reserved_days=0.0,
-                    approved_days=0.0,
-                )
-
+            employee = self.employees[employee_id]
+            for leave_type in LeaveType:
+                policy = self._resolve_policy(employee_id, leave_type)
+                if (employee_id, leave_type) not in self.leave_balances:
+                    self.leave_balances[(employee_id, leave_type)] = LeaveBalance(
+                        tenant_id=self.tenant_id,
+                        employee_id=employee_id,
+                        leave_type=leave_type,
+                        entitlement_days=policy.annual_entitlement_days,
+                        reserved_days=0.0,
+                        approved_days=0.0,
+                        policy_id=policy.leave_policy_id,
+                    )
 
     def _resolve_tenant(self, tenant_id: str | None = None) -> str:
         return normalize_tenant_id(tenant_id or self.tenant_id)
@@ -226,8 +490,51 @@ class LeaveService:
         self.error_logger.log(code, error, trace_id=trace, details={"details": details or []})
         raise error
 
-    def _total_days(self, start: date, end: date) -> float:
-        return float((end - start).days + 1)
+    def _resolve_policy(self, employee_id: str, leave_type: LeaveType) -> LeavePolicy:
+        employee = self.employees.get(employee_id)
+        if not employee:
+            raise ValueError(f"Unknown employee {employee_id}")
+        return self.policy_engine.resolve_policy(
+            tenant_id=self.tenant_id,
+            employee=employee,
+            leave_type=leave_type,
+            policies=list(self.leave_policies.values()),
+            assignments=dict(self.employee_policy_assignments.items()),
+        )
+
+    def _policy_snapshot(self, employee_id: str, leave_type: LeaveType) -> dict[str, Any]:
+        return self._resolve_policy(employee_id, leave_type).to_dict()
+
+    def _resolve_holiday_calendar(self, employee_id: str) -> HolidayCalendar | None:
+        employee = self.employees[employee_id]
+        for calendar in self.holiday_calendars.values():
+            if calendar.tenant_id == self.tenant_id and calendar.location_code == employee.location_code:
+                return calendar
+        return None
+
+    def _calculate_leave_days(
+        self,
+        *,
+        employee_id: str,
+        leave_type: LeaveType,
+        start_date: date,
+        end_date: date,
+        partial_day_portion: float,
+        trace_id: str | None,
+    ) -> tuple[float, list[str], LeavePolicy]:
+        policy = self._resolve_policy(employee_id, leave_type)
+        holiday_calendar = self._resolve_holiday_calendar(employee_id)
+        try:
+            total_days, holiday_dates = self.policy_engine.calculate_leave_days(
+                start=start_date,
+                end=end_date,
+                policy=policy,
+                partial_day_portion=partial_day_portion,
+                holiday_calendar=holiday_calendar,
+            )
+        except ValueError as exc:
+            self._fail(422, "VALIDATION_ERROR", str(exc), trace_id)
+        return total_days, holiday_dates, policy
 
     def _can_access(self, role: Role, actor_employee_id: str, leave: LeaveRequest) -> bool:
         if leave.tenant_id != self.tenant_id:
@@ -242,8 +549,6 @@ class LeaveService:
 
     def _ensure_employee_eligible(self, employee_id: str, trace_id: str | None):
         employee = self.employees.get(employee_id)
-        if employee and employee.tenant_id != self.tenant_id:
-            employee = None
         if employee and employee.tenant_id != self.tenant_id:
             employee = None
         if not employee:
@@ -276,15 +581,62 @@ class LeaveService:
         return self._get_balance(employee_id, leave_type).to_dict()
 
     def _balances_for_employee(self, employee_id: str) -> list[dict]:
-        return [
-            self.leave_balances[(employee_id, leave_type)].to_dict()
-            for leave_type in LeaveType
-        ]
+        return [self.leave_balances[(employee_id, leave_type)].to_dict() for leave_type in LeaveType]
+
+    def _record_ledger(
+        self,
+        *,
+        employee_id: str,
+        leave_type: LeaveType,
+        entry_type: str,
+        delta_days: float,
+        trace_id: str | None,
+        leave_request_id: str | None = None,
+        effective_on: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        balance = self._get_balance(employee_id, leave_type)
+        entry = LeaveLedgerEntry(
+            tenant_id=self.tenant_id,
+            ledger_entry_id=str(uuid.uuid4()),
+            employee_id=employee_id,
+            leave_type=leave_type,
+            entry_type=entry_type,
+            delta_days=round(delta_days, 2),
+            balance_after=balance.remaining_days,
+            effective_on=effective_on or self._today().isoformat(),
+            created_at=self._now(),
+            leave_request_id=leave_request_id,
+            policy_id=balance.policy_id,
+            metadata=metadata or {},
+        )
+        self.leave_balance_ledger[entry.ledger_entry_id] = entry
+        audit = emit_audit_record(
+            service_name='leave-service',
+            tenant_id=self.tenant_id,
+            actor={'id': 'system', 'type': 'system'},
+            action='leave_balance_ledger_recorded',
+            entity='LeaveBalanceLedger',
+            entity_id=entry.ledger_entry_id,
+            before={},
+            after=entry.to_dict(),
+            trace_id=self._trace(trace_id),
+            source={'entry_type': entry_type, 'employee_id': employee_id, 'leave_type': leave_type.value},
+        )
+        self.observability.logger.info(
+            'leave.balance_ledger_recorded',
+            trace_id=self._trace(trace_id),
+            message=entry_type,
+            context={'employee_id': employee_id, 'leave_type': leave_type.value, 'audit_record': audit},
+        )
+        return entry.to_dict()
 
     def _ensure_balance_capacity(self, employee_id: str, leave_type: LeaveType, days: float, trace_id: str | None) -> None:
         balance = self._get_balance(employee_id, leave_type)
-        remaining = balance.remaining_days
-        if remaining is not None and remaining < days:
+        policy = self._resolve_policy(employee_id, leave_type)
+        try:
+            self.policy_engine.ensure_balance_capacity(balance=balance, policy=policy, days=days)
+        except ValueError:
             self._fail(
                 409,
                 "INSUFFICIENT_LEAVE_BALANCE",
@@ -295,7 +647,8 @@ class LeaveService:
                         "employee_id": employee_id,
                         "leave_type": leave_type.value,
                         "requested_days": days,
-                        "remaining_days": remaining,
+                        "remaining_days": balance.remaining_days,
+                        "policy_id": policy.leave_policy_id,
                     }
                 ],
             )
@@ -304,19 +657,55 @@ class LeaveService:
         self._ensure_balance_capacity(leave.employee_id, leave.leave_type, leave.total_days, trace_id)
         balance = self._get_balance(leave.employee_id, leave.leave_type)
         balance.reserved_days += leave.total_days
+        self._record_ledger(
+            employee_id=leave.employee_id,
+            leave_type=leave.leave_type,
+            entry_type='reservation',
+            delta_days=-leave.total_days,
+            leave_request_id=leave.leave_request_id,
+            trace_id=trace_id,
+            metadata={'status': LeaveStatus.SUBMITTED.value},
+        )
 
-    def _release_reserved_balance(self, leave: LeaveRequest) -> None:
+    def _release_reserved_balance(self, leave: LeaveRequest, trace_id: str | None = None) -> None:
         balance = self._get_balance(leave.employee_id, leave.leave_type)
         balance.reserved_days = max(0.0, balance.reserved_days - leave.total_days)
+        self._record_ledger(
+            employee_id=leave.employee_id,
+            leave_type=leave.leave_type,
+            entry_type='reservation_released',
+            delta_days=leave.total_days,
+            leave_request_id=leave.leave_request_id,
+            trace_id=trace_id,
+            metadata={'status': leave.status.value},
+        )
 
-    def _consume_reserved_balance(self, leave: LeaveRequest) -> None:
+    def _consume_reserved_balance(self, leave: LeaveRequest, trace_id: str | None = None) -> None:
         balance = self._get_balance(leave.employee_id, leave.leave_type)
         balance.reserved_days = max(0.0, balance.reserved_days - leave.total_days)
         balance.approved_days += leave.total_days
+        self._record_ledger(
+            employee_id=leave.employee_id,
+            leave_type=leave.leave_type,
+            entry_type='consumption',
+            delta_days=-leave.total_days,
+            leave_request_id=leave.leave_request_id,
+            trace_id=trace_id,
+            metadata={'status': LeaveStatus.APPROVED.value},
+        )
 
-    def _restore_approved_balance(self, leave: LeaveRequest) -> None:
+    def _restore_approved_balance(self, leave: LeaveRequest, trace_id: str | None = None) -> None:
         balance = self._get_balance(leave.employee_id, leave.leave_type)
         balance.approved_days = max(0.0, balance.approved_days - leave.total_days)
+        self._record_ledger(
+            employee_id=leave.employee_id,
+            leave_type=leave.leave_type,
+            entry_type='approved_balance_restored',
+            delta_days=leave.total_days,
+            leave_request_id=leave.leave_request_id,
+            trace_id=trace_id,
+            metadata={'status': LeaveStatus.CANCELLED.value},
+        )
 
     def _sync_employee_leave_status(self, employee_id: str) -> None:
         employee = self.employees[employee_id]
@@ -354,7 +743,7 @@ class LeaveService:
                 legacy_event_name=event,
                 data={**payload, "tenant_id": self.tenant_id},
                 correlation_id=self._trace(trace_id),
-                idempotency_key=payload.get("leave_request_id"),
+                idempotency_key=payload.get("leave_request_id") or payload.get("employee_id"),
             )
             self.outbox.dispatch_pending(self.events.append)
             self.observability.logger.info(
@@ -375,21 +764,22 @@ class LeaveService:
         if leave.status != LeaveStatus.APPROVED:
             self.attendance_impacts.pop(leave.leave_request_id, None)
             return
-
         impacts = []
         cursor = leave.start_date
+        holiday_dates = set(leave.holiday_dates)
         while cursor <= leave.end_date:
-            impacts.append(
-                {
-                    "attendance_date": cursor.isoformat(),
-                    "attendance_status": "Absent",
-                    "employee_id": leave.employee_id,
-                    "leave_request_id": leave.leave_request_id,
-                    "leave_type": leave.leave_type.value,
-                    "source": "leave_approval",
-                    "tenant_id": leave.tenant_id,
-                }
-            )
+            if cursor.isoformat() not in holiday_dates:
+                impacts.append(
+                    {
+                        "attendance_date": cursor.isoformat(),
+                        "attendance_status": "Absent" if leave.partial_day_portion == 1.0 or cursor != leave.start_date else "HalfDayAbsent",
+                        "employee_id": leave.employee_id,
+                        "leave_request_id": leave.leave_request_id,
+                        "leave_type": leave.leave_type.value,
+                        "source": "leave_approval",
+                        "tenant_id": leave.tenant_id,
+                    }
+                )
             cursor = date.fromordinal(cursor.toordinal() + 1)
         self.attendance_impacts[leave.leave_request_id] = impacts
 
@@ -408,10 +798,13 @@ class LeaveService:
                 "department_id": employee.department_id,
                 "manager_employee_id": employee.manager_employee_id,
                 "status": employee.status.value,
+                "location_code": employee.location_code,
+                "grade_code": employee.grade_code,
+                "hire_date": employee.hire_date.isoformat(),
             },
             "leave_balances": self._balances_for_employee(employee_id),
             "leave_requests": leaves,
-            "attendance_impacts": [impact for leave_id, items in self.attendance_impacts.items() for impact in items if impact.get("tenant_id") == self.tenant_id and impact["employee_id"] == employee_id],
+            "attendance_impacts": [impact for items in self.attendance_impacts.values() for impact in items if impact.get("tenant_id") == self.tenant_id and impact["employee_id"] == employee_id],
             "active_leave": active_leave,
         }
 
@@ -421,16 +814,12 @@ class LeaveService:
         payload["attendance_impacts"] = list(self.attendance_impacts.get(leave.leave_request_id, []))
         payload["employee_status"] = self.employees[leave.employee_id].status.value
         payload["tenant_id"] = leave.tenant_id
+        payload["policy"] = self._policy_snapshot(leave.employee_id, leave.leave_type)
         payload["workflow"] = self.workflow_service.get_instance(leave.workflow_id, tenant_id=leave.tenant_id) if leave.workflow_id else None
         return payload
 
-
     def _actor_payload(self, actor_role: str, actor_employee_id: str, *, actor_type: str = 'user') -> dict[str, str | None]:
-        return {
-            'id': actor_employee_id or actor_role,
-            'type': actor_type,
-            'role': actor_role,
-        }
+        return {'id': actor_employee_id or actor_role, 'type': actor_type, 'role': actor_role}
 
     def _audit_leave_mutation(self, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, before: dict, after: dict, trace_id: str | None) -> None:
         self.observability.logger.audit(
@@ -440,6 +829,19 @@ class LeaveService:
             entity='LeaveRequest',
             entity_id=leave_request_id,
             context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
+        )
+
+    def _audit_domain_change(self, action: str, entity: str, entity_id: str, before: Any, after: Any, trace_id: str | None, actor: dict[str, Any] | None = None) -> dict[str, Any]:
+        return emit_audit_record(
+            service_name='leave-service',
+            tenant_id=self.tenant_id,
+            actor=actor or {'id': 'system', 'type': 'system'},
+            action=action,
+            entity=entity,
+            entity_id=entity_id,
+            before=before,
+            after=after,
+            trace_id=self._trace(trace_id),
         )
 
     def replay_dead_letters(self) -> list[dict]:
@@ -460,6 +862,215 @@ class LeaveService:
         self.outbox.dispatch_pending(self.events.append)
         return [entry.__dict__ for entry in recovered]
 
+    def create_or_update_policy(self, payload: dict[str, Any], *, trace_id: str | None = None) -> dict[str, Any]:
+        self.tenant_id = self._resolve_tenant(payload.get('tenant_id'))
+        leave_type = LeaveType(payload['leave_type'])
+        now = self._now()
+        policy_id = payload.get('leave_policy_id')
+        existing = self.leave_policies.get(policy_id) if policy_id else None
+        before = existing.to_dict() if existing else {}
+        policy = LeavePolicy(
+            tenant_id=self.tenant_id,
+            leave_policy_id=policy_id or str(uuid.uuid4()),
+            code=payload['code'],
+            name=payload['name'],
+            leave_type=leave_type,
+            location_codes=list(payload.get('location_codes') or ['*']),
+            grade_codes=list(payload.get('grade_codes') or ['*']),
+            annual_entitlement_days=payload.get('annual_entitlement_days'),
+            accrual_frequency=AccrualFrequency(payload.get('accrual_frequency', 'None')),
+            accrual_rate_days=float(payload.get('accrual_rate_days', 0.0)),
+            carry_forward_limit_days=payload.get('carry_forward_limit_days'),
+            requires_approval=bool(payload.get('requires_approval', True)),
+            allow_negative_balance=bool(payload.get('allow_negative_balance', False)),
+            allow_partial_days=bool(payload.get('allow_partial_days', True)),
+            status=payload.get('status', 'Active'),
+            created_at=existing.created_at if existing else now,
+            updated_at=now,
+        )
+        self.leave_policies[policy.leave_policy_id] = policy
+        action = 'leave_policy_updated' if existing else 'leave_policy_created'
+        audit = self._audit_domain_change(action, 'LeavePolicy', policy.leave_policy_id, before, policy.to_dict(), trace_id)
+        self.observability.logger.info('leave.policy_upserted', trace_id=self._trace(trace_id), message=action, context={'leave_policy_id': policy.leave_policy_id, 'audit_record': audit})
+        for employee_id in self.employees:
+            employee = self.employees[employee_id]
+            if employee.tenant_id != self.tenant_id:
+                continue
+            try:
+                resolved = self._resolve_policy(employee_id, policy.leave_type)
+            except Exception:
+                continue
+            balance = self._get_balance(employee_id, policy.leave_type)
+            balance.policy_id = resolved.leave_policy_id
+            if balance.entitlement_days is None or resolved.annual_entitlement_days is not None:
+                balance.entitlement_days = resolved.annual_entitlement_days
+        return policy.to_dict()
+
+    def assign_policy_to_employee(self, employee_id: str, leave_type: str, leave_policy_id: str, *, trace_id: str | None = None) -> dict[str, Any]:
+        self.tenant_id = self._resolve_tenant(None)
+        leave_type_enum = LeaveType(leave_type)
+        before = {'leave_policy_id': self.employee_policy_assignments.get((employee_id, leave_type_enum))}
+        self.employee_policy_assignments[(employee_id, leave_type_enum)] = leave_policy_id
+        balance = self._get_balance(employee_id, leave_type_enum)
+        policy = self._resolve_policy(employee_id, leave_type_enum)
+        balance.policy_id = policy.leave_policy_id
+        if policy.annual_entitlement_days is not None:
+            balance.entitlement_days = policy.annual_entitlement_days
+        after = {'employee_id': employee_id, 'leave_type': leave_type_enum.value, 'leave_policy_id': leave_policy_id}
+        self._audit_domain_change('leave_policy_assigned', 'EmployeeLeavePolicy', f'{employee_id}:{leave_type_enum.value}', before, after, trace_id)
+        return after
+
+    def upsert_holiday_calendar(self, location_code: str, payload: dict[str, Any], *, trace_id: str | None = None) -> dict[str, Any]:
+        self.tenant_id = self._resolve_tenant(payload.get('tenant_id'))
+        existing = next((calendar for calendar in self.holiday_calendars.values() if calendar.tenant_id == self.tenant_id and calendar.location_code == location_code), None)
+        before = existing.to_dict() if existing else {}
+        now = self._now()
+        calendar = HolidayCalendar(
+            tenant_id=self.tenant_id,
+            calendar_id=existing.calendar_id if existing else str(uuid.uuid4()),
+            location_code=location_code,
+            name=payload.get('name', f'{location_code} holiday calendar'),
+            holidays=dict(payload.get('holidays') or {}),
+            created_at=existing.created_at if existing else now,
+            updated_at=now,
+        )
+        self.holiday_calendars[calendar.calendar_id] = calendar
+        action = 'holiday_calendar_updated' if existing else 'holiday_calendar_created'
+        self._audit_domain_change(action, 'HolidayCalendar', calendar.calendar_id, before, calendar.to_dict(), trace_id)
+        return calendar.to_dict()
+
+    def list_holiday_calendars(self, *, tenant_id: str | None = None) -> list[dict[str, Any]]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
+        return [calendar.to_dict() for calendar in self.holiday_calendars.values() if calendar.tenant_id == self.tenant_id]
+
+    def list_policies(self, *, tenant_id: str | None = None, leave_type: str | None = None) -> list[dict[str, Any]]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
+        rows = [policy.to_dict() for policy in self.leave_policies.values() if policy.tenant_id == self.tenant_id]
+        if leave_type:
+            rows = [row for row in rows if row['leave_type'] == leave_type]
+        rows.sort(key=lambda item: (item['leave_type'], item['code']))
+        return rows
+
+    def get_leave_ledger(self, employee_id: str, *, leave_type: str | None = None, tenant_id: str | None = None) -> list[dict[str, Any]]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
+        rows = []
+        for entry in self.leave_balance_ledger.values():
+            if entry.tenant_id != self.tenant_id or entry.employee_id != employee_id:
+                continue
+            if leave_type and entry.leave_type.value != leave_type:
+                continue
+            rows.append(entry.to_dict())
+        rows.sort(key=lambda item: (item['effective_on'], item['created_at'], item['ledger_entry_id']))
+        return rows
+
+    def accrue_balances(self, *, as_of: date | None = None, employee_id: str | None = None, tenant_id: str | None = None, trace_id: str | None = None) -> dict[str, Any]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
+        effective_date = as_of or self._today()
+        updated: list[dict[str, Any]] = []
+        for candidate_employee_id in self.employees:
+            if employee_id and candidate_employee_id != employee_id:
+                continue
+            employee = self.employees[candidate_employee_id]
+            if employee.tenant_id != self.tenant_id:
+                continue
+            for leave_type in LeaveType:
+                policy = self._resolve_policy(candidate_employee_id, leave_type)
+                balance = self._get_balance(candidate_employee_id, leave_type)
+                last = date.fromisoformat(balance.last_accrual_at) if balance.last_accrual_at else None
+                accrued = self.policy_engine.accrued_days_between(policy=policy, last_accrual_on=last, as_of=effective_date)
+                if accrued <= 0:
+                    continue
+                if balance.entitlement_days is not None and policy.annual_entitlement_days is not None and policy.annual_entitlement_days > 0:
+                    available_room = max(0.0, policy.annual_entitlement_days - balance.accrued_days)
+                    accrued = min(accrued, available_room)
+                if accrued <= 0:
+                    balance.last_accrual_at = effective_date.isoformat()
+                    continue
+                balance.accrued_days = round(balance.accrued_days + accrued, 2)
+                balance.last_accrual_at = effective_date.isoformat()
+                ledger = self._record_ledger(
+                    employee_id=candidate_employee_id,
+                    leave_type=leave_type,
+                    entry_type='accrual',
+                    delta_days=accrued,
+                    trace_id=trace_id,
+                    effective_on=effective_date.isoformat(),
+                    metadata={'policy_id': policy.leave_policy_id},
+                )
+                updated.append({'employee_id': candidate_employee_id, 'leave_type': leave_type.value, 'accrued_days': accrued, 'ledger_entry': ledger})
+        self._audit_domain_change('leave_accrual_processed', 'LeaveAccrualBatch', effective_date.isoformat(), {}, {'items': updated}, trace_id)
+        return {'as_of': effective_date.isoformat(), 'items': updated}
+
+    def apply_carry_forward(self, *, year: int, employee_id: str | None = None, tenant_id: str | None = None, trace_id: str | None = None) -> dict[str, Any]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
+        items: list[dict[str, Any]] = []
+        for candidate_employee_id in self.employees:
+            if employee_id and candidate_employee_id != employee_id:
+                continue
+            employee = self.employees[candidate_employee_id]
+            if employee.tenant_id != self.tenant_id:
+                continue
+            for leave_type in LeaveType:
+                policy = self._resolve_policy(candidate_employee_id, leave_type)
+                balance = self._get_balance(candidate_employee_id, leave_type)
+                carry = self.policy_engine.apply_carry_forward(balance=balance, policy=policy)
+                if carry <= 0:
+                    continue
+                balance.carried_forward_days = carry
+                balance.last_carry_forward_at = date(year, 1, 1).isoformat()
+                ledger = self._record_ledger(
+                    employee_id=candidate_employee_id,
+                    leave_type=leave_type,
+                    entry_type='carry_forward',
+                    delta_days=carry,
+                    trace_id=trace_id,
+                    effective_on=date(year, 1, 1).isoformat(),
+                    metadata={'policy_id': policy.leave_policy_id, 'year': year},
+                )
+                items.append({'employee_id': candidate_employee_id, 'leave_type': leave_type.value, 'carried_forward_days': carry, 'ledger_entry': ledger})
+        self._audit_domain_change('leave_carry_forward_processed', 'LeaveCarryForwardBatch', str(year), {}, {'items': items}, trace_id)
+        return {'year': year, 'items': items}
+
+    def recompute_employee_balance(self, employee_id: str, *, tenant_id: str | None = None, trace_id: str | None = None) -> dict[str, Any]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
+        self._ensure_employee_eligible(employee_id, trace_id)
+        balances: list[dict[str, Any]] = []
+        for leave_type in LeaveType:
+            policy = self._resolve_policy(employee_id, leave_type)
+            balance = self._get_balance(employee_id, leave_type)
+            balance.policy_id = policy.leave_policy_id
+            balance.reserved_days = round(
+                sum(
+                    leave.total_days
+                    for leave in self.requests.values()
+                    if leave.tenant_id == self.tenant_id and leave.employee_id == employee_id and leave.leave_type == leave_type and leave.status == LeaveStatus.SUBMITTED
+                ),
+                2,
+            )
+            balance.approved_days = round(
+                sum(
+                    leave.total_days
+                    for leave in self.requests.values()
+                    if leave.tenant_id == self.tenant_id and leave.employee_id == employee_id and leave.leave_type == leave_type and leave.status == LeaveStatus.APPROVED
+                ),
+                2,
+            )
+            if balance.entitlement_days is None or policy.annual_entitlement_days is not None:
+                balance.entitlement_days = policy.annual_entitlement_days
+            balances.append(balance.to_dict())
+        employee = self.employees[employee_id]
+        employee_payload = {
+            'employee_id': employee.employee_id,
+            'department_id': employee.department_id,
+            'manager_employee_id': employee.manager_employee_id,
+            'status': employee.status.value,
+            'location_code': employee.location_code,
+            'grade_code': employee.grade_code,
+            'hire_date': employee.hire_date.isoformat(),
+        }
+        self._audit_domain_change('leave_balance_recomputed', 'LeaveBalance', employee_id, {}, {'employee': employee_payload, 'leave_balances': balances}, trace_id)
+        return {'employee_id': employee_id, 'employee': employee_payload, 'leave_balances': balances}
+
     def create_request(
         self,
         actor_role: str,
@@ -472,6 +1083,7 @@ class LeaveService:
         approver_employee_id: str | None = None,
         trace_id: str | None = None,
         tenant_id: str | None = None,
+        partial_day_portion: float = 1.0,
     ) -> tuple[int, dict]:
         self.tenant_id = self._resolve_tenant(tenant_id)
         trace = self._trace(trace_id)
@@ -479,15 +1091,21 @@ class LeaveService:
         role = Role(actor_role)
         try:
             with self._lock:
-                if end_date < start_date:
-                    self._fail(422, "VALIDATION_ERROR", "end_date must be >= start_date", trace)
                 self._ensure_employee_eligible(employee_id, trace)
                 self._ensure_lifecycle_scope(role, actor_employee_id, employee_id, trace)
                 if self._overlap_exists(employee_id, start_date, end_date):
                     self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
 
                 leave_type_enum = LeaveType(leave_type)
-                self._ensure_balance_capacity(employee_id, leave_type_enum, self._total_days(start_date, end_date), trace)
+                total_days, holiday_dates, policy = self._calculate_leave_days(
+                    employee_id=employee_id,
+                    leave_type=leave_type_enum,
+                    start_date=start_date,
+                    end_date=end_date,
+                    partial_day_portion=partial_day_portion,
+                    trace_id=trace,
+                )
+                self._ensure_balance_capacity(employee_id, leave_type_enum, total_days, trace)
                 now = self._now()
                 leave = LeaveRequest(
                     tenant_id=self.tenant_id,
@@ -496,7 +1114,7 @@ class LeaveService:
                     leave_type=leave_type_enum,
                     start_date=start_date,
                     end_date=end_date,
-                    total_days=self._total_days(start_date, end_date),
+                    total_days=total_days,
                     reason=reason,
                     approver_employee_id=approver_employee_id,
                     workflow_id=None,
@@ -505,13 +1123,16 @@ class LeaveService:
                     decision_at=None,
                     created_at=now,
                     updated_at=now,
+                    partial_day_portion=partial_day_portion,
+                    policy_id=policy.leave_policy_id,
+                    holiday_dates=holiday_dates,
                 )
                 self.requests[leave.leave_request_id] = leave
             self._audit_leave_mutation('leave_request_created', actor_role, actor_employee_id, leave.leave_request_id, {}, self._response_payload(leave), trace)
             self.observability.logger.info(
                 "leave.request_created",
                 trace_id=trace,
-                context={"leave_request_id": leave.leave_request_id, "employee_id": employee_id},
+                context={"leave_request_id": leave.leave_request_id, "employee_id": employee_id, "policy_id": leave.policy_id},
             )
             self._finalize_observation("create_request", trace, started, True, {"status": 201})
             return 201, self._response_payload(leave)
@@ -541,6 +1162,11 @@ class LeaveService:
                 self.idempotency.record(key, fingerprint, 200, payload)
                 self._finalize_observation("submit_request", trace, started, True, {"status": 200, "replayed": True})
                 return 200, payload
+            if leave.status == LeaveStatus.APPROVED:
+                payload = self._response_payload(leave)
+                self.idempotency.record(key, fingerprint, 200, payload)
+                self._finalize_observation("submit_request", trace, started, True, {"status": 200, "replayed": True})
+                return 200, payload
             if leave.status != LeaveStatus.DRAFT:
                 self._fail(409, "INVALID_TRANSITION", "Only Draft requests can be submitted", trace)
             if replay is not None:
@@ -549,6 +1175,7 @@ class LeaveService:
             if self._overlap_exists(leave.employee_id, leave.start_date, leave.end_date, exclude_id=leave.leave_request_id):
                 self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
 
+            policy = self._resolve_policy(leave.employee_id, leave.leave_type)
             self._reserve_balance(leave, trace)
             ts = self._now()
             if not leave.approver_employee_id:
@@ -563,8 +1190,10 @@ class LeaveService:
                 actor_id=actor_employee_id,
                 actor_type="user",
                 context={
-                    "approver_employee_id": leave.approver_employee_id,
+                    "approver_employee_id": leave.approver_employee_id if policy.requires_approval else "system-auto-approver",
                     "escalation_assignee": "emp-admin",
+                    "policy_id": policy.leave_policy_id,
+                    "requires_approval": policy.requires_approval,
                 },
                 trace_id=trace,
             )
@@ -572,9 +1201,34 @@ class LeaveService:
             leave.status = LeaveStatus.SUBMITTED
             leave.submitted_at = ts
             leave.updated_at = ts
+
+            if not policy.requires_approval:
+                try:
+                    workflow = self.workflow_service.approve_step(
+                        leave.workflow_id,
+                        tenant_id=self.tenant_id,
+                        actor_id="system-auto-approver",
+                        actor_type="system",
+                        actor_role=None,
+                        comment="Auto-approved by leave policy engine",
+                        trace_id=trace,
+                    )
+                except WorkflowServiceError as exc:
+                    self._fail(exc.status_code, exc.code, exc.message, trace, exc.details)
+                if workflow.get('metadata', {}).get('terminal_result') != 'approved':
+                    self._fail(409, 'WORKFLOW_BYPASS_DETECTED', 'Leave workflow did not auto-complete as expected', trace)
+                self._consume_reserved_balance(leave, trace)
+                leave.status = LeaveStatus.APPROVED
+                leave.decision_at = ts
+                leave.updated_at = ts
+                self._sync_employee_leave_status(leave.employee_id)
+                self._sync_attendance_impacts(leave)
+                event_name = 'LeaveRequestApproved'
+            else:
+                event_name = 'LeaveRequestSubmitted'
             payload = self._response_payload(leave)
             self._emit_event(
-                "LeaveRequestSubmitted",
+                event_name,
                 {
                     "leave_request_id": leave.leave_request_id,
                     "employee_id": leave.employee_id,
@@ -657,17 +1311,17 @@ class LeaveService:
             ts = self._now()
             terminal_result = workflow.get("metadata", {}).get("terminal_result")
             if action == "approve" and terminal_result == "approved":
-                self._consume_reserved_balance(leave)
+                self._consume_reserved_balance(leave, trace)
                 leave.status = LeaveStatus.APPROVED
                 event = "LeaveRequestApproved"
             elif action == "reject" and terminal_result == "rejected":
-                self._release_reserved_balance(leave)
+                self._release_reserved_balance(leave, trace)
                 leave.status = LeaveStatus.REJECTED
                 if reason:
                     leave.reason = f"{leave.reason or ''}\n[Rejection] {reason}".strip()
                 event = "LeaveRequestRejected"
             else:
-                self._fail(409, "INVALID_TRANSITION", "Workflow resolution did not produce a valid leave decision", trace)
+                self._fail(409, "WORKFLOW_BYPASS_DETECTED", "Workflow resolution did not produce a valid leave decision", trace)
             leave.approver_employee_id = actor_employee_id
             leave.decision_at = ts
             leave.updated_at = ts
@@ -714,9 +1368,9 @@ class LeaveService:
                 if leave.status == LeaveStatus.APPROVED and leave.end_date < self._today():
                     self._fail(409, "INVALID_TRANSITION", "Past approved leave cannot be cancelled", trace)
                 if leave.status == LeaveStatus.SUBMITTED:
-                    self._release_reserved_balance(leave)
+                    self._release_reserved_balance(leave, trace)
                 elif leave.status == LeaveStatus.APPROVED:
-                    self._restore_approved_balance(leave)
+                    self._restore_approved_balance(leave, trace)
                 leave.status = LeaveStatus.CANCELLED
                 leave.updated_at = self._now()
                 self._sync_employee_leave_status(leave.employee_id)
@@ -739,13 +1393,18 @@ class LeaveService:
 
             start = date.fromisoformat(patch.get("start_date")) if patch.get("start_date") else leave.start_date
             end = date.fromisoformat(patch.get("end_date")) if patch.get("end_date") else leave.end_date
-            if end < start:
-                self._fail(422, "VALIDATION_ERROR", "end_date must be >= start_date", trace)
             if self._overlap_exists(leave.employee_id, start, end, exclude_id=leave.leave_request_id):
                 self._fail(409, "LEAVE_OVERLAP", "Leave range overlaps with existing submitted/approved leave", trace)
-
             next_type = LeaveType(patch["leave_type"]) if "leave_type" in patch else leave.leave_type
-            next_total_days = self._total_days(start, end)
+            partial_day_portion = float(patch.get('partial_day_portion', leave.partial_day_portion))
+            next_total_days, holiday_dates, policy = self._calculate_leave_days(
+                employee_id=leave.employee_id,
+                leave_type=next_type,
+                start_date=start,
+                end_date=end,
+                partial_day_portion=partial_day_portion,
+                trace_id=trace,
+            )
             self._ensure_balance_capacity(leave.employee_id, next_type, next_total_days, trace)
 
             if "leave_type" in patch:
@@ -757,6 +1416,9 @@ class LeaveService:
             if "approver_employee_id" in patch:
                 leave.approver_employee_id = patch["approver_employee_id"]
             leave.total_days = next_total_days
+            leave.partial_day_portion = partial_day_portion
+            leave.holiday_dates = holiday_dates
+            leave.policy_id = policy.leave_policy_id
             leave.updated_at = self._now()
         payload = self._response_payload(leave)
         self._audit_leave_mutation('leave_request_updated', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
@@ -810,6 +1472,8 @@ class LeaveService:
                     "requests": len(self.requests),
                     "dead_letters": len(self.dead_letters.entries),
                     "leave_balances": len(self.leave_balances),
+                    "leave_policies": len(self.leave_policies),
+                    "leave_balance_ledger": len(self.leave_balance_ledger),
                 }
             )
 
