@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ApiError, sendApiError } from '../../middleware/error-handler';
+import { logAuditMutation } from '../../middleware/audit';
 import { getStructuredLogger } from '../../middleware/logger';
 import { ValidationError } from '../employee-service/employee.validation';
 import { ConflictError, NotFoundError } from '../employee-service/service.errors';
@@ -62,7 +63,15 @@ export class SettingsController {
   createAttendanceRule = (req: Request, res: Response): void => {
     try {
       const data = this.settingsService.createAttendanceRule(req.body);
-      this.logger.audit('attendance_rule_created', req.traceId ?? 'missing-trace-id', { attendance_rule_id: data.attendance_rule_id, code: data.code });
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        action: 'attendance_rule_created',
+        entity: 'AttendanceRule',
+        entityId: data.attendance_rule_id,
+        before: {},
+        after: data,
+      });
       res.status(201).json({ data, read_models: this.settingsService.getSettingsReadModels() });
     } catch (error) {
       this.handleError(req, res, error);
@@ -71,7 +80,17 @@ export class SettingsController {
 
   updateAttendanceRule = (req: Request, res: Response): void => {
     try {
+      const before = this.settingsService.getAttendanceRuleById(req.params.attendanceRuleId);
       const data = this.settingsService.updateAttendanceRule(req.params.attendanceRuleId, req.body);
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        action: 'attendance_rule_updated',
+        entity: 'AttendanceRule',
+        entityId: data.attendance_rule_id,
+        before,
+        after: data,
+      });
       res.status(200).json({ data, read_models: this.settingsService.getSettingsReadModels() });
     } catch (error) {
       this.handleError(req, res, error);
@@ -81,7 +100,15 @@ export class SettingsController {
   createLeavePolicy = (req: Request, res: Response): void => {
     try {
       const data = this.settingsService.createLeavePolicy(req.body);
-      this.logger.audit('leave_policy_created', req.traceId ?? 'missing-trace-id', { leave_policy_id: data.leave_policy_id, code: data.code });
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        action: 'leave_policy_created',
+        entity: 'LeavePolicy',
+        entityId: data.leave_policy_id,
+        before: {},
+        after: data,
+      });
       res.status(201).json({ data, read_models: this.settingsService.getSettingsReadModels() });
     } catch (error) {
       this.handleError(req, res, error);
@@ -90,7 +117,17 @@ export class SettingsController {
 
   updateLeavePolicy = (req: Request, res: Response): void => {
     try {
+      const before = this.settingsService.getLeavePolicyById(req.params.leavePolicyId);
       const data = this.settingsService.updateLeavePolicy(req.params.leavePolicyId, req.body);
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        action: 'leave_policy_updated',
+        entity: 'LeavePolicy',
+        entityId: data.leave_policy_id,
+        before,
+        after: data,
+      });
       res.status(200).json({ data, read_models: this.settingsService.getSettingsReadModels() });
     } catch (error) {
       this.handleError(req, res, error);
@@ -99,7 +136,22 @@ export class SettingsController {
 
   upsertPayrollSettings = (req: Request, res: Response): void => {
     try {
+      let before = {};
+      try {
+        before = this.settingsService.getPayrollSettings();
+      } catch {
+        before = {};
+      }
       const data = this.settingsService.upsertPayrollSettings(req.body);
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        action: 'payroll_settings_upserted',
+        entity: 'PayrollSettings',
+        entityId: data.payroll_setting_id,
+        before,
+        after: data,
+      });
       res.status(200).json({ data, read_models: this.settingsService.getSettingsReadModels() });
     } catch (error) {
       this.handleError(req, res, error);

@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { AuditActor, AuditRecord } from './audit';
 
 export type StructuredLogRecord = {
   timestamp: string;
@@ -10,10 +12,26 @@ export type StructuredLogRecord = {
   context: Record<string, unknown>;
 };
 
+export interface AuditLogInput {
+  traceId: string;
+  tenantId: string;
+  actor: AuditActor;
+  action: string;
+  entity: string;
+  entityId: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+}
+
 export class StructuredLogger {
   readonly records: StructuredLogRecord[] = [];
+  private readonly auditRecordsInternal: AuditRecord[] = [];
 
   constructor(private readonly serviceName: string) {}
+
+  get auditRecords(): readonly AuditRecord[] {
+    return Object.freeze([...this.auditRecordsInternal]);
+  }
 
   private write(level: 'INFO' | 'ERROR', event: string, traceId: string, message: string, context: Record<string, unknown> = {}): StructuredLogRecord {
     const record: StructuredLogRecord = {
@@ -41,8 +59,23 @@ export class StructuredLogger {
     return this.write('ERROR', event, traceId, message, context);
   }
 
-  audit(action: string, traceId: string, context: Record<string, unknown> = {}): StructuredLogRecord {
-    return this.write('INFO', 'audit', traceId, action, context);
+  audit(input: AuditLogInput): AuditRecord {
+    const record: AuditRecord = Object.freeze({
+      audit_id: randomUUID(),
+      tenant_id: input.tenantId,
+      actor: Object.freeze({ ...input.actor }),
+      action: input.action,
+      entity: input.entity,
+      entity_id: input.entityId,
+      before: input.before,
+      after: input.after,
+      timestamp: new Date().toISOString(),
+      trace_id: input.traceId,
+    });
+
+    this.auditRecordsInternal.push(record);
+    this.write('INFO', 'audit', input.traceId, input.action, { audit_record: record });
+    return record;
   }
 }
 
