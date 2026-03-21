@@ -388,3 +388,106 @@ def test_attendance_summary_enriches_payroll_overtime(service: PayrollService):
     summary = service.get_employee_payroll_summary("emp-77")
     assert summary["employee"]["employee_id"] == "emp-77"
     assert summary["attendance_summaries"][0]["overtime_hours"] == "3.00"
+
+
+def test_payroll_components_rules_tax_and_payslip_are_centralized_in_payroll_service(service: PayrollService):
+    admin = token("Admin")
+    service.register_employee_profile("emp-42", department_id="dept-fin", role_id="role-analyst")
+    service.create_salary_structure(
+        {
+            "employee_id": "emp-42",
+            "effective_from": "2026-01-01",
+            "base_salary": "4000.00",
+            "allowances": "100.00",
+            "deductions": "25.00",
+            "overtime_rate": "20.00",
+            "currency": "USD",
+        },
+        admin,
+    )
+    service.create_payroll_component(
+        {
+            "employee_id": "emp-42",
+            "code": "SHIFT",
+            "name": "Shift allowance",
+            "category": "earning",
+            "amount": "150.00",
+            "taxable": True,
+            "effective_from": "2026-11-01",
+        },
+        admin,
+    )
+    service.upsert_payroll_rule(
+        {
+            "code": "RETIREMENT",
+            "name": "Retirement contribution",
+            "category": "deduction",
+            "calculation_mode": "percentage",
+            "value": "10.00",
+            "input_key": "taxable_earnings",
+        },
+        admin,
+    )
+    service.upsert_payroll_tax_profile(
+        {
+            "employee_id": "emp-42",
+            "jurisdiction": "US-FED",
+            "tax_code": "FIT",
+            "metadata": {"rate": "5.00"},
+        },
+        admin,
+    )
+
+    _, record = service.create_payroll_record(
+        {
+            "employee_id": "emp-42",
+            "pay_period_start": "2026-11-01",
+            "pay_period_end": "2026-11-30",
+            "currency": "USD",
+        },
+        admin,
+    )
+
+    assert record["allowances"] == "250.00"
+    assert record["deductions"] == "662.50"
+    assert record["gross_pay"] == "4250.00"
+    assert record["net_pay"] == "3587.50"
+
+    payslip_status, payslip = service.generate_payslip(record["payroll_record_id"], admin)
+    assert payslip_status == 201
+    assert payslip["summary"]["net_pay"] == "3587.50"
+    assert any(item["code"] == "SHIFT" for item in payslip["line_items"])
+
+
+def test_adjustment_and_reversal_preserve_transactional_payroll_history(service: PayrollService):
+    admin = token("Admin", "pay-admin")
+    _, record = service.create_payroll_record(
+        {
+            "employee_id": "emp-55",
+            "pay_period_start": "2026-12-01",
+            "pay_period_end": "2026-12-31",
+            "base_salary": "2000.00",
+            "currency": "USD",
+        },
+        admin,
+    )
+    service.run_payroll("2026-12-01", "2026-12-31", admin)
+    service.mark_paid(record["payroll_record_id"], admin, payment_date="2027-01-02")
+
+    adjustment_status, adjustment_payload = service.apply_adjustment(
+        record["payroll_record_id"],
+        {"reason": "Year-end correction", "delta_allowances": "100.00"},
+        admin,
+    )
+    assert adjustment_status == 200
+    assert adjustment_payload["record"]["status"] == "Processed"
+    assert adjustment_payload["record"]["net_pay"] == "2100.00"
+
+    reversal_status, reversal_payload = service.reverse_payroll_record(
+        record["payroll_record_id"],
+        {"reason": "ACH recall"},
+        admin,
+    )
+    assert reversal_status == 200
+    assert reversal_payload["record"]["status"] == "Cancelled"
+    assert reversal_payload["reversal_record"]["net_pay"] == "-2100.00"

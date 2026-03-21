@@ -48,6 +48,7 @@ def test_payroll_run_job_wraps_payroll_service_and_stages_outbox_events() -> Non
                     'currency': 'USD',
                 }
             ],
+            'generate_payslips': True,
         },
         idempotency_key='payroll-run-march-2026',
     )
@@ -57,6 +58,7 @@ def test_payroll_run_job_wraps_payroll_service_and_stages_outbox_events() -> Non
     assert completed.status == JobStatus.SUCCEEDED
     assert completed.last_result is not None
     assert completed.last_result['response']['data']['processed_count'] == 1
+    assert len(completed.last_result['generated_payslip_ids']) == 1
     assert any(event.event_name == 'PayrollProcessed' for event in jobs.outbox.list_events(tenant_id='tenant-default'))
     assert len(payroll.batches) == 1
 

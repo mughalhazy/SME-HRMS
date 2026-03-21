@@ -12,7 +12,7 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
-from event_contract import EventRegistry, emit_canonical_event
+from event_contract import EventRegistry
 from notification_service import NotificationService
 from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
@@ -196,6 +196,172 @@ class EmployeePayrollProfile:
         }
 
 
+@dataclass
+class PayrollComponent:
+    payroll_component_id: str
+    employee_id: str
+    code: str
+    name: str
+    category: str
+    amount: Decimal
+    taxable: bool
+    recurring: bool
+    effective_from: date
+    effective_to: date | None
+    metadata: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payroll_component_id": self.payroll_component_id,
+            "employee_id": self.employee_id,
+            "code": self.code,
+            "name": self.name,
+            "category": self.category,
+            "amount": str(self.amount),
+            "taxable": self.taxable,
+            "recurring": self.recurring,
+            "effective_from": self.effective_from.isoformat(),
+            "effective_to": self.effective_to.isoformat() if self.effective_to else None,
+            "metadata": dict(self.metadata),
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+@dataclass
+class PayrollRule:
+    payroll_rule_id: str
+    code: str
+    name: str
+    category: str
+    calculation_mode: str
+    value: Decimal
+    target_component_code: str | None
+    input_key: str | None
+    condition: dict[str, Any]
+    priority: int
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payroll_rule_id": self.payroll_rule_id,
+            "code": self.code,
+            "name": self.name,
+            "category": self.category,
+            "calculation_mode": self.calculation_mode,
+            "value": str(self.value),
+            "target_component_code": self.target_component_code,
+            "input_key": self.input_key,
+            "condition": dict(self.condition),
+            "priority": self.priority,
+            "active": self.active,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+@dataclass
+class PayrollTaxProfile:
+    payroll_tax_profile_id: str
+    employee_id: str
+    jurisdiction: str
+    tax_code: str
+    metadata: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payroll_tax_profile_id": self.payroll_tax_profile_id,
+            "employee_id": self.employee_id,
+            "jurisdiction": self.jurisdiction,
+            "tax_code": self.tax_code,
+            "metadata": dict(self.metadata),
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+@dataclass
+class PayrollPayslip:
+    payslip_id: str
+    payroll_record_id: str
+    employee_id: str
+    payroll_cycle_id: str | None
+    line_items: list[dict[str, Any]]
+    summary: dict[str, Any]
+    generated_at: datetime
+    generated_by_job_id: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payslip_id": self.payslip_id,
+            "payroll_record_id": self.payroll_record_id,
+            "employee_id": self.employee_id,
+            "payroll_cycle_id": self.payroll_cycle_id,
+            "line_items": [dict(item) for item in self.line_items],
+            "summary": dict(self.summary),
+            "generated_at": self.generated_at.isoformat(),
+            "generated_by_job_id": self.generated_by_job_id,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+@dataclass
+class PayrollAdjustment:
+    payroll_adjustment_id: str
+    payroll_record_id: str
+    employee_id: str
+    adjustment_type: str
+    reason: str
+    delta_allowances: Decimal
+    delta_deductions: Decimal
+    delta_overtime_pay: Decimal
+    created_at: datetime
+    created_by: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payroll_adjustment_id": self.payroll_adjustment_id,
+            "payroll_record_id": self.payroll_record_id,
+            "employee_id": self.employee_id,
+            "adjustment_type": self.adjustment_type,
+            "reason": self.reason,
+            "delta_allowances": str(self.delta_allowances),
+            "delta_deductions": str(self.delta_deductions),
+            "delta_overtime_pay": str(self.delta_overtime_pay),
+            "created_at": self.created_at.isoformat(),
+            "created_by": self.created_by,
+        }
+
+
+@dataclass
+class PayrollReversal:
+    payroll_reversal_id: str
+    payroll_record_id: str
+    reversal_record_id: str
+    reason: str
+    created_at: datetime
+    created_by: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payroll_reversal_id": self.payroll_reversal_id,
+            "payroll_record_id": self.payroll_record_id,
+            "reversal_record_id": self.reversal_record_id,
+            "reason": self.reason,
+            "created_at": self.created_at.isoformat(),
+            "created_by": self.created_by,
+        }
+
+
 class ServiceError(Exception):
     def __init__(self, code: str, message: str, status: int, details: list[dict[str, Any]] | None = None):
         self.code = code
@@ -228,6 +394,17 @@ class PayrollService:
         self.payroll_cycle_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='payroll_cycle_index', db_path=shared_db_path)
         self.salary_structures = PersistentKVStore[str, SalaryStructure](service='payroll-service', namespace='salary_structures', db_path=shared_db_path)
         self.salary_structure_index = PersistentKVStore[str, list[str]](service='payroll-service', namespace='salary_structure_index', db_path=shared_db_path)
+        self.payroll_components = PersistentKVStore[str, PayrollComponent](service='payroll-service', namespace='payroll_components', db_path=shared_db_path)
+        self.payroll_component_index = PersistentKVStore[str, list[str]](service='payroll-service', namespace='payroll_component_index', db_path=shared_db_path)
+        self.payroll_rules = PersistentKVStore[str, PayrollRule](service='payroll-service', namespace='payroll_rules', db_path=shared_db_path)
+        self.payroll_tax_profiles = PersistentKVStore[str, PayrollTaxProfile](service='payroll-service', namespace='payroll_tax_profiles', db_path=shared_db_path)
+        self.payroll_tax_profile_index = PersistentKVStore[str, str](service='payroll-service', namespace='payroll_tax_profile_index', db_path=shared_db_path)
+        self.payslips = PersistentKVStore[str, PayrollPayslip](service='payroll-service', namespace='payslips', db_path=shared_db_path)
+        self.payslip_index = PersistentKVStore[str, str](service='payroll-service', namespace='payslip_index', db_path=shared_db_path)
+        self.adjustments = PersistentKVStore[str, PayrollAdjustment](service='payroll-service', namespace='adjustments', db_path=shared_db_path)
+        self.adjustment_index = PersistentKVStore[str, list[str]](service='payroll-service', namespace='adjustment_index', db_path=shared_db_path)
+        self.reversals = PersistentKVStore[str, PayrollReversal](service='payroll-service', namespace='reversals', db_path=shared_db_path)
+        self.reversal_index = PersistentKVStore[str, str](service='payroll-service', namespace='reversal_index', db_path=shared_db_path)
         self.batches = PersistentKVStore[str, PayrollBatch](service='payroll-service', namespace='batches', db_path=shared_db_path)
         self.batch_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='batch_index', db_path=shared_db_path)
         self.record_batches = PersistentKVStore[str, str](service='payroll-service', namespace='record_batches', db_path=shared_db_path)
@@ -269,6 +446,31 @@ class PayrollService:
     def _trace(self, trace_id: str | None = None) -> str:
         return self.observability.trace_id(trace_id)
 
+    def _transaction(self):
+        return self.outbox.transaction(
+            self.records,
+            self.employee_profiles,
+            self.attendance_summaries,
+            self.period_index,
+            self.payroll_cycles,
+            self.payroll_cycle_index,
+            self.salary_structures,
+            self.salary_structure_index,
+            self.payroll_components,
+            self.payroll_component_index,
+            self.payroll_rules,
+            self.payroll_tax_profiles,
+            self.payroll_tax_profile_index,
+            self.payslips,
+            self.payslip_index,
+            self.adjustments,
+            self.adjustment_index,
+            self.reversals,
+            self.reversal_index,
+            self.batches,
+            self.batch_index,
+            self.record_batches,
+        )
 
     def _audit_payroll_mutation(self, action: str, ctx: AuthContext, entity: str, entity_id: str, before: dict[str, Any], after: dict[str, Any], *, trace_id: str | None = None) -> None:
         self.observability.logger.audit(
@@ -323,6 +525,10 @@ class PayrollService:
         if min_zero and val < 0:
             raise ServiceError("VALIDATION_ERROR", f"{field} must be >= 0", 422)
         return val
+
+    @staticmethod
+    def _signed_money(value: Decimal | str | int | float | None, field: str) -> Decimal:
+        return PayrollService._money(value, field, min_zero=False)
 
     @staticmethod
     def _calc(base_salary: Decimal, allowances: Decimal, overtime_pay: Decimal, deductions: Decimal) -> tuple[Decimal, Decimal]:
@@ -425,6 +631,165 @@ class PayrollService:
             return None
         return max(eligible, key=lambda item: (item.effective_from, item.created_at))
 
+    def _components_for_period(self, employee_id: str, period_start: date, period_end: date) -> list[PayrollComponent]:
+        component_ids = self.payroll_component_index.get(employee_id, [])
+        eligible: list[PayrollComponent] = []
+        for component_id in component_ids:
+            component = self.payroll_components[component_id]
+            if component.effective_from <= period_end and (component.effective_to is None or component.effective_to >= period_start):
+                eligible.append(component)
+        eligible.sort(key=lambda item: (item.category, item.code, item.created_at))
+        return eligible
+
+    def _rule_applies(self, rule: PayrollRule, employee_id: str, period_start: date, period_end: date, context: dict[str, Any]) -> bool:
+        if not rule.active:
+            return False
+        condition = rule.condition or {}
+        if condition.get("employee_id") and str(condition["employee_id"]) != employee_id:
+            return False
+        if condition.get("employment_status"):
+            profile = self.employee_profiles.get(employee_id)
+            if profile is None or profile.status != str(condition["employment_status"]):
+                return False
+        if condition.get("period_start_on_or_after") and period_start < self._coerce_date(str(condition["period_start_on_or_after"]), "period_start_on_or_after"):
+            return False
+        if condition.get("period_end_on_or_before") and period_end > self._coerce_date(str(condition["period_end_on_or_before"]), "period_end_on_or_before"):
+            return False
+        if rule.input_key:
+            actual = Decimal(str(context.get(rule.input_key, "0")))
+            minimum = Decimal(str(condition.get("min_input", "0")))
+            maximum = Decimal(str(condition.get("max_input", actual)))
+            if actual < minimum or actual > maximum:
+                return False
+        return True
+
+    def _apply_payroll_rules(
+        self,
+        *,
+        employee_id: str,
+        period_start: date,
+        period_end: date,
+        context: dict[str, Any],
+        components: list[PayrollComponent],
+    ) -> tuple[Decimal, Decimal, list[dict[str, Any]]]:
+        extra_earnings = Decimal("0.00")
+        extra_deductions = Decimal("0.00")
+        derived_components: list[dict[str, Any]] = []
+        active_rules = sorted(
+            [rule for rule in self.payroll_rules.values() if rule.active],
+            key=lambda item: (item.priority, item.code),
+        )
+        existing_codes = {component.code for component in components}
+        for rule in active_rules:
+            if not self._rule_applies(rule, employee_id, period_start, period_end, context):
+                continue
+            if rule.calculation_mode == "flat":
+                amount = rule.value
+            elif rule.calculation_mode == "percentage":
+                base_amount = Decimal(str(context.get(rule.input_key or "taxable_earnings", "0")))
+                amount = (base_amount * rule.value / Decimal("100")).quantize(Decimal("0.01"))
+            else:
+                raise ServiceError("VALIDATION_ERROR", f"Unsupported payroll rule calculation_mode: {rule.calculation_mode}", 422)
+            amount = amount.quantize(Decimal("0.01"))
+            if rule.category == "earning":
+                extra_earnings += amount
+            elif rule.category == "deduction":
+                extra_deductions += amount
+            else:
+                raise ServiceError("VALIDATION_ERROR", f"Unsupported payroll rule category: {rule.category}", 422)
+            component_code = rule.target_component_code or rule.code
+            if component_code in existing_codes:
+                continue
+            derived_components.append(
+                {
+                    "code": component_code,
+                    "name": rule.name,
+                    "category": rule.category,
+                    "amount": str(amount),
+                    "source": "rule",
+                    "rule_code": rule.code,
+                    "taxable": rule.category == "earning",
+                }
+            )
+            existing_codes.add(component_code)
+        return extra_earnings.quantize(Decimal("0.01")), extra_deductions.quantize(Decimal("0.01")), derived_components
+
+    def _calculate_tax_deduction(self, employee_id: str, taxable_earnings: Decimal, *, context: dict[str, Any]) -> tuple[Decimal, dict[str, Any] | None]:
+        profile_id = self.payroll_tax_profile_index.get(employee_id)
+        if not profile_id:
+            return Decimal("0.00"), None
+        profile = self.payroll_tax_profiles[profile_id]
+        rate = self._money(profile.metadata.get("rate"), "tax_rate")
+        amount = (taxable_earnings * rate / Decimal("100")).quantize(Decimal("0.01"))
+        return amount, {
+            "code": f"TAX-{profile.tax_code}",
+            "name": f"{profile.jurisdiction} tax",
+            "category": "deduction",
+            "amount": str(amount),
+            "source": "tax",
+            "tax_profile_id": profile.payroll_tax_profile_id,
+            "tax_code": profile.tax_code,
+            "taxable_base": str(taxable_earnings),
+            "metadata": {
+                "jurisdiction": profile.jurisdiction,
+                "withholding_rate": str(rate),
+                "tax_context": dict(context),
+            },
+        }
+
+    def _line_item(self, *, code: str, name: str, category: str, amount: Decimal, source: str, taxable: bool = False, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+        return {
+            "code": code,
+            "name": name,
+            "category": category,
+            "amount": str(amount.quantize(Decimal("0.01"))),
+            "source": source,
+            "taxable": taxable,
+            "metadata": dict(metadata or {}),
+        }
+
+    def _build_payslip_payload(self, record: PayrollRecord) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        components = self._components_for_period(record.employee_id, record.pay_period_start, record.pay_period_end)
+        component_items = [
+            self._line_item(
+                code=component.code,
+                name=component.name,
+                category=component.category,
+                amount=component.amount,
+                source="component",
+                taxable=component.taxable,
+                metadata=component.metadata,
+            )
+            for component in components
+        ]
+        adjustment_ids = self.adjustment_index.get(record.payroll_record_id, [])
+        adjustment_items = []
+        for adjustment_id in adjustment_ids:
+            adjustment = self.adjustments[adjustment_id]
+            if adjustment.delta_allowances:
+                adjustment_items.append(self._line_item(code=f"ADJ-{adjustment.payroll_adjustment_id}-ALLOW", name=adjustment.reason, category="earning", amount=adjustment.delta_allowances, source="adjustment"))
+            if adjustment.delta_deductions:
+                adjustment_items.append(self._line_item(code=f"ADJ-{adjustment.payroll_adjustment_id}-DEDUCT", name=adjustment.reason, category="deduction", amount=adjustment.delta_deductions, source="adjustment"))
+            if adjustment.delta_overtime_pay:
+                adjustment_items.append(self._line_item(code=f"ADJ-{adjustment.payroll_adjustment_id}-OT", name=adjustment.reason, category="earning", amount=adjustment.delta_overtime_pay, source="adjustment"))
+        line_items = [
+            self._line_item(code="BASE", name="Base salary", category="earning", amount=record.base_salary, source="salary_structure", taxable=True),
+            self._line_item(code="ALLOWANCES", name="Allowances", category="earning", amount=record.allowances, source="record", taxable=True),
+            self._line_item(code="OVERTIME", name="Overtime", category="earning", amount=record.overtime_pay, source="record", taxable=True),
+            self._line_item(code="DEDUCTIONS", name="Deductions", category="deduction", amount=record.deductions, source="record"),
+            *component_items,
+            *adjustment_items,
+        ]
+        summary = {
+            "gross_pay": str(record.gross_pay),
+            "net_pay": str(record.net_pay),
+            "currency": record.currency,
+            "status": record.status.value,
+            "pay_period_start": record.pay_period_start.isoformat(),
+            "pay_period_end": record.pay_period_end.isoformat(),
+        }
+        return line_items, summary
+
     def _resolve_or_create_cycle(self, payload: dict[str, Any]) -> PayrollCycle | None:
         cycle_id = payload.get("payroll_cycle_id")
         if cycle_id:
@@ -486,6 +851,33 @@ class PayrollService:
             else Decimal("0.00")
         )
         overtime_pay = self._money(payload.get("overtime_pay", default_overtime_pay), "overtime_pay")
+        components = self._components_for_period(str(employee_id), pay_period_start, pay_period_end) if employee_id is not None else []
+        component_earnings = sum((component.amount for component in components if component.category == "earning"), Decimal("0.00"))
+        component_deductions = sum((component.amount for component in components if component.category == "deduction"), Decimal("0.00"))
+        context = {
+            "base_salary": str(base_salary),
+            "allowances": str(allowances),
+            "deductions": str(deductions),
+            "overtime_pay": str(overtime_pay),
+            "overtime_hours": str(overtime_hours),
+            "component_earnings": str(component_earnings),
+            "component_deductions": str(component_deductions),
+            "taxable_earnings": str(base_salary + allowances + overtime_pay + component_earnings),
+        }
+        rule_earnings, rule_deductions, _derived_rule_components = self._apply_payroll_rules(
+            employee_id=str(employee_id),
+            period_start=pay_period_start,
+            period_end=pay_period_end,
+            context=context,
+            components=components,
+        )
+        tax_deduction, _tax_component = self._calculate_tax_deduction(
+            str(employee_id),
+            Decimal(context["taxable_earnings"]) + rule_earnings,
+            context=context,
+        )
+        allowances = (allowances + component_earnings + rule_earnings).quantize(Decimal("0.01"))
+        deductions = (deductions + component_deductions + rule_deductions + tax_deduction).quantize(Decimal("0.01"))
         gross, net = self._calc(base_salary, allowances, overtime_pay, deductions)
         self._validate_declared_totals(payload, gross, net)
         currency = self._validate_currency(payload.get("currency", salary_structure.currency if salary_structure else "USD"))
@@ -668,7 +1060,7 @@ class PayrollService:
         try:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
-            with self._lock:
+            with self._lock, self._transaction():
                 period_start = self._coerce_date(self._require_field(payload, "pay_period_start"), "pay_period_start")
                 period_end = self._coerce_date(self._require_field(payload, "pay_period_end"), "pay_period_end")
                 payment_date = self._coerce_date(self._require_field(payload, "payment_date"), "payment_date")
@@ -721,7 +1113,7 @@ class PayrollService:
         try:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
-            with self._lock:
+            with self._lock, self._transaction():
                 employee_id = str(self._require_field(payload, "employee_id"))
                 if employee_id not in self.employee_profiles:
                     self.register_employee_profile(employee_id)
@@ -762,6 +1154,358 @@ class PayrollService:
             self._finalize_observation("create_salary_structure", trace, started, False, {"employee_id": payload.get("employee_id")})
             raise
 
+    def create_payroll_component(
+        self,
+        payload: dict[str, Any],
+        authorization: str | None,
+        trace_id: str | None = None,
+    ) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            self._require_admin(ctx)
+            employee_id = str(self._require_field(payload, "employee_id"))
+            if employee_id not in self.employee_profiles:
+                self.register_employee_profile(employee_id)
+            component = PayrollComponent(
+                payroll_component_id=str(uuid4()),
+                employee_id=employee_id,
+                code=str(self._require_field(payload, "code")).upper(),
+                name=str(self._require_field(payload, "name")),
+                category=str(self._require_field(payload, "category")).lower(),
+                amount=self._money(payload.get("amount"), "amount"),
+                taxable=bool(payload.get("taxable", False)),
+                recurring=bool(payload.get("recurring", True)),
+                effective_from=self._coerce_date(self._require_field(payload, "effective_from"), "effective_from"),
+                effective_to=self._coerce_date(payload["effective_to"], "effective_to") if payload.get("effective_to") else None,
+                metadata=dict(payload.get("metadata") or {}),
+                created_at=self._now(),
+                updated_at=self._now(),
+            )
+            if component.category not in {"earning", "deduction"}:
+                raise ServiceError("VALIDATION_ERROR", "category must be earning or deduction", 422)
+            with self._lock, self._transaction():
+                self.payroll_components[component.payroll_component_id] = component
+                self.payroll_component_index.setdefault(employee_id, []).append(component.payroll_component_id)
+            self._audit_payroll_mutation("payroll_component_created", ctx, "PayrollComponent", component.payroll_component_id, {}, component.to_dict(), trace_id=trace)
+            self._finalize_observation("create_payroll_component", trace, started, True, {"status": 201})
+            return 201, component.to_dict()
+        except Exception as exc:
+            self.error_logger.log("create_payroll_component", exc, trace_id=trace, details={"employee_id": payload.get("employee_id")})
+            self._finalize_observation("create_payroll_component", trace, started, False, {"employee_id": payload.get("employee_id")})
+            raise
+
+    def upsert_payroll_rule(self, payload: dict[str, Any], authorization: str | None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            self._require_admin(ctx)
+            rule_id = str(payload.get("payroll_rule_id") or "")
+            existing = self.payroll_rules.get(rule_id) if rule_id else None
+            ts = self._now()
+            rule = existing or PayrollRule(
+                payroll_rule_id=str(uuid4()),
+                code=str(self._require_field(payload, "code")).upper(),
+                name=str(self._require_field(payload, "name")),
+                category=str(self._require_field(payload, "category")).lower(),
+                calculation_mode=str(self._require_field(payload, "calculation_mode")).lower(),
+                value=self._money(payload.get("value"), "value"),
+                target_component_code=str(payload.get("target_component_code")) if payload.get("target_component_code") else None,
+                input_key=str(payload.get("input_key")) if payload.get("input_key") else None,
+                condition=dict(payload.get("condition") or {}),
+                priority=int(payload.get("priority", 100)),
+                active=bool(payload.get("active", True)),
+                created_at=ts,
+                updated_at=ts,
+            )
+            if existing:
+                before = existing.to_dict()
+                rule.code = str(payload.get("code", rule.code)).upper()
+                rule.name = str(payload.get("name", rule.name))
+                rule.category = str(payload.get("category", rule.category)).lower()
+                rule.calculation_mode = str(payload.get("calculation_mode", rule.calculation_mode)).lower()
+                if "value" in payload:
+                    rule.value = self._money(payload.get("value"), "value")
+                rule.target_component_code = str(payload.get("target_component_code", rule.target_component_code)) if payload.get("target_component_code", rule.target_component_code) else None
+                rule.input_key = str(payload.get("input_key", rule.input_key)) if payload.get("input_key", rule.input_key) else None
+                rule.condition = dict(payload.get("condition", rule.condition) or {})
+                rule.priority = int(payload.get("priority", rule.priority))
+                rule.active = bool(payload.get("active", rule.active))
+                rule.updated_at = ts
+                status_code = 200
+            else:
+                before = {}
+                status_code = 201
+            if rule.category not in {"earning", "deduction"}:
+                raise ServiceError("VALIDATION_ERROR", "category must be earning or deduction", 422)
+            if rule.calculation_mode not in {"flat", "percentage"}:
+                raise ServiceError("VALIDATION_ERROR", "calculation_mode must be flat or percentage", 422)
+            with self._lock, self._transaction():
+                self.payroll_rules[rule.payroll_rule_id] = rule
+            self._audit_payroll_mutation("payroll_rule_upserted", ctx, "PayrollRule", rule.payroll_rule_id, before, rule.to_dict(), trace_id=trace)
+            self._finalize_observation("upsert_payroll_rule", trace, started, True, {"status": status_code})
+            return status_code, rule.to_dict()
+        except Exception as exc:
+            self.error_logger.log("upsert_payroll_rule", exc, trace_id=trace, details={"code": payload.get("code")})
+            self._finalize_observation("upsert_payroll_rule", trace, started, False, {"code": payload.get("code")})
+            raise
+
+    def upsert_payroll_tax_profile(self, payload: dict[str, Any], authorization: str | None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            self._require_admin(ctx)
+            employee_id = str(self._require_field(payload, "employee_id"))
+            if employee_id not in self.employee_profiles:
+                self.register_employee_profile(employee_id)
+            existing_id = self.payroll_tax_profile_index.get(employee_id)
+            existing = self.payroll_tax_profiles.get(existing_id) if existing_id else None
+            ts = self._now()
+            profile = existing or PayrollTaxProfile(
+                payroll_tax_profile_id=str(uuid4()),
+                employee_id=employee_id,
+                jurisdiction=str(self._require_field(payload, "jurisdiction")),
+                tax_code=str(self._require_field(payload, "tax_code")),
+                metadata=dict(payload.get("metadata") or {}),
+                created_at=ts,
+                updated_at=ts,
+            )
+            before = existing.to_dict() if existing else {}
+            if existing:
+                profile.jurisdiction = str(payload.get("jurisdiction", profile.jurisdiction))
+                profile.tax_code = str(payload.get("tax_code", profile.tax_code))
+                profile.metadata = dict(payload.get("metadata", profile.metadata) or {})
+                profile.updated_at = ts
+            with self._lock, self._transaction():
+                self.payroll_tax_profiles[profile.payroll_tax_profile_id] = profile
+                self.payroll_tax_profile_index[employee_id] = profile.payroll_tax_profile_id
+            self._audit_payroll_mutation("payroll_tax_profile_upserted", ctx, "PayrollTaxProfile", profile.payroll_tax_profile_id, before, profile.to_dict(), trace_id=trace)
+            self._finalize_observation("upsert_payroll_tax_profile", trace, started, True, {"status": 200 if existing else 201})
+            return 200 if existing else 201, profile.to_dict()
+        except Exception as exc:
+            self.error_logger.log("upsert_payroll_tax_profile", exc, trace_id=trace, details={"employee_id": payload.get("employee_id")})
+            self._finalize_observation("upsert_payroll_tax_profile", trace, started, False, {"employee_id": payload.get("employee_id")})
+            raise
+
+    def generate_payslip(self, payroll_record_id: str, authorization: str | None, *, job_id: str | None = None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            with self._lock:
+                record = self.records.get(payroll_record_id)
+                if not record:
+                    raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
+                self._assert_read_scope(ctx, record)
+                before = self.payslips[self.payslip_index[payroll_record_id]].to_dict() if payroll_record_id in self.payslip_index else {}
+                line_items, summary = self._build_payslip_payload(record)
+                ts = self._now()
+                payslip = self.payslips.get(self.payslip_index[payroll_record_id]) if payroll_record_id in self.payslip_index else None
+                if payslip is None:
+                    payslip = PayrollPayslip(
+                        payslip_id=str(uuid4()),
+                        payroll_record_id=record.payroll_record_id,
+                        employee_id=record.employee_id,
+                        payroll_cycle_id=record.payroll_cycle_id,
+                        line_items=line_items,
+                        summary=summary,
+                        generated_at=ts,
+                        generated_by_job_id=job_id,
+                        created_at=ts,
+                        updated_at=ts,
+                    )
+                    status_code = 201
+                else:
+                    payslip.line_items = line_items
+                    payslip.summary = summary
+                    payslip.generated_at = ts
+                    payslip.generated_by_job_id = job_id
+                    payslip.updated_at = ts
+                    status_code = 200
+                with self._transaction():
+                    self.payslips[payslip.payslip_id] = payslip
+                    self.payslip_index[record.payroll_record_id] = payslip.payslip_id
+                    self.outbox.enqueue(
+                        legacy_event_name="PayrollProcessed",
+                        data={
+                            "payroll_record_id": record.payroll_record_id,
+                            "employee_id": record.employee_id,
+                            "payslip_id": payslip.payslip_id,
+                            "status": record.status.value,
+                            "generated_at": payslip.generated_at.isoformat(),
+                        },
+                        correlation_id=trace,
+                        idempotency_key=f"payslip:{record.payroll_record_id}:{payslip.payslip_id}",
+                        metadata={"artifact": "payslip"},
+                    )
+                self.outbox.dispatch_pending(self.events.append)
+            self._audit_payroll_mutation("payroll_payslip_generated", ctx, "PayrollPayslip", payslip.payslip_id, before, payslip.to_dict(), trace_id=trace)
+            self._finalize_observation("generate_payslip", trace, started, True, {"status": status_code})
+            return status_code, payslip.to_dict()
+        except Exception as exc:
+            self.error_logger.log("generate_payslip", exc, trace_id=trace, details={"payroll_record_id": payroll_record_id})
+            self._finalize_observation("generate_payslip", trace, started, False, {"payroll_record_id": payroll_record_id})
+            raise
+
+    def apply_adjustment(self, payroll_record_id: str, payload: dict[str, Any], authorization: str | None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            self._require_admin(ctx)
+            with self._lock:
+                record = self.records.get(payroll_record_id)
+                if not record:
+                    raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
+                if record.status == PayrollStatus.CANCELLED:
+                    raise ServiceError("CONFLICT", "Cannot adjust cancelled records", 409)
+                before = record.to_dict()
+                adjustment = PayrollAdjustment(
+                    payroll_adjustment_id=str(uuid4()),
+                    payroll_record_id=record.payroll_record_id,
+                    employee_id=record.employee_id,
+                    adjustment_type=str(payload.get("adjustment_type", "manual")),
+                    reason=str(self._require_field(payload, "reason")),
+                    delta_allowances=self._signed_money(payload.get("delta_allowances"), "delta_allowances"),
+                    delta_deductions=self._signed_money(payload.get("delta_deductions"), "delta_deductions"),
+                    delta_overtime_pay=self._signed_money(payload.get("delta_overtime_pay"), "delta_overtime_pay"),
+                    created_at=self._now(),
+                    created_by=ctx.employee_id or ctx.role.value,
+                )
+                with self._transaction():
+                    record.allowances = (record.allowances + adjustment.delta_allowances).quantize(Decimal("0.01"))
+                    record.deductions = (record.deductions + adjustment.delta_deductions).quantize(Decimal("0.01"))
+                    record.overtime_pay = (record.overtime_pay + adjustment.delta_overtime_pay).quantize(Decimal("0.01"))
+                    if record.allowances < 0 or record.deductions < 0 or record.overtime_pay < 0:
+                        raise ServiceError("VALIDATION_ERROR", "adjustment cannot produce negative payroll amounts", 422)
+                    record.gross_pay, record.net_pay = self._calc(record.base_salary, record.allowances, record.overtime_pay, record.deductions)
+                    record.updated_at = self._now()
+                    if record.status == PayrollStatus.PAID:
+                        record.status = PayrollStatus.PROCESSED
+                    self.records[record.payroll_record_id] = record
+                    self.adjustments[adjustment.payroll_adjustment_id] = adjustment
+                    self.adjustment_index.setdefault(record.payroll_record_id, []).append(adjustment.payroll_adjustment_id)
+                self.outbox.enqueue(
+                    legacy_event_name="PayrollProcessed",
+                    data={
+                        "payroll_record_id": record.payroll_record_id,
+                        "employee_id": record.employee_id,
+                        "status": record.status.value,
+                        "adjustment_id": adjustment.payroll_adjustment_id,
+                        "net_pay": str(record.net_pay),
+                        "currency": record.currency,
+                    },
+                    correlation_id=trace,
+                    idempotency_key=adjustment.payroll_adjustment_id,
+                )
+                self.outbox.dispatch_pending(self.events.append)
+            self._audit_payroll_mutation("payroll_record_adjusted", ctx, "PayrollRecord", record.payroll_record_id, before, record.to_dict(), trace_id=trace)
+            self._finalize_observation("apply_adjustment", trace, started, True, {"status": 200})
+            return 200, {"record": record.to_dict(), "adjustment": adjustment.to_dict()}
+        except Exception as exc:
+            self.error_logger.log("apply_adjustment", exc, trace_id=trace, details={"payroll_record_id": payroll_record_id})
+            self._finalize_observation("apply_adjustment", trace, started, False, {"payroll_record_id": payroll_record_id})
+            raise
+
+    def reverse_payroll_record(self, payroll_record_id: str, payload: dict[str, Any], authorization: str | None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        try:
+            ctx = self.decode_bearer_token(authorization)
+            self._require_admin(ctx)
+            with self._lock:
+                record = self.records.get(payroll_record_id)
+                if not record:
+                    raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
+                if payroll_record_id in self.reversal_index:
+                    reversal = self.reversals[self.reversal_index[payroll_record_id]]
+                    return 200, reversal.to_dict()
+                before = record.to_dict()
+                reason = str(self._require_field(payload, "reason"))
+                ts = self._now()
+                reversal_record = PayrollRecord(
+                    payroll_record_id=str(uuid4()),
+                    employee_id=record.employee_id,
+                    salary_structure_id=record.salary_structure_id,
+                    payroll_cycle_id=record.payroll_cycle_id,
+                    pay_period_start=record.pay_period_start,
+                    pay_period_end=record.pay_period_end,
+                    base_salary=-record.base_salary,
+                    allowances=-record.allowances,
+                    deductions=-record.deductions,
+                    overtime_pay=-record.overtime_pay,
+                    gross_pay=-record.gross_pay,
+                    net_pay=-record.net_pay,
+                    currency=record.currency,
+                    payment_date=payload.get("payment_date") and self._coerce_date(payload["payment_date"], "payment_date"),
+                    payment_workflow_id=None,
+                    status=PayrollStatus.PROCESSED,
+                    created_at=ts,
+                    updated_at=ts,
+                )
+                reversal = PayrollReversal(
+                    payroll_reversal_id=str(uuid4()),
+                    payroll_record_id=record.payroll_record_id,
+                    reversal_record_id=reversal_record.payroll_record_id,
+                    reason=reason,
+                    created_at=ts,
+                    created_by=ctx.employee_id or ctx.role.value,
+                )
+                with self._transaction():
+                    record.status = PayrollStatus.CANCELLED
+                    record.updated_at = ts
+                    self.records[record.payroll_record_id] = record
+                    self.records[reversal_record.payroll_record_id] = reversal_record
+                    self.reversals[reversal.payroll_reversal_id] = reversal
+                    self.reversal_index[record.payroll_record_id] = reversal.payroll_reversal_id
+                self.outbox.enqueue(
+                    legacy_event_name="PayrollCancelled",
+                    data={
+                        "payroll_record_id": record.payroll_record_id,
+                        "employee_id": record.employee_id,
+                        "pay_period_start": record.pay_period_start.isoformat(),
+                        "pay_period_end": record.pay_period_end.isoformat(),
+                        "status": record.status.value,
+                        "reversal_record_id": reversal_record.payroll_record_id,
+                        "reason": reason,
+                        "updated_at": record.updated_at.isoformat(),
+                    },
+                    correlation_id=trace,
+                    idempotency_key=reversal.payroll_reversal_id,
+                )
+                self.outbox.dispatch_pending(self.events.append)
+            self._audit_payroll_mutation("payroll_record_reversed", ctx, "PayrollRecord", record.payroll_record_id, before, record.to_dict(), trace_id=trace)
+            self._finalize_observation("reverse_payroll_record", trace, started, True, {"status": 200})
+            return 200, {"record": record.to_dict(), "reversal": reversal.to_dict(), "reversal_record": reversal_record.to_dict()}
+        except Exception as exc:
+            self.error_logger.log("reverse_payroll_record", exc, trace_id=trace, details={"payroll_record_id": payroll_record_id})
+            self._finalize_observation("reverse_payroll_record", trace, started, False, {"payroll_record_id": payroll_record_id})
+            raise
+
+    def enqueue_payroll_run(self, payload: dict[str, Any], authorization: str | None, background_jobs: Any, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        trace = self._trace(trace_id)
+        ctx = self.decode_bearer_token(authorization)
+        self._require_admin(ctx)
+        job = background_jobs.enqueue_job(
+            tenant_id=self.tenant_id,
+            job_type="payroll.run",
+            payload={
+                "period_start": str(self._require_field(payload, "period_start")),
+                "period_end": str(self._require_field(payload, "period_end")),
+                "authorization": authorization,
+                "records": list(payload.get("records") or []),
+                "generate_payslips": bool(payload.get("generate_payslips", True)),
+            },
+            actor_id=ctx.employee_id or ctx.role.value,
+            actor_type="user",
+            trace_id=trace,
+            idempotency_key=str(payload.get("idempotency_key") or f"payroll-run-job:{payload['period_start']}:{payload['period_end']}"),
+        )
+        return 202, job.to_dict()
+
     def generate_payroll(
         self,
         payload: dict[str, Any],
@@ -777,7 +1521,7 @@ class PayrollService:
         try:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
-            with self._lock:
+            with self._lock, self._transaction():
                 enriched_payload = {**payload, "_authorization": authorization}
                 employee_id = enriched_payload.get("employee_id")
                 if not employee_id and enriched_payload.get("salary_structure_id"):
@@ -820,7 +1564,19 @@ class PayrollService:
                 record = self._build_record_from_payload(enriched_payload, salary_structure=salary_structure, payroll_cycle=payroll_cycle)
                 self.records[record.payroll_record_id] = record
                 self.period_index[key] = record.payroll_record_id
-                emit_canonical_event(self.events, legacy_event_name="PayrollDrafted", data={"payroll_record_id": record.payroll_record_id, "at": record.created_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
+                self.outbox.enqueue(
+                    legacy_event_name="PayrollDrafted",
+                    data={
+                        "payroll_record_id": record.payroll_record_id,
+                        "employee_id": record.employee_id,
+                        "pay_period_start": record.pay_period_start.isoformat(),
+                        "pay_period_end": record.pay_period_end.isoformat(),
+                        "status": record.status.value,
+                    },
+                    correlation_id=trace,
+                    idempotency_key=record.payroll_record_id,
+                )
+            self.outbox.dispatch_pending(self.events.append)
             self._audit_payroll_mutation('payroll_record_drafted', ctx, 'PayrollRecord', record.payroll_record_id, {}, record.to_dict(), trace_id=trace)
             self._finalize_observation("create_payroll_record", trace, started, True, {"status": 201})
             return self._record_idempotent_result(replay_key, fingerprint, 201, record.to_dict())
@@ -835,7 +1591,7 @@ class PayrollService:
         try:
             ctx = self.decode_bearer_token(authorization)
             self._require_admin(ctx)
-            with self._lock:
+            with self._lock, self._transaction():
                 start, end = self._coerce_period(period_start, period_end)
                 fingerprint = json.dumps({"period_start": period_start, "period_end": period_end, "records": records or []}, sort_keys=True)
                 replay_key = idempotency_key or f"payroll-run:{period_start}:{period_end}"
@@ -878,9 +1634,9 @@ class PayrollService:
                     if record.status == PayrollStatus.DRAFT:
                         record.status = PayrollStatus.PROCESSED
                         record.updated_at = self._now()
-                        self._emit_event(
-                            "PayrollProcessed",
-                            {
+                        self.outbox.enqueue(
+                            legacy_event_name="PayrollProcessed",
+                            data={
                                 "payroll_record_id": record_id,
                                 "employee_id": record.employee_id,
                                 "pay_period_start": record.pay_period_start.isoformat(),
@@ -902,9 +1658,9 @@ class PayrollService:
                         if record.status == PayrollStatus.DRAFT:
                             record.status = PayrollStatus.PROCESSED
                             record.updated_at = self._now()
-                            self._emit_event(
-                                "PayrollProcessed",
-                                {
+                            self.outbox.enqueue(
+                                legacy_event_name="PayrollProcessed",
+                                data={
                                     "payroll_record_id": record.payroll_record_id,
                                     "employee_id": record.employee_id,
                                     "pay_period_start": record.pay_period_start.isoformat(),
@@ -934,6 +1690,7 @@ class PayrollService:
                         "consistency": validation,
                     }
                 }
+            self.outbox.dispatch_pending(self.events.append)
             self._audit_payroll_mutation('payroll_run_processed', ctx, 'PayrollRun', f'{period_start}:{period_end}', {}, {'batch': batch.to_dict(), 'period_start': period_start, 'period_end': period_end, 'processed_count': batch.processed_count, 'failed_count': batch.failed_count}, trace_id=trace)
             self._finalize_observation(
                 "run_payroll",
@@ -999,7 +1756,7 @@ class PayrollService:
         started = perf_counter()
         ctx = self.decode_bearer_token(authorization)
         self._require_admin(ctx)
-        with self._lock:
+        with self._lock, self._transaction():
             record = self.records.get(payroll_record_id)
             before = record.to_dict() if record else {}
             if not record:
@@ -1049,7 +1806,7 @@ class PayrollService:
         started = perf_counter()
         ctx = self.decode_bearer_token(authorization)
         self._require_admin(ctx)
-        with self._lock:
+        with self._lock, self._transaction():
             record = self.records.get(payroll_record_id)
             before = record.to_dict() if record else {}
             if not record:
@@ -1102,9 +1859,9 @@ class PayrollService:
             record.payment_date = date.fromisoformat(payment_date) if payment_date else date.today()
             record.status = PayrollStatus.PAID
             record.updated_at = self._now()
-            self._emit_event(
-                "PayrollPaid",
-                {
+            self.outbox.enqueue(
+                legacy_event_name="PayrollPaid",
+                data={
                     "payroll_record_id": record.payroll_record_id,
                     "employee_id": record.employee_id,
                     "payment_date": record.payment_date.isoformat() if record.payment_date else None,
@@ -1121,6 +1878,7 @@ class PayrollService:
                 batch = self.batches[batch_id]
                 self._recompute_batch(batch)
                 batch_payload = batch.to_dict()
+        self.outbox.dispatch_pending(self.events.append)
         self._audit_payroll_mutation('payroll_record_paid', ctx, 'PayrollRecord', record.payroll_record_id, before, record.to_dict(), trace_id=trace)
         self._finalize_observation("mark_paid", trace, started, True, {"status": 200})
         payload = record.to_dict()
