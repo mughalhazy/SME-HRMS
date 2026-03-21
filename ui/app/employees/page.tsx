@@ -1,25 +1,13 @@
-import Link from 'next/link'
-import { UserPlus } from 'lucide-react'
-
-import { EmployeeListPage } from '@/components/employees/employee-list-page'
 import AppShell from '@/components/hrms/shell/app-shell'
-import { Button } from '@/components/ui/button'
+import { EmployeesV2 } from '@/components/employees/EmployeesV2'
 
 export default function EmployeesPage() {
   return (
     <AppShell
-      pageTitle="Employees"
-      pageDescription="Browse, filter, and act on employee records from a single structured directory table."
-      pageActions={
-        <Button asChild className="h-11 shadow-none">
-          <Link href="/employees/new">
-            <UserPlus className="h-4 w-4" />
-            Add Employee
-          </Link>
-        </Button>
-      }
+      pageTitle="Employees V2"
+      pageDescription="Use a clean, table-dominant employee grid for high-speed scanning, filtering, and direct record actions."
     >
-      <EmployeeListPage />
+      <EmployeesV2 />
     </AppShell>
   )
 }
