@@ -11,6 +11,7 @@ from time import perf_counter
 
 from event_contract import EventRegistry, emit_canonical_event
 from notification_service import NotificationService
+from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
@@ -149,6 +150,14 @@ class LeaveService:
         self.event_registry = EventRegistry()
         self.notification_service = notification_service or NotificationService()
         self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
+        self.outbox = OutboxManager(
+            service_name='leave-service',
+            tenant_id=self.tenant_id,
+            db_path=shared_db_path,
+            observability=self.observability,
+            dead_letters=self.dead_letters,
+            event_registry=self.event_registry,
+        )
         self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=db_path)
         seeded_employees = {
             "emp-admin": EmployeeRecord(self.tenant_id, "emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),

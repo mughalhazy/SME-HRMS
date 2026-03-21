@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from event_contract import EventRegistry, emit_canonical_event
 from notification_service import NotificationService
+from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 from workflow_service import WorkflowService, WorkflowServiceError
@@ -239,6 +240,14 @@ class PayrollService:
         self.event_registry = EventRegistry()
         self.notification_service = notification_service or NotificationService()
         self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
+        self.outbox = OutboxManager(
+            service_name='payroll-service',
+            tenant_id=self.tenant_id,
+            db_path=shared_db_path,
+            observability=self.observability,
+            dead_letters=self.dead_letters,
+            event_registry=self.event_registry,
+        )
         self._lock = RLock()
         self.workflow_service.register_definition(
             tenant_id=self.tenant_id,

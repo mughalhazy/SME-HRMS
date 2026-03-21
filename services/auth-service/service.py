@@ -212,6 +212,7 @@ class AuthService:
         self._users_by_name[user_lookup_key] = user
         self._users_by_id[user.user_id] = user
         self._audit_auth_mutation('auth_user_registered', str(user.user_id), 'UserAccount', str(user.user_id), tenant_id, {}, self._user_payload(user), role=role)
+        self._emit_event('auth.user.provisioned', {'user_id': str(user.user_id), 'tenant_id': tenant_id, 'role': role}, tenant_id=tenant_id, idempotency_key=str(user.user_id))
         return user
 
     def login(self, username: str, password: str, *, tenant_id: str = DEFAULT_TENANT_ID, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800) -> dict[str, Any]:
@@ -428,7 +429,9 @@ class AuthService:
         session.revoked = True
         session.revoked_at = datetime.now(timezone.utc)
         user = self._users_by_id.get(session.user_id)
-        self._audit_auth_mutation('auth_logout', actor, 'Session', session_id, user.tenant_id if user else DEFAULT_TENANT_ID, before, self._session_payload(session), role=role)
+        tenant_id = user.tenant_id if user else DEFAULT_TENANT_ID
+        self._audit_auth_mutation('auth_logout', actor, 'Session', session_id, tenant_id, before, self._session_payload(session), role=role)
+        self._emit_event('auth.session.revoked', {'session_id': session_id, 'user_id': str(session.user_id), 'tenant_id': tenant_id}, tenant_id=tenant_id, idempotency_key=session_id)
 
     def _get_session_by_refresh_token(self, refresh_token: str) -> SessionRecord:
         if not refresh_token:

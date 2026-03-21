@@ -201,7 +201,8 @@ class AuthServiceTests(unittest.TestCase):
         )
         self.assertEqual(sessions_status, 200)
         self.assertEqual(len(sessions_payload['data']), 1)
-        self.assertEqual(sessions_payload['meta']['pagination'], {})
+        self.assertEqual(sessions_payload['meta']['pagination']['count'], 1)
+        self.assertEqual(sessions_payload['meta']['service'], 'auth-service')
 
         revoke_status, revoke_payload = post_auth_session_revoke(
             self.service,
