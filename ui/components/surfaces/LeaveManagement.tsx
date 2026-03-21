@@ -20,7 +20,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input, Select } from '@/components/ui/input'
-import { PageGrid, PageStack, StatCard } from '@/components/ui/page'
+import { KpiGrid, PageStack, StatCard } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -190,12 +190,12 @@ export function LeaveManagement() {
         </div>
       </section>
 
-      <PageGrid className="md:grid-cols-2 xl:grid-cols-4">
+      <KpiGrid>
         {kpis.map((item) => {
           const Icon = item.icon
           return <StatCard key={item.label} title={item.label} value={item.value} hint="Operational view aligned to the active leave queue." icon={Icon} />
         })}
-      </PageGrid>
+      </KpiGrid>
 
       <Card>
         <CardContent className="p-4">

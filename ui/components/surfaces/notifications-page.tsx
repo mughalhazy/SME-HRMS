@@ -6,7 +6,7 @@ import { BellRing, CheckCheck, MailWarning, RefreshCw, ShieldCheck } from 'lucid
 
 import { EmptyState, ErrorState, StatSkeletonGrid, TableSkeleton } from '@/components/ui/feedback'
 import { Button } from '@/components/ui/button'
-import { PageGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
+import { KpiGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { apiRequest } from '@/lib/api/client'
 
@@ -145,11 +145,11 @@ export function NotificationsPage() {
         <ErrorState title="Unable to load delivery log" message={deliveryQuery.error.message} onRetry={refreshAll} />
       ) : (
         <>
-          <PageGrid className="md:grid-cols-2 xl:grid-cols-4">
+          <KpiGrid>
             {stats.map((stat) => (
               <StatCard key={stat.label} title={stat.label} value={stat.value} hint={stat.hint} icon={stat.icon} />
             ))}
-          </PageGrid>
+          </KpiGrid>
 
           <section className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
             <SectionHeading

@@ -18,14 +18,15 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
+  KpiGrid,
   PageSection,
   PageSectionHeader,
   PageStack,
   pageSectionBodyClassName,
   pageEyebrowClassName,
-  pageIconChipClassName,
   pageMetaTextClassName,
   pageSectionTitleClassName,
+  StatCard,
 } from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -271,30 +272,15 @@ export function EnterpriseDashboard() {
         />
       </PageSection>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
+      <KpiGrid>
         {metrics.map((metric) => {
           const Icon = metric.icon
 
           return (
-            <Card key={metric.title} className="flex min-h-48 flex-col xl:col-span-3">
-              <CardContent className="flex h-full flex-col justify-between p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className={pageIconChipClassName}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <p className={mutedMetaClassName}>{metric.change}</p>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-slate-600">{metric.title}</p>
-                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
-                  <p className="text-sm leading-6 text-slate-500">{metric.hint}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard key={metric.title} title={metric.title} value={metric.value} hint={metric.hint} icon={Icon} meta={metric.change} />
           )
         })}
-      </section>
+      </KpiGrid>
 
       <section className="grid gap-6 xl:grid-cols-12">
         <div className="min-w-0 space-y-6 xl:col-span-8">

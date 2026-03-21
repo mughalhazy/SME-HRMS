@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { PageStack } from '@/components/ui/page'
+import { KpiGrid, PageStack, StatCard } from '@/components/ui/page'
 
 const metrics = [
   {
@@ -149,28 +149,15 @@ export function PerformanceReviewsPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-12 gap-4">
+      <KpiGrid>
         {metrics.map((metric) => {
           const Icon = metric.icon
 
           return (
-            <Card key={metric.label} className="col-span-12 h-full border-slate-200 shadow-none md:col-span-6 xl:col-span-3">
-              <CardContent className="flex h-full min-h-[160px] flex-col justify-between gap-4 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <p className="text-sm font-medium text-slate-500">{metric.label}</p>
-                  <div className="rounded-[var(--radius-surface)] bg-slate-100 p-3 text-slate-600">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
-                  <p className="text-sm text-slate-600">{metric.note}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard key={metric.label} title={metric.label} value={metric.value} hint={metric.note} icon={Icon} className="border-slate-200 shadow-none" />
           )
         })}
-      </section>
+      </KpiGrid>
 
       <section className="grid grid-cols-12 gap-6 xl:items-start">
         <div className="col-span-12 xl:col-span-8">

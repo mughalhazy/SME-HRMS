@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { KpiGrid, StatCard } from '@/components/ui/page'
 import { Separator } from '@/components/ui/separator'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -166,26 +167,15 @@ export function Departments() {
         </CardHeader>
       </Card>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <KpiGrid>
         {kpiCards.map((card) => {
           const Icon = card.icon
 
           return (
-            <Card key={card.title} className="bg-white shadow-sm">
-              <CardContent className="flex items-start justify-between gap-4 pt-5">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-slate-500">{card.title}</p>
-                  <p className="text-3xl font-semibold tracking-tight">{card.value}</p>
-                  <p className="text-sm text-slate-500">{card.note}</p>
-                </div>
-                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-                  <Icon className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard key={card.title} title={card.title} value={card.value} hint={card.note} icon={Icon} className="bg-white shadow-sm" />
           )
         })}
-      </section>
+      </KpiGrid>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.95fr)]">
         <Card className="overflow-hidden bg-white shadow-sm">
