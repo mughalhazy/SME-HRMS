@@ -105,6 +105,7 @@ This catalog defines query-optimized projections and validates each read model a
 - Every UI-facing operational area has a read model contract.
 - Every source entity listed above is defined in `docs/canon/domain-model.md`.
 
+
 ## 12) `integration_delivery_view`
 - **Source services:** `integration-service`
 - **Source workflows:** outbound integration dispatch
@@ -112,3 +113,20 @@ This catalog defines query-optimized projections and validates each read model a
 - **Key/grain:** one row per webhook delivery (`delivery_id`)
 - **Fields:** `delivery_id`, `webhook_id`, `tenant_id`, `target_url`, `event_id`, `event_type`, `status`, `attempt_count`, `last_http_status`, `last_error`, `dead_lettered_at`, `updated_at`
 - **Primary consumers:** integration operations, support tooling, audit/replay views
+
+## 13) `document_library_view`
+- **Source services:** `documents`, `employee-service`
+- **Source workflows:** employee-document management, compliance tracking
+- **Source entities:** `EmployeeDocument`, `PolicyAcknowledgement`, `ComplianceTask`, `Employee`
+- **Key/grain:** one row per document metadata record (`document_id`)
+- **Fields:** `document_id`, `employee_id`, `employee_name`, `department_id`, `department_name`, `title`, `document_type`, `status`, `policy_code`, `expiry_date`, `requires_acknowledgement`, `created_at`, `updated_at`
+- **Primary consumers:** document operations, compliance dashboards, search indexing
+
+## 14) `global_search_view`
+- **Source services:** `search-service`
+- **Source workflows:** `projection_search_indexing`
+- **Source entities:** `SearchDocument`
+- **Key/grain:** one row per searchable projection document (`document_id`)
+- **Fields:** `document_id`, `tenant_id`, `source_view`, `source_key`, `domain`, `entity_type`, `display_name`, `department_id`, `department_name`, `role_id`, `role_title`, `status`, `updated_at`, `metadata`
+- **Primary consumers:** universal search, directory lookups, command palette, cross-domain navigation
+
