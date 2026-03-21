@@ -8,7 +8,7 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 
-from api_contract import error_payload
+from api_contract import error_payload, success_payload
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, Observability, run_with_retry
 
 
@@ -69,17 +69,17 @@ class Handler(BaseHTTPRequestHandler):
         started = time.perf_counter()
         trace_id = OBSERVABILITY.trace_id(self.headers.get("X-Trace-Id") or self.headers.get("X-Request-Id"))
         try:
-            if self.path == "/health":
-                self._send_json({"service": "api-gateway", "status": "ok", "routes": ROUTES, "trace_id": trace_id, "metrics": OBSERVABILITY.metrics.snapshot()})
+            if self.path == '/health':
+                self._send_json(success_payload({'service': 'api-gateway', 'service_status': 'ok', 'routes': ROUTES, 'metrics': OBSERVABILITY.metrics.snapshot()}, trace_id))
                 return
 
-            if self.path == "/ready":
+            if self.path == '/ready':
                 checks = {svc: _check_service_health(svc, url, trace_id) for svc, url in ROUTES.items()}
-                overall_status = "ok" if all(item["status"] == "ok" for item in checks.values()) else "degraded"
-                self._send_json({"service": "api-gateway", "status": overall_status, "connectivity": checks, "trace_id": trace_id})
+                overall_status = 'ok' if all(item['status'] == 'ok' for item in checks.values()) else 'degraded'
+                self._send_json(success_payload({'service': 'api-gateway', 'service_status': overall_status, 'connectivity': checks}, trace_id))
                 return
 
-            self._send_json({"service": "api-gateway", "message": "route placeholder", "trace_id": trace_id})
+            self._send_json(success_payload({'service': 'api-gateway', 'message': 'route placeholder'}, trace_id))
         except Exception:  # noqa: BLE001
             LOGGER.exception("Unhandled gateway error path=%s trace_id=%s", self.path, trace_id)
             OBSERVABILITY.logger.error("request.error", trace_id=trace_id, message=self.path, context={"method": "GET"})
@@ -97,7 +97,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        trace_id = str(payload.get("trace_id", payload.get("meta", {}).get("trace_id", "")))
+        trace_id = str(payload.get("meta", {}).get("request_id", ""))
         self.send_header("X-Trace-Id", trace_id)
         self.send_header("X-Request-Id", trace_id)
         self.send_header("X-Content-Type-Options", "nosniff")

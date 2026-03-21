@@ -88,18 +88,21 @@ class AuthServiceTests(unittest.TestCase):
         with self.assertRaises(AuthServiceError):
             self.service.authenticate_token(token)
 
-    def test_api_login_refresh_logout_and_me_follow_canonical_envelope(self) -> None:
+    def test_api_login_refresh_logout_and_me_follow_scs_envelope(self) -> None:
         login_status, login_payload = post_auth_login(
             self.service,
             {'username': 'ava.manager', 'password': 'Password123!'},
             trace_id='trace-login',
         )
         self.assertEqual(login_status, 200)
+        self.assertEqual(login_payload['status'], 'success')
+        self.assertEqual(login_payload['meta']['request_id'], 'trace-login')
         token = login_payload['data']['access_token']
         refresh_token = login_payload['data']['refresh_token']
 
         me_status, me_payload = get_auth_me(self.service, f'Bearer {token}', trace_id='trace-me')
         self.assertEqual(me_status, 200)
+        self.assertEqual(me_payload['status'], 'success')
         self.assertEqual(me_payload['data']['role'], 'Manager')
 
         refresh_status, refresh_payload = post_auth_refresh(
@@ -120,6 +123,7 @@ class AuthServiceTests(unittest.TestCase):
 
         revoked_status, revoked_payload = get_auth_me(self.service, f"Bearer {refresh_payload['data']['access_token']}", trace_id='trace-revoked')
         self.assertEqual(revoked_status, 401)
+        self.assertEqual(revoked_payload['status'], 'error')
         self.assertEqual(revoked_payload['error']['code'], 'TOKEN_REVOKED')
 
         bad_status, bad_payload = post_auth_login(
@@ -128,7 +132,7 @@ class AuthServiceTests(unittest.TestCase):
             trace_id='trace-bad',
         )
         self.assertEqual(bad_status, 401)
-        self.assertEqual(bad_payload['error']['trace_id'], 'trace-bad')
+        self.assertEqual(bad_payload['meta']['request_id'], 'trace-bad')
 
     def test_malformed_password_hash_is_treated_as_invalid_credentials(self) -> None:
         user = self.service.register_user(username='broken.hash', password='Password123!', role='Employee')
@@ -138,7 +142,6 @@ class AuthServiceTests(unittest.TestCase):
             self.service.login('broken.hash', 'Password123!')
 
         self.assertEqual(ctx.exception.code, 'INVALID_CREDENTIALS')
-
 
     def test_current_session_listing_and_revocation_api_support(self) -> None:
         login_payload = self.service.login('ava.manager', 'Password123!')
@@ -156,6 +159,7 @@ class AuthServiceTests(unittest.TestCase):
         )
         self.assertEqual(sessions_status, 200)
         self.assertEqual(len(sessions_payload['data']), 1)
+        self.assertEqual(sessions_payload['meta']['pagination'], {})
 
         revoke_status, revoke_payload = post_auth_session_revoke(
             self.service,

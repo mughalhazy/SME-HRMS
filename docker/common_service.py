@@ -6,7 +6,7 @@ import os
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from api_contract import error_payload
+from api_contract import error_payload, success_payload
 from resilience import Observability
 
 
@@ -30,18 +30,17 @@ class Handler(BaseHTTPRequestHandler):
         trace_id = OBSERVABILITY.trace_id(self.headers.get("X-Trace-Id") or self.headers.get("X-Request-Id"))
         try:
             if self.path in ("/health", "/ready"):
-                payload = {
-                    "service": SERVICE_NAME,
-                    "status": "ok",
-                    "database_configured": bool(DATABASE_URL),
-                    "trace_id": trace_id,
-                    "metrics": OBSERVABILITY.metrics.snapshot(),
-                }
+                payload = success_payload({
+                    'service': SERVICE_NAME,
+                    'service_status': 'ok',
+                    'database_configured': bool(DATABASE_URL),
+                    'metrics': OBSERVABILITY.metrics.snapshot(),
+                }, trace_id)
                 self._send_json(payload)
                 return
 
             if self.path == "/":
-                self._send_json({"service": SERVICE_NAME, "message": "running", "trace_id": trace_id})
+                self._send_json(success_payload({'service': SERVICE_NAME, 'message': 'running'}, trace_id))
                 return
 
             self._send_json(_error_payload("NOT_FOUND", "Resource not found", trace_id), status=404)
@@ -62,7 +61,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        trace_id = str(payload.get("trace_id", payload.get("meta", {}).get("trace_id", "")))
+        trace_id = str(payload.get("meta", {}).get("request_id", ""))
         self.send_header("X-Trace-Id", trace_id)
         self.send_header("X-Request-Id", trace_id)
         self.send_header("X-Content-Type-Options", "nosniff")
