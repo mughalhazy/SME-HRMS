@@ -380,6 +380,30 @@ class SupervisorEngine:
                     )
                 )
                 continue
+            last_updated = instance.updated_at if isinstance(instance.updated_at, datetime) else datetime.fromisoformat(str(instance.updated_at))
+            if last_updated > current:
+                incidents.append(
+                    self._incident(
+                        source_type="workflow",
+                        source_id=instance.workflow_id,
+                        service_name="workflow-service",
+                        classification="escalation_required",
+                        retryable=True,
+                        escalation_required=True,
+                        summary="workflow timestamp drift detected",
+                        details={
+                            "workflow_id": instance.workflow_id,
+                            "tenant_id": instance.tenant_id,
+                            "definition_code": instance.definition_code,
+                            "updated_at": last_updated.isoformat(),
+                            "monitor_time": current.isoformat(),
+                            "drift_seconds": (last_updated - current).total_seconds(),
+                        },
+                        detected_at=current,
+                        tenant_id=instance.tenant_id,
+                    )
+                )
+                continue
             for step in active_pending:
                 metadata = dict(step.get("metadata") or {})
                 deadline_at = metadata.get("deadline_at")
@@ -408,8 +432,7 @@ class SupervisorEngine:
                             )
                         )
                         continue
-                created_at = instance.updated_at if isinstance(instance.updated_at, datetime) else datetime.fromisoformat(str(instance.updated_at))
-                if created_at + self.workflow_stall_after <= current:
+                if last_updated + self.workflow_stall_after <= current:
                     incidents.append(
                         self._incident(
                             source_type="workflow",
@@ -425,7 +448,7 @@ class SupervisorEngine:
                                 "definition_code": instance.definition_code,
                                 "step_id": step["step_id"],
                                 "assignee": step["assignee"],
-                                "updated_at": created_at.isoformat(),
+                                "updated_at": last_updated.isoformat(),
                             },
                             detected_at=current,
                             tenant_id=instance.tenant_id,
@@ -536,7 +559,7 @@ class SupervisorEngine:
                 now=current,
                 tenant_id=incident.tenant_id,
                 workflow_id=incident.source_id,
-                include_stalled=incident.summary == "workflow exceeded stall threshold",
+                include_stalled=incident.summary in {"workflow exceeded stall threshold", "workflow timestamp drift detected"},
             )
             after = self.workflow_service.get_instance(incident.source_id, tenant_id=incident.tenant_id or "tenant-default")
             recovered = any(item["workflow_id"] == incident.source_id for item in escalated)

@@ -55,7 +55,7 @@ schema_markers = [
     "leave_type VARCHAR(20) NOT NULL",
     "base_salary NUMERIC(12,2) NOT NULL",
     "CREATE TABLE IF NOT EXISTS interviews",
-    "CREATE TABLE IF NOT EXISTS performance_reviews",
+    "CREATE TABLE IF NOT EXISTS performance_review_cycles",
     "ON UPDATE CASCADE",
 ]
 checks.append(("data architecture match", "postgres:16-alpine" in COMPOSE and all(marker in (CORE_SCHEMA + WORKFLOW_SCHEMA) for marker in schema_markers)))
