@@ -36,15 +36,18 @@ type ResourceAction =
   | 'finalizeReview'
   | 'readOrgStructure'
   | 'listOrgStructure'
-  | 'manageOrgStructure';
+  | 'manageOrgStructure'
+  | 'readCompensation'
+  | 'listCompensation'
+  | 'manageCompensation';
 
 const ROLE_ACTIONS: Record<AuthRole, ResourceAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
-  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews', 'readOrgStructure', 'listOrgStructure'],
-  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles', 'readOrgStructure', 'listOrgStructure'],
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'readCompensation', 'listCompensation', 'manageCompensation'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'readCompensation', 'listCompensation', 'manageCompensation'],
+  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews', 'readOrgStructure', 'listOrgStructure', 'readCompensation'],
+  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles', 'readOrgStructure', 'listOrgStructure', 'readCompensation', 'listCompensation', 'manageCompensation'],
   Recruiter: [],
-  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
+  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'readCompensation', 'listCompensation', 'manageCompensation'],
 };
 
 const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
@@ -69,6 +72,9 @@ const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
   readOrgStructure: 'CAP-EMP-001',
   listOrgStructure: 'CAP-EMP-001',
   manageOrgStructure: 'CAP-EMP-002',
+  readCompensation: 'CAP-PAY-001',
+  listCompensation: 'CAP-PAY-001',
+  manageCompensation: 'CAP-PAY-001',
 };
 
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;
@@ -240,7 +246,7 @@ export function authorizeEmployeeAction(action: ResourceAction): RequestHandler 
       return;
     }
 
-    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles' && action !== 'readOrgStructure' && action !== 'listOrgStructure') {
+    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles' && action !== 'readOrgStructure' && action !== 'listOrgStructure' && action !== 'readCompensation' && action !== 'listCompensation' && action !== 'manageCompensation') {
       sendError(req, res, 403, 'FORBIDDEN', 'Insufficient permissions');
       return;
     }

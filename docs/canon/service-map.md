@@ -22,6 +22,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - Manage employee master data and employment lifecycle.
 - Manage organizational reference data for departments, business units, legal entities, locations, cost centers, grades/bands, job positions, and roles.
 - Manage performance review cycles and outcomes.
+- Manage compensation bands, salary revisions, benefits plans, enrollments, and allowances as authoritative compensation context.
 - Publish authoritative employee and organization changes to downstream services.
 
 ### Owned entities
@@ -35,6 +36,11 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `JobPosition`
 - `Role`
 - `PerformanceReview`
+- `CompensationBand`
+- `SalaryRevision`
+- `BenefitsPlan`
+- `BenefitsEnrollment`
+- `Allowance`
 
 ### Canonical APIs
 - `POST /api/v1/employees`
@@ -56,6 +62,27 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `POST /api/v1/performance-reviews/{performance_review_id}/submit`
 - `POST /api/v1/performance-reviews/{performance_review_id}/finalize`
 - `GET /api/v1/performance-reviews?employee_id=&reviewer_employee_id=&status=&limit=&cursor=`
+- `POST /api/v1/compensation/bands`
+- `GET /api/v1/compensation/bands/{compensation_band_id}`
+- `PATCH /api/v1/compensation/bands/{compensation_band_id}`
+- `GET /api/v1/compensation/bands?grade_band_id=&status=&limit=&cursor=`
+- `POST /api/v1/compensation/salary-revisions`
+- `GET /api/v1/compensation/salary-revisions/{salary_revision_id}`
+- `PATCH /api/v1/compensation/salary-revisions/{salary_revision_id}`
+- `GET /api/v1/compensation/salary-revisions?employee_id=&status=&limit=&cursor=`
+- `POST /api/v1/benefits/plans`
+- `GET /api/v1/benefits/plans/{benefits_plan_id}`
+- `PATCH /api/v1/benefits/plans/{benefits_plan_id}`
+- `GET /api/v1/benefits/plans?plan_type=&status=&limit=&cursor=`
+- `POST /api/v1/benefits/enrollments`
+- `GET /api/v1/benefits/enrollments/{benefits_enrollment_id}`
+- `PATCH /api/v1/benefits/enrollments/{benefits_enrollment_id}`
+- `GET /api/v1/benefits/enrollments?employee_id=&benefits_plan_id=&status=&limit=&cursor=`
+- `POST /api/v1/compensation/allowances`
+- `GET /api/v1/compensation/allowances/{allowance_id}`
+- `PATCH /api/v1/compensation/allowances/{allowance_id}`
+- `GET /api/v1/compensation/allowances?employee_id=&status=&limit=&cursor=`
+- `GET /api/v1/compensation/employees/{employee_id}/payroll-context?effective_date=`
 
 ### Dependencies
 - `auth-service` for authentication and authorization.
@@ -88,6 +115,14 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `JobPositionUpdated`
 - `PerformanceReviewSubmitted`
 - `PerformanceReviewFinalized`
+- `CompensationBandCreated`
+- `CompensationBandUpdated`
+- `SalaryRevisionCreated`
+- `BenefitsPlanCreated`
+- `BenefitsPlanUpdated`
+- `BenefitsEnrollmentCreated`
+- `AllowanceCreated`
+- `AllowanceUpdated`
 
 ### Subscribes
 - `CandidateHired`
@@ -98,6 +133,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `employee_reporting_view`
 - `performance_review_view`
 - enriches `attendance_dashboard_view`, `leave_requests_view`, `payroll_summary_view`, `job_posting_directory_view`, and `candidate_pipeline_view`
+- produces `employee_compensation_view` and payroll-context projections consumed by `payroll-service`
 
 ## attendance-service
 

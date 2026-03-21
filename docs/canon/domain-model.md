@@ -6,7 +6,7 @@ This document defines the canonical backend domain for SME-HRMS and aligns entit
 
 | Service | Canonical entities |
 |---|---|
-| `employee-service` | `Employee`, `Department`, `BusinessUnit`, `LegalEntity`, `Location`, `CostCenter`, `GradeBand`, `JobPosition`, `Role`, `PerformanceReview` |
+| `employee-service` | `Employee`, `Department`, `BusinessUnit`, `LegalEntity`, `Location`, `CostCenter`, `GradeBand`, `JobPosition`, `Role`, `PerformanceReview`, `CompensationBand`, `SalaryRevision`, `BenefitsPlan`, `BenefitsEnrollment`, `Allowance` |
 | `attendance-service` | `AttendanceRecord` |
 | `leave-service` | `LeaveRequest` |
 | `payroll-service` | `PayrollRecord` |
@@ -70,6 +70,7 @@ Represents a person employed by the organization, including identity, reporting 
 - Has many `LeaveRequest` entries.
 - Has many `PayrollRecord` entries.
 - Has many `PerformanceReview` entries as review subject.
+- Has many `SalaryRevision`, `BenefitsEnrollment`, and `Allowance` records that provide payroll-safe compensation context.
 - May have one linked `UserAccount`.
 
 ### Lifecycle states
@@ -152,6 +153,76 @@ Represents the grade/band framework used to normalize job levels and compensatio
 
 ### Description
 Represents an approved organizational position that anchors department assignment, reporting chains, and grade mapping.
+
+## CompensationBand
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents the approved compensation range for a grade/band used to validate salary revisions without duplicating payroll calculations.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| compensation_band_id | UUID | Yes | Primary identifier. |
+| grade_band_id | UUID | Yes | Foreign key to `GradeBand`. |
+| name | String | Yes | Human-readable band name. |
+| code | String | Yes | Unique compensation band code. |
+| currency | String | Yes | ISO 4217 currency code. |
+| min_salary | Decimal(12,2) | Yes | Minimum approved base salary. |
+| max_salary | Decimal(12,2) | Yes | Maximum approved base salary. |
+| target_salary | Decimal(12,2) | No | Midpoint or guidance amount. |
+| status | Enum | Yes | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Record last update timestamp. |
+
+## SalaryRevision
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents the effective-dated base-pay decision for an employee and serves as the master compensation input for payroll.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| salary_revision_id | UUID | Yes | Primary identifier. |
+| employee_id | UUID | Yes | Foreign key to `Employee`. |
+| compensation_band_id | UUID | No | Foreign key to `CompensationBand`. |
+| effective_from | Date | Yes | Effective start date. |
+| effective_to | Date | No | Optional end date. |
+| base_salary | Decimal(12,2) | Yes | Approved base salary passed to payroll. |
+| currency | String | Yes | ISO 4217 currency code. |
+| reason | Text | No | Revision rationale. |
+| status | Enum | Yes | `Draft`, `Approved`, `Superseded`. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Record last update timestamp. |
+
+## BenefitsPlan
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents a reusable benefits offering that can be enrolled by employees and translated into payroll deductions when applicable.
+
+## BenefitsEnrollment
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents an employee election into a benefits plan with effective dates and employee/employer contribution amounts.
+
+## Allowance
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents a recurring or one-time compensation allowance aggregated into payroll allowance inputs rather than recalculating pay inside employee-service.
 
 ## Department
 

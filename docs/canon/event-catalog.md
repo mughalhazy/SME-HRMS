@@ -35,6 +35,14 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `JobPositionUpdated` | `employee-service` | `JobPosition` | Job position metadata/status updated. |
 | `PerformanceReviewSubmitted` | `employee-service` | `PerformanceReview` | Review submitted by reviewer. |
 | `PerformanceReviewFinalized` | `employee-service` | `PerformanceReview` | Review finalized from the submitted state. |
+| `CompensationBandCreated` | `employee-service` | `CompensationBand` | Compensation band created. |
+| `CompensationBandUpdated` | `employee-service` | `CompensationBand` | Compensation band updated. |
+| `SalaryRevisionCreated` | `employee-service` | `SalaryRevision` | Salary revision created or materially updated. |
+| `BenefitsPlanCreated` | `employee-service` | `BenefitsPlan` | Benefits plan created. |
+| `BenefitsPlanUpdated` | `employee-service` | `BenefitsPlan` | Benefits plan updated. |
+| `BenefitsEnrollmentCreated` | `employee-service` | `BenefitsEnrollment` | Benefits enrollment created or materially updated. |
+| `AllowanceCreated` | `employee-service` | `Allowance` | Allowance created. |
+| `AllowanceUpdated` | `employee-service` | `Allowance` | Allowance updated. |
 | `AttendanceCaptured` | `attendance-service` | `AttendanceRecord` | Attendance record captured. |
 | `AttendanceValidated` | `attendance-service` | `AttendanceRecord` | Attendance validated. |
 | `AttendanceApproved` | `attendance-service` | `AttendanceRecord` | Attendance approved for payroll/reporting. |
@@ -128,6 +136,54 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Transition:** `Submitted -> Finalized`.
 - **Minimum payload:** `performance_review_id`, `employee_id`, `status`, `updated_at`.
 - **Consumers:** compensation planning, analytics, notification pipelines.
+
+### `CompensationBandCreated`
+- **Aggregate:** `CompensationBand`
+- **Transition:** compensation band created.
+- **Minimum payload:** `compensation_band_id`, `grade_band_id`, `code`, `status`.
+- **Consumers:** compensation planning, payroll context builders.
+
+### `CompensationBandUpdated`
+- **Aggregate:** `CompensationBand`
+- **Transition:** compensation band metadata or status updated.
+- **Minimum payload:** `compensation_band_id`, `grade_band_id`, `changed_fields`, `status`, `updated_at`.
+- **Consumers:** compensation planning, payroll context builders.
+
+### `SalaryRevisionCreated`
+- **Aggregate:** `SalaryRevision`
+- **Transition:** salary revision created or materially updated.
+- **Minimum payload:** `salary_revision_id`, `employee_id`, `effective_from`, `base_salary`, `currency`, `status`.
+- **Consumers:** `payroll-service`, analytics, audit.
+
+### `BenefitsPlanCreated`
+- **Aggregate:** `BenefitsPlan`
+- **Transition:** benefits plan created.
+- **Minimum payload:** `benefits_plan_id`, `code`, `plan_type`, `status`.
+- **Consumers:** enrollment workflows, payroll context builders.
+
+### `BenefitsPlanUpdated`
+- **Aggregate:** `BenefitsPlan`
+- **Transition:** benefits plan updated.
+- **Minimum payload:** `benefits_plan_id`, `changed_fields`, `status`, `updated_at`.
+- **Consumers:** enrollment workflows, payroll context builders.
+
+### `BenefitsEnrollmentCreated`
+- **Aggregate:** `BenefitsEnrollment`
+- **Transition:** enrollment created or materially updated.
+- **Minimum payload:** `benefits_enrollment_id`, `employee_id`, `benefits_plan_id`, `employee_contribution`, `status`, `effective_from`.
+- **Consumers:** `payroll-service`, benefits analytics, audit.
+
+### `AllowanceCreated`
+- **Aggregate:** `Allowance`
+- **Transition:** allowance created.
+- **Minimum payload:** `allowance_id`, `employee_id`, `code`, `amount`, `status`, `effective_from`.
+- **Consumers:** `payroll-service`, analytics, audit.
+
+### `AllowanceUpdated`
+- **Aggregate:** `Allowance`
+- **Transition:** allowance updated.
+- **Minimum payload:** `allowance_id`, `employee_id`, `code`, `amount`, `status`, `updated_at`.
+- **Consumers:** `payroll-service`, analytics, audit.
 
 ## attendance-service events
 
