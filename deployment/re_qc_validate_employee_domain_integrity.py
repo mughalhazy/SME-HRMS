@@ -13,6 +13,8 @@ CORE_SCHEMA = (ROOT / 'deployment/migrations/001_core_schema.sql').read_text()
 SEEDS = (ROOT / 'services/employee-service/domain-seed.ts').read_text()
 
 checks: list[tuple[str, bool]] = [
+    ('employee repository enforces tenant scope filters', 'assertTenantFilter' in EMPLOYEE_REPOSITORY and 'tenant_id' in EMPLOYEE_REPOSITORY),
+    ('core schema carries tenant_id across employee domain tables', 'tenant_id VARCHAR(80) NOT NULL' in CORE_SCHEMA),
     ('seeded departments available to repositories', 'seedDepartments' in SEEDS and 'dep-eng' in SEEDS),
     ('seeded roles available to repositories', 'seedRoles' in SEEDS and 'role-frontend-engineer' in SEEDS),
     ('employee repository resolves department references dynamically', 'referenceRepository' in EMPLOYEE_REPOSITORY and 'findDepartmentById' in EMPLOYEE_REPOSITORY),
@@ -22,10 +24,10 @@ checks: list[tuple[str, bool]] = [
     ('department status changes protect assigned employees', 'cannot deactivate or archive a department with assigned employees' in DEPARTMENT_SERVICE),
     ('department repository supports head and parent integrity indexes', 'headEmployeeIndex' in DEPARTMENT_REPOSITORY and 'parentDepartmentIndex' in DEPARTMENT_REPOSITORY),
     ('role repository tracks linked employees', 'employeeRoleIndex' in ROLE_REPOSITORY and 'countEmployees' in ROLE_REPOSITORY),
-    ('api exposes employees, departments, and roles consistently', all(route in ROUTES for route in ['/api/v1/employees', '/api/v1/departments', '/api/v1/roles']) and 'REFERENCES roles (role_id)' in CORE_SCHEMA and 'REFERENCES departments (department_id)' in CORE_SCHEMA),
+    ('api exposes employees, departments, and roles consistently', all(route in ROUTES for route in ['/api/v1/employees', '/api/v1/departments', '/api/v1/roles']) and 'REFERENCES roles (tenant_id, role_id)' in CORE_SCHEMA and 'REFERENCES departments (tenant_id, department_id)' in CORE_SCHEMA),
 ]
 
-score = sum(1 for _, ok in checks)
+score = sum(1 for _, ok in checks if ok)
 for name, ok in checks:
     print(f"[{'PASS' if ok else 'FAIL'}] {name}")
 print(f'RE-QC employee-domain-integrity score: {score}/{len(checks)}')

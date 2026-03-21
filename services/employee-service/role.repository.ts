@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, QueryOptimizer } from '../../db/optimization';
 import { CreateRoleInput, EmploymentCategory, Role, RoleFilters, RoleStatus, UpdateRoleInput, resolveRolePermissions } from './role.model';
-import { seedRoles } from './domain-seed';
+import { DEFAULT_TENANT_ID, seedRoles } from './domain-seed';
 
 const ROLE_CACHE_PREFIX = 'roles';
 
@@ -16,8 +16,14 @@ export class RoleRepository {
   private readonly pool = new ConnectionPool(16);
   private readonly optimizer = new QueryOptimizer(10);
 
-  constructor(seedData: Role[] = seedRoles()) {
+  constructor(
+    private readonly tenantId: string = DEFAULT_TENANT_ID,
+    seedData: Role[] = seedRoles(tenantId),
+  ) {
     for (const role of seedData) {
+      if (role.tenant_id !== this.tenantId) {
+        continue;
+      }
       this.roles.set(role.role_id, { ...role, permissions: [...role.permissions] });
       this.titleIndex.set(this.normalizeTitle(role.title), role.role_id);
       this.addToIndex(this.statusIndex, role.status, role.role_id);
@@ -29,6 +35,7 @@ export class RoleRepository {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.create' }, () => {
       const timestamp = new Date().toISOString();
       const record: Role = {
+        tenant_id: this.tenantId,
         role_id: randomUUID(),
         title: input.title,
         level: input.level,
@@ -50,30 +57,32 @@ export class RoleRepository {
   }
 
   findById(roleId: string): Role | null {
-    const cacheKey = `${ROLE_CACHE_PREFIX}:by-id:${roleId}`;
+    const cacheKey = `${ROLE_CACHE_PREFIX}:by-id:${this.tenantId}:${roleId}`;
     const cached = this.cache.get<Role>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.findById', expectedIndex: 'pk_roles' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.findById', expectedIndex: 'idx_roles_tenant_id + pk_roles' }, () => {
       const role = this.roles.get(roleId) ?? null;
-      if (role) {
+      if (role && role.tenant_id === this.tenantId) {
         this.cache.set(cacheKey, role);
+        return role;
       }
-      return role;
+      return null;
     }));
   }
 
   findByTitle(title: string): Role | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.findByTitle', expectedIndex: 'uq_roles_title' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.findByTitle', expectedIndex: 'uq_roles_tenant_title' }, () => {
       const roleId = this.titleIndex.get(this.normalizeTitle(title));
-      return roleId ? (this.roles.get(roleId) ?? null) : null;
+      return roleId ? this.findById(roleId) : null;
     }));
   }
 
   list(filters: RoleFilters = {}): Role[] {
-    const cacheKey = `${ROLE_CACHE_PREFIX}:list:${JSON.stringify(filters)}`;
+    this.assertTenantFilter(filters.tenant_id);
+    const cacheKey = `${ROLE_CACHE_PREFIX}:list:${this.tenantId}:${JSON.stringify(filters)}`;
     const cached = this.cache.get<Role[]>(cacheKey);
     if (cached) {
       return cached;
@@ -83,7 +92,7 @@ export class RoleRepository {
       const candidateIds = this.collectCandidateIds(filters);
       return candidateIds
         .map((roleId) => this.roles.get(roleId))
-        .filter((role): role is Role => Boolean(role))
+        .filter((role): role is Role => Boolean(role) && role.tenant_id === this.tenantId)
         .filter((role) => {
           if (filters.status && role.status !== filters.status) {
             return false;
@@ -103,8 +112,8 @@ export class RoleRepository {
   }
 
   update(roleId: string, input: UpdateRoleInput): Role | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.update', expectedIndex: 'pk_roles' }, () => {
-      const existing = this.roles.get(roleId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.update', expectedIndex: 'idx_roles_tenant_id + pk_roles' }, () => {
+      const existing = this.findById(roleId);
       if (!existing) {
         return null;
       }
@@ -112,6 +121,7 @@ export class RoleRepository {
       const updated: Role = {
         ...existing,
         ...input,
+        tenant_id: this.tenantId,
         permissions: resolveRolePermissions({
           employment_category: input.employment_category ?? existing.employment_category,
           permissions: input.permissions ?? existing.permissions,
@@ -127,8 +137,8 @@ export class RoleRepository {
   }
 
   delete(roleId: string): boolean {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.delete', expectedIndex: 'pk_roles' }, () => {
-      const existing = this.roles.get(roleId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.delete', expectedIndex: 'idx_roles_tenant_id + pk_roles' }, () => {
+      const existing = this.findById(roleId);
       if (!existing) {
         return false;
       }
@@ -144,7 +154,7 @@ export class RoleRepository {
   }
 
   assignEmployee(roleId: string, employeeId: string): void {
-    this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.assignEmployee', expectedIndex: 'idx_employees_role_id' }, () => {
+    this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.assignEmployee', expectedIndex: 'idx_employees_tenant_role_id' }, () => {
       const set = this.employeeRoleIndex.get(roleId) ?? new Set<string>();
       set.add(employeeId);
       this.employeeRoleIndex.set(roleId, set);
@@ -153,7 +163,7 @@ export class RoleRepository {
   }
 
   unassignEmployee(roleId: string, employeeId: string): void {
-    this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.unassignEmployee', expectedIndex: 'idx_employees_role_id' }, () => {
+    this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.unassignEmployee', expectedIndex: 'idx_employees_tenant_role_id' }, () => {
       const set = this.employeeRoleIndex.get(roleId);
       if (!set) {
         return;
@@ -167,13 +177,13 @@ export class RoleRepository {
   }
 
   countEmployees(roleId: string): number {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.countEmployees', expectedIndex: 'idx_employees_role_id' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.countEmployees', expectedIndex: 'idx_employees_tenant_role_id' }, () => {
       return this.employeeRoleIndex.get(roleId)?.size ?? 0;
     }));
   }
 
   listEmployeeIds(roleId: string): string[] {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.listEmployeeIds', expectedIndex: 'idx_employees_role_id' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'roles.listEmployeeIds', expectedIndex: 'idx_employees_tenant_role_id' }, () => {
       return [...(this.employeeRoleIndex.get(roleId) ?? new Set<string>())].sort();
     }));
   }
@@ -198,15 +208,21 @@ export class RoleRepository {
 
   private resolveExpectedIndex(filters: RoleFilters): string {
     if (filters.status && filters.employment_category) {
-      return 'idx_roles_status + idx_roles_employment_category';
+      return 'idx_roles_tenant_status + idx_roles_tenant_employment_category';
     }
     if (filters.status) {
-      return 'idx_roles_status';
+      return 'idx_roles_tenant_status';
     }
     if (filters.employment_category) {
-      return 'idx_roles_employment_category';
+      return 'idx_roles_tenant_employment_category';
     }
-    return 'pk_roles';
+    return 'idx_roles_tenant_id';
+  }
+
+  private assertTenantFilter(tenantId?: string): void {
+    if (tenantId && tenantId !== this.tenantId) {
+      throw new Error('cross_tenant_filter_blocked');
+    }
   }
 
   private normalizeTitle(title: string): string {
@@ -248,7 +264,7 @@ export class RoleRepository {
   }
 
   private invalidateRoleCache(roleId: string): void {
-    this.cache.invalidate(`${ROLE_CACHE_PREFIX}:by-id:${roleId}`);
-    this.cache.invalidateByPrefix(`${ROLE_CACHE_PREFIX}:list:`);
+    this.cache.invalidate(`${ROLE_CACHE_PREFIX}:by-id:${this.tenantId}:${roleId}`);
+    this.cache.invalidateByPrefix(`${ROLE_CACHE_PREFIX}:list:${this.tenantId}:`);
   }
 }

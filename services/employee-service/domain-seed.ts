@@ -1,14 +1,17 @@
 import { Department } from './department.model';
 import { DEFAULT_ROLE_PERMISSIONS, Role } from './role.model';
 
+export const DEFAULT_TENANT_ID = 'tenant-default';
+
 export function timestampSeed(): string {
   return '2026-01-01T00:00:00.000Z';
 }
 
-export function seedDepartments(): Department[] {
+export function seedDepartments(tenantId: string = DEFAULT_TENANT_ID): Department[] {
   const createdAt = timestampSeed();
   return [
     {
+      tenant_id: tenantId,
       department_id: 'dep-hr',
       name: 'People Operations',
       code: 'HR',
@@ -18,6 +21,7 @@ export function seedDepartments(): Department[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       department_id: 'dep-eng',
       name: 'Engineering',
       code: 'ENG',
@@ -27,6 +31,7 @@ export function seedDepartments(): Department[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       department_id: 'dep-fin',
       name: 'Finance',
       code: 'FIN',
@@ -36,6 +41,7 @@ export function seedDepartments(): Department[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       department_id: 'dep-ops',
       name: 'Operations',
       code: 'OPS',
@@ -45,6 +51,7 @@ export function seedDepartments(): Department[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       department_id: 'dep-archive',
       name: 'Legacy Programs',
       code: 'LEG',
@@ -56,10 +63,11 @@ export function seedDepartments(): Department[] {
   ];
 }
 
-export function seedRoles(): Role[] {
+export function seedRoles(tenantId: string = DEFAULT_TENANT_ID): Role[] {
   const createdAt = timestampSeed();
   return [
     {
+      tenant_id: tenantId,
       role_id: 'role-hr-director',
       title: 'HR Director',
       level: 'Director',
@@ -71,6 +79,7 @@ export function seedRoles(): Role[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       role_id: 'role-frontend-engineer',
       title: 'Frontend Engineer',
       level: 'IC3',
@@ -82,6 +91,7 @@ export function seedRoles(): Role[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       role_id: 'role-finance-manager',
       title: 'Finance Manager',
       level: 'M2',
@@ -93,6 +103,7 @@ export function seedRoles(): Role[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       role_id: 'role-ops-lead',
       title: 'Operations Lead',
       level: 'M1',
@@ -104,6 +115,7 @@ export function seedRoles(): Role[] {
       updated_at: createdAt,
     },
     {
+      tenant_id: tenantId,
       role_id: 'role-legacy-contractor',
       title: 'Legacy Contractor',
       level: 'Contract',

@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS attendance_records (
+  tenant_id VARCHAR(80) NOT NULL,
   attendance_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   employee_id UUID NOT NULL,
   attendance_date DATE NOT NULL,
@@ -9,19 +10,22 @@ CREATE TABLE IF NOT EXISTS attendance_records (
   source VARCHAR(20) CHECK (source IN ('Manual', 'Biometric', 'APIImport')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT uq_attendance_records_employee_date UNIQUE (employee_id, attendance_date),
+  CONSTRAINT uq_attendance_records_tenant_attendance UNIQUE (tenant_id, attendance_id),
+  CONSTRAINT uq_attendance_records_employee_date UNIQUE (tenant_id, employee_id, attendance_date),
   CONSTRAINT fk_attendance_records_employee
-    FOREIGN KEY (employee_id)
-    REFERENCES employees (employee_id)
+    FOREIGN KEY (tenant_id, employee_id)
+    REFERENCES employees (tenant_id, employee_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_attendance_records_employee_id ON attendance_records (employee_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_records_date ON attendance_records (attendance_date);
-CREATE INDEX IF NOT EXISTS idx_attendance_records_status ON attendance_records (attendance_status);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_tenant_id ON attendance_records (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_tenant_employee_id ON attendance_records (tenant_id, employee_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_tenant_date ON attendance_records (tenant_id, attendance_date);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_tenant_status ON attendance_records (tenant_id, attendance_status);
 
 CREATE TABLE IF NOT EXISTS leave_requests (
+  tenant_id VARCHAR(80) NOT NULL,
   leave_request_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   employee_id UUID NOT NULL,
   leave_type VARCHAR(20) NOT NULL CHECK (leave_type IN ('Annual', 'Sick', 'Casual', 'Unpaid', 'Other')),
@@ -35,25 +39,28 @@ CREATE TABLE IF NOT EXISTS leave_requests (
   decision_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_leave_requests_tenant_request UNIQUE (tenant_id, leave_request_id),
   CONSTRAINT chk_leave_requests_date_range CHECK (end_date >= start_date),
   CONSTRAINT fk_leave_requests_employee
-    FOREIGN KEY (employee_id)
-    REFERENCES employees (employee_id)
+    FOREIGN KEY (tenant_id, employee_id)
+    REFERENCES employees (tenant_id, employee_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
   CONSTRAINT fk_leave_requests_approver
-    FOREIGN KEY (approver_employee_id)
-    REFERENCES employees (employee_id)
+    FOREIGN KEY (tenant_id, approver_employee_id)
+    REFERENCES employees (tenant_id, employee_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_leave_requests_employee_id ON leave_requests (employee_id);
-CREATE INDEX IF NOT EXISTS idx_leave_requests_approver_employee_id ON leave_requests (approver_employee_id);
-CREATE INDEX IF NOT EXISTS idx_leave_requests_status ON leave_requests (status);
-CREATE INDEX IF NOT EXISTS idx_leave_requests_date_range ON leave_requests (start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_id ON leave_requests (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_employee_id ON leave_requests (tenant_id, employee_id);
+CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_approver_employee_id ON leave_requests (tenant_id, approver_employee_id);
+CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_status ON leave_requests (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_date_range ON leave_requests (tenant_id, start_date, end_date);
 
 CREATE TABLE IF NOT EXISTS payroll_records (
+  tenant_id VARCHAR(80) NOT NULL,
   payroll_record_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   employee_id UUID NOT NULL,
   pay_period_start DATE NOT NULL,
@@ -69,20 +76,23 @@ CREATE TABLE IF NOT EXISTS payroll_records (
   status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Processed', 'Paid', 'Cancelled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_payroll_records_tenant_record UNIQUE (tenant_id, payroll_record_id),
   CONSTRAINT chk_payroll_records_period CHECK (pay_period_end >= pay_period_start),
-  CONSTRAINT uq_payroll_records_employee_period UNIQUE (employee_id, pay_period_start, pay_period_end),
+  CONSTRAINT uq_payroll_records_employee_period UNIQUE (tenant_id, employee_id, pay_period_start, pay_period_end),
   CONSTRAINT fk_payroll_records_employee
-    FOREIGN KEY (employee_id)
-    REFERENCES employees (employee_id)
+    FOREIGN KEY (tenant_id, employee_id)
+    REFERENCES employees (tenant_id, employee_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_payroll_records_employee_id ON payroll_records (employee_id);
-CREATE INDEX IF NOT EXISTS idx_payroll_records_status ON payroll_records (status);
-CREATE INDEX IF NOT EXISTS idx_payroll_records_payment_date ON payroll_records (payment_date);
+CREATE INDEX IF NOT EXISTS idx_payroll_records_tenant_id ON payroll_records (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_records_tenant_employee_id ON payroll_records (tenant_id, employee_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_records_tenant_status ON payroll_records (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_payroll_records_tenant_payment_date ON payroll_records (tenant_id, payment_date);
 
 CREATE TABLE IF NOT EXISTS job_postings (
+  tenant_id VARCHAR(80) NOT NULL,
   job_posting_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title VARCHAR(200) NOT NULL,
   department_id UUID NOT NULL,
@@ -96,25 +106,28 @@ CREATE TABLE IF NOT EXISTS job_postings (
   status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Open', 'OnHold', 'Closed', 'Filled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_job_postings_tenant_posting UNIQUE (tenant_id, job_posting_id),
   CONSTRAINT chk_job_postings_dates CHECK (closing_date IS NULL OR closing_date >= posting_date),
   CONSTRAINT fk_job_postings_department
-    FOREIGN KEY (department_id)
-    REFERENCES departments (department_id)
+    FOREIGN KEY (tenant_id, department_id)
+    REFERENCES departments (tenant_id, department_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
   CONSTRAINT fk_job_postings_role
-    FOREIGN KEY (role_id)
-    REFERENCES roles (role_id)
+    FOREIGN KEY (tenant_id, role_id)
+    REFERENCES roles (tenant_id, role_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_job_postings_department_id ON job_postings (department_id);
-CREATE INDEX IF NOT EXISTS idx_job_postings_role_id ON job_postings (role_id);
-CREATE INDEX IF NOT EXISTS idx_job_postings_status ON job_postings (status);
-CREATE INDEX IF NOT EXISTS idx_job_postings_posting_date ON job_postings (posting_date);
+CREATE INDEX IF NOT EXISTS idx_job_postings_tenant_id ON job_postings (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_job_postings_tenant_department_id ON job_postings (tenant_id, department_id);
+CREATE INDEX IF NOT EXISTS idx_job_postings_tenant_role_id ON job_postings (tenant_id, role_id);
+CREATE INDEX IF NOT EXISTS idx_job_postings_tenant_status ON job_postings (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_job_postings_tenant_posting_date ON job_postings (tenant_id, posting_date);
 
 CREATE TABLE IF NOT EXISTS candidates (
+  tenant_id VARCHAR(80) NOT NULL,
   candidate_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   job_posting_id UUID NOT NULL,
   first_name VARCHAR(100) NOT NULL,
@@ -129,20 +142,23 @@ CREATE TABLE IF NOT EXISTS candidates (
   status VARCHAR(20) NOT NULL CHECK (status IN ('Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Rejected', 'Withdrawn')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT uq_candidates_posting_email UNIQUE (job_posting_id, email),
+  CONSTRAINT uq_candidates_tenant_candidate UNIQUE (tenant_id, candidate_id),
+  CONSTRAINT uq_candidates_posting_email UNIQUE (tenant_id, job_posting_id, email),
   CONSTRAINT fk_candidates_job_posting
-    FOREIGN KEY (job_posting_id)
-    REFERENCES job_postings (job_posting_id)
+    FOREIGN KEY (tenant_id, job_posting_id)
+    REFERENCES job_postings (tenant_id, job_posting_id)
     ON UPDATE CASCADE
     ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_candidates_job_posting_id ON candidates (job_posting_id);
-CREATE INDEX IF NOT EXISTS idx_candidates_status ON candidates (status);
-CREATE INDEX IF NOT EXISTS idx_candidates_application_date ON candidates (application_date);
-CREATE INDEX IF NOT EXISTS idx_candidates_source_candidate_id ON candidates (source_candidate_id);
+CREATE INDEX IF NOT EXISTS idx_candidates_tenant_id ON candidates (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_candidates_tenant_job_posting_id ON candidates (tenant_id, job_posting_id);
+CREATE INDEX IF NOT EXISTS idx_candidates_tenant_status ON candidates (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_candidates_tenant_application_date ON candidates (tenant_id, application_date);
+CREATE INDEX IF NOT EXISTS idx_candidates_tenant_source_candidate_id ON candidates (tenant_id, source_candidate_id);
 
 CREATE TABLE IF NOT EXISTS candidate_stage_transitions (
+  tenant_id VARCHAR(80) NOT NULL,
   candidate_stage_transition_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   candidate_id UUID NOT NULL,
   from_status VARCHAR(20) CHECK (from_status IN ('Applied', 'Screening', 'Interviewing', 'Offered', 'Hired', 'Rejected', 'Withdrawn')),
@@ -151,18 +167,21 @@ CREATE TABLE IF NOT EXISTS candidate_stage_transitions (
   changed_by VARCHAR(120),
   reason TEXT,
   notes TEXT,
+  CONSTRAINT uq_candidate_stage_transitions_tenant_transition UNIQUE (tenant_id, candidate_stage_transition_id),
   CONSTRAINT fk_candidate_stage_transitions_candidate
-    FOREIGN KEY (candidate_id)
-    REFERENCES candidates (candidate_id)
+    FOREIGN KEY (tenant_id, candidate_id)
+    REFERENCES candidates (tenant_id, candidate_id)
     ON UPDATE CASCADE
     ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_candidate_id ON candidate_stage_transitions (candidate_id);
-CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_changed_at ON candidate_stage_transitions (changed_at);
-CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_to_status ON candidate_stage_transitions (to_status);
+CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_tenant_id ON candidate_stage_transitions (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_tenant_candidate_id ON candidate_stage_transitions (tenant_id, candidate_id);
+CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_tenant_changed_at ON candidate_stage_transitions (tenant_id, changed_at);
+CREATE INDEX IF NOT EXISTS idx_candidate_stage_transitions_tenant_to_status ON candidate_stage_transitions (tenant_id, to_status);
 
 CREATE TABLE IF NOT EXISTS interviews (
+  tenant_id VARCHAR(80) NOT NULL,
   interview_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   candidate_id UUID NOT NULL,
   interview_type VARCHAR(20) NOT NULL CHECK (interview_type IN ('PhoneScreen', 'Technical', 'Behavioral', 'Panel', 'Final')),
@@ -175,20 +194,22 @@ CREATE TABLE IF NOT EXISTS interviews (
   status VARCHAR(20) NOT NULL CHECK (status IN ('Scheduled', 'Completed', 'Cancelled', 'NoShow')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_interviews_tenant_interview UNIQUE (tenant_id, interview_id),
   CONSTRAINT chk_interviews_schedule CHECK (scheduled_end > scheduled_start),
   CONSTRAINT fk_interviews_candidate
-    FOREIGN KEY (candidate_id)
-    REFERENCES candidates (candidate_id)
+    FOREIGN KEY (tenant_id, candidate_id)
+    REFERENCES candidates (tenant_id, candidate_id)
     ON UPDATE CASCADE
     ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_interviews_candidate_id ON interviews (candidate_id);
-CREATE INDEX IF NOT EXISTS idx_interviews_schedule ON interviews (scheduled_start, scheduled_end);
-CREATE INDEX IF NOT EXISTS idx_interviews_status ON interviews (status);
-
+CREATE INDEX IF NOT EXISTS idx_interviews_tenant_id ON interviews (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_interviews_tenant_candidate_id ON interviews (tenant_id, candidate_id);
+CREATE INDEX IF NOT EXISTS idx_interviews_tenant_schedule ON interviews (tenant_id, scheduled_start, scheduled_end);
+CREATE INDEX IF NOT EXISTS idx_interviews_tenant_status ON interviews (tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS attendance_rules (
+  tenant_id VARCHAR(80) NOT NULL,
   attendance_rule_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   code VARCHAR(80) NOT NULL,
   name VARCHAR(160) NOT NULL,
@@ -202,12 +223,15 @@ CREATE TABLE IF NOT EXISTS attendance_rules (
   status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Active', 'Archived')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT uq_attendance_rules_code UNIQUE (code)
+  CONSTRAINT uq_attendance_rules_tenant_rule UNIQUE (tenant_id, attendance_rule_id),
+  CONSTRAINT uq_attendance_rules_code UNIQUE (tenant_id, code)
 );
 
-CREATE INDEX IF NOT EXISTS idx_attendance_rules_status ON attendance_rules (status);
+CREATE INDEX IF NOT EXISTS idx_attendance_rules_tenant_id ON attendance_rules (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_rules_tenant_status ON attendance_rules (tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS leave_policies (
+  tenant_id VARCHAR(80) NOT NULL,
   leave_policy_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   code VARCHAR(80) NOT NULL,
   name VARCHAR(160) NOT NULL,
@@ -221,15 +245,18 @@ CREATE TABLE IF NOT EXISTS leave_policies (
   status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Active', 'Archived')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT uq_leave_policies_code UNIQUE (code),
+  CONSTRAINT uq_leave_policies_tenant_policy UNIQUE (tenant_id, leave_policy_id),
+  CONSTRAINT uq_leave_policies_code UNIQUE (tenant_id, code),
   CONSTRAINT chk_leave_policies_unpaid_entitlement CHECK (leave_type <> 'Unpaid' OR annual_entitlement_days = 0)
 );
 
-CREATE INDEX IF NOT EXISTS idx_leave_policies_status ON leave_policies (status);
-CREATE INDEX IF NOT EXISTS idx_leave_policies_type_status ON leave_policies (leave_type, status);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_leave_policies_active_type ON leave_policies (leave_type) WHERE status = 'Active';
+CREATE INDEX IF NOT EXISTS idx_leave_policies_tenant_id ON leave_policies (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_leave_policies_tenant_status ON leave_policies (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_leave_policies_tenant_type_status ON leave_policies (tenant_id, leave_type, status);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_leave_policies_active_type ON leave_policies (tenant_id, leave_type) WHERE status = 'Active';
 
 CREATE TABLE IF NOT EXISTS payroll_settings (
+  tenant_id VARCHAR(80) NOT NULL,
   payroll_setting_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   pay_schedule VARCHAR(20) NOT NULL CHECK (pay_schedule IN ('Weekly', 'BiWeekly', 'SemiMonthly', 'Monthly')),
   pay_day INTEGER NOT NULL CHECK (pay_day >= 1 AND pay_day <= 31),
@@ -240,12 +267,15 @@ CREATE TABLE IF NOT EXISTS payroll_settings (
   approval_chain TEXT[] NOT NULL,
   status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Active', 'Archived')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_payroll_settings_tenant_setting UNIQUE (tenant_id, payroll_setting_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_payroll_settings_status ON payroll_settings (status);
+CREATE INDEX IF NOT EXISTS idx_payroll_settings_tenant_id ON payroll_settings (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_settings_tenant_status ON payroll_settings (tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS performance_reviews (
+  tenant_id VARCHAR(80) NOT NULL,
   performance_review_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   employee_id UUID NOT NULL,
   reviewer_employee_id UUID NOT NULL,
@@ -260,20 +290,22 @@ CREATE TABLE IF NOT EXISTS performance_reviews (
   finalized_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_performance_reviews_tenant_review UNIQUE (tenant_id, performance_review_id),
   CONSTRAINT chk_performance_reviews_period CHECK (review_period_end >= review_period_start),
-  CONSTRAINT uq_performance_reviews_cycle UNIQUE (employee_id, review_period_start, review_period_end),
+  CONSTRAINT uq_performance_reviews_cycle UNIQUE (tenant_id, employee_id, review_period_start, review_period_end),
   CONSTRAINT fk_performance_reviews_employee
-    FOREIGN KEY (employee_id)
-    REFERENCES employees (employee_id)
+    FOREIGN KEY (tenant_id, employee_id)
+    REFERENCES employees (tenant_id, employee_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
   CONSTRAINT fk_performance_reviews_reviewer
-    FOREIGN KEY (reviewer_employee_id)
-    REFERENCES employees (employee_id)
+    FOREIGN KEY (tenant_id, reviewer_employee_id)
+    REFERENCES employees (tenant_id, employee_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_performance_reviews_employee_id ON performance_reviews (employee_id);
-CREATE INDEX IF NOT EXISTS idx_performance_reviews_reviewer_employee_id ON performance_reviews (reviewer_employee_id);
-CREATE INDEX IF NOT EXISTS idx_performance_reviews_status ON performance_reviews (status);
+CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_id ON performance_reviews (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_employee_id ON performance_reviews (tenant_id, employee_id);
+CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_reviewer_employee_id ON performance_reviews (tenant_id, reviewer_employee_id);
+CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_status ON performance_reviews (tenant_id, status);

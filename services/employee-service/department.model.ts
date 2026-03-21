@@ -2,6 +2,7 @@ export const DEPARTMENT_STATUSES = ['Proposed', 'Active', 'Inactive', 'Archived'
 export type DepartmentStatus = (typeof DEPARTMENT_STATUSES)[number];
 
 export interface Department {
+  tenant_id: string;
   department_id: string;
   name: string;
   code: string;
@@ -14,6 +15,7 @@ export interface Department {
 }
 
 export interface CreateDepartmentInput {
+  tenant_id?: string;
   name: string;
   code: string;
   description?: string;
@@ -32,6 +34,7 @@ export interface UpdateDepartmentInput {
 }
 
 export interface DepartmentFilters {
+  tenant_id?: string;
   department_id?: string;
   status?: DepartmentStatus;
   parent_department_id?: string;

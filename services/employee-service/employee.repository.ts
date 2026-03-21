@@ -14,13 +14,18 @@ import {
   Role,
   UpdateEmployeeInput,
 } from './employee.model';
-import { seedDepartments, seedRoles } from './domain-seed';
+import { DEFAULT_TENANT_ID, seedDepartments, seedRoles } from './domain-seed';
 
 const EMPLOYEE_CACHE_PREFIX = 'employees';
 
 export interface EmployeeReferenceRepository {
   findDepartmentById(departmentId: string): Department | null;
   findRoleById(roleId: string): Role | null;
+}
+
+export interface EmployeeRepositoryOptions {
+  tenantId?: string;
+  referenceRepository?: EmployeeReferenceRepository;
 }
 
 export class EmployeeRepository {
@@ -35,25 +40,38 @@ export class EmployeeRepository {
   private readonly pool = new ConnectionPool(16);
   private readonly optimizer = new QueryOptimizer(10);
   private readonly referenceRepository: EmployeeReferenceRepository;
+  private readonly tenantId: string;
 
-  constructor(referenceRepository?: EmployeeReferenceRepository) {
+  constructor(options: EmployeeReferenceRepository | EmployeeRepositoryOptions = {}) {
+    const hasRepo = typeof (options as EmployeeReferenceRepository).findDepartmentById === 'function';
+    this.tenantId = hasRepo ? DEFAULT_TENANT_ID : ((options as EmployeeRepositoryOptions).tenantId ?? DEFAULT_TENANT_ID);
+    const referenceRepository = hasRepo ? (options as EmployeeReferenceRepository) : (options as EmployeeRepositoryOptions).referenceRepository;
+
     if (referenceRepository) {
       this.referenceRepository = referenceRepository;
       return;
     }
 
-    const departmentMap = new Map<string, Department>(seedDepartments().map((department) => [department.department_id, department]));
-    const roleMap = new Map<string, Role>(seedRoles().map((role) => [role.role_id, role]));
+    const departmentMap = new Map<string, Department>(seedDepartments(this.tenantId).map((department) => [department.department_id, department]));
+    const roleMap = new Map<string, Role>(seedRoles(this.tenantId).map((role) => [role.role_id, role]));
     this.referenceRepository = {
-      findDepartmentById: (departmentId: string) => departmentMap.get(departmentId) ?? null,
-      findRoleById: (roleId: string) => roleMap.get(roleId) ?? null,
+      findDepartmentById: (departmentId: string) => {
+        const department = departmentMap.get(departmentId) ?? null;
+        return department?.tenant_id === this.tenantId ? department : null;
+      },
+      findRoleById: (roleId: string) => {
+        const role = roleMap.get(roleId) ?? null;
+        return role?.tenant_id === this.tenantId ? role : null;
+      },
     };
   }
 
   create(input: CreateEmployeeInput): Employee {
+    this.assertTenantFilter(input.tenant_id);
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.create' }, () => {
       const timestamp = new Date().toISOString();
       const record: Employee = {
+        tenant_id: this.tenantId,
         employee_id: randomUUID(),
         employee_number: input.employee_number,
         first_name: input.first_name,
@@ -85,45 +103,49 @@ export class EmployeeRepository {
   }
 
   findById(employeeId: string): Employee | null {
-    const cacheKey = `${EMPLOYEE_CACHE_PREFIX}:by-id:${employeeId}`;
+    const cacheKey = `${EMPLOYEE_CACHE_PREFIX}:by-id:${this.tenantId}:${employeeId}`;
     const cached = this.cache.get<Employee>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.findById', expectedIndex: 'pk_employees' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.findById', expectedIndex: 'idx_employees_tenant_id + pk_employees' }, () => {
       const employee = this.employees.get(employeeId) ?? null;
-      if (employee) {
+      if (employee && employee.tenant_id === this.tenantId) {
         this.cache.set(cacheKey, employee);
+        return employee;
       }
-      return employee;
+      return null;
     }));
   }
 
   findByEmployeeNumber(employeeNumber: string): Employee | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.findByEmployeeNumber', expectedIndex: 'uq_employees_employee_number' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.findByEmployeeNumber', expectedIndex: 'uq_employees_tenant_employee_number' }, () => {
       const employeeId = this.employeeNumberIndex.get(employeeNumber);
-      return employeeId ? (this.employees.get(employeeId) ?? null) : null;
+      return employeeId ? this.findById(employeeId) : null;
     }));
   }
 
   findByEmail(email: string): Employee | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.findByEmail', expectedIndex: 'uq_employees_email' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.findByEmail', expectedIndex: 'uq_employees_tenant_email' }, () => {
       const employeeId = this.emailIndex.get(email);
-      return employeeId ? (this.employees.get(employeeId) ?? null) : null;
+      return employeeId ? this.findById(employeeId) : null;
     }));
   }
 
   findDepartmentById(departmentId: string): Department | null {
-    return this.referenceRepository.findDepartmentById(departmentId);
+    const department = this.referenceRepository.findDepartmentById(departmentId);
+    return department?.tenant_id === this.tenantId ? department : null;
   }
 
   findRoleById(roleId: string): Role | null {
-    return this.referenceRepository.findRoleById(roleId);
+    const role = this.referenceRepository.findRoleById(roleId);
+    return role?.tenant_id === this.tenantId ? role : null;
   }
 
   list(filters: EmployeeFilters): PaginatedResult<Employee> {
-    const cacheKey = `${EMPLOYEE_CACHE_PREFIX}:list:${JSON.stringify(filters)}`;
+    this.assertTenantFilter(filters.tenant_id);
+    const cacheKey = `${EMPLOYEE_CACHE_PREFIX}:list:${this.tenantId}:${JSON.stringify(filters)}`;
     const cached = this.cache.get<PaginatedResult<Employee>>(cacheKey);
     if (cached) {
       return cached;
@@ -133,7 +155,7 @@ export class EmployeeRepository {
       const candidateIds = this.collectCandidateIds(filters);
       const rows = candidateIds
         .map((employeeId) => this.employees.get(employeeId))
-        .filter((employee): employee is Employee => Boolean(employee))
+        .filter((employee): employee is Employee => Boolean(employee) && employee.tenant_id === this.tenantId)
         .filter((employee) => {
           if (filters.department_id && employee.department_id !== filters.department_id) {
             return false;
@@ -167,8 +189,8 @@ export class EmployeeRepository {
   }
 
   update(employeeId: string, input: UpdateEmployeeInput): Employee | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.update', expectedIndex: 'pk_employees' }, () => {
-      const employee = this.employees.get(employeeId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.update', expectedIndex: 'idx_employees_tenant_id + pk_employees' }, () => {
+      const employee = this.findById(employeeId);
 
       if (!employee) {
         return null;
@@ -177,6 +199,7 @@ export class EmployeeRepository {
       const updated: Employee = {
         ...employee,
         ...input,
+        tenant_id: this.tenantId,
         updated_at: new Date().toISOString(),
       };
 
@@ -192,8 +215,8 @@ export class EmployeeRepository {
   }
 
   updateStatus(employeeId: string, status: EmployeeStatus): Employee | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.updateStatus', expectedIndex: 'pk_employees' }, () => {
-      const employee = this.employees.get(employeeId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.updateStatus', expectedIndex: 'idx_employees_tenant_id + pk_employees' }, () => {
+      const employee = this.findById(employeeId);
 
       if (!employee) {
         return null;
@@ -217,8 +240,8 @@ export class EmployeeRepository {
   }
 
   delete(employeeId: string): boolean {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.delete', expectedIndex: 'pk_employees' }, () => {
-      const existing = this.employees.get(employeeId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'employees.delete', expectedIndex: 'idx_employees_tenant_id + pk_employees' }, () => {
+      const existing = this.findById(employeeId);
       if (!existing) {
         return false;
       }
@@ -256,11 +279,12 @@ export class EmployeeRepository {
   }
 
   private toEmployeeDirectoryReadModel(employee: Employee): EmployeeDirectoryReadModel {
-    const department = this.referenceRepository.findDepartmentById(employee.department_id);
-    const role = this.referenceRepository.findRoleById(employee.role_id);
-    const manager = employee.manager_employee_id ? this.employees.get(employee.manager_employee_id) : undefined;
+    const department = this.findDepartmentById(employee.department_id);
+    const role = this.findRoleById(employee.role_id);
+    const manager = employee.manager_employee_id ? this.findById(employee.manager_employee_id) : undefined;
 
     return {
+      tenant_id: employee.tenant_id,
       employee_id: employee.employee_id,
       employee_number: employee.employee_number,
       full_name: this.toFullName(employee.first_name, employee.last_name),
@@ -280,12 +304,13 @@ export class EmployeeRepository {
   }
 
   private toOrganizationStructureReadModel(employee: Employee): OrganizationStructureReadModel {
-    const department = this.referenceRepository.findDepartmentById(employee.department_id);
-    const role = this.referenceRepository.findRoleById(employee.role_id);
-    const manager = employee.manager_employee_id ? this.employees.get(employee.manager_employee_id) : undefined;
-    const head = department?.head_employee_id ? this.employees.get(department.head_employee_id) : undefined;
+    const department = this.findDepartmentById(employee.department_id);
+    const role = this.findRoleById(employee.role_id);
+    const manager = employee.manager_employee_id ? this.findById(employee.manager_employee_id) : undefined;
+    const head = department?.head_employee_id ? this.findById(department.head_employee_id) : undefined;
 
     return {
+      tenant_id: employee.tenant_id,
       department_id: employee.department_id,
       department_name: department?.name ?? employee.department_id,
       department_code: department?.code ?? employee.department_id,
@@ -333,30 +358,36 @@ export class EmployeeRepository {
 
   private resolveExpectedIndex(filters: EmployeeFilters): string {
     if (filters.employee_id) {
-      return 'pk_employees';
+      return 'idx_employees_tenant_id + pk_employees';
     }
     if (filters.department_id && filters.role_id && filters.status) {
-      return 'idx_employees_department_id + idx_employees_role_id + idx_employees_status';
+      return 'idx_employees_tenant_department_id + idx_employees_tenant_role_id + idx_employees_tenant_status';
     }
     if (filters.department_id && filters.role_id) {
-      return 'idx_employees_department_id + idx_employees_role_id';
+      return 'idx_employees_tenant_department_id + idx_employees_tenant_role_id';
     }
     if (filters.department_id && filters.status) {
-      return 'idx_employees_department_id + idx_employees_status';
+      return 'idx_employees_tenant_department_id + idx_employees_tenant_status';
     }
     if (filters.role_id && filters.status) {
-      return 'idx_employees_role_id + idx_employees_status';
+      return 'idx_employees_tenant_role_id + idx_employees_tenant_status';
     }
     if (filters.department_id) {
-      return 'idx_employees_department_id';
+      return 'idx_employees_tenant_department_id';
     }
     if (filters.role_id) {
-      return 'idx_employees_role_id';
+      return 'idx_employees_tenant_role_id';
     }
     if (filters.status) {
-      return 'idx_employees_status';
+      return 'idx_employees_tenant_status';
     }
-    return 'pk_employees';
+    return 'idx_employees_tenant_id';
+  }
+
+  private assertTenantFilter(tenantId?: string): void {
+    if (tenantId && tenantId !== this.tenantId) {
+      throw new Error('cross_tenant_filter_blocked');
+    }
   }
 
   private addToIndex<K>(index: Map<K, Set<string>>, key: K, employeeId: string): void {
@@ -413,8 +444,8 @@ export class EmployeeRepository {
   }
 
   private invalidateEmployeeCache(employeeId: string): void {
-    this.cache.invalidate(`${EMPLOYEE_CACHE_PREFIX}:by-id:${employeeId}`);
-    this.cache.invalidateByPrefix(`${EMPLOYEE_CACHE_PREFIX}:list:`);
+    this.cache.invalidate(`${EMPLOYEE_CACHE_PREFIX}:by-id:${this.tenantId}:${employeeId}`);
+    this.cache.invalidateByPrefix(`${EMPLOYEE_CACHE_PREFIX}:list:${this.tenantId}:`);
   }
 
   private toFullName(firstName: string, lastName: string): string {

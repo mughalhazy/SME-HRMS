@@ -14,6 +14,7 @@ export const ROLE_STATUSES = ['Draft', 'Active', 'Inactive', 'Archived'] as cons
 export type RoleStatus = (typeof ROLE_STATUSES)[number];
 
 export interface Department {
+  tenant_id: string;
   department_id: string;
   name: string;
   code: string;
@@ -25,6 +26,7 @@ export interface Department {
 }
 
 export interface Role {
+  tenant_id: string;
   role_id: string;
   title: string;
   level?: string;
@@ -36,6 +38,7 @@ export interface Role {
 }
 
 export interface Employee {
+  tenant_id: string;
   employee_id: string;
   employee_number: string;
   first_name: string;
@@ -53,6 +56,7 @@ export interface Employee {
 }
 
 export interface EmployeeDirectoryReadModel {
+  tenant_id: string;
   employee_id: string;
   employee_number: string;
   full_name: string;
@@ -71,6 +75,7 @@ export interface EmployeeDirectoryReadModel {
 }
 
 export interface OrganizationStructureReadModel {
+  tenant_id: string;
   department_id: string;
   department_name: string;
   department_code: string;
@@ -98,6 +103,7 @@ export interface EmployeeListReadModelBundle {
 }
 
 export interface CreateEmployeeInput {
+  tenant_id?: string;
   employee_number: string;
   first_name: string;
   last_name: string;
@@ -124,6 +130,7 @@ export interface UpdateEmployeeInput {
 }
 
 export interface EmployeeFilters {
+  tenant_id?: string;
   employee_id?: string;
   department_id?: string;
   role_id?: string;

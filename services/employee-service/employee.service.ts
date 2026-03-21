@@ -30,10 +30,12 @@ export class EmployeeService {
     private readonly roleService?: RoleService,
     private readonly departmentRepository?: DepartmentRepository,
     private readonly performanceReviewRepository?: EmployeePerformanceReviewReferenceRepository,
+    private readonly tenantId: string = 'tenant-default',
   ) {}
 
   createEmployee(input: CreateEmployeeInput): Employee {
     validateCreateEmployee(input);
+    this.assertActorTenant(input.tenant_id);
     this.ensureUniqueEmployee(input.employee_number, input.email);
     this.ensureDepartmentAndRoleAreAssignable(input.department_id, input.role_id);
     this.ensureManagerRelationship(input.manager_employee_id);
@@ -44,7 +46,7 @@ export class EmployeeService {
 
     this.ensureRoleAssignmentLink(input.role_id);
 
-    const employee = this.repository.create(input);
+    const employee = this.repository.create({ ...input, tenant_id: this.tenantId });
     this.roleService?.linkEmployee(employee.role_id, employee.employee_id);
     return employee;
   }
@@ -64,11 +66,13 @@ export class EmployeeService {
   }
 
   listEmployees(filters: EmployeeFilters) {
-    return this.repository.list(filters);
+    this.assertActorTenant(filters.tenant_id);
+    return this.repository.list({ ...filters, tenant_id: this.tenantId });
   }
 
   listEmployeeReadModels(filters: EmployeeFilters) {
-    const page = this.repository.list(filters);
+    this.assertActorTenant(filters.tenant_id);
+    const page = this.repository.list({ ...filters, tenant_id: this.tenantId });
     return this.repository.toReadModelListBundle(page.data);
   }
 
@@ -259,5 +263,11 @@ export class EmployeeService {
 
   private ensureActivationRequirements(departmentId: string, roleId: string): void {
     this.ensureDepartmentAndRoleAreAssignable(departmentId, roleId);
+  }
+
+  private assertActorTenant(actorTenantId?: string): void {
+    if (actorTenantId && actorTenantId !== this.tenantId) {
+      throw new ValidationError([{ field: 'tenant_id', reason: 'actor tenant does not match requested tenant scope' }]);
+    }
   }
 }

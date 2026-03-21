@@ -24,6 +24,7 @@ export interface RolePermissionMapping {
 }
 
 export interface Role {
+  tenant_id: string;
   role_id: string;
   title: string;
   level?: string;
@@ -36,6 +37,7 @@ export interface Role {
 }
 
 export interface CreateRoleInput {
+  tenant_id?: string;
   title: string;
   level?: string;
   description?: string;
@@ -54,6 +56,7 @@ export interface UpdateRoleInput {
 }
 
 export interface RoleFilters {
+  tenant_id?: string;
   status?: RoleStatus;
   employment_category?: EmploymentCategory;
 }
