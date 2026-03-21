@@ -7,11 +7,12 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
-from event_contract import EventRegistry
-from outbox_system import OutboxManager
+from event_contract import EventRegistry, emit_canonical_event
+from notification_service import NotificationService
 
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, Observability, run_with_retry
+from workflow_service import WorkflowService, WorkflowServiceError
 
 
 class HiringValidationError(ValueError):
@@ -49,6 +50,7 @@ class Candidate:
     status: str
     created_at: datetime
     updated_at: datetime
+    hire_workflow_id: str | None = None
     source_candidate_id: str | None = None
     source_profile_url: str | None = None
 
@@ -130,7 +132,7 @@ class HiringService:
         "Withdrawn": set(),
     }
 
-    def __init__(self, db_path: str | None = None) -> None:
+    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None) -> None:
         self.job_postings = PersistentKVStore[str, JobPosting](service='hiring-service', namespace='job_postings', db_path=db_path)
         shared_db_path = self.job_postings.db_path
         self.candidates = PersistentKVStore[str, Candidate](service='hiring-service', namespace='candidates', db_path=shared_db_path)
@@ -141,6 +143,8 @@ class HiringService:
         self.events: list[dict[str, Any]] = []
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
+        self.notification_service = notification_service or NotificationService()
+        self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
         self.error_logger = CentralErrorLogger("hiring-service")
         self.dead_letters = DeadLetterQueue()
         self.observability = Observability("hiring-service")
@@ -157,6 +161,31 @@ class HiringService:
             "linkedin": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
         }
         self._lock = RLock()
+        self.workflow_service.register_definition(
+            tenant_id=self.tenant_id,
+            code="candidate_hiring_approval",
+            source_service="hiring-service",
+            subject_type="Candidate",
+            description="Centralized candidate hiring approval workflow.",
+            steps=[
+                {
+                    "name": "hire-approval",
+                    "type": "approval",
+                    "assignee_template": "{approver_assignee}",
+                    "sla": "PT48H",
+                    "escalation_assignee_template": "{escalation_assignee}",
+                }
+            ],
+        )
+
+    def _audit_hiring_mutation(self, action: str, entity: str, entity_id: str, before: dict[str, Any], after: dict[str, Any], *, actor_id: str | None = None, actor_type: str = 'user') -> None:
+        self.observability.logger.audit(
+            action,
+            actor={'id': actor_id or 'system', 'type': actor_type},
+            entity=entity,
+            entity_id=entity_id,
+            context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
+        )
 
     def create_job_posting(self, payload: dict[str, Any]) -> dict[str, Any]:
         started = perf_counter()
@@ -192,11 +221,14 @@ class HiringService:
             self.job_postings[job_posting.job_posting_id] = job_posting
             if status == "Open":
                 self._emit("JobPostingOpened", {"job_posting_id": job_posting.job_posting_id})
+        payload = self._serialize(job_posting)
+        self._audit_hiring_mutation('job_posting_created', 'JobPosting', job_posting.job_posting_id, {}, payload, actor_id=str(payload.get('changed_by') or payload.get('actor_id') or 'system'), actor_type='service' if payload.get('changed_by') is None else 'user')
         self.observability.track("create_job_posting", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "job_posting_id": job_posting.job_posting_id})
-        return self._serialize(job_posting)
+        return payload
 
     def update_job_posting(self, job_posting_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         posting = self._require_job_posting(job_posting_id)
+        before = self._serialize(posting)
         previous_status = posting.status
 
         for key in ["title", "department_id", "role_id", "location", "description"]:
@@ -235,7 +267,9 @@ class HiringService:
             if posting.status in {"Closed", "Filled"}:
                 self._emit("JobPostingClosed", {"job_posting_id": posting.job_posting_id, "status": posting.status})
 
-        return self._serialize(posting)
+        payload = self._serialize(posting)
+        self._audit_hiring_mutation('job_posting_updated', 'JobPosting', posting.job_posting_id, before, payload, actor_id=str(patch.get('changed_by') or 'system'), actor_type='user' if patch.get('changed_by') else 'system')
+        return payload
 
     def get_job_posting(self, job_posting_id: str) -> dict[str, Any]:
         posting = self._require_job_posting(job_posting_id)
@@ -283,6 +317,7 @@ class HiringService:
             payload = self._serialize(posting)
             payload["candidate_count"] = 0
             del self.job_postings[job_posting_id]
+            self._audit_hiring_mutation('job_posting_deleted', 'JobPosting', job_posting_id, payload, {}, actor_id='system', actor_type='system')
             return payload
 
     def create_candidate(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -323,6 +358,7 @@ class HiringService:
                 updated_at=self._now(),
             )
             self.candidates[candidate.candidate_id] = candidate
+            created_candidate = self._serialize(candidate)
             self._record_candidate_stage_transition(
                 candidate_id=candidate.candidate_id,
                 from_status=None,
@@ -333,7 +369,9 @@ class HiringService:
             )
             self._emit("CandidateApplied", {"candidate_id": candidate.candidate_id, "job_posting_id": candidate.job_posting_id})
         self.observability.track("create_candidate", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "candidate_id": candidate.candidate_id})
-        return self.get_candidate(candidate.candidate_id)
+        payload = self.get_candidate(candidate.candidate_id)
+        self._audit_hiring_mutation('candidate_created', 'Candidate', candidate.candidate_id, {}, payload, actor_id=str(payload.get('stage_history', [{}])[0].get('changed_by') or 'system'), actor_type='user' if payload.get('stage_history', [{}])[0].get('changed_by') else 'system')
+        return payload
 
     def list_candidates(
         self,
@@ -380,6 +418,7 @@ class HiringService:
 
     def update_candidate(self, candidate_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
+        before = self.get_candidate(candidate_id)
         previous_status = candidate.status
 
         for key in [
@@ -442,7 +481,9 @@ class HiringService:
                 },
             )
 
-        return self.get_candidate(candidate.candidate_id)
+        payload = self.get_candidate(candidate.candidate_id)
+        self._audit_hiring_mutation('candidate_updated', 'Candidate', candidate.candidate_id, before, payload, actor_id=str(patch.get('changed_by') or 'system'), actor_type='user' if patch.get('changed_by') else 'system')
+        return payload
 
     def get_candidate(self, candidate_id: str) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
@@ -486,7 +527,9 @@ class HiringService:
 
         self.interviews[interview.interview_id] = interview
         self._emit("InterviewScheduled", {"interview_id": interview.interview_id, "candidate_id": interview.candidate_id})
-        return self.get_interview(interview.interview_id)
+        payload = self.get_interview(interview.interview_id)
+        self._audit_hiring_mutation('interview_created', 'Interview', interview.interview_id, {}, payload, actor_id=str(payload.get('created_by') or payload.get('candidate_id') or 'system'), actor_type='system')
+        return payload
 
     def get_interview(self, interview_id: str) -> dict[str, Any]:
         interview = self._require_interview(interview_id)
@@ -646,6 +689,7 @@ class HiringService:
 
     def update_interview(self, interview_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         interview = self._require_interview(interview_id)
+        before = self.get_interview(interview_id)
         previous_status = interview.status
 
         if "candidate_id" in patch and patch["candidate_id"] != interview.candidate_id:
@@ -690,14 +734,47 @@ class HiringService:
         if previous_status != interview.status and interview.status == "Completed":
             self._emit("InterviewCompleted", {"interview_id": interview.interview_id, "candidate_id": interview.candidate_id})
 
-        return self.get_interview(interview.interview_id)
+        payload = self.get_interview(interview.interview_id)
+        self._audit_hiring_mutation('interview_updated', 'Interview', interview.interview_id, before, payload, actor_id=str(patch.get('changed_by') or 'system'), actor_type='user' if patch.get('changed_by') else 'system')
+        return payload
 
     def mark_candidate_hired(self, candidate_id: str, employee_payload: dict[str, Any] | None = None) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
         if candidate.status != "Offered":
             raise HiringValidationError("candidate can only be hired from Offered status")
+        payload = employee_payload or {}
+        approver_id = str(payload.get("changed_by") or "role:Admin")
+        approver_role = str(payload.get("approver_role") or "Admin")
+        if not candidate.hire_workflow_id:
+            workflow = self.workflow_service.start_workflow(
+                tenant_id=self.tenant_id,
+                definition_code="candidate_hiring_approval",
+                source_service="hiring-service",
+                subject_type="Candidate",
+                subject_id=candidate_id,
+                actor_id=approver_id,
+                actor_type="user",
+                context={
+                    "approver_assignee": approver_id if approver_id.startswith("role:") else f"role:{approver_role}",
+                    "escalation_assignee": "role:Admin",
+                },
+            )
+            candidate.hire_workflow_id = workflow["workflow_id"]
+        try:
+            workflow = self.workflow_service.approve_step(
+                candidate.hire_workflow_id,
+                tenant_id=self.tenant_id,
+                actor_id=approver_id,
+                actor_type="user",
+                actor_role=approver_role,
+                comment="Candidate hire approved",
+            )
+        except WorkflowServiceError as exc:
+            raise HiringValidationError(exc.message) from exc
+        if workflow.get("metadata", {}).get("terminal_result") != "approved":
+            raise HiringValidationError("candidate hiring workflow did not complete")
 
-        employee_profile = self._upsert_employee_profile_for_candidate(candidate, employee_payload or {})
+        employee_profile = self._upsert_employee_profile_for_candidate(candidate, payload)
         candidate.status = "Hired"
         candidate.updated_at = self._now()
 
@@ -705,7 +782,7 @@ class HiringService:
             candidate_id=candidate_id,
             from_status="Offered",
             to_status="Hired",
-            changed_by=(employee_payload or {}).get("changed_by"),
+            changed_by=payload.get("changed_by"),
             reason="candidate accepted offer",
             notes=None,
         )
@@ -727,7 +804,9 @@ class HiringService:
                 "role_id": employee_profile.role_id,
             },
         )
-        return self.get_candidate(candidate_id)
+        payload = self.get_candidate(candidate_id)
+        self._audit_hiring_mutation('candidate_hired', 'Candidate', candidate_id, {'status': 'Offered'}, payload, actor_id=str((employee_payload or {}).get('changed_by') or 'system'), actor_type='user' if (employee_payload or {}).get('changed_by') else 'system')
+        return payload
 
     def get_employee_profile(self, employee_id: str) -> dict[str, Any]:
         employee = self.employee_profiles.get(employee_id)

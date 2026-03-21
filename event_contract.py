@@ -46,6 +46,7 @@ CANONICAL_EVENT_TYPES: dict[str, str] = {
     "LinkedInCandidatesImported": "hiring.linkedin_candidates.imported",
     "NotificationQueued": "notification.message.queued",
     "NotificationSent": "notification.message.sent",
+    "NotificationFailed": "notification.message.failed",
     "NotificationSuppressed": "notification.message.suppressed",
     "UserProvisioned": "auth.user.provisioned",
     "SessionRevoked": "auth.session.revoked",
