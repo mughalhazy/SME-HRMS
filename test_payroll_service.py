@@ -141,7 +141,7 @@ def test_monthly_trigger_runs_full_month_period(service: PayrollService):
     assert payload["data"]["period_start"] == "2026-05-01"
     assert payload["data"]["period_end"] == "2026-05-31"
     assert payload["data"]["processed_count"] == 1
-    assert service.events[-1]["type"] == "PayrollMonthlyTriggerExecuted"
+    assert service.events[-1]["event_type"] == "payroll.run.monthly_trigger_executed"
 
 
 def test_invalid_money_value_returns_validation_error(service: PayrollService):
