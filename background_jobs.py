@@ -79,6 +79,23 @@ class JobExecutionContext:
     correlation_id: str
 
 
+
+
+@dataclass(frozen=True)
+class TenantJobQueueConfig:
+    max_queued_jobs: int = 500
+    max_due_jobs_per_run: int = 50
+
+    @classmethod
+    def from_payload(cls, payload: dict[str, Any] | None, *, fallback: "TenantJobQueueConfig | None" = None) -> "TenantJobQueueConfig":
+        base = fallback or cls()
+        source = dict(payload or {})
+        return cls(
+            max_queued_jobs=int(source.get('max_queued_jobs', base.max_queued_jobs)),
+            max_due_jobs_per_run=int(source.get('max_due_jobs_per_run', base.max_due_jobs_per_run)),
+        )
+
+
 class BackgroundJobError(Exception):
     def __init__(self, status_code: int, code: str, message: str, *, details: list[dict[str, Any]] | None = None):
         super().__init__(message)
@@ -113,6 +130,7 @@ class BackgroundJobService:
         self.job_results = PersistentKVStore[str, dict[str, Any]](service='background-jobs', namespace='job_results', db_path=db_path)
         self.job_failures = PersistentKVStore[str, JobFailureRecord](service='background-jobs', namespace='job_failures', db_path=db_path)
         self.handlers: dict[str, JobHandler] = {}
+        self.tenant_queue_configs = PersistentKVStore[str, TenantJobQueueConfig](service='background-jobs', namespace='tenant_queue_configs', db_path=db_path)
         self.default_max_attempts = 3
         self.idempotency = IdempotencyStore()
         self.dead_letters = DeadLetterQueue()
@@ -138,6 +156,20 @@ class BackgroundJobService:
 
     def _trace(self, trace_id: str | None) -> str:
         return self.observability.trace_id(trace_id)
+
+    def upsert_tenant_queue_config(self, tenant_id: str, payload: dict[str, Any]) -> TenantJobQueueConfig:
+        tenant = normalize_tenant_id(tenant_id)
+        current = self.tenant_queue_configs.get(tenant) or TenantJobQueueConfig()
+        config = TenantJobQueueConfig.from_payload(payload, fallback=current)
+        self.tenant_queue_configs[tenant] = config
+        return config
+
+    def _tenant_queue_config(self, tenant_id: str) -> TenantJobQueueConfig:
+        return self.tenant_queue_configs.get(normalize_tenant_id(tenant_id)) or TenantJobQueueConfig()
+
+    def queued_job_count(self, tenant_id: str) -> int:
+        tenant = normalize_tenant_id(tenant_id)
+        return len([job for job in self.jobs.values() if job.tenant_id == tenant and job.status == JobStatus.SCHEDULED])
 
     def register_handler(self, job_type: str, handler: JobHandler, *, max_attempts: int | None = None) -> None:
         self.handlers[job_type] = handler
@@ -171,6 +203,10 @@ class BackgroundJobService:
             return existing
         if job_type not in self.handlers:
             raise BackgroundJobError(422, 'UNKNOWN_JOB_TYPE', f'No job handler registered for {job_type}')
+        queue_config = self._tenant_queue_config(tenant)
+        queued_jobs = self.queued_job_count(tenant)
+        if queued_jobs >= queue_config.max_queued_jobs:
+            raise BackgroundJobError(429, 'QUEUE_OVERFLOW', 'Background job queue capacity exceeded for tenant', details=[{'field': 'tenant_id', 'reason': f'queued jobs exceeded limit {queue_config.max_queued_jobs}'}])
         job = JobRecord(
             job_id=str(uuid4()),
             tenant_id=tenant,
@@ -196,7 +232,7 @@ class BackgroundJobService:
             'job.enqueued',
             trace_id=job.trace_id,
             message=job.job_type,
-            context={'job_id': job.job_id, 'tenant_id': job.tenant_id, 'scheduled_at': job.scheduled_at},
+            context={'job_id': job.job_id, 'tenant_id': job.tenant_id, 'scheduled_at': job.scheduled_at, 'queued_jobs': queued_jobs + 1, 'queue_limit': queue_config.max_queued_jobs},
         )
         return job
 
@@ -250,10 +286,29 @@ class BackgroundJobService:
         if tenant_id is not None:
             tenant = normalize_tenant_id(tenant_id)
             rows = [job for job in rows if job.tenant_id == tenant]
+            per_tenant_limits = {tenant: self._tenant_queue_config(tenant).max_due_jobs_per_run}
+        else:
+            per_tenant_limits = {
+                tenant_key: self._tenant_queue_config(tenant_key).max_due_jobs_per_run
+                for tenant_key in {job.tenant_id for job in rows}
+            }
         rows.sort(key=lambda row: (row.scheduled_at, row.job_id))
         executed: list[JobRecord] = []
+        executed_by_tenant: dict[str, int] = {}
         for job in rows:
+            limit = per_tenant_limits.get(job.tenant_id, TenantJobQueueConfig().max_due_jobs_per_run)
+            current = executed_by_tenant.get(job.tenant_id, 0)
+            if current >= limit:
+                continue
             executed.append(self.execute_job(job.job_id, tenant_id=job.tenant_id))
+            executed_by_tenant[job.tenant_id] = current + 1
+        if rows:
+            backlog = len(rows) - len(executed)
+            self.observability.logger.info(
+                'jobs.run_due.summary',
+                message='run_due_jobs',
+                context={'tenant_id': tenant_id or '*', 'due_jobs': len(rows), 'executed_jobs': len(executed), 'backlog_jobs': backlog, 'per_tenant_limits': per_tenant_limits},
+            )
         return executed
 
     def execute_job(self, job_id: str, *, tenant_id: str, trace_id: str | None = None) -> JobRecord:
