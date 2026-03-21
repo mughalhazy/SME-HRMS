@@ -2,21 +2,17 @@
 
 import type { MouseEvent, ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Bell, ChevronDown, LoaderCircle, Search, Settings2 } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { Bell, LoaderCircle, Search, Settings2 } from 'lucide-react'
 
 import { useAuth } from '@/components/auth/auth-provider'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { getNavigationItem, isNavigationItemActive, navigationSections, partitionPrimaryNavigationItems, primaryNavigationItems, utilityNavigationItems } from '@/lib/navigation'
+import { getNavigationItem, isNavigationItemActive, navigationSections, primaryNavigationItems, utilityNavigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
-
-const NAV_ITEM_GAP = 24
-const NAV_ROOT_GAP = 16
 
 function shouldHandleNavigation(event: MouseEvent<HTMLAnchorElement>, href: string, pathname: string) {
   if (event.defaultPrevented) {
@@ -58,25 +54,6 @@ function getProfileInitials(identifier: string | null | undefined) {
     .join('')
 }
 
-function getVisibleNavigationCount(itemWidths: number[], availableWidth: number, moreWidth: number) {
-  let visibleCount = itemWidths.length
-
-  for (let count = itemWidths.length; count >= 0; count -= 1) {
-    const hiddenCount = itemWidths.length - count
-    const visibleWidth = itemWidths.slice(0, count).reduce((total, width) => total + width, 0)
-    const visibleGapWidth = count > 1 ? (count - 1) * NAV_ITEM_GAP : 0
-    const moreGapWidth = hiddenCount > 0 && count > 0 ? NAV_ITEM_GAP : 0
-    const totalWidth = visibleWidth + visibleGapWidth + (hiddenCount > 0 ? moreGapWidth + moreWidth : 0)
-
-    if (totalWidth <= availableWidth) {
-      visibleCount = count
-      break
-    }
-  }
-
-  return visibleCount
-}
-
 export function AppShell({
   children,
   currentPath,
@@ -90,16 +67,10 @@ export function AppShell({
   pageDescription?: string
   pageActions?: ReactNode
 }) {
-  const router = useRouter()
   const pathname = usePathname() ?? currentPath ?? '/dashboard'
   const activePath = currentPath ?? pathname
   const { session } = useAuth()
   const [pendingHref, setPendingHref] = useState<string | null>(null)
-  const [visibleNavigationCount, setVisibleNavigationCount] = useState(primaryNavigationItems.length)
-  const navigationRootRef = useRef<HTMLDivElement | null>(null)
-  const rightNavRef = useRef<HTMLDivElement | null>(null)
-  const moreMeasureRef = useRef<HTMLButtonElement | null>(null)
-  const itemMeasureRefs = useRef<Record<string, HTMLAnchorElement | null>>({})
 
   useEffect(() => {
     setPendingHref(null)
@@ -116,77 +87,6 @@ export function AppShell({
     }
 
     setPendingHref(href)
-  }
-
-  const recalculateNavigation = useCallback(() => {
-    const navigationRoot = navigationRootRef.current
-    const rightNav = rightNavRef.current
-    const moreMeasure = moreMeasureRef.current
-
-    if (!navigationRoot || !rightNav || !moreMeasure) {
-      return
-    }
-
-    const itemWidths = primaryNavigationItems.map((item) => itemMeasureRefs.current[item.key]?.offsetWidth ?? 0)
-
-    if (itemWidths.some((width) => width === 0)) {
-      return
-    }
-
-    const availableWidth = Math.max(0, navigationRoot.clientWidth - rightNav.offsetWidth - NAV_ROOT_GAP)
-    const nextVisibleCount = getVisibleNavigationCount(itemWidths, availableWidth, moreMeasure.offsetWidth)
-
-    setVisibleNavigationCount((currentCount) => (currentCount === nextVisibleCount ? currentCount : nextVisibleCount))
-  }, [])
-
-  useLayoutEffect(() => {
-    recalculateNavigation()
-
-    const resizeObserver = new ResizeObserver(() => {
-      recalculateNavigation()
-    })
-
-    if (navigationRootRef.current) {
-      resizeObserver.observe(navigationRootRef.current)
-    }
-
-    if (rightNavRef.current) {
-      resizeObserver.observe(rightNavRef.current)
-    }
-
-    Object.values(itemMeasureRefs.current).forEach((element) => {
-      if (element) {
-        resizeObserver.observe(element)
-      }
-    })
-
-    if (moreMeasureRef.current) {
-      resizeObserver.observe(moreMeasureRef.current)
-    }
-
-    window.addEventListener('resize', recalculateNavigation)
-
-    return () => {
-      resizeObserver.disconnect()
-      window.removeEventListener('resize', recalculateNavigation)
-    }
-  }, [recalculateNavigation])
-
-  const { visibleNavigationItems, overflowNavigationItems } = useMemo(
-    () => partitionPrimaryNavigationItems(visibleNavigationCount),
-    [visibleNavigationCount],
-  )
-  const hasOverflowNavigation = overflowNavigationItems.length > 0
-  const visibleNavigationCountLabel = `${visibleNavigationItems.length} visible, ${overflowNavigationItems.length} in More`
-  const overflowActive = overflowNavigationItems.some((item) => isNavigationItemActive(activePath, item))
-
-  const handleOverflowNavigation = (href: string) => {
-    if (href === pathname) {
-      return
-    }
-
-    setPendingHref(href)
-    router.push(href)
   }
 
   return (
@@ -206,77 +106,38 @@ export function AppShell({
           </div>
 
           <div className="col-span-12 min-w-0 lg:col-span-9 xl:col-span-10">
-            <div ref={navigationRootRef} className="flex w-full flex-wrap items-center justify-between gap-4">
-              <nav
-                aria-label="Primary navigation"
-                data-nav-count={primaryNavigationItems.length}
-                data-nav-visibility={visibleNavigationCountLabel}
-                className="flex min-w-0 flex-1 items-center gap-6 overflow-hidden"
-              >
-                {visibleNavigationItems.map((item) => {
-                  const active = isNavigationItemActive(activePath, item)
-                  const isPending = pendingHref === item.href
+            <div className="flex w-full flex-wrap items-center justify-between gap-4">
+              <nav aria-label="Primary navigation" data-nav-count={primaryNavigationItems.length} className="min-w-0 flex-1">
+                <div className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="flex min-w-max items-center gap-6">
+                    {primaryNavigationItems.map((item) => {
+                      const active = isNavigationItemActive(activePath, item)
+                      const isPending = pendingHref === item.href
 
-                  return (
-                    <Link
-                      key={item.key}
-                      href={item.href}
-                      onClick={onNavigationStart(item.href)}
-                      aria-current={active ? 'page' : undefined}
-                      aria-busy={isPending}
-                      className={cn(
-                        'inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] border border-transparent px-4 text-sm font-semibold transition-[background-color,color,border-color,box-shadow] duration-150',
-                        active
-                          ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--primary)] shadow-[var(--shadow-control)]'
-                          : 'text-slate-600 hover:bg-[var(--surface-subtle)] hover:text-slate-950',
-                      )}
-                    >
-                      {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                      <span>{item.label}</span>
-                    </Link>
-                  )
-                })}
-
-                {hasOverflowNavigation ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'h-11 shrink-0 gap-2 whitespace-nowrap border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-none hover:bg-[var(--surface-subtle)] hover:text-slate-950',
-                          overflowActive && 'border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--primary)]',
-                        )}
-                      >
-                        <span>More</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56 p-1" aria-label="More navigation">
-                      {overflowNavigationItems.map((item) => {
-                        const active = isNavigationItemActive(activePath, item)
-                        const isPending = pendingHref === item.href
-
-                        return (
-                          <DropdownMenuItem
-                            key={item.key}
-                            aria-current={active ? 'page' : undefined}
-                            className={cn(
-                              'justify-between gap-3 text-left font-medium',
-                              active && 'bg-[var(--accent)] text-[var(--primary)]',
-                            )}
-                            onClick={() => handleOverflowNavigation(item.href)}
-                          >
-                            <span className="whitespace-nowrap">{item.label}</span>
-                            {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                          </DropdownMenuItem>
-                        )
-                      })}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
+                      return (
+                        <Link
+                          key={item.key}
+                          href={item.href}
+                          onClick={onNavigationStart(item.href)}
+                          aria-current={active ? 'page' : undefined}
+                          aria-busy={isPending}
+                          className={cn(
+                            'inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap border-b-2 border-transparent px-1 text-sm font-semibold text-slate-600 transition-[color,border-color,background-color] duration-150',
+                            active
+                              ? 'border-[var(--primary)] text-[var(--primary)]'
+                              : 'hover:text-slate-950',
+                          )}
+                        >
+                          {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                          <span>{item.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
               </nav>
 
-              <div ref={rightNavRef} className="flex shrink-0 items-center gap-3">
+              <div className="flex shrink-0 items-center gap-3">
                 <div className="flex shrink-0 items-center gap-3">
                   {utilityNavigationItems.map((item) => {
                     const Icon = item.icon === 'bell' ? Bell : Settings2
@@ -314,32 +175,6 @@ export function AppShell({
           </div>
         </div>
 
-        <div aria-hidden="true" className="pointer-events-none absolute left-0 top-0 -z-10 opacity-0">
-          <div className="flex items-center gap-6">
-            {primaryNavigationItems.map((item) => (
-              <Link
-                key={item.key}
-                href={item.href}
-                ref={(element) => {
-                  itemMeasureRefs.current[item.key] = element
-                }}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] border border-transparent px-4 text-sm font-semibold"
-                tabIndex={-1}
-              >
-                <span>{item.label}</span>
-              </Link>
-            ))}
-            <Button
-              ref={moreMeasureRef}
-              variant="outline"
-              className="h-11 shrink-0 gap-2 whitespace-nowrap border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-none"
-              tabIndex={-1}
-            >
-              <span>More</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
       </header>
 
       <main className="px-4 pb-6 pt-6 sm:px-6 xl:px-8">
