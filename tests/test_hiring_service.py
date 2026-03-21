@@ -461,5 +461,148 @@ class HiringServiceTest(unittest.TestCase):
         self.assertEqual(self.service.list_employee_profiles(candidate_id=candidate["candidate_id"])[0]["employee_id"], "emp-200")
 
 
+    def test_requisition_pipeline_offer_and_onboarding_handoff_flow(self) -> None:
+        requisition = self.service.create_requisition(
+            {
+                "title": "Platform Engineer",
+                "department_id": "dep-1",
+                "role_id": "role-1",
+                "employment_type": "FullTime",
+                "justification": "Backfill critical role",
+                "openings_count": 1,
+                "requested_by": "manager-1",
+                "hiring_manager_id": "manager-1",
+                "recruiter_ids": ["recruiter-1"],
+                "hiring_plan": {"headcount": 1, "must_have_skills": ["Python", "ATS"]},
+                "actor_role": "Manager",
+            }
+        )
+        self.assertEqual(requisition["status"], "Draft")
+
+        submitted = self.service.submit_requisition_for_approval(
+            requisition["requisition_id"],
+            {"changed_by": "manager-1", "actor_role": "Manager", "department_id": "dep-1"},
+        )
+        self.assertEqual(submitted["status"], "PendingApproval")
+
+        approved = self.service.approve_requisition(
+            requisition["requisition_id"],
+            {
+                "changed_by": "manager-1",
+                "actor_role": "Manager",
+                "department_id": "dep-1",
+                "posting_date": "2026-01-02",
+                "description": "Platform ownership",
+            },
+        )
+        self.assertEqual(approved["status"], "Open")
+        self.assertIsNotNone(approved["job_posting_id"])
+
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": approved["job_posting_id"],
+                "first_name": "Rin",
+                "last_name": "Aster",
+                "email": "rin@example.com",
+                "application_date": "2026-01-03",
+                "changed_by": "recruiter-1",
+                "actor_role": "Recruiter",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening", "changed_by": "recruiter-1", "actor_role": "Recruiter"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing", "changed_by": "recruiter-1", "actor_role": "Recruiter"})
+        form = self.service.create_evaluation_form(
+            {
+                "name": "Panel form",
+                "stage": "Interview",
+                "sections": [{"name": "Competencies", "questions": ["Architecture", "Communication"]}],
+            }
+        )
+        interview = self.service.create_interview(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Panel",
+                "scheduled_start": "2026-01-04T10:00:00Z",
+                "scheduled_end": "2026-01-04T11:00:00Z",
+                "evaluation_form_id": form["evaluation_form_id"],
+                "interviewer_employee_ids": ["emp-1", "emp-2"],
+                "changed_by": "recruiter-1",
+                "actor_role": "Recruiter",
+            }
+        )
+        scorecard = self.service.create_scorecard(
+            {
+                "interview_id": interview["interview_id"],
+                "overall_rating": 4.5,
+                "recommendation": "Hire",
+                "submitted_by": "emp-1",
+                "structured_feedback": {"summary": "Strong panel round"},
+                "competencies": [{"name": "Architecture", "score": 5}],
+            }
+        )
+        self.assertEqual(scorecard["recommendation"], "Hire")
+
+        offer = self.service.create_offer(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "salary_amount": 120000,
+                "currency": "USD",
+                "start_date": "2026-02-01",
+                "created_by": "recruiter-1",
+                "changed_by": "recruiter-1",
+                "actor_role": "Recruiter",
+            }
+        )
+        self.assertEqual(offer["status"], "Draft")
+        submitted_offer = self.service.submit_offer_for_approval(offer["offer_id"], {"changed_by": "recruiter-1", "actor_role": "Recruiter"})
+        self.assertEqual(submitted_offer["status"], "PendingApproval")
+        approved_offer = self.service.approve_offer(offer["offer_id"], {"changed_by": "manager-1", "actor_role": "Manager", "department_id": "dep-1"})
+        self.assertEqual(approved_offer["status"], "Approved")
+        accepted_offer = self.service.accept_offer(offer["offer_id"], {"changed_by": "candidate-portal"})
+        self.assertEqual(accepted_offer["status"], "Accepted")
+
+        hired = self.service.mark_candidate_hired(
+            candidate["candidate_id"],
+            {"changed_by": "manager-1", "approver_role": "Manager", "department_id": "dep-1", "hire_date": "2026-02-01"},
+        )
+        self.assertEqual(hired["status"], "Hired")
+        self.assertEqual(hired["employee_profile"]["onboarding_status"], "HandoffCompleted")
+        self.assertEqual(hired["employee_profile"]["employee_service_record"]["source"], "hiring-service")
+
+    def test_tenant_pipeline_templates_and_access_are_isolated(self) -> None:
+        tenant_a = self.service.configure_pipeline_template(
+            {
+                "tenant_id": "tenant-a",
+                "name": "Tenant A Pipeline",
+                "stages": [
+                    {"code": "Applied", "sequence": 1},
+                    {"code": "Screening", "sequence": 2},
+                    {"code": "Interview", "sequence": 3},
+                    {"code": "Offer", "sequence": 4},
+                    {"code": "Hired", "sequence": 5, "terminal": True},
+                    {"code": "Rejected", "sequence": 6, "terminal": True},
+                ],
+            }
+        )
+        self.assertEqual(tenant_a["tenant_id"], "tenant-a")
+        self.assertEqual(self.service.get_default_pipeline_template(tenant_id="tenant-a")["name"], "Tenant A Pipeline")
+
+        other_posting = self.service.create_job_posting(
+            {
+                "tenant_id": "tenant-b",
+                "title": "Tenant B Role",
+                "department_id": "dep-b",
+                "employment_type": "FullTime",
+                "description": "Tenant isolated",
+                "openings_count": 1,
+                "posting_date": "2026-01-01",
+                "status": "Open",
+            }
+        )
+        self.assertEqual(other_posting["tenant_id"], "tenant-b")
+        with self.assertRaises(PermissionError):
+            self.service.get_job_posting(other_posting["job_posting_id"], tenant_id="tenant-a")
+
+
 if __name__ == "__main__":
     unittest.main()
