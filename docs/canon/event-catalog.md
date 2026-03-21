@@ -21,6 +21,18 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `DepartmentUpdated` | `employee-service` | `Department` | Department metadata/status updated. |
 | `RoleCreated` | `employee-service` | `Role` | Role created. |
 | `RoleUpdated` | `employee-service` | `Role` | Role metadata/status updated. |
+| `BusinessUnitCreated` | `employee-service` | `BusinessUnit` | Business unit created. |
+| `BusinessUnitUpdated` | `employee-service` | `BusinessUnit` | Business unit metadata/status updated. |
+| `LegalEntityCreated` | `employee-service` | `LegalEntity` | Legal entity created. |
+| `LegalEntityUpdated` | `employee-service` | `LegalEntity` | Legal entity metadata/status updated. |
+| `LocationCreated` | `employee-service` | `Location` | Location created. |
+| `LocationUpdated` | `employee-service` | `Location` | Location metadata/status updated. |
+| `CostCenterCreated` | `employee-service` | `CostCenter` | Cost center created. |
+| `CostCenterUpdated` | `employee-service` | `CostCenter` | Cost center metadata/status updated. |
+| `GradeBandCreated` | `employee-service` | `GradeBand` | Grade/band created. |
+| `GradeBandUpdated` | `employee-service` | `GradeBand` | Grade/band metadata/status updated. |
+| `JobPositionCreated` | `employee-service` | `JobPosition` | Job position created. |
+| `JobPositionUpdated` | `employee-service` | `JobPosition` | Job position metadata/status updated. |
 | `PerformanceReviewSubmitted` | `employee-service` | `PerformanceReview` | Review submitted by reviewer. |
 | `PerformanceReviewFinalized` | `employee-service` | `PerformanceReview` | Review finalized from the submitted state. |
 | `AttendanceCaptured` | `attendance-service` | `AttendanceRecord` | Attendance record captured. |

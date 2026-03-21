@@ -34,7 +34,7 @@ This document defines canonical authentication, authorization, scope enforcement
 
 | Module / Resource | Admin | Manager | Employee | Recruiter | PayrollAdmin | Service |
 |---|---|---|---|---|---|---|
-| Employee / Department / Role | CRUD | CRU (scoped) | R directory, U own profile | R | R limited | scoped API access |
+| Employee / Department / BusinessUnit / LegalEntity / Location / CostCenter / GradeBand / JobPosition / Role | CRUD | CRU (scoped to assigned department and reporting hierarchy) | R directory, U own profile | R | R limited | scoped API access |
 | PerformanceReview | CRU+submit/finalize | CRU+submit/finalize (scoped) | R own | Deny | Deny | scoped API access |
 | AttendanceRecord | CRUD | CRUA (scoped) | CRU own | Deny | R | scoped API access |
 | LeaveRequest | CRUDA | CRUA (scoped) | CRU own, submit | Deny | R | scoped API access |

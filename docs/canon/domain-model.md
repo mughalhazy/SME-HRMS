@@ -6,7 +6,7 @@ This document defines the canonical backend domain for SME-HRMS and aligns entit
 
 | Service | Canonical entities |
 |---|---|
-| `employee-service` | `Employee`, `Department`, `Role`, `PerformanceReview` |
+| `employee-service` | `Employee`, `Department`, `BusinessUnit`, `LegalEntity`, `Location`, `CostCenter`, `GradeBand`, `JobPosition`, `Role`, `PerformanceReview` |
 | `attendance-service` | `AttendanceRecord` |
 | `leave-service` | `LeaveRequest` |
 | `payroll-service` | `PayrollRecord` |
@@ -47,14 +47,25 @@ Represents a person employed by the organization, including identity, reporting 
 | status | Enum | Yes | `Draft`, `Active`, `OnLeave`, `Suspended`, `Terminated`. |
 | department_id | UUID | Yes | Foreign key to `Department`. |
 | role_id | UUID | Yes | Foreign key to `Role`. |
-| manager_employee_id | UUID | No | Self-reference to manager `Employee`. |
+| manager_employee_id | UUID | No | Self-reference to primary manager `Employee`. |
+| business_unit_id | UUID | No | Foreign key to `BusinessUnit`. |
+| legal_entity_id | UUID | No | Foreign key to `LegalEntity`. |
+| location_id | UUID | No | Foreign key to `Location`. |
+| cost_center_id | UUID | No | Primary foreign key to `CostCenter`. |
+| job_position_id | UUID | No | Foreign key to `JobPosition`. |
+| grade_band_id | UUID | No | Foreign key to `GradeBand`. |
+| matrix_manager_employee_ids | UUID[] | No | Matrix-reporting managers for cross-functional accountability. |
+| cost_allocations | Object[] | No | Cost-center allocation split that should total 100 percent. |
 | created_at | DateTime | Yes | Record creation timestamp. |
 | updated_at | DateTime | Yes | Record last update timestamp. |
 
 ### Relationships
 - Belongs to one `Department`.
 - Is assigned one `Role`.
-- May report to one manager `Employee`.
+- May report to one primary manager `Employee`.
+- May have many matrix-reporting managers through reporting-line assignments.
+- Belongs to one `BusinessUnit`, `LegalEntity`, and `Location` where assigned.
+- May be mapped to one `JobPosition`, one `GradeBand`, and one primary `CostCenter`, with optional split cost allocations.
 - Has many `AttendanceRecord` entries.
 - Has many `LeaveRequest` entries.
 - Has many `PayrollRecord` entries.
@@ -67,6 +78,80 @@ Represents a person employed by the organization, including identity, reporting 
 - `OnLeave`: temporarily inactive due to approved leave.
 - `Suspended`: temporarily restricted pending HR action.
 - `Terminated`: employment ended; historical records retained.
+
+## BusinessUnit
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents an enterprise business unit used to group departments, legal entities, cost centers, and leadership accountability.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| business_unit_id | UUID | Yes | Primary identifier. |
+| name | String | Yes | Unique business-unit name. |
+| code | String | Yes | Unique business-unit code. |
+| description | Text | No | Optional description. |
+| parent_business_unit_id | UUID | No | Self-reference for hierarchical grouping. |
+| leader_employee_id | UUID | No | Employee leader for the business unit. |
+| status | Enum | Yes | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Record last update timestamp. |
+
+## LegalEntity
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents a legal employer/payroll entity aligned to a business unit.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| legal_entity_id | UUID | Yes | Primary identifier. |
+| name | String | Yes | Legal-entity name. |
+| code | String | Yes | Unique code. |
+| registration_number | String | No | Registration / incorporation reference. |
+| tax_identifier | String | No | Tax identifier or employer reference. |
+| business_unit_id | UUID | No | Foreign key to `BusinessUnit`. |
+| status | Enum | Yes | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Record last update timestamp. |
+
+## Location
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents a physical or administrative work location tied to a legal entity.
+
+## CostCenter
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents finance-facing allocation structures used for workforce costing and downstream payroll/reporting.
+
+## GradeBand
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents the grade/band framework used to normalize job levels and compensation bands.
+
+## JobPosition
+
+### Owning service
+- `employee-service`
+
+### Description
+Represents an approved organizational position that anchors department assignment, reporting chains, and grade mapping.
 
 ## Department
 

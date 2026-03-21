@@ -6,7 +6,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 
 | Service | Primary scope | Route prefix |
 |---|---|---|
-| `employee-service` | Workforce master data and organizational structure | `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/performance-reviews` |
+| `employee-service` | Workforce master data and organizational structure | `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/org/*`, `/api/v1/performance-reviews` |
 | `attendance-service` | Attendance capture, validation, and period closure | `/api/v1/attendance` |
 | `leave-service` | Leave lifecycle and approval workflow | `/api/v1/leave` |
 | `payroll-service` | Payroll processing and payout lifecycle | `/api/v1/payroll` |
@@ -20,13 +20,19 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 
 ### Responsibilities
 - Manage employee master data and employment lifecycle.
-- Manage organizational reference data for departments and roles.
+- Manage organizational reference data for departments, business units, legal entities, locations, cost centers, grades/bands, job positions, and roles.
 - Manage performance review cycles and outcomes.
 - Publish authoritative employee and organization changes to downstream services.
 
 ### Owned entities
 - `Employee`
 - `Department`
+- `BusinessUnit`
+- `LegalEntity`
+- `Location`
+- `CostCenter`
+- `GradeBand`
+- `JobPosition`
 - `Role`
 - `PerformanceReview`
 
@@ -41,6 +47,9 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `POST /api/v1/roles`
 - `PATCH /api/v1/roles/{role_id}`
 - `GET /api/v1/roles?status=&limit=&cursor=`
+- `POST /api/v1/org/{kind}`
+- `PATCH /api/v1/org/{kind}/{entity_id}`
+- `GET /api/v1/org/{kind}?status=&department_id=&business_unit_id=&legal_entity_id=&limit=&cursor=`
 - `POST /api/v1/performance-reviews`
 - `GET /api/v1/performance-reviews/{performance_review_id}`
 - `PATCH /api/v1/performance-reviews/{performance_review_id}`
@@ -65,6 +74,18 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `DepartmentUpdated`
 - `RoleCreated`
 - `RoleUpdated`
+- `BusinessUnitCreated`
+- `BusinessUnitUpdated`
+- `LegalEntityCreated`
+- `LegalEntityUpdated`
+- `LocationCreated`
+- `LocationUpdated`
+- `CostCenterCreated`
+- `CostCenterUpdated`
+- `GradeBandCreated`
+- `GradeBandUpdated`
+- `JobPositionCreated`
+- `JobPositionUpdated`
 - `PerformanceReviewSubmitted`
 - `PerformanceReviewFinalized`
 
@@ -74,6 +95,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 ### Read models produced or enriched
 - `employee_directory_view`
 - `organization_structure_view`
+- `employee_reporting_view`
 - `performance_review_view`
 - enriches `attendance_dashboard_view`, `leave_requests_view`, `payroll_summary_view`, `job_posting_directory_view`, and `candidate_pipeline_view`
 

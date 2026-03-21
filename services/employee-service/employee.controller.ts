@@ -35,17 +35,16 @@ export class EmployeeController {
   }
 
   private ensureManagerScope(req: Request, res: Response, auth: AuthContext, employeeId: string): boolean {
-    if (auth.role !== 'Manager' || !auth.department_id) {
+    if (auth.role !== 'Manager') {
       return true;
     }
 
-    const target = this.employeeService.getEmployeeById(employeeId);
-    if (target.department_id !== auth.department_id) {
-      sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
-      return false;
+    if (this.employeeService.canManagerAccessEmployee(auth.employee_id, auth.department_id, employeeId)) {
+      return true;
     }
 
-    return true;
+    sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
+    return false;
   }
 
   createEmployee = (req: Request, res: Response): void => {
@@ -110,14 +109,28 @@ export class EmployeeController {
 
       const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
       let departmentFilter = typeof req.query.department_id === 'string' ? req.query.department_id : undefined;
+      let managerFilter = typeof req.query.manager_employee_id === 'string' ? req.query.manager_employee_id : undefined;
       const roleFilter = typeof req.query.role_id === 'string' ? req.query.role_id : undefined;
       let employeeFilter: string | undefined;
+      const businessUnitFilter = typeof req.query.business_unit_id === 'string' ? req.query.business_unit_id : undefined;
+      const legalEntityFilter = typeof req.query.legal_entity_id === 'string' ? req.query.legal_entity_id : undefined;
+      const locationFilter = typeof req.query.location_id === 'string' ? req.query.location_id : undefined;
+      const costCenterFilter = typeof req.query.cost_center_id === 'string' ? req.query.cost_center_id : undefined;
+      const jobPositionFilter = typeof req.query.job_position_id === 'string' ? req.query.job_position_id : undefined;
+      const gradeBandFilter = typeof req.query.grade_band_id === 'string' ? req.query.grade_band_id : undefined;
+
       if (auth.role === 'Employee') {
         departmentFilter = undefined;
+        managerFilter = undefined;
         employeeFilter = auth.employee_id;
       }
-      if (auth.role === 'Manager' && auth.department_id) {
-        departmentFilter = auth.department_id;
+      if (auth.role === 'Manager') {
+        if (managerFilter && auth.employee_id && managerFilter !== auth.employee_id) {
+          sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
+          return;
+        }
+        managerFilter = auth.employee_id ?? managerFilter;
+        departmentFilter = auth.department_id ?? departmentFilter;
       }
 
       const filters = {
@@ -125,6 +138,13 @@ export class EmployeeController {
         employee_id: employeeFilter,
         department_id: departmentFilter,
         role_id: roleFilter,
+        manager_employee_id: managerFilter,
+        business_unit_id: businessUnitFilter,
+        legal_entity_id: legalEntityFilter,
+        location_id: locationFilter,
+        cost_center_id: costCenterFilter,
+        job_position_id: jobPositionFilter,
+        grade_band_id: gradeBandFilter,
         status: typeof status === 'string' ? (status as never) : undefined,
         limit: rawLimit,
         cursor,
@@ -296,6 +316,6 @@ export class EmployeeController {
       return;
     }
 
-    sendError(req, res, 500, 'INTERNAL_SERVER_ERROR', 'Unexpected server failure.');
+    sendError(req, res, 500, 'INTERNAL_SERVER_ERROR', 'An unexpected error occurred');
   }
 }

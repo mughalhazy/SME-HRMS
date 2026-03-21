@@ -19,13 +19,58 @@ function isIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
 }
 
-function requireString(
-  details: Array<{ field: string; reason: string }>,
-  field: string,
-  value: unknown,
-): void {
+function requireString(details: Array<{ field: string; reason: string }>, field: string, value: unknown): void {
   if (typeof value !== 'string' || value.trim() === '') {
     details.push({ field, reason: 'must be a non-empty string' });
+  }
+}
+
+function validateOptionalString(details: Array<{ field: string; reason: string }>, field: string, value: unknown): void {
+  if (value !== undefined && (typeof value !== 'string' || value.trim() === '')) {
+    details.push({ field, reason: 'must be a non-empty string when provided' });
+  }
+}
+
+function validateOptionalStringArray(details: Array<{ field: string; reason: string }>, field: string, value: unknown): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.trim() === '')) {
+    details.push({ field, reason: 'must be an array of non-empty strings when provided' });
+  }
+}
+
+function validateCostAllocations(details: Array<{ field: string; reason: string }>, costAllocations: unknown): void {
+  if (costAllocations === undefined) {
+    return;
+  }
+  if (!Array.isArray(costAllocations) || costAllocations.length === 0) {
+    details.push({ field: 'cost_allocations', reason: 'must be a non-empty array when provided' });
+    return;
+  }
+
+  let total = 0;
+  for (const [index, item] of costAllocations.entries()) {
+    if (!item || typeof item !== 'object') {
+      details.push({ field: `cost_allocations[${index}]`, reason: 'must be an object' });
+      continue;
+    }
+    const allocation = item as Record<string, unknown>;
+    if (typeof allocation.cost_center_id !== 'string' || allocation.cost_center_id.trim() === '') {
+      details.push({ field: `cost_allocations[${index}].cost_center_id`, reason: 'must be a non-empty string' });
+    }
+    if (typeof allocation.allocation_percentage !== 'number' || allocation.allocation_percentage <= 0 || allocation.allocation_percentage > 100) {
+      details.push({ field: `cost_allocations[${index}].allocation_percentage`, reason: 'must be a number between 0 and 100' });
+    } else {
+      total += allocation.allocation_percentage;
+    }
+    if (allocation.is_primary !== undefined && typeof allocation.is_primary !== 'boolean') {
+      details.push({ field: `cost_allocations[${index}].is_primary`, reason: 'must be a boolean when provided' });
+    }
+  }
+
+  if (Math.round(total * 100) / 100 !== 100) {
+    details.push({ field: 'cost_allocations', reason: 'allocation percentages must total 100' });
   }
 }
 
@@ -40,9 +85,16 @@ export function validateCreateEmployee(input: CreateEmployeeInput): void {
   requireString(details, 'department_id', input.department_id);
   requireString(details, 'role_id', input.role_id);
 
-  if (input.phone !== undefined && (typeof input.phone !== 'string' || input.phone.trim() === '')) {
-    details.push({ field: 'phone', reason: 'must be a non-empty string when provided' });
-  }
+  validateOptionalString(details, 'phone', input.phone);
+  validateOptionalString(details, 'manager_employee_id', input.manager_employee_id);
+  validateOptionalString(details, 'business_unit_id', input.business_unit_id);
+  validateOptionalString(details, 'legal_entity_id', input.legal_entity_id);
+  validateOptionalString(details, 'location_id', input.location_id);
+  validateOptionalString(details, 'cost_center_id', input.cost_center_id);
+  validateOptionalString(details, 'job_position_id', input.job_position_id);
+  validateOptionalString(details, 'grade_band_id', input.grade_band_id);
+  validateOptionalStringArray(details, 'matrix_manager_employee_ids', input.matrix_manager_employee_ids);
+  validateCostAllocations(details, input.cost_allocations);
 
   if (input.email && !EMAIL_REGEX.test(input.email)) {
     details.push({ field: 'email', reason: 'must be a valid email address' });
@@ -53,21 +105,11 @@ export function validateCreateEmployee(input: CreateEmployeeInput): void {
   }
 
   if (!EMPLOYMENT_TYPES.includes(input.employment_type)) {
-    details.push({
-      field: 'employment_type',
-      reason: `must be one of: ${EMPLOYMENT_TYPES.join(', ')}`,
-    });
+    details.push({ field: 'employment_type', reason: `must be one of: ${EMPLOYMENT_TYPES.join(', ')}` });
   }
 
   if (input.status && !EMPLOYEE_STATUSES.includes(input.status)) {
-    details.push({
-      field: 'status',
-      reason: `must be one of: ${EMPLOYEE_STATUSES.join(', ')}`,
-    });
-  }
-
-  if (input.manager_employee_id !== undefined && (typeof input.manager_employee_id !== 'string' || input.manager_employee_id.trim() === '')) {
-    details.push({ field: 'manager_employee_id', reason: 'must be a non-empty string when provided' });
+    details.push({ field: 'status', reason: `must be one of: ${EMPLOYEE_STATUSES.join(', ')}` });
   }
 
   if (details.length > 0) {
@@ -82,47 +124,31 @@ export function validateUpdateEmployee(input: UpdateEmployeeInput): void {
     details.push({ field: 'body', reason: 'must include at least one updatable field' });
   }
 
-  if (input.first_name !== undefined && (typeof input.first_name !== 'string' || input.first_name.trim() === '')) {
-    details.push({ field: 'first_name', reason: 'must be a non-empty string' });
-  }
-
-  if (input.last_name !== undefined && (typeof input.last_name !== 'string' || input.last_name.trim() === '')) {
-    details.push({ field: 'last_name', reason: 'must be a non-empty string' });
-  }
+  validateOptionalString(details, 'first_name', input.first_name);
+  validateOptionalString(details, 'last_name', input.last_name);
+  validateOptionalString(details, 'phone', input.phone);
+  validateOptionalString(details, 'department_id', input.department_id);
+  validateOptionalString(details, 'role_id', input.role_id);
+  validateOptionalString(details, 'manager_employee_id', input.manager_employee_id);
+  validateOptionalString(details, 'business_unit_id', input.business_unit_id);
+  validateOptionalString(details, 'legal_entity_id', input.legal_entity_id);
+  validateOptionalString(details, 'location_id', input.location_id);
+  validateOptionalString(details, 'cost_center_id', input.cost_center_id);
+  validateOptionalString(details, 'job_position_id', input.job_position_id);
+  validateOptionalString(details, 'grade_band_id', input.grade_band_id);
+  validateOptionalStringArray(details, 'matrix_manager_employee_ids', input.matrix_manager_employee_ids);
+  validateCostAllocations(details, input.cost_allocations);
 
   if (input.email !== undefined && (!EMAIL_REGEX.test(input.email) || input.email.trim() === '')) {
     details.push({ field: 'email', reason: 'must be a valid email address' });
-  }
-
-  if (input.phone !== undefined && (typeof input.phone !== 'string' || input.phone.trim() === '')) {
-    details.push({ field: 'phone', reason: 'must be a non-empty string when provided' });
   }
 
   if (input.hire_date !== undefined && !isIsoDate(input.hire_date)) {
     details.push({ field: 'hire_date', reason: 'must be an ISO date (YYYY-MM-DD)' });
   }
 
-  if (input.department_id !== undefined && (typeof input.department_id !== 'string' || input.department_id.trim() === '')) {
-    details.push({ field: 'department_id', reason: 'must be a non-empty string' });
-  }
-
-  if (input.role_id !== undefined && (typeof input.role_id !== 'string' || input.role_id.trim() === '')) {
-    details.push({ field: 'role_id', reason: 'must be a non-empty string' });
-  }
-
-  if (input.manager_employee_id !== undefined && (typeof input.manager_employee_id !== 'string' || input.manager_employee_id.trim() === '')) {
-    details.push({ field: 'manager_employee_id', reason: 'must be a non-empty string when provided' });
-  }
-
   if (input.employment_type !== undefined && !EMPLOYMENT_TYPES.includes(input.employment_type)) {
-    details.push({
-      field: 'employment_type',
-      reason: `must be one of: ${EMPLOYMENT_TYPES.join(', ')}`,
-    });
-  }
-
-  if (input.role_id !== undefined && (typeof input.role_id !== 'string' || input.role_id.trim() === '')) {
-    details.push({ field: 'role_id', reason: 'must be a non-empty string when provided' });
+    details.push({ field: 'employment_type', reason: `must be one of: ${EMPLOYMENT_TYPES.join(', ')}` });
   }
 
   if (details.length > 0) {
