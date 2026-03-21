@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ApiError, sendApiError } from '../../middleware/error-handler';
+import { logAuditMutation } from '../../middleware/audit';
 import { getStructuredLogger } from '../../middleware/logger';
 import { DEPARTMENT_STATUSES } from './department.model';
 import { DepartmentService } from './department.service';
@@ -45,12 +46,17 @@ export class DepartmentController {
 
   createDepartment = (req: Request, res: Response): void => {
     try {
-      const auth = getAuth(req);
+      getAuth(req);
       const department = this.departmentService.createDepartment(req.body);
-      this.logger.audit('department_created', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        department_id: department.department_id,
-        code: department.code,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: department.tenant_id,
+        action: 'department_created',
+        entity: 'Department',
+        entityId: department.department_id,
+        before: {},
+        after: department,
       });
       res.status(201).json({ data: department });
     } catch (error) {
@@ -125,11 +131,17 @@ export class DepartmentController {
       if (!this.ensureManagerScope(req, res, auth, req.params.departmentId)) {
         return;
       }
+      const before = this.departmentService.getDepartmentById(req.params.departmentId);
       const department = this.departmentService.updateDepartment(req.params.departmentId, req.body);
-      this.logger.audit('department_updated', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        department_id: department.department_id,
-        fields: Object.keys(req.body ?? {}).sort(),
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: department.tenant_id,
+        action: 'department_updated',
+        entity: 'Department',
+        entityId: department.department_id,
+        before,
+        after: department,
       });
       res.status(200).json({ data: department });
     } catch (error) {
@@ -143,10 +155,17 @@ export class DepartmentController {
       if (!this.ensureManagerScope(req, res, auth, req.params.departmentId)) {
         return;
       }
+      const before = this.departmentService.getDepartmentById(req.params.departmentId);
       this.departmentService.deleteDepartment(req.params.departmentId);
-      this.logger.audit('department_deleted', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        department_id: req.params.departmentId,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: before.tenant_id,
+        action: 'department_deleted',
+        entity: 'Department',
+        entityId: req.params.departmentId,
+        before,
+        after: {},
       });
       res.status(204).send();
     } catch (error) {

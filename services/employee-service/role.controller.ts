@@ -5,6 +5,7 @@ import { ConflictError, NotFoundError } from './service.errors';
 import { ValidationError } from './employee.validation';
 import { AuthContext } from './rbac.middleware';
 import { ApiError, sendApiError } from '../../middleware/error-handler';
+import { logAuditMutation } from '../../middleware/audit';
 import { getStructuredLogger } from '../../middleware/logger';
 
 function sendError(
@@ -32,12 +33,17 @@ export class RoleController {
 
   createRole = (req: Request, res: Response): void => {
     try {
-      const auth = getAuth(req);
+      getAuth(req);
       const role = this.roleService.createRole(req.body);
-      this.logger.audit('role_created', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        role_id: role.role_id,
-        title: role.title,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: role.tenant_id,
+        action: 'role_created',
+        entity: 'Role',
+        entityId: role.role_id,
+        before: {},
+        after: role,
       });
       res.status(201).json({ data: role });
     } catch (error) {
@@ -87,12 +93,18 @@ export class RoleController {
 
   updateRole = (req: Request, res: Response): void => {
     try {
-      const auth = getAuth(req);
+      getAuth(req);
+      const before = this.roleService.getRoleById(req.params.roleId);
       const role = this.roleService.updateRole(req.params.roleId, req.body);
-      this.logger.audit('role_updated', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        role_id: role.role_id,
-        fields: Object.keys(req.body ?? {}).sort(),
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: role.tenant_id,
+        action: 'role_updated',
+        entity: 'Role',
+        entityId: role.role_id,
+        before,
+        after: role,
       });
       res.status(200).json({ data: role });
     } catch (error) {
@@ -102,11 +114,18 @@ export class RoleController {
 
   deleteRole = (req: Request, res: Response): void => {
     try {
-      const auth = getAuth(req);
+      getAuth(req);
+      const before = this.roleService.getRoleById(req.params.roleId);
       this.roleService.deleteRole(req.params.roleId);
-      this.logger.audit('role_deleted', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        role_id: req.params.roleId,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: before.tenant_id,
+        action: 'role_deleted',
+        entity: 'Role',
+        entityId: req.params.roleId,
+        before,
+        after: {},
       });
       res.status(204).send();
     } catch (error) {

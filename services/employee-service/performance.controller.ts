@@ -5,6 +5,7 @@ import { AuthContext } from './rbac.middleware';
 import { ConflictError, NotFoundError } from './service.errors';
 import { ValidationError } from './employee.validation';
 import { ApiError, sendApiError } from '../../middleware/error-handler';
+import { logAuditMutation } from '../../middleware/audit';
 import { getStructuredLogger } from '../../middleware/logger';
 
 function sendError(
@@ -51,14 +52,18 @@ export class PerformanceReviewController {
 
   createReview = (req: Request, res: Response): void => {
     try {
-      const auth = getAuth(req);
+      getAuth(req);
       const review = this.performanceReviewService.createReview(req.body);
       const readModels = this.performanceReviewService.getReviewReadModels(review.performance_review_id);
-      this.logger.audit('performance_review_created', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        performance_review_id: review.performance_review_id,
-        employee_id: review.employee_id,
-        reviewer_employee_id: review.reviewer_employee_id,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: review.tenant_id,
+        action: 'performance_review_created',
+        entity: 'PerformanceReview',
+        entityId: review.performance_review_id,
+        before: {},
+        after: review,
       });
       res.status(201).json({ data: review, read_models: readModels });
     } catch (error) {
@@ -140,12 +145,18 @@ export class PerformanceReviewController {
       if (!this.ensureReviewScope(req, res, auth, req.params.performanceReviewId)) {
         return;
       }
+      const before = this.performanceReviewService.getReviewById(req.params.performanceReviewId);
       const review = this.performanceReviewService.updateReview(req.params.performanceReviewId, req.body);
       const readModels = this.performanceReviewService.getReviewReadModels(review.performance_review_id);
-      this.logger.audit('performance_review_updated', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        performance_review_id: review.performance_review_id,
-        fields: Object.keys(req.body ?? {}).sort(),
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: review.tenant_id,
+        action: 'performance_review_updated',
+        entity: 'PerformanceReview',
+        entityId: review.performance_review_id,
+        before,
+        after: review,
       });
       res.status(200).json({ data: review, read_models: readModels });
     } catch (error) {
@@ -159,11 +170,18 @@ export class PerformanceReviewController {
       if (!this.ensureReviewScope(req, res, auth, req.params.performanceReviewId)) {
         return;
       }
+      const before = this.performanceReviewService.getReviewById(req.params.performanceReviewId);
       const review = this.performanceReviewService.submitReview(req.params.performanceReviewId);
       const readModels = this.performanceReviewService.getReviewReadModels(review.performance_review_id);
-      this.logger.audit('performance_review_submitted', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        performance_review_id: review.performance_review_id,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: review.tenant_id,
+        action: 'performance_review_submitted',
+        entity: 'PerformanceReview',
+        entityId: review.performance_review_id,
+        before,
+        after: review,
       });
       res.status(200).json({ data: review, read_models: readModels });
     } catch (error) {
@@ -177,11 +195,18 @@ export class PerformanceReviewController {
       if (!this.ensureReviewScope(req, res, auth, req.params.performanceReviewId)) {
         return;
       }
+      const before = this.performanceReviewService.getReviewById(req.params.performanceReviewId);
       const review = this.performanceReviewService.finalizeReview(req.params.performanceReviewId);
       const readModels = this.performanceReviewService.getReviewReadModels(review.performance_review_id);
-      this.logger.audit('performance_review_finalized', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        performance_review_id: review.performance_review_id,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: review.tenant_id,
+        action: 'performance_review_finalized',
+        entity: 'PerformanceReview',
+        entityId: review.performance_review_id,
+        before,
+        after: review,
       });
       res.status(200).json({ data: review, read_models: readModels });
     } catch (error) {

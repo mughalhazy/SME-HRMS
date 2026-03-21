@@ -5,6 +5,7 @@ import { ConflictError, NotFoundError } from './service.errors';
 import { ValidationError } from './employee.validation';
 import { AuthContext } from './rbac.middleware';
 import { ApiError, sendApiError } from '../../middleware/error-handler';
+import { logAuditMutation } from '../../middleware/audit';
 import { getStructuredLogger } from '../../middleware/logger';
 
 function sendError(
@@ -57,10 +58,15 @@ export class EmployeeController {
 
       const employee = this.employeeService.createEmployee(req.body);
       const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
-      this.logger.audit('employee_created', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        employee_id: employee.employee_id,
-        department_id: employee.department_id,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: employee.tenant_id,
+        action: 'employee_created',
+        entity: 'Employee',
+        entityId: employee.employee_id,
+        before: {},
+        after: employee,
       });
       res.status(201).json({ data: employee, read_models: readModels });
     } catch (error) {
@@ -152,12 +158,18 @@ export class EmployeeController {
         ]);
         return;
       }
+      const before = this.employeeService.getEmployeeById(req.params.employeeId);
       const employee = this.employeeService.updateEmployee(req.params.employeeId, req.body);
       const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
-      this.logger.audit('employee_updated', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        employee_id: employee.employee_id,
-        fields: Object.keys(req.body ?? {}).sort(),
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: employee.tenant_id,
+        action: 'employee_updated',
+        entity: 'Employee',
+        entityId: employee.employee_id,
+        before,
+        after: employee,
       });
       res.status(200).json({ data: employee, read_models: readModels });
     } catch (error) {
@@ -175,12 +187,18 @@ export class EmployeeController {
         sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
         return;
       }
+      const before = this.employeeService.getEmployeeById(req.params.employeeId);
       const employee = this.employeeService.assignDepartment(req.params.employeeId, req.body.department_id);
       const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
-      this.logger.audit('employee_department_assigned', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        employee_id: employee.employee_id,
-        department_id: employee.department_id,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: employee.tenant_id,
+        action: 'employee_department_assigned',
+        entity: 'Employee',
+        entityId: employee.employee_id,
+        before,
+        after: employee,
       });
       res.status(200).json({ data: employee, read_models: readModels });
     } catch (error) {
@@ -194,12 +212,18 @@ export class EmployeeController {
       if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
         return;
       }
+      const before = this.employeeService.getEmployeeById(req.params.employeeId);
       const employee = this.employeeService.updateStatus(req.params.employeeId, req.body.status);
       const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
-      this.logger.audit('employee_status_updated', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        employee_id: employee.employee_id,
-        status: employee.status,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: employee.tenant_id,
+        action: 'employee_status_updated',
+        entity: 'Employee',
+        entityId: employee.employee_id,
+        before,
+        after: employee,
       });
       res.status(200).json({ data: employee, read_models: readModels });
     } catch (error) {
@@ -213,10 +237,17 @@ export class EmployeeController {
       if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
         return;
       }
+      const before = this.employeeService.getEmployeeById(req.params.employeeId);
       this.employeeService.deleteEmployee(req.params.employeeId);
-      this.logger.audit('employee_deleted', req.traceId ?? 'missing-trace-id', {
-        actor: auth.employee_id ?? auth.role,
-        employee_id: req.params.employeeId,
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: before.tenant_id,
+        action: 'employee_deleted',
+        entity: 'Employee',
+        entityId: req.params.employeeId,
+        before,
+        after: {},
       });
       res.status(204).send();
     } catch (error) {
