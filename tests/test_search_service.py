@@ -218,3 +218,30 @@ def test_search_api_is_d1_compliant_and_supports_domain_specific_endpoints(tmp_p
     assert error_payload['status'] == 'error'
     assert error_payload['error']['code'] == 'VALIDATION_ERROR'
     assert error_payload['meta']['request_id'] == 'trace-search-missing-tenant'
+
+
+
+def test_search_uses_cached_results_for_repeat_queries_and_invalidates_on_reindex(tmp_path) -> None:
+    service = SearchIndexingService(db_path=str(tmp_path / 'search.sqlite3'))
+    jobs = BackgroundJobService(db_path=str(tmp_path / 'search.sqlite3'))
+    service.register_background_jobs(jobs)
+
+    service.ingest_read_model('employee_directory_view', [_employee_row(full_name='Ava Patel')], replace=True)
+    service.consume_event({'event_id': 'evt-cache-1', 'event_name': 'EmployeeUpdated', 'tenant_id': 'tenant-default'}, background_jobs=jobs)
+    jobs.run_due_jobs(tenant_id='tenant-default')
+
+    first = service.search(tenant_id='tenant-default', q='Ava', entity_types=['employee'])
+    assert first['items'][0]['display_name'] == 'Ava Patel'
+    assert service.get_projection_state(tenant_id='tenant-default')['last_query']['cache_hit'] is False
+
+    second = service.search(tenant_id='tenant-default', q='Ava', entity_types=['employee'])
+    assert second == first
+    assert service.get_projection_state(tenant_id='tenant-default')['last_query']['cache_hit'] is True
+
+    service.ingest_read_model('employee_directory_view', [_employee_row(full_name='Ava Stone')], replace=True)
+    service.consume_event({'event_id': 'evt-cache-2', 'event_name': 'EmployeeUpdated', 'tenant_id': 'tenant-default'}, background_jobs=jobs)
+    jobs.run_due_jobs(tenant_id='tenant-default')
+
+    refreshed = service.search(tenant_id='tenant-default', q='Stone', entity_types=['employee'])
+    assert refreshed['items'][0]['display_name'] == 'Ava Stone'
+    assert service.get_projection_state(tenant_id='tenant-default')['last_query']['cache_hit'] is False

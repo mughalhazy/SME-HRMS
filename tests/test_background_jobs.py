@@ -268,3 +268,33 @@ def test_background_job_api_returns_d1_envelopes_for_status_and_admin_controls()
     )
     assert retry_status == 202
     assert retried['data']['status'] == 'Scheduled'
+
+
+
+def test_background_jobs_reject_queue_overflow_per_tenant() -> None:
+    jobs = BackgroundJobService()
+    jobs.register_handler('test.noop', lambda context: {'ok': True}, max_attempts=1)
+    jobs.upsert_tenant_queue_config('tenant-default', {'max_queued_jobs': 1, 'max_due_jobs_per_run': 1})
+
+    jobs.enqueue_job(tenant_id='tenant-default', job_type='test.noop', payload={'seq': 1})
+    with pytest.raises(Exception) as exc:
+        jobs.enqueue_job(tenant_id='tenant-default', job_type='test.noop', payload={'seq': 2})
+
+    assert 'queue capacity exceeded' in str(exc.value).lower()
+
+
+
+def test_run_due_jobs_applies_per_tenant_backpressure_limits() -> None:
+    jobs = BackgroundJobService()
+    processed: list[int] = []
+    jobs.register_handler('test.batch', lambda context: processed.append(int(context.job.payload['seq'])) or {'seq': context.job.payload['seq']}, max_attempts=1)
+    jobs.upsert_tenant_queue_config('tenant-default', {'max_due_jobs_per_run': 2})
+
+    for seq in range(3):
+        jobs.enqueue_job(tenant_id='tenant-default', job_type='test.batch', payload={'seq': seq})
+
+    executed = jobs.run_due_jobs(tenant_id='tenant-default')
+
+    assert len(executed) == 2
+    assert processed == [0, 1]
+    assert jobs.queued_job_count('tenant-default') == 1
