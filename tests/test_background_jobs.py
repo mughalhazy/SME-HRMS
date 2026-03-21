@@ -48,6 +48,7 @@ def test_payroll_run_job_wraps_payroll_service_and_stages_outbox_events() -> Non
                     'currency': 'USD',
                 }
             ],
+            'generate_payslips': True,
         },
         idempotency_key='payroll-run-march-2026',
     )
@@ -57,6 +58,7 @@ def test_payroll_run_job_wraps_payroll_service_and_stages_outbox_events() -> Non
     assert completed.status == JobStatus.SUCCEEDED
     assert completed.last_result is not None
     assert completed.last_result['response']['data']['processed_count'] == 1
+    assert len(completed.last_result['generated_payslip_ids']) == 1
     assert any(event.event_name == 'PayrollProcessed' for event in jobs.outbox.list_events(tenant_id='tenant-default'))
     assert len(payroll.batches) == 1
 
@@ -183,7 +185,8 @@ def test_outbox_dispatch_job_marks_notification_events_published() -> None:
     assert completed.last_result['dispatched_count'] == 1
     pending = jobs.outbox.pending_events(tenant_id='tenant-default')
     assert pending == []
-    assert notification.get_inbox(subject_id='emp-001')['summary']['total'] >= 1
+    inbox, _ = notification.get_inbox(tenant_id='tenant-default', subject_id='emp-001')
+    assert inbox['summary']['total'] >= 1
 
 
 def test_workflow_escalation_job_stages_escalation_event() -> None:

@@ -362,17 +362,41 @@ class BackgroundJobService:
                 idempotency_key=payload.get('idempotency_key') or context.job.idempotency_key or context.job.job_id,
                 trace_id=context.trace_id,
             )
+            generated_payslips: list[str] = []
+            if payload.get('generate_payslips', False):
+                for record_id in response.get('data', {}).get('record_ids', []):
+                    _, payslip = payroll_service.generate_payslip(
+                        record_id,
+                        payload['authorization'],
+                        job_id=context.job.job_id,
+                        trace_id=context.trace_id,
+                    )
+                    generated_payslips.append(payslip['payslip_id'])
             self._stage_new_events(getattr(payroll_service, 'events', []), before=before, aggregate_type='PayrollRun', aggregate_id=f"{payload['period_start']}:{payload['period_end']}")
-            return {'status_code': status, 'response': response}
+            return {'status_code': status, 'response': response, 'generated_payslip_ids': generated_payslips}
 
         self.register_handler('payroll.run', handler, max_attempts=3)
+        def payslip_handler(context: JobExecutionContext) -> dict[str, Any]:
+            status, payslip = payroll_service.generate_payslip(
+                str(context.job.payload['payroll_record_id']),
+                str(context.job.payload['authorization']),
+                job_id=context.job.job_id,
+                trace_id=context.trace_id,
+            )
+            return {'status_code': status, 'payslip': payslip}
+
+        self.register_handler('payroll.payslip.generate', payslip_handler, max_attempts=3)
 
     def register_leave_balance_recompute_handler(self, leave_service: Any) -> None:
         def handler(context: JobExecutionContext) -> dict[str, Any]:
             payload = context.job.payload
             employee_id = payload['employee_id']
-            result = leave_service.recompute_employee_balance(employee_id, tenant_id=context.tenant_id, trace_id=context.trace_id)
-            return {'employee_id': employee_id, 'balance_count': len(result['leave_balances']), 'employee_status': result['employee']['status']}
+            if hasattr(leave_service, 'recompute_employee_balance'):
+                result = leave_service.recompute_employee_balance(employee_id, tenant_id=context.tenant_id, trace_id=context.trace_id)
+                return {'employee_id': employee_id, 'balance_count': len(result['leave_balances']), 'employee_status': result['employee']['status']}
+            detail = leave_service.get_employee_detail(employee_id)
+            balances = detail.get('leave_balances') or []
+            return {'employee_id': employee_id, 'balance_count': len(balances), 'employee_status': detail['employee']['status']}
 
         self.register_handler('leave.balance.recompute', handler, max_attempts=3)
 
