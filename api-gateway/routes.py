@@ -16,6 +16,10 @@ class Route:
     def full_path_prefix(self) -> str:
         return f"{API_VERSION_PREFIX}{self.path_prefix}"
 
+    @property
+    def legacy_path_prefix(self) -> str:
+        return self.path_prefix
+
 
 ROUTES: tuple[Route, ...] = (
     Route(name="employees", path_prefix="/employees", upstream_service="employee-service"),
@@ -42,10 +46,26 @@ def iter_routes() -> Iterable[Route]:
     return ROUTES
 
 
+def _matches_prefix(request_path: str, prefix: str) -> bool:
+    return request_path == prefix or request_path.startswith(f"{prefix}/")
+
+
 def resolve_route(request_path: str) -> Route:
     normalized = request_path.rstrip("/") or "/"
     for route in ROUTES:
-        prefix = route.full_path_prefix
-        if normalized == prefix or normalized.startswith(f"{prefix}/"):
+        if _matches_prefix(normalized, route.full_path_prefix):
             return route
+
+    for route in ROUTES:
+        if _matches_prefix(normalized, route.legacy_path_prefix):
+            return route
+
     raise RouteNotFoundError(f"No API gateway route registered for '{request_path}'.")
+
+
+def is_legacy_route(request_path: str) -> bool:
+    normalized = request_path.rstrip("/") or "/"
+    for route in ROUTES:
+        if _matches_prefix(normalized, route.legacy_path_prefix) and not _matches_prefix(normalized, route.full_path_prefix):
+            return True
+    return False
