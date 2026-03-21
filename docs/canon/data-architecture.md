@@ -10,6 +10,7 @@ This document maps the canonical domain model to a relational data architecture 
 - Domain enums are modeled with constrained text (`CHECK`) or database enums.
 - Cross-service integration uses events and read models rather than cross-service database joins.
 - Event publication should be implemented with an outbox table or equivalent transactional mechanism.
+- Search workloads must execute against projection/index tables or equivalent read-model stores, never against transactional service tables for cross-domain fan-out queries.
 
 ## Core workforce tables
 

@@ -16,6 +16,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 | `notification-service` | Notification templates, queueing, delivery, and preferences | `/api/v1/notifications` |
 | `integration-service` | Outbound webhooks, connector dispatch, delivery attempts, and replay operations | `/api/v1/integrations` |
 | `settings-service` | Administrative HR policy configuration and defaults | `/api/v1/settings` |
+| `search-service` | Cross-domain projection-backed search and indexing | `/api/v1/search` |
 
 ## employee-service
 
@@ -88,6 +89,62 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `employee_reporting_view`
 - enriches `attendance_dashboard_view`, `leave_requests_view`, `payroll_summary_view`, `job_posting_directory_view`, and `candidate_pipeline_view`
 - produces `employee_compensation_view` and payroll-context projections consumed by `payroll-service`
+
+
+## search-service
+
+### Responsibilities
+- Provide fast, projection-backed cross-domain search over HRMS entities without reading transactional domain stores for search-heavy queries.
+- Consume D2-aligned events from the outbox pipeline and schedule asynchronous reindex jobs through the background-jobs service.
+- Build and serve tenant-safe search documents from canonical read models and search-owned projections.
+
+### Owned entities
+- `SearchDocument`
+- `SearchProjectionState`
+- `SearchEventCheckpoint`
+
+### Canonical APIs
+- `GET /api/v1/search?tenant_id=&q=&entity_type=&domain=&department_id=&role_id=&status=&limit=&cursor=&sort=`
+- `GET /api/v1/search/employees?tenant_id=&q=&department_id=&role_id=&status=&limit=&cursor=&sort=`
+- `GET /api/v1/search/candidates?tenant_id=&q=&department_id=&status=&limit=&cursor=&sort=`
+- `GET /api/v1/search/documents?tenant_id=&q=&department_id=&status=&limit=&cursor=&sort=`
+
+### Dependencies
+- `employee-service` read models for workforce and organizational search surfaces.
+- `hiring-service` read models for candidate search surfaces.
+- `documents` metadata projections for document search.
+- `payroll-service` summary projections for optional payroll run search.
+- `background-jobs` for asynchronous indexing.
+- `integration-service` / event-outbox pipeline for canonical event delivery.
+
+### Supported workflows
+- `projection_search_indexing`
+
+### Publishes
+- None required; indexing side effects remain internal projections.
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeUpdated`
+- `EmployeeStatusChanged`
+- `DepartmentCreated`
+- `DepartmentUpdated`
+- `RoleCreated`
+- `RoleUpdated`
+- `CandidateApplied`
+- `CandidateStageChanged`
+- `InterviewScheduled`
+- `InterviewCompleted`
+- `CandidateHired`
+- `DocumentStored`
+- `DocumentUpdated`
+- `PayrollProcessed`
+- `PayrollPaid`
+- `PayrollCancelled`
+
+### Read models produced or enriched
+- consumes `employee_directory_view`, `organization_structure_view`, `candidate_pipeline_view`, `document_library_view`, and `payroll_summary_view`
+- produces `global_search_view`
 
 ## performance-service
 
