@@ -28,6 +28,7 @@ type InterviewStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'NoShow'
 
 type CandidateRecord = {
   id: string
+  jobPostingId: string
   name: string
   email: string
   role: string
@@ -59,6 +60,7 @@ type DraftInterview = {
 
 type CandidateApiRow = {
   candidate_id: string
+  job_posting_id: string
   candidate_name: string
   candidate_email: string
   job_title: string
@@ -125,6 +127,7 @@ const EMPTY_INTERVIEW_DRAFT: DraftInterview = {
 function mapCandidate(row: CandidateApiRow): CandidateRecord {
   return {
     id: row.candidate_id,
+    jobPostingId: row.job_posting_id,
     name: row.candidate_name,
     email: row.candidate_email,
     role: row.job_title,
@@ -214,7 +217,12 @@ function getStatusBadgeClassName(status: CandidateStatus | InterviewStatus) {
   return 'border-slate-200 bg-slate-50 text-slate-700'
 }
 
-export function HiringPipelineBoard() {
+type HiringPipelineBoardProps = {
+  selectedJobId: string
+  selectedJobTitle: string | null
+}
+
+export function HiringPipelineBoard({ selectedJobId, selectedJobTitle }: HiringPipelineBoardProps) {
   const queryClient = useQueryClient()
   const candidatesQuery = useQuery({
     queryKey: ['hiring-candidates'],
@@ -245,16 +253,21 @@ export function HiringPipelineBoard() {
     }
   }, [interviewsQuery.data])
 
+  const visibleCandidates = useMemo(() => {
+    if (selectedJobId === 'all') return candidates
+    return candidates.filter((candidate) => candidate.jobPostingId === selectedJobId)
+  }, [candidates, selectedJobId])
+
   useEffect(() => {
-    if (candidates.length === 0) {
+    if (visibleCandidates.length === 0) {
       setSelectedCandidateId(null)
       return
     }
 
-    if (!selectedCandidateId || !candidates.some((candidate) => candidate.id === selectedCandidateId)) {
-      setSelectedCandidateId(candidates[0]?.id ?? null)
+    if (!selectedCandidateId || !visibleCandidates.some((candidate) => candidate.id === selectedCandidateId)) {
+      setSelectedCandidateId(visibleCandidates[0]?.id ?? null)
     }
-  }, [candidates, selectedCandidateId])
+  }, [visibleCandidates, selectedCandidateId])
 
   const stageMutation = useMutation({
     mutationFn: ({ candidateId, pipelineStage }: { candidateId: string; pipelineStage: CandidateStatus }) =>
@@ -310,7 +323,7 @@ export function HiringPipelineBoard() {
   const candidatesByStage = useMemo(() => {
     return STAGES.reduce<Record<BoardStage, CandidateRecord[]>>(
       (accumulator, stage) => {
-        const rows = candidates
+        const rows = visibleCandidates
           .filter((candidate) => statusToStage(candidate.status) === stage.id)
           .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
 
@@ -319,9 +332,9 @@ export function HiringPipelineBoard() {
       },
       { Applied: [], Screening: [], Interview: [], Offer: [], Hired: [] },
     )
-  }, [candidates])
+  }, [visibleCandidates])
 
-  const selectedCandidate = selectedCandidateId ? candidates.find((candidate) => candidate.id === selectedCandidateId) ?? null : null
+  const selectedCandidate = selectedCandidateId ? visibleCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? null : null
   const selectedStage = selectedCandidate ? statusToStage(selectedCandidate.status) : null
   const selectedCandidateInterviews = selectedCandidate ? interviewsByCandidate[selectedCandidate.id] ?? [] : []
   const selectedDraft = selectedCandidate ? drafts[selectedCandidate.id] ?? EMPTY_INTERVIEW_DRAFT : EMPTY_INTERVIEW_DRAFT
@@ -330,7 +343,7 @@ export function HiringPipelineBoard() {
   const nextStage = selectedStage ? getNextStage(selectedStage) : null
 
   function moveCandidate(candidateId: string, targetStage: BoardStage) {
-    const candidate = candidates.find((entry) => entry.id === candidateId)
+    const candidate = visibleCandidates.find((entry) => entry.id === candidateId) ?? candidates.find((entry) => entry.id === candidateId)
     if (!candidate) return
 
     const currentStage = statusToStage(candidate.status)
@@ -375,7 +388,7 @@ export function HiringPipelineBoard() {
   }
 
   function handleScheduleInterview(candidateId: string) {
-    const candidate = candidates.find((entry) => entry.id === candidateId)
+    const candidate = visibleCandidates.find((entry) => entry.id === candidateId) ?? candidates.find((entry) => entry.id === candidateId)
     const draft = drafts[candidateId] ?? EMPTY_INTERVIEW_DRAFT
 
     if (!candidate) return
@@ -436,7 +449,7 @@ export function HiringPipelineBoard() {
     const interview = interviews.find((entry) => entry.id === interviewId)
     if (!interview) return
 
-    const candidate = candidates.find((entry) => entry.id === interview.candidateId)
+    const candidate = visibleCandidates.find((entry) => entry.id === interview.candidateId) ?? candidates.find((entry) => entry.id === interview.candidateId)
 
     setInterviews((current) =>
       current.map((entry) =>
@@ -474,12 +487,14 @@ export function HiringPipelineBoard() {
   const isLoading = candidatesQuery.isLoading || interviewsQuery.isLoading
   const isError = candidatesQuery.isError || interviewsQuery.isError
   const errorMessage = candidatesQuery.error?.message ?? interviewsQuery.error?.message
+  const totalVisibleCandidates = visibleCandidates.length
 
   return (
     <PageStack className="gap-6">
-      <section className={cn(pageSurfaceClassName, 'p-4')}>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <section className={cn(pageSurfaceClassName, 'space-y-4 p-4')}>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Pipeline flow</p>
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {STAGES.map((stage, index) => (
                 <div key={stage.id} className="flex items-center gap-2">
@@ -488,12 +503,13 @@ export function HiringPipelineBoard() {
                 </div>
               ))}
             </div>
+            <h2 className="text-lg font-semibold text-slate-950">{selectedJobTitle ? `${selectedJobTitle} pipeline` : 'Candidate pipeline'}</h2>
             <p className="text-sm leading-6 text-slate-600">{isLoading ? 'Loading pipeline…' : isError ? errorMessage : message}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">Aligned stages</span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">Consistent cards</span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">Adjacent stage moves only</span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">{totalVisibleCandidates} candidates</span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">Drag left or right</span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2">Stage-by-stage movement</span>
             <Button
               type="button"
               size="sm"
@@ -522,11 +538,11 @@ export function HiringPipelineBoard() {
             void interviewsQuery.refetch()
           }}
         />
-      ) : candidates.length === 0 ? (
+      ) : visibleCandidates.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No candidates in pipeline"
-          message="Candidate cards will appear here once applications are created. Refresh the board to sync the latest hiring data."
+          message={selectedJobTitle ? `No candidates are attached to ${selectedJobTitle} yet. Refresh the board to sync the latest hiring data.` : 'Candidate cards will appear here once applications are created. Refresh the board to sync the latest hiring data.'}
           action={
             <Button
               variant="outline"
@@ -543,7 +559,7 @@ export function HiringPipelineBoard() {
       ) : (
         <div className="grid gap-6 xl:grid-cols-12">
           <section className={cn(pageSurfaceClassName, 'min-w-0 overflow-x-auto p-4 xl:col-span-9')}>
-            <div className="grid min-w-[1280px] grid-cols-5 gap-4">
+            <div className="grid min-w-[1200px] grid-cols-5 gap-4">
               {STAGES.map((stage) => {
                 const draggedCandidate = candidates.find((candidate) => candidate.id === draggedCandidateId)
                 const draggedStage = draggedCandidate ? statusToStage(draggedCandidate.status) : null
@@ -608,7 +624,7 @@ export function HiringPipelineBoard() {
                               setHoverStage(null)
                             }}
                             className={cn(
-                              'flex flex-col gap-3 rounded-[var(--radius-control)] border border-slate-200 bg-white p-4 transition-colors duration-150 hover:border-slate-300',
+                              'flex flex-col gap-3 rounded-[var(--radius-control)] border border-slate-200 bg-white p-3 transition-colors duration-150 hover:border-slate-300',
                               isSelected && 'border-slate-300 bg-slate-50',
                               isDragging && 'border-slate-300 opacity-70',
                             )}
@@ -626,29 +642,18 @@ export function HiringPipelineBoard() {
                                 </div>
                               </div>
                               <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                                Score {candidate.score}
+                                {candidate.score}%
                               </div>
                             </div>
 
-                            <div className="grid gap-2 text-xs text-slate-600">
-                              <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
-                                <span className="text-slate-500">Source</span>
-                                <span className="truncate font-medium text-slate-700">{candidate.source}</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
-                                <span className="text-slate-500">Applied</span>
-                                <span className="font-medium text-slate-700">{formatShortDateLabel(candidate.appliedDate)}</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
-                                <span className="text-slate-500">Next step</span>
-                                <span className="truncate font-medium text-slate-700">
-                                  {nextInterview ? formatShortDateLabel(nextInterview.scheduledAt) : 'No interview'}
-                                </span>
-                              </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                              <span className="rounded-md bg-slate-50 px-2 py-1 text-slate-500">Applied {formatShortDateLabel(candidate.appliedDate)}</span>
+                              <span className="rounded-md bg-slate-50 px-2 py-1 text-slate-500">{candidate.source}</span>
+                              <span className="rounded-md bg-slate-50 px-2 py-1 text-slate-500">{nextInterview ? formatShortDateLabel(nextInterview.scheduledAt) : 'No interview'}</span>
                             </div>
 
                             <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3 text-xs text-slate-500">
-                              <span className="truncate">Updated {formatDateLabel(candidate.updatedAt)}</span>
+                              <span className="truncate">Updated {formatShortDateLabel(candidate.updatedAt)}</span>
                               <Button type="button" size="sm" variant="ghost" className="h-auto px-3 py-1 text-xs text-slate-600" onClick={() => setSelectedCandidateId(candidate.id)}>
                                 Review
                               </Button>
