@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import type { StructuredLogger } from './logger';
+import { sanitizeLogContext } from './logger';
 
 export type AuditActorType = 'user' | 'service' | 'system';
 
@@ -39,7 +40,7 @@ function cloneObject(value: unknown): Record<string, unknown> {
     return {};
   }
 
-  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  return sanitizeLogContext(JSON.parse(JSON.stringify(value)) as Record<string, unknown>);
 }
 
 function deepFreeze<T>(value: T): T {

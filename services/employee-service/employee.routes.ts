@@ -6,6 +6,7 @@ import { requestIdMiddleware } from '../../middleware/request-id';
 import { createThrottleMiddleware } from '../../middleware/throttle';
 import { createPayloadLimitMiddleware } from '../../middleware/validation';
 import { createMetricsMiddleware } from '../../metrics/metrics';
+import { tenantContextMiddleware } from '../../middleware/tenant-context';
 import { DepartmentController } from './department.controller';
 import { DepartmentRepository } from './department.repository';
 import { DepartmentService } from './department.service';
@@ -157,6 +158,7 @@ export function createEmployeeRouter(): Router {
   router.use(createLoggerMiddleware('employee-service'));
   router.use(createMetricsMiddleware('employee-service'));
   router.use(createPayloadLimitMiddleware(16 * 1024));
+  router.use(tenantContextMiddleware);
 
   router.get('/health', healthController.getHealth);
   router.get('/ready', healthController.getReady);

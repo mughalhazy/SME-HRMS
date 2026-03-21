@@ -56,7 +56,7 @@ export class EmployeeController {
         return;
       }
 
-      const employee = this.employeeService.createEmployee(req.body);
+      const employee = this.employeeService.createEmployee({ ...req.body, tenant_id: req.tenantId });
       const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
       logAuditMutation({
         logger: this.logger,
@@ -121,6 +121,7 @@ export class EmployeeController {
       }
 
       const filters = {
+        tenant_id: req.tenantId,
         employee_id: employeeFilter,
         department_id: departmentFilter,
         role_id: roleFilter,

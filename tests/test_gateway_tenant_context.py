@@ -29,12 +29,26 @@ class GatewayTenantContextTests(unittest.TestCase):
         self.assertEqual(context.actor_id, 'user-456')
 
     def test_gateway_builds_upstream_headers_with_tenant_context(self) -> None:
-        context = module.resolve_gateway_context('/api/v1/payroll/records', {'x-tenant': 'tenant-beta', 'x-trace-id': 'trace-1'})
+        context = module.resolve_gateway_context(
+            '/api/v1/payroll/records',
+            {
+                'x-tenant': 'tenant-beta',
+                'x-trace-id': 'trace-1',
+                'x-actor-id': 'user-123',
+                'x-actor-role': 'Manager',
+                'x-actor-employee-id': 'emp-123',
+                'x-auth-subject-type': 'user',
+            },
+        )
         headers = module.build_upstream_headers(context, {'authorization': 'Bearer token'})
         self.assertEqual(headers['x-tenant-id'], 'tenant-beta')
         self.assertEqual(headers['x-request-id'], 'trace-1')
         self.assertEqual(headers['x-trace-id'], 'trace-1')
         self.assertEqual(headers['authorization'], 'Bearer token')
+        self.assertEqual(headers['x-authenticated-tenant-id'], 'tenant-beta')
+        self.assertEqual(headers['x-actor-role'], 'Manager')
+        self.assertEqual(headers['x-actor-employee-id'], 'emp-123')
+        self.assertIn('"upstream_service":"payroll-service"', headers['x-auth-context'])
 
 
 if __name__ == '__main__':
