@@ -13,8 +13,10 @@ from typing import Any
 from uuid import uuid4
 
 from event_contract import EventRegistry, emit_canonical_event
+from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
+from workflow_service import WorkflowService, WorkflowServiceError
 
 
 class Role(str, Enum):
@@ -61,6 +63,7 @@ class PayrollRecord:
     net_pay: Decimal
     currency: str
     payment_date: date | None
+    payment_workflow_id: str | None
     status: PayrollStatus
     created_at: datetime
     updated_at: datetime
@@ -81,6 +84,7 @@ class PayrollRecord:
             "net_pay": str(self.net_pay),
             "currency": self.currency,
             "payment_date": self.payment_date.isoformat() if self.payment_date else None,
+            "payment_workflow_id": self.payment_workflow_id,
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
@@ -213,7 +217,7 @@ class ServiceError(Exception):
 class PayrollService:
     """Canonical payroll-service business logic and API-compatible handlers."""
 
-    def __init__(self, db_path: str | None = None):
+    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None):
         self.records = PersistentKVStore[str, PayrollRecord](service='payroll-service', namespace='records', db_path=db_path)
         self.employee_profiles = PersistentKVStore[str, EmployeePayrollProfile](service='payroll-service', namespace='employee_profiles', db_path=db_path)
         self.attendance_summaries = PersistentKVStore[tuple[str, date, date], dict[str, Any]](service='payroll-service', namespace='attendance_summaries', db_path=db_path)
@@ -232,7 +236,25 @@ class PayrollService:
         self.observability = Observability("payroll-service")
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
+        self.notification_service = notification_service or NotificationService()
+        self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
         self._lock = RLock()
+        self.workflow_service.register_definition(
+            tenant_id=self.tenant_id,
+            code="payroll_disbursement_approval",
+            source_service="payroll-service",
+            subject_type="PayrollRecord",
+            description="Centralized payroll disbursement approval workflow.",
+            steps=[
+                {
+                    "name": "payroll-disbursement-approval",
+                    "type": "approval",
+                    "assignee_template": "{approver_assignee}",
+                    "sla": "PT4H",
+                    "escalation_assignee_template": "{escalation_assignee}",
+                }
+            ],
+        )
 
     def _trace(self, trace_id: str | None = None) -> str:
         return self.observability.trace_id(trace_id)
@@ -479,6 +501,7 @@ class PayrollService:
             net_pay=net,
             currency=currency,
             payment_date=payroll_cycle.payment_date if payroll_cycle else None,
+            payment_workflow_id=None,
             status=PayrollStatus.DRAFT,
             created_at=ts,
             updated_at=ts,
@@ -991,6 +1014,37 @@ class PayrollService:
                 return self._record_idempotent_result(replay_key, fingerprint, 200, record.to_dict())
             if record.status != PayrollStatus.PROCESSED:
                 raise ServiceError("CONFLICT", "Only processed records can be marked paid", 409)
+
+            if not record.payment_workflow_id:
+                workflow = self.workflow_service.start_workflow(
+                    tenant_id=self.tenant_id,
+                    definition_code="payroll_disbursement_approval",
+                    source_service="payroll-service",
+                    subject_type="PayrollRecord",
+                    subject_id=record.payroll_record_id,
+                    actor_id=ctx.employee_id or ctx.role.value,
+                    actor_type="user",
+                    context={
+                        "approver_assignee": f"role:{ctx.role.value}",
+                        "escalation_assignee": "role:Admin",
+                    },
+                    trace_id=trace,
+                )
+                record.payment_workflow_id = workflow["workflow_id"]
+            try:
+                workflow = self.workflow_service.approve_step(
+                    record.payment_workflow_id,
+                    tenant_id=self.tenant_id,
+                    actor_id=ctx.employee_id or ctx.role.value,
+                    actor_type="user",
+                    actor_role=ctx.role.value,
+                    comment="Payroll disbursement approved",
+                    trace_id=trace,
+                )
+            except WorkflowServiceError as exc:
+                raise ServiceError(exc.code, exc.message, exc.status_code, exc.details) from exc
+            if workflow.get("metadata", {}).get("terminal_result") != "approved":
+                raise ServiceError("CONFLICT", "Workflow approval did not complete payroll disbursement", 409)
 
             record.payment_date = date.fromisoformat(payment_date) if payment_date else date.today()
             record.status = PayrollStatus.PAID

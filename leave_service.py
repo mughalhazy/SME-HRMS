@@ -10,9 +10,11 @@ from threading import RLock
 from time import perf_counter
 
 from event_contract import EventRegistry, emit_canonical_event
+from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from workflow_service import WorkflowService, WorkflowServiceError
 
 
 class Role(str, Enum):
@@ -101,6 +103,7 @@ class LeaveRequest:
     total_days: float
     reason: str | None
     approver_employee_id: str | None
+    workflow_id: str | None
     status: LeaveStatus
     submitted_at: datetime | None
     decision_at: datetime | None
@@ -134,7 +137,7 @@ class LeaveServiceError(Exception):
 
 
 class LeaveService:
-    def __init__(self, db_path: str | None = None):
+    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None):
         self.requests = PersistentKVStore[str, LeaveRequest](service='leave-service', namespace='requests', db_path=db_path)
         self.events: list[dict] = []
         self.error_logger = CentralErrorLogger("leave-service")
@@ -143,6 +146,8 @@ class LeaveService:
         self.observability = Observability("leave-service")
         self.tenant_id = DEFAULT_TENANT_ID
         self.event_registry = EventRegistry()
+        self.notification_service = notification_service or NotificationService()
+        self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
         self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=db_path)
         seeded_employees = {
             "emp-admin": EmployeeRecord(self.tenant_id, "emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
@@ -157,6 +162,22 @@ class LeaveService:
         self.attendance_impacts = PersistentKVStore[str, list[dict]](service='leave-service', namespace='attendance_impacts', db_path=db_path)
         self._lock = RLock()
         self._seed_leave_balances()
+        self.workflow_service.register_definition(
+            tenant_id=self.tenant_id,
+            code="leave_request_approval",
+            source_service="leave-service",
+            subject_type="LeaveRequest",
+            description="Centralized leave approval workflow aligned to the workflow catalog.",
+            steps=[
+                {
+                    "name": "manager-approval",
+                    "type": "approval",
+                    "assignee_template": "{approver_employee_id}",
+                    "sla": "PT24H",
+                    "escalation_assignee_template": "{escalation_assignee}",
+                }
+            ],
+        )
 
     def _seed_leave_balances(self) -> None:
         for employee_id in self.employees:
@@ -383,6 +404,7 @@ class LeaveService:
         payload["attendance_impacts"] = list(self.attendance_impacts.get(leave.leave_request_id, []))
         payload["employee_status"] = self.employees[leave.employee_id].status.value
         payload["tenant_id"] = leave.tenant_id
+        payload["workflow"] = self.workflow_service.get_instance(leave.workflow_id, tenant_id=leave.tenant_id) if leave.workflow_id else None
         return payload
 
 
@@ -453,6 +475,7 @@ class LeaveService:
                     total_days=self._total_days(start_date, end_date),
                     reason=reason,
                     approver_employee_id=approver_employee_id,
+                    workflow_id=None,
                     status=LeaveStatus.DRAFT,
                     submitted_at=None,
                     decision_at=None,
@@ -504,6 +527,24 @@ class LeaveService:
 
             self._reserve_balance(leave, trace)
             ts = self._now()
+            if not leave.approver_employee_id:
+                employee = self.employees[leave.employee_id]
+                leave.approver_employee_id = employee.manager_employee_id or "emp-admin"
+            workflow = self.workflow_service.start_workflow(
+                tenant_id=self.tenant_id,
+                definition_code="leave_request_approval",
+                source_service="leave-service",
+                subject_type="LeaveRequest",
+                subject_id=leave.leave_request_id,
+                actor_id=actor_employee_id,
+                actor_type="user",
+                context={
+                    "approver_employee_id": leave.approver_employee_id,
+                    "escalation_assignee": "emp-admin",
+                },
+                trace_id=trace,
+            )
+            leave.workflow_id = workflow["workflow_id"]
             leave.status = LeaveStatus.SUBMITTED
             leave.submitted_at = ts
             leave.updated_at = ts
@@ -561,20 +602,48 @@ class LeaveService:
             if replay is not None:
                 self._finalize_observation("decide_request", trace, started, True, {"status": replay.status_code, "replayed": True, "action": action})
                 return replay.status_code, replay.payload
+            if not leave.workflow_id:
+                self._fail(409, "WORKFLOW_MISSING", "Leave request is missing its centralized workflow", trace)
+
+            try:
+                workflow = (
+                    self.workflow_service.approve_step(
+                        leave.workflow_id,
+                        tenant_id=self.tenant_id,
+                        actor_id=actor_employee_id,
+                        actor_type="user",
+                        actor_role=actor_role,
+                        comment=reason,
+                        trace_id=trace,
+                    )
+                    if action == "approve"
+                    else self.workflow_service.reject_step(
+                        leave.workflow_id,
+                        tenant_id=self.tenant_id,
+                        actor_id=actor_employee_id,
+                        actor_type="user",
+                        actor_role=actor_role,
+                        comment=reason,
+                        trace_id=trace,
+                    )
+                )
+            except WorkflowServiceError as exc:
+                self._fail(exc.status_code, exc.code, exc.message, trace, exc.details)
 
             ts = self._now()
-            if action == "approve":
+            terminal_result = workflow.get("metadata", {}).get("terminal_result")
+            if action == "approve" and terminal_result == "approved":
                 self._consume_reserved_balance(leave)
                 leave.status = LeaveStatus.APPROVED
                 event = "LeaveRequestApproved"
-            elif action == "reject":
+            elif action == "reject" and terminal_result == "rejected":
                 self._release_reserved_balance(leave)
                 leave.status = LeaveStatus.REJECTED
                 if reason:
                     leave.reason = f"{leave.reason or ''}\n[Rejection] {reason}".strip()
                 event = "LeaveRequestRejected"
             else:
-                self._fail(400, "BAD_REQUEST", "Unknown action", trace)
+                self._fail(409, "INVALID_TRANSITION", "Workflow resolution did not produce a valid leave decision", trace)
             leave.approver_employee_id = actor_employee_id
             leave.decision_at = ts
             leave.updated_at = ts

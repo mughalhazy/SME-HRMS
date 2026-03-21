@@ -349,6 +349,26 @@ EVENT_NOTIFICATION_PLANS: dict[str, tuple[EventNotificationPlan, ...]] = {
             channels=(NotificationChannel.IN_APP,),
         ),
     ),
+    "WorkflowTaskAssigned": (
+        EventNotificationPlan(
+            template_code="workflow.task.assigned",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="destination",
+            topic_code="workflow.task_assigned",
+            channels=(NotificationChannel.IN_APP,),
+        ),
+    ),
+    "WorkflowTaskEscalated": (
+        EventNotificationPlan(
+            template_code="workflow.task.escalated",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="destination",
+            topic_code="workflow.task_escalated",
+            channels=(NotificationChannel.IN_APP,),
+        ),
+    ),
 }
 
 
@@ -378,6 +398,8 @@ DEFAULT_TEMPLATE_SEED = (
     ("auth.user_provisioned", NotificationChannel.IN_APP, "Account provisioned", "Your {legal_entity} account is ready to use."),
     ("auth.user_provisioned", NotificationChannel.EMAIL, "Welcome to SME HRMS", "Your account is provisioned and ready."),
     ("auth.session_revoked", NotificationChannel.IN_APP, "Session revoked", "A session was revoked. Please sign in again if needed."),
+    ("workflow.task.assigned", NotificationChannel.IN_APP, "Workflow task assigned", "A workflow task for {workflow_definition} is awaiting your action before {deadline_at}."),
+    ("workflow.task.escalated", NotificationChannel.IN_APP, "Workflow task escalated", "A workflow task for {workflow_definition} was escalated to you. Deadline: {deadline_at}."),
 )
 
 

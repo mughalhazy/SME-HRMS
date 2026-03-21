@@ -36,6 +36,9 @@ class ApiGatewayRouteTests(unittest.TestCase):
         route = api_gateway_routes.resolve_route("/api/v1/auth/login")
         self.assertEqual(route.upstream_service, "auth-service")
 
+        workflow_route = api_gateway_routes.resolve_route("/api/v1/workflows/123")
+        self.assertEqual(workflow_route.upstream_service, "workflow-service")
+
         notification_route = api_gateway_routes.resolve_route("/api/v1/notifications/send")
         self.assertEqual(notification_route.upstream_service, "notification-service")
 
