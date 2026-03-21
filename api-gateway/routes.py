@@ -26,6 +26,7 @@ ROUTES: tuple[Route, ...] = (
     Route(name="hiring", path_prefix="/hiring", upstream_service="hiring-service"),
     Route(name="auth", path_prefix="/auth", upstream_service="auth-service"),
     Route(name="notifications", path_prefix="/notifications", upstream_service="notification-service"),
+    Route(name="jobs", path_prefix="/jobs", upstream_service="api-gateway"),
 )
 
 

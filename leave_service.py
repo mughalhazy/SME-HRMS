@@ -385,6 +385,49 @@ class LeaveService:
         payload["tenant_id"] = leave.tenant_id
         return payload
 
+    def recompute_employee_balance(self, employee_id: str, tenant_id: str | None = None, trace_id: str | None = None) -> dict:
+        self.tenant_id = self._resolve_tenant(tenant_id)
+        trace = self._trace(trace_id)
+        started = perf_counter()
+        with self._lock:
+            employee = self.employees.get(employee_id)
+            if employee and employee.tenant_id != self.tenant_id:
+                employee = None
+            if not employee:
+                self._fail(404, "EMPLOYEE_NOT_FOUND", "Employee not found", trace)
+
+            for leave_type, entitlement_days in BALANCE_CAPS.items():
+                self.leave_balances[(employee_id, leave_type)] = LeaveBalance(
+                    tenant_id=self.tenant_id,
+                    employee_id=employee_id,
+                    leave_type=leave_type,
+                    entitlement_days=entitlement_days,
+                    reserved_days=0.0,
+                    approved_days=0.0,
+                )
+
+            for leave in self.requests.values():
+                if leave.tenant_id != self.tenant_id or leave.employee_id != employee_id:
+                    continue
+                balance = self._get_balance(employee_id, leave.leave_type)
+                if leave.status == LeaveStatus.SUBMITTED:
+                    balance.reserved_days += leave.total_days
+                elif leave.status == LeaveStatus.APPROVED:
+                    balance.approved_days += leave.total_days
+
+            self._sync_employee_leave_status(employee_id)
+            employee_detail = self.get_employee_detail(employee_id)
+        self.observability.logger.audit(
+            "leave_balance_recomputed",
+            trace_id=trace,
+            actor=employee_id,
+            entity="Employee",
+            entity_id=employee_id,
+            context={"tenant_id": self.tenant_id},
+        )
+        self._finalize_observation("recompute_employee_balance", trace, started, True, {"status": 200, "employee_id": employee_id})
+        return employee_detail
+
     def replay_dead_letters(self) -> list[dict]:
         recovered = self.dead_letters.recover(
             lambda entry: entry.workflow == "leave_request",

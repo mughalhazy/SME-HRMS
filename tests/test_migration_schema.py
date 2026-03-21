@@ -8,7 +8,8 @@ CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_
 WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
 PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_normalization.sql').read_text()
 TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
-FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}"
+BACKGROUND_JOBS_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_background_jobs_schema.sql').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{BACKGROUND_JOBS_SCHEMA}"
 
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
@@ -116,3 +117,20 @@ def test_tenant_foundation_schema_adds_tenant_registry_and_config_store() -> Non
 
     for fragment in expected_fragments:
         assert fragment in TENANT_FOUNDATION_SCHEMA
+
+
+def test_background_jobs_schema_adds_job_and_outbox_persistence() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS event_outbox',
+        'aggregate_type VARCHAR(80) NOT NULL',
+        'payload JSONB NOT NULL',
+        'CREATE TABLE IF NOT EXISTS background_jobs',
+        'job_type VARCHAR(120) NOT NULL',
+        "status VARCHAR(20) NOT NULL CHECK (status IN ('Scheduled', 'Running', 'Succeeded', 'Failed', 'DeadLettered', 'Cancelled'))",
+        'CREATE TABLE IF NOT EXISTS background_job_failures',
+        'retryable BOOLEAN NOT NULL DEFAULT TRUE',
+        'REFERENCES background_jobs (tenant_id, job_id)',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in BACKGROUND_JOBS_SCHEMA
