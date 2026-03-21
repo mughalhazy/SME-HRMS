@@ -102,7 +102,10 @@ class LeaveApiTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(len(payload['data']['data']), 1)
+        self.assertEqual(len(payload['data']['items']), 1)
         self.assertEqual(payload['data']['data'][0]['status'], 'Submitted')
+        self.assertEqual(payload['meta']['pagination']['count'], 1)
+        self.assertEqual(payload['meta']['service'], 'leave-service')
         self.assertTrue(payload['data']['leave_balances'])
 
     def test_submit_get_and_cancel_leave_request_via_api(self) -> None:

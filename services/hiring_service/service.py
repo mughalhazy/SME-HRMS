@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from event_contract import EventRegistry, emit_canonical_event
 from notification_service import NotificationService
+from outbox_system import OutboxManager
 
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, Observability, run_with_retry
