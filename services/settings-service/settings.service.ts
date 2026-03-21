@@ -8,6 +8,8 @@ import {
   LeavePolicyFilters,
   PayrollSettings,
   SettingsReadModelBundle,
+  TenantConfig,
+  UpsertTenantConfigInput,
   UpdateAttendanceRuleInput,
   UpdateLeavePolicyInput,
   UpsertPayrollSettingsInput,
@@ -23,7 +25,7 @@ import {
 import { ValidationError } from '../employee-service/employee.validation';
 
 export class SettingsService {
-  constructor(private readonly repository: SettingsRepository) {}
+  constructor(private readonly repository: SettingsRepository, private readonly tenantId: string = 'tenant-default') {}
 
   createAttendanceRule(input: CreateAttendanceRuleInput): AttendanceRule {
     validateCreateAttendanceRule(input);
@@ -32,7 +34,7 @@ export class SettingsService {
       throw new ConflictError('attendance rule code already exists');
     }
 
-    return this.repository.createAttendanceRule(input);
+    return this.repository.createAttendanceRule({ ...input, tenant_id: this.tenantId });
   }
 
   updateAttendanceRule(attendanceRuleId: string, input: UpdateAttendanceRuleInput): AttendanceRule {
@@ -77,7 +79,7 @@ export class SettingsService {
       throw new ConflictError('an Active leave policy already exists for this leave_type');
     }
 
-    return this.repository.createLeavePolicy(input);
+    return this.repository.createLeavePolicy({ ...input, tenant_id: this.tenantId });
   }
 
   updateLeavePolicy(leavePolicyId: string, input: UpdateLeavePolicyInput): LeavePolicy {
@@ -138,7 +140,7 @@ export class SettingsService {
       throw new ConflictError('cannot replace Active payroll settings with Draft status');
     }
 
-    return this.repository.upsertPayrollSettings(input);
+    return this.repository.upsertPayrollSettings({ ...input, tenant_id: this.tenantId });
   }
 
   getPayrollSettings(): PayrollSettings {
@@ -147,6 +149,18 @@ export class SettingsService {
       throw new NotFoundError('payroll settings not found');
     }
     return settings;
+  }
+
+  upsertTenantConfig(input: UpsertTenantConfigInput): TenantConfig {
+    return this.repository.upsertTenantConfig({ ...input, tenant_id: this.tenantId });
+  }
+
+  getTenantConfig(): TenantConfig {
+    return this.repository.getTenantConfig();
+  }
+
+  isFeatureEnabled(featureKey: string): boolean {
+    return Boolean(this.getTenantConfig().feature_flags[featureKey]);
   }
 
 

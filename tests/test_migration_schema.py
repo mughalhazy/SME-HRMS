@@ -7,7 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_text()
 WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
 PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_normalization.sql').read_text()
-FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}"
+TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}"
 
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
@@ -98,3 +99,20 @@ def test_persistence_normalization_schema_adds_auth_and_attendance_persistence()
 
     for fragment in expected_fragments:
         assert fragment in PERSISTENCE_SCHEMA
+
+
+def test_tenant_foundation_schema_adds_tenant_registry_and_config_store() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS tenants',
+        'tenant_id VARCHAR(80) NOT NULL PRIMARY KEY',
+        'slug VARCHAR(120) NOT NULL UNIQUE',
+        'CREATE TABLE IF NOT EXISTS tenant_configs',
+        'feature_flags JSONB NOT NULL DEFAULT',
+        'leave_policy_refs JSONB NOT NULL DEFAULT',
+        'payroll_rule_refs JSONB NOT NULL DEFAULT',
+        'enabled_locations JSONB NOT NULL DEFAULT',
+        'REFERENCES tenants (tenant_id)',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in TENANT_FOUNDATION_SCHEMA

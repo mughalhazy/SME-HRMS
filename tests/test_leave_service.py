@@ -141,3 +141,39 @@ def test_approved_leave_includes_attendance_impacts_and_employee_detail():
     assert detail["employee"]["employee_id"] == "emp-001"
     assert len(detail["attendance_impacts"]) == 3
     assert any(item["leave_request_id"] == created["leave_request_id"] for item in detail["attendance_impacts"])
+
+
+def test_cross_tenant_request_access_is_denied():
+    svc = LeaveService()
+    _, created = svc.create_request(
+        'Employee',
+        'emp-001',
+        'emp-001',
+        'Annual',
+        date(2026, 11, 1),
+        date(2026, 11, 2),
+        tenant_id='tenant-default',
+    )
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.get_request('Admin', 'emp-admin', created['leave_request_id'], tenant_id='tenant-other')
+
+    assert ex.value.status_code == 403
+    assert ex.value.payload['error']['code'] == 'TENANT_SCOPE_VIOLATION'
+
+
+def test_leave_events_include_tenant_context():
+    svc = LeaveService()
+    _, created = svc.create_request(
+        'Employee',
+        'emp-001',
+        'emp-001',
+        'Annual',
+        date(2026, 12, 10),
+        date(2026, 12, 11),
+        tenant_id='tenant-default',
+    )
+    svc.submit_request('Employee', 'emp-001', created['leave_request_id'], tenant_id='tenant-default')
+
+    assert svc.events[-1]['tenant_id'] == 'tenant-default'
+    assert svc.events[-1]['data']['tenant_id'] == 'tenant-default'

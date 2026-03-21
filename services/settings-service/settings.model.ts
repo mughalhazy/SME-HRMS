@@ -17,6 +17,7 @@ export const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
 export type WeekDay = (typeof WEEK_DAYS)[number];
 
 export interface AttendanceRule {
+  tenant_id: string;
   attendance_rule_id: string;
   code: string;
   name: string;
@@ -33,6 +34,7 @@ export interface AttendanceRule {
 }
 
 export interface LeavePolicy {
+  tenant_id: string;
   leave_policy_id: string;
   code: string;
   name: string;
@@ -49,6 +51,7 @@ export interface LeavePolicy {
 }
 
 export interface PayrollSettings {
+  tenant_id: string;
   payroll_setting_id: string;
   pay_schedule: PaySchedule;
   pay_day: number;
@@ -62,7 +65,19 @@ export interface PayrollSettings {
   updated_at: string;
 }
 
+export interface TenantConfig {
+  tenant_id: string;
+  feature_flags: Record<string, boolean>;
+  leave_policy_refs: string[];
+  payroll_rule_refs: string[];
+  locale: string;
+  legal_entity: string;
+  enabled_locations: string[];
+  updated_at: string;
+}
+
 export interface AttendanceRuleReadModel {
+  tenant_id: string;
   attendance_rule_id: string;
   code: string;
   name: string;
@@ -73,6 +88,7 @@ export interface AttendanceRuleReadModel {
 }
 
 export interface LeavePolicyReadModel {
+  tenant_id: string;
   leave_policy_id: string;
   code: string;
   name: string;
@@ -84,6 +100,7 @@ export interface LeavePolicyReadModel {
 }
 
 export interface PayrollSettingsReadModel {
+  tenant_id: string;
   payroll_setting_id: string;
   pay_schedule: PaySchedule;
   pay_day: number;
@@ -95,9 +112,11 @@ export interface PayrollSettingsReadModel {
 }
 
 export interface SettingsConfigurationView {
+  tenant_id: string;
   attendance_rules: AttendanceRuleReadModel[];
   leave_policies: LeavePolicyReadModel[];
   payroll_settings: PayrollSettingsReadModel | null;
+  tenant_configuration: TenantConfig;
   updated_at: string | null;
 }
 
@@ -106,6 +125,7 @@ export interface SettingsReadModelBundle {
 }
 
 export interface CreateAttendanceRuleInput {
+  tenant_id?: string;
   code: string;
   name: string;
   timezone: string;
@@ -131,10 +151,12 @@ export interface UpdateAttendanceRuleInput {
 }
 
 export interface AttendanceRuleFilters {
+  tenant_id?: string;
   status?: SettingsStatus;
 }
 
 export interface CreateLeavePolicyInput {
+  tenant_id?: string;
   code: string;
   name: string;
   leave_type: LeavePolicyType;
@@ -159,11 +181,13 @@ export interface UpdateLeavePolicyInput {
 }
 
 export interface LeavePolicyFilters {
+  tenant_id?: string;
   leave_type?: LeavePolicyType;
   status?: SettingsStatus;
 }
 
 export interface UpsertPayrollSettingsInput {
+  tenant_id?: string;
   pay_schedule: PaySchedule;
   pay_day: number;
   currency: string;
@@ -172,4 +196,14 @@ export interface UpsertPayrollSettingsInput {
   leave_deduction_mode: LeaveDeductionMode;
   approval_chain: string[];
   status?: SettingsStatus;
+}
+
+export interface UpsertTenantConfigInput {
+  tenant_id?: string;
+  feature_flags?: Record<string, boolean>;
+  leave_policy_refs?: string[];
+  payroll_rule_refs?: string[];
+  locale?: string;
+  legal_entity?: string;
+  enabled_locations?: string[];
 }

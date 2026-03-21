@@ -8,6 +8,7 @@ export type AuthContext = {
   role: AuthRole;
   employee_id?: string;
   department_id?: string;
+  tenant_id?: string;
 };
 
 type ResourceAction =
@@ -107,7 +108,7 @@ function parseAuth(req: Request): AuthContext {
     throw new Error('UNAUTHORIZED');
   }
 
-  const { role, employee_id, department_id, iss, aud, nbf, exp } = payload as Record<string, unknown>;
+  const { role, employee_id, department_id, tenant_id, iss, aud, nbf, exp } = payload as Record<string, unknown>;
   if (role !== 'Admin' && role !== 'Manager' && role !== 'Employee') {
     throw new Error('UNAUTHORIZED');
   }
@@ -125,6 +126,7 @@ function parseAuth(req: Request): AuthContext {
     role,
     employee_id: typeof employee_id === 'string' ? employee_id : undefined,
     department_id: typeof department_id === 'string' ? department_id : undefined,
+    tenant_id: typeof tenant_id === 'string' ? tenant_id : undefined,
   };
 }
 
