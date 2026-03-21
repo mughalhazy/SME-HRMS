@@ -61,12 +61,12 @@ class HiringServiceTest(unittest.TestCase):
         self.assertEqual(hired["status"], "Hired")
 
         event_types = [event["event_type"] for event in self.service.events]
-        self.assertIn("JobPostingOpened", event_types)
-        self.assertIn("CandidateApplied", event_types)
-        self.assertIn("CandidateStageTransitionRecorded", event_types)
-        self.assertIn("InterviewScheduled", event_types)
-        self.assertIn("InterviewCompleted", event_types)
-        self.assertIn("CandidateHired", event_types)
+        self.assertIn("hiring.job_posting.opened", event_types)
+        self.assertIn("hiring.candidate.applied", event_types)
+        self.assertIn("hiring.candidate.stage_transition.recorded", event_types)
+        self.assertIn("hiring.interview.scheduled", event_types)
+        self.assertIn("hiring.interview.completed", event_types)
+        self.assertIn("hiring.candidate.hired", event_types)
 
     def test_candidate_stage_history_tracks_initial_and_subsequent_stage_changes(self) -> None:
         candidate = self.service.create_candidate(
@@ -310,7 +310,7 @@ class HiringServiceTest(unittest.TestCase):
         self.assertIn("calendar.google.com", interview["google_calendar_event_link"])
         self.assertIn("meet.google.com", interview["location_or_link"])
         event_types = [event["event_type"] for event in self.service.events]
-        self.assertIn("InterviewCalendarSynced", event_types)
+        self.assertIn("hiring.interview.calendar_synced", event_types)
 
     def test_import_candidates_from_linkedin(self) -> None:
         result = self.service.import_candidates_from_linkedin(
@@ -342,8 +342,8 @@ class HiringServiceTest(unittest.TestCase):
         self.assertEqual(imported["source_profile_url"], "https://linkedin.example/mia")
 
         event_types = [event["event_type"] for event in self.service.events]
-        self.assertIn("CandidateImported", event_types)
-        self.assertIn("LinkedInCandidatesImported", event_types)
+        self.assertIn("hiring.candidate.imported", event_types)
+        self.assertIn("hiring.linkedin_candidates.imported", event_types)
 
     def test_build_hiring_ui_returns_job_postings_and_candidate_pipeline_surfaces(self) -> None:
         candidate = self.service.create_candidate(

@@ -7,6 +7,8 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
+from event_contract import EventRegistry, emit_canonical_event
+
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, Observability, run_with_retry
 
 
@@ -134,6 +136,8 @@ class HiringService:
         self.employee_profiles: dict[str, EmployeeProfile] = {}
         self.hired_candidate_index: dict[str, str] = {}
         self.events: list[dict[str, Any]] = []
+        self.tenant_id = "tenant-default"
+        self.event_registry = EventRegistry()
         self.error_logger = CentralErrorLogger("hiring-service")
         self.dead_letters = DeadLetterQueue()
         self.observability = Observability("hiring-service")
@@ -882,13 +886,32 @@ class HiringService:
         return payload
 
     def _emit(self, event_type: str, payload: dict[str, Any]) -> None:
-        self.events.append(
-            {
-                "event_type": event_type,
-                "payload": payload,
-                "occurred_at": self._now().isoformat(),
-            }
+        if payload.get("candidate_stage_transition_id"):
+            idempotency_key = str(payload["candidate_stage_transition_id"])
+        elif payload.get("interview_id"):
+            idempotency_key = str(payload["interview_id"])
+        elif payload.get("employee_profile_id"):
+            idempotency_key = str(payload["employee_profile_id"])
+        elif payload.get("candidate_id") and payload.get("from_status") and payload.get("to_status"):
+            idempotency_key = f"{payload['candidate_id']}:{payload['from_status']}:{payload['to_status']}"
+        elif payload.get("candidate_id"):
+            idempotency_key = str(payload["candidate_id"])
+        elif payload.get("job_posting_id"):
+            idempotency_key = str(payload["job_posting_id"])
+        else:
+            idempotency_key = self._new_id()
+
+        event = emit_canonical_event(
+            self.events,
+            legacy_event_name=event_type,
+            data=payload,
+            source="hiring-service",
+            tenant_id=self.tenant_id,
+            registry=self.event_registry,
+            idempotency_key=idempotency_key,
+            aliases={"payload": payload, "occurred_at": self._now().isoformat()},
         )
+        event["legacy_event_type"] = event_type
 
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)

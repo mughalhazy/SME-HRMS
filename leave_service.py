@@ -9,6 +9,7 @@ from enum import Enum
 from threading import RLock
 from time import perf_counter
 
+from event_contract import EventRegistry, emit_canonical_event
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 
 
@@ -133,6 +134,8 @@ class LeaveService:
         self.dead_letters = DeadLetterQueue()
         self.idempotency = IdempotencyStore()
         self.observability = Observability("leave-service")
+        self.tenant_id = "tenant-default"
+        self.event_registry = EventRegistry()
         self.employees: dict[str, EmployeeRecord] = {
             "emp-admin": EmployeeRecord("emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
             "emp-manager": EmployeeRecord("emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE),
@@ -285,7 +288,7 @@ class LeaveService:
         try:
             if simulate_failure:
                 raise RuntimeError(f"simulated failure while emitting {event}")
-            self.events.append({"event": event, **payload})
+            emit_canonical_event(self.events, legacy_event_name=event, data=payload, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=self._trace(trace_id), idempotency_key=payload.get("leave_request_id"))
             self.observability.logger.info(
                 "leave.event_emitted",
                 trace_id=self._trace(trace_id),
@@ -356,7 +359,7 @@ class LeaveService:
         for entry in recovered:
             payload = dict(entry.payload)
             payload.pop("simulate_failure", None)
-            self.events.append({"event": entry.operation, **payload, "recovered_from_dead_letter": True})
+            emit_canonical_event(self.events, legacy_event_name=entry.operation, data={**payload, "recovered_from_dead_letter": True}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=entry.trace_id, idempotency_key=payload.get("leave_request_id"))
         return [entry.__dict__ for entry in recovered]
 
     def create_request(

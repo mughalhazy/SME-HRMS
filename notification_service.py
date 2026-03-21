@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any
 from uuid import uuid4
 
+from event_contract import EventContractError, EventRegistry, ensure_event_contract, legacy_event_name_for, normalize_event_type
 from resilience import Observability
 
 
@@ -245,6 +246,7 @@ class NotificationService:
         self.messages: dict[str, NotificationMessage] = {}
         self.delivery_attempts: list[DeliveryAttempt] = []
         self.events: list[dict[str, Any]] = []
+        self.event_registry = EventRegistry()
         self.observability = Observability("notification-service")
         self._seed_templates()
 
@@ -337,9 +339,15 @@ class NotificationService:
             raise NotificationServiceError('VALIDATION_ERROR', 'subject_id is required', details=[{'field': 'subject_id', 'reason': 'must be a non-empty string'}])
 
     def ingest_event(self, event: dict[str, Any]) -> list[NotificationMessage]:
-        event_name = str(event.get("event_name") or event.get("type") or "")
-        if not event_name:
-            raise NotificationServiceError("VALIDATION_ERROR", "event_name is required")
+        try:
+            canonical_event, _ = ensure_event_contract(event, source="notification-api", registry=self.event_registry)
+        except EventContractError as exc:
+            if str(exc) == "missing_tenant_context":
+                raise NotificationServiceError("VALIDATION_ERROR", "tenant_id is required") from exc
+            raise NotificationServiceError("VALIDATION_ERROR", f"Invalid event payload: {exc}") from exc
+
+        event_type = canonical_event["event_type"]
+        event_name = str(canonical_event["metadata"].get("legacy_event_name") or legacy_event_name_for(event_type))
 
         plans = EVENT_NOTIFICATION_PLANS.get(event_name)
         if not plans:
@@ -347,7 +355,7 @@ class NotificationService:
 
         created: list[NotificationMessage] = []
         for plan in plans:
-            subject_id = event.get(plan.subject_id_field)
+            subject_id = canonical_event["data"].get(plan.subject_id_field)
             if not subject_id:
                 raise NotificationServiceError(
                     "VALIDATION_ERROR",
@@ -362,8 +370,8 @@ class NotificationService:
                         subject_id=str(subject_id),
                         topic_code=plan.topic_code,
                         channel=channel,
-                        destination=self._resolve_destination(channel=channel, subject_id=str(subject_id), event=event, destination_field=plan.destination_field),
-                        payload={**event, "event_name": event_name},
+                        destination=self._resolve_destination(channel=channel, subject_id=str(subject_id), event=canonical_event["data"], destination_field=plan.destination_field),
+                        payload={**canonical_event["data"], "event_name": event_name, "event_type": event_type, "tenant_id": canonical_event["tenant_id"], "metadata": canonical_event["metadata"]},
                         event_name=event_name,
                     )
                 )

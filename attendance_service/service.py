@@ -14,6 +14,7 @@ from attendance_service.models import (
     AttendanceStatus,
     RecordState,
 )
+from event_contract import EventRegistry, emit_canonical_event
 from resilience import Observability
 
 
@@ -66,6 +67,8 @@ class AttendanceService:
         self.events: List[dict] = []
         self.observability = Observability("attendance-service")
         self._late_after = late_after
+        self.tenant_id = "tenant-default"
+        self.event_registry = EventRegistry()
 
     def create_record(
         self,
@@ -108,14 +111,7 @@ class AttendanceService:
 
         self._records[record.attendance_id] = record
         self._employee_date_index[key] = record.attendance_id
-        self.events.append(
-            {
-                "type": "AttendanceCaptured",
-                "attendance_id": str(record.attendance_id),
-                "employee_id": str(record.employee_id),
-                "attendance_date": record.attendance_date.isoformat(),
-            }
-        )
+        emit_canonical_event(self.events, legacy_event_name="AttendanceCaptured", data={"attendance_id": str(record.attendance_id), "employee_id": str(record.employee_id), "attendance_date": record.attendance_date.isoformat()}, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=str(record.attendance_id))
         self.observability.logger.info(
             "attendance.captured",
             context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
@@ -166,15 +162,7 @@ class AttendanceService:
             record.lifecycle_state = RecordState.CAPTURED
             self._auto_validate(record)
 
-        self.events.append(
-            {
-                "type": "AttendanceLogged",
-                "attendance_id": str(record.attendance_id),
-                "employee_id": str(record.employee_id),
-                "event_type": event_type.value,
-                "occurred_at": occurred_at.isoformat(),
-            }
-        )
+        emit_canonical_event(self.events, legacy_event_name="AttendanceLogged", data={"attendance_id": str(record.attendance_id), "employee_id": str(record.employee_id), "event_type": event_type.value, "occurred_at": occurred_at.isoformat()}, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=f"{record.attendance_id}:{event_type.value}:{occurred_at.isoformat()}")
         self.observability.logger.info(
             "attendance.logged",
             context={
@@ -212,13 +200,7 @@ class AttendanceService:
         self._normalize_record(record)
         record.lifecycle_state = RecordState.CAPTURED
         self._auto_validate(record)
-        self.events.append(
-            {
-                "type": "AttendanceCorrected",
-                "attendance_id": str(record.attendance_id),
-                "employee_id": str(record.employee_id),
-            }
-        )
+        emit_canonical_event(self.events, legacy_event_name="AttendanceCorrected", data={"attendance_id": str(record.attendance_id), "employee_id": str(record.employee_id)}, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=str(record.attendance_id))
         self.observability.logger.info(
             "attendance.updated",
             context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
@@ -240,7 +222,7 @@ class AttendanceService:
             )
         record.lifecycle_state = RecordState.APPROVED
         record.updated_at = datetime.utcnow()
-        self.events.append({"type": "AttendanceApproved", "attendance_id": str(record.attendance_id)})
+        emit_canonical_event(self.events, legacy_event_name="AttendanceApproved", data={"attendance_id": str(record.attendance_id)}, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=str(record.attendance_id))
         self.observability.logger.info(
             "attendance.approved",
             context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
@@ -309,15 +291,12 @@ class AttendanceService:
                 record.updated_at = datetime.utcnow()
                 locked_ids.append(str(record.attendance_id))
 
-        self.events.append({"type": "AttendanceLocked", "period_id": period_id, "record_ids": locked_ids})
-        self.events.append(
-            {
-                "type": "AttendancePeriodClosed",
+        emit_canonical_event(self.events, legacy_event_name="AttendanceLocked", data={"period_id": period_id, "record_ids": locked_ids}, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=period_id)
+        emit_canonical_event(self.events, legacy_event_name="AttendancePeriodClosed", data={
                 "period_id": period_id,
                 "from": from_date.isoformat(),
                 "to": to_date.isoformat(),
-            }
-        )
+            }, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=period_id)
         self.observability.logger.info(
             "attendance.period_locked",
             context={"period_id": period_id, "locked_count": len(locked_ids)},
@@ -370,15 +349,12 @@ class AttendanceService:
             records.append(record)
             current = date.fromordinal(current.toordinal() + 1)
 
-        self.events.append(
-            {
-                "type": "AttendanceSyncedFromLeave",
+        emit_canonical_event(self.events, legacy_event_name="AttendanceSyncedFromLeave", data={
                 "employee_id": str(employee_id),
                 "leave_request_id": leave_request_id,
                 "from_date": from_date.isoformat(),
                 "to_date": to_date.isoformat(),
-            }
-        )
+            }, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=leave_request_id)
         return records
 
     def get_employee_detail(self, actor: Actor, *, employee_id: UUID, period_start: date, period_end: date) -> dict:
@@ -434,13 +410,10 @@ class AttendanceService:
                 }
             )
 
-        self.events.append(
-            {
-                "type": "AttendanceAbsenceAlertsGenerated",
+        emit_canonical_event(self.events, legacy_event_name="AttendanceAbsenceAlertsGenerated", data={
                 "attendance_date": attendance_date.isoformat(),
                 "count": len(alert_records),
-            }
-        )
+            }, source="attendance-service", tenant_id=self.tenant_id, registry=self.event_registry, idempotency_key=f"absence-alerts:{attendance_date.isoformat()}")
         self.observability.logger.info(
             "attendance.absence_alerts_generated",
             context={"attendance_date": attendance_date.isoformat(), "count": len(alert_records)},
@@ -481,12 +454,17 @@ class AttendanceService:
         if record.attendance_status in {AttendanceStatus.ABSENT, AttendanceStatus.HOLIDAY} or record.total_hours is not None:
             record.lifecycle_state = RecordState.VALIDATED
             record.updated_at = datetime.utcnow()
-            self.events.append(
-                {
-                    "type": "AttendanceValidated",
+            emit_canonical_event(
+                self.events,
+                legacy_event_name="AttendanceValidated",
+                data={
                     "attendance_id": str(record.attendance_id),
                     "anomalies": [anomaly.value for anomaly in record.anomalies],
-                }
+                },
+                source="attendance-service",
+                tenant_id=self.tenant_id,
+                registry=self.event_registry,
+                idempotency_key=str(record.attendance_id),
             )
 
     @staticmethod

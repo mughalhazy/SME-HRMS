@@ -12,6 +12,7 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
+from event_contract import EventRegistry, emit_canonical_event
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 
 
@@ -228,6 +229,8 @@ class PayrollService:
         self.error_logger = CentralErrorLogger("payroll-service")
         self.idempotency = IdempotencyStore()
         self.observability = Observability("payroll-service")
+        self.tenant_id = "tenant-default"
+        self.event_registry = EventRegistry()
         self._lock = RLock()
 
     def _trace(self, trace_id: str | None = None) -> str:
@@ -776,7 +779,7 @@ class PayrollService:
                 record = self._build_record_from_payload(enriched_payload, salary_structure=salary_structure, payroll_cycle=payroll_cycle)
                 self.records[record.payroll_record_id] = record
                 self.period_index[key] = record.payroll_record_id
-                self.events.append({"type": "PayrollDrafted", "payroll_record_id": record.payroll_record_id, "at": record.created_at.isoformat()})
+                emit_canonical_event(self.events, legacy_event_name="PayrollDrafted", data={"payroll_record_id": record.payroll_record_id, "at": record.created_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
             self.observability.logger.audit(
                 "payroll_record_drafted",
                 trace_id=trace,
@@ -841,7 +844,7 @@ class PayrollService:
                     if record.status == PayrollStatus.DRAFT:
                         record.status = PayrollStatus.PROCESSED
                         record.updated_at = self._now()
-                        self.events.append({"type": "PayrollProcessed", "payroll_record_id": record_id, "at": record.updated_at.isoformat()})
+                        emit_canonical_event(self.events, legacy_event_name="PayrollProcessed", data={"payroll_record_id": record_id, "at": record.updated_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record_id)
                     if record.status in {PayrollStatus.PROCESSED, PayrollStatus.PAID}:
                         processed_ids.add(record_id)
 
@@ -851,7 +854,7 @@ class PayrollService:
                         if record.status == PayrollStatus.DRAFT:
                             record.status = PayrollStatus.PROCESSED
                             record.updated_at = self._now()
-                            self.events.append({"type": "PayrollProcessed", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
+                            emit_canonical_event(self.events, legacy_event_name="PayrollProcessed", data={"payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
                         if record.status in {PayrollStatus.PROCESSED, PayrollStatus.PAID}:
                             processed_ids.add(record.payroll_record_id)
 
@@ -927,7 +930,7 @@ class PayrollService:
             "at": self._now().isoformat(),
         }
         if not self.events or self.events[-1] != event:
-            self.events.append(event)
+            emit_canonical_event(self.events, legacy_event_name="PayrollMonthlyTriggerExecuted", data={k: v for k, v in event.items() if k != "type"}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace_id or self._trace(None), idempotency_key=f"monthly:{trigger_date.isoformat()}")
         return status, {
             "data": {
                 "trigger": "monthly",
@@ -1018,7 +1021,7 @@ class PayrollService:
             record.payment_date = date.fromisoformat(payment_date) if payment_date else date.today()
             record.status = PayrollStatus.PAID
             record.updated_at = self._now()
-            self.events.append({"type": "PayrollPaid", "payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()})
+            emit_canonical_event(self.events, legacy_event_name="PayrollPaid", data={"payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
             batch_id = self.record_batches.get(record.payroll_record_id)
             batch_payload = None
             if batch_id and batch_id in self.batches:

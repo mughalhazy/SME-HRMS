@@ -3,6 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 from typing import Any, Callable
 
+from event_contract import normalize_event_type
 from notification_service import NotificationService, NotificationServiceError, serialize_message, serialize_preference
 from api_contract import error_response, success_response
 from resilience import new_trace_id
@@ -48,6 +49,7 @@ def post_notification_event(service: NotificationService, payload: dict[str, Any
     messages = service.ingest_event(payload)
     return 202, {
         'event_name': payload.get('event_name') or payload.get('type'),
+        'event_type': normalize_event_type(str(payload.get('event_type') or payload.get('event_name') or payload.get('type') or '')),
         'notifications': [serialize_message(message) for message in messages],
         'count': len(messages),
     }

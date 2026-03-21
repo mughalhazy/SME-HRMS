@@ -23,6 +23,7 @@ class NotificationServiceTests(unittest.TestCase):
             self.service,
             {
                 'event_name': 'LeaveRequestApproved',
+                'tenant_id': 'tenant-acme',
                 'employee_id': 'emp-001',
                 'employee_email': 'amina.yusuf@example.com',
                 'approver_name': 'Helen Brooks',
@@ -37,6 +38,7 @@ class NotificationServiceTests(unittest.TestCase):
         self.assertEqual(response['data']['count'], 2)
         channels = {row['channel'] for row in response['data']['notifications']}
         self.assertEqual(channels, {'Email', 'InApp'})
+        self.assertEqual(response['data']['event_type'], 'leave.request.approved')
         inbox = self.service.get_inbox(subject_id='emp-001')
         self.assertEqual(inbox['summary']['unread'], 1)
         self.assertEqual(inbox['items'][0]['title'], 'Leave request approved')
@@ -60,6 +62,7 @@ class NotificationServiceTests(unittest.TestCase):
             self.service,
             {
                 'event_name': 'PayrollProcessed',
+                'tenant_id': 'tenant-acme',
                 'employee_id': 'emp-001',
                 'employee_email': 'amina.yusuf@example.com',
                 'pay_period_start': '2026-03-01',
@@ -80,6 +83,7 @@ class NotificationServiceTests(unittest.TestCase):
             self.service,
             {
                 'event_name': 'SessionRevoked',
+                'tenant_id': 'tenant-acme',
                 'user_id': 'user-001',
             },
             trace_id='trace-session-revoked',
@@ -120,6 +124,7 @@ class NotificationServiceTests(unittest.TestCase):
             self.service,
             {
                 'event_name': 'InterviewScheduled',
+                'tenant_id': 'tenant-acme',
                 'candidate_id': 'cand-001',
                 'candidate_email': 'candidate@example.com',
                 'scheduled_start': '2026-03-24T14:00:00Z',
@@ -165,10 +170,50 @@ class NotificationServiceTests(unittest.TestCase):
         self.assertEqual(status, 422)
         self.assertEqual(payload['error']['code'], 'VALIDATION_ERROR')
 
+
+    def test_canonical_event_envelope_is_accepted_and_missing_tenant_is_rejected(self) -> None:
+        status, response = post_notification_event(
+            self.service,
+            {
+                'event_id': '11111111-1111-1111-1111-111111111111',
+                'event_type': 'payroll.record.processed',
+                'tenant_id': 'tenant-acme',
+                'timestamp': '2026-03-21T00:00:00+00:00',
+                'source': 'payroll-service',
+                'data': {
+                    'employee_id': 'emp-001',
+                    'employee_email': 'amina.yusuf@example.com',
+                    'pay_period_start': '2026-03-01',
+                    'pay_period_end': '2026-03-31',
+                    'net_pay': '5190.00',
+                    'currency': 'USD',
+                },
+                'metadata': {
+                    'version': 'v1',
+                    'correlation_id': '22222222-2222-2222-2222-222222222222',
+                },
+            },
+            trace_id='trace-canonical-event',
+        )
+
+        self.assertEqual(status, 202)
+        self.assertEqual(response['data']['event_type'], 'payroll.record.processed')
+
+        rejected_status, rejected_payload = post_notification_event(
+            self.service,
+            {
+                'event_name': 'PayrollProcessed',
+                'employee_id': 'emp-001',
+            },
+            trace_id='trace-missing-tenant',
+        )
+        self.assertEqual(rejected_status, 422)
+        self.assertEqual(rejected_payload['error']['code'], 'VALIDATION_ERROR')
+
     def test_unsupported_events_return_validation_error(self) -> None:
         status, payload = post_notification_event(
             self.service,
-            {'event_name': 'UnknownEvent', 'employee_id': 'emp-001'},
+            {'event_type': 'unknown.entity.received', 'tenant_id': 'tenant-acme', 'employee_id': 'emp-001'},
             trace_id='trace-bad-event',
         )
         self.assertEqual(status, 422)
