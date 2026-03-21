@@ -211,7 +211,7 @@ class AuditServiceTests(unittest.TestCase):
                   };
                 }
                 const repository = new EmployeeRepository({ tenantId: 'tenant-default' });
-                const service = new EmployeeService(repository, undefined, undefined, undefined, 'tenant-default');
+                const service = new EmployeeService(repository, undefined, undefined, 'tenant-default');
                 const controller = new EmployeeController(service);
                 const req = {
                   traceId: 'trace-ts-audit',

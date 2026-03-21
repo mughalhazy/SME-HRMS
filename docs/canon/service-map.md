@@ -6,7 +6,8 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 
 | Service | Primary scope | Route prefix |
 |---|---|---|
-| `employee-service` | Workforce master data and organizational structure | `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/org/*`, `/api/v1/performance-reviews` |
+| `employee-service` | Workforce master data and organizational structure | `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/org/*` |
+| `performance-service` | Performance cycles, goals/OKRs, feedback, calibration, and PIP tracking | `/api/v1/performance/*` |
 | `attendance-service` | Attendance capture, validation, and period closure | `/api/v1/attendance` |
 | `leave-service` | Leave lifecycle and approval workflow | `/api/v1/leave` |
 | `payroll-service` | Payroll processing and payout lifecycle | `/api/v1/payroll` |
@@ -21,7 +22,6 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 ### Responsibilities
 - Manage employee master data and employment lifecycle.
 - Manage organizational reference data for departments, business units, legal entities, locations, cost centers, grades/bands, job positions, and roles.
-- Manage performance review cycles and outcomes.
 - Publish authoritative employee and organization changes to downstream services.
 
 ### Owned entities
@@ -34,7 +34,6 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `GradeBand`
 - `JobPosition`
 - `Role`
-- `PerformanceReview`
 
 ### Canonical APIs
 - `POST /api/v1/employees`
@@ -50,12 +49,6 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `POST /api/v1/org/{kind}`
 - `PATCH /api/v1/org/{kind}/{entity_id}`
 - `GET /api/v1/org/{kind}?status=&department_id=&business_unit_id=&legal_entity_id=&limit=&cursor=`
-- `POST /api/v1/performance-reviews`
-- `GET /api/v1/performance-reviews/{performance_review_id}`
-- `PATCH /api/v1/performance-reviews/{performance_review_id}`
-- `POST /api/v1/performance-reviews/{performance_review_id}/submit`
-- `POST /api/v1/performance-reviews/{performance_review_id}/finalize`
-- `GET /api/v1/performance-reviews?employee_id=&reviewer_employee_id=&status=&limit=&cursor=`
 
 ### Dependencies
 - `auth-service` for authentication and authorization.
@@ -64,7 +57,6 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 
 ### Supported workflows
 - `employee_onboarding`
-- `performance_review`
 
 ### Publishes
 - `EmployeeCreated`
@@ -86,8 +78,6 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `GradeBandUpdated`
 - `JobPositionCreated`
 - `JobPositionUpdated`
-- `PerformanceReviewSubmitted`
-- `PerformanceReviewFinalized`
 
 ### Subscribes
 - `CandidateHired`
@@ -96,8 +86,83 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `employee_directory_view`
 - `organization_structure_view`
 - `employee_reporting_view`
-- `performance_review_view`
 - enriches `attendance_dashboard_view`, `leave_requests_view`, `payroll_summary_view`, `job_posting_directory_view`, and `candidate_pipeline_view`
+
+## performance-service
+
+### Responsibilities
+- Manage enterprise performance review cycles and publish cycle state changes.
+- Manage goals/OKRs, continuous feedback, calibration decisions, and performance improvement plans.
+- Integrate performance approvals through the centralized workflow engine and emit audit-ready mutations.
+- Reuse `employee-service` as the read-only source for employee and manager references.
+
+### Owned entities
+- `ReviewCycle`
+- `Goal`
+- `Feedback`
+- `CalibrationSession`
+- `PipPlan`
+
+### Canonical APIs
+- `POST /api/v1/performance/review-cycles`
+- `POST /api/v1/performance/review-cycles/{review_cycle_id}/submit`
+- `POST /api/v1/performance/review-cycles/{review_cycle_id}/close`
+- `GET /api/v1/performance/review-cycles/{review_cycle_id}`
+- `POST /api/v1/performance/goals`
+- `POST /api/v1/performance/goals/{goal_id}/submit`
+- `POST /api/v1/performance/goals/{goal_id}/approve`
+- `POST /api/v1/performance/goals/{goal_id}/reject`
+- `GET /api/v1/performance/goals?employee_id=&status=&limit=&cursor=`
+- `POST /api/v1/performance/feedback`
+- `GET /api/v1/performance/feedback?employee_id=`
+- `POST /api/v1/performance/calibrations`
+- `POST /api/v1/performance/calibrations/{calibration_id}/submit`
+- `POST /api/v1/performance/calibrations/{calibration_id}/approve`
+- `POST /api/v1/performance/calibrations/{calibration_id}/reject`
+- `POST /api/v1/performance/pips`
+- `POST /api/v1/performance/pips/{pip_id}/submit`
+- `POST /api/v1/performance/pips/{pip_id}/approve`
+- `POST /api/v1/performance/pips/{pip_id}/reject`
+- `PATCH /api/v1/performance/pips/{pip_id}/progress`
+- `GET /api/v1/performance/pips?employee_id=&status=`
+
+### Dependencies
+- `employee-service` for employee existence, department context, and reporting-line lookup.
+- `auth-service` for access control.
+- `workflow-service` for review-cycle, goal, calibration, and PIP approvals.
+- `audit-service` for mutation logging.
+- `notification-service` for manager, HR, and employee notifications.
+
+### Supported workflows
+- `performance_management`
+
+### Publishes
+- `PerformanceReviewCycleCreated`
+- `PerformanceReviewCycleOpened`
+- `PerformanceReviewCycleClosed`
+- `PerformanceGoalCreated`
+- `PerformanceGoalSubmitted`
+- `PerformanceGoalApproved`
+- `PerformanceGoalRejected`
+- `PerformanceFeedbackRecorded`
+- `PerformanceCalibrationCreated`
+- `PerformanceCalibrationSubmitted`
+- `PerformanceCalibrationFinalized`
+- `PerformanceCalibrationRejected`
+- `PerformancePipCreated`
+- `PerformancePipSubmitted`
+- `PerformancePipActive`
+- `PerformancePipRejected`
+- `PerformancePipProgressUpdated`
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeUpdated`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `performance_review_view`
+- `employee_profile_view`
 
 ## attendance-service
 

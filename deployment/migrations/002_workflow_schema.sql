@@ -274,38 +274,144 @@ CREATE TABLE IF NOT EXISTS payroll_settings (
 CREATE INDEX IF NOT EXISTS idx_payroll_settings_tenant_id ON payroll_settings (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_payroll_settings_tenant_status ON payroll_settings (tenant_id, status);
 
-CREATE TABLE IF NOT EXISTS performance_reviews (
+CREATE TABLE IF NOT EXISTS performance_review_cycles (
   tenant_id VARCHAR(80) NOT NULL,
-  performance_review_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  employee_id UUID NOT NULL,
-  reviewer_employee_id UUID NOT NULL,
+  review_cycle_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(40) NOT NULL,
+  name VARCHAR(160) NOT NULL,
   review_period_start DATE NOT NULL,
   review_period_end DATE NOT NULL,
-  overall_rating NUMERIC(2,1),
-  strengths TEXT,
-  improvement_areas TEXT,
-  goals_next_period TEXT,
-  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Submitted', 'Finalized')),
-  submitted_at TIMESTAMPTZ,
-  finalized_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT uq_performance_reviews_tenant_review UNIQUE (tenant_id, performance_review_id),
-  CONSTRAINT chk_performance_reviews_period CHECK (review_period_end >= review_period_start),
-  CONSTRAINT uq_performance_reviews_cycle UNIQUE (tenant_id, employee_id, review_period_start, review_period_end),
-  CONSTRAINT fk_performance_reviews_employee
-    FOREIGN KEY (tenant_id, employee_id)
-    REFERENCES employees (tenant_id, employee_id)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT,
-  CONSTRAINT fk_performance_reviews_reviewer
-    FOREIGN KEY (tenant_id, reviewer_employee_id)
-    REFERENCES employees (tenant_id, employee_id)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT
+  owner_employee_id UUID NOT NULL,
+  workflow_id UUID,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Open', 'Closed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_performance_review_cycles_tenant_review UNIQUE (tenant_id, review_cycle_id),
+  CONSTRAINT uq_performance_review_cycles_tenant_code UNIQUE (tenant_id, code),
+  CONSTRAINT chk_performance_review_cycles_period CHECK (review_period_end >= review_period_start),
+  CONSTRAINT fk_performance_review_cycles_owner FOREIGN KEY (tenant_id, owner_employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_id ON performance_reviews (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_employee_id ON performance_reviews (tenant_id, employee_id);
-CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_reviewer_employee_id ON performance_reviews (tenant_id, reviewer_employee_id);
-CREATE INDEX IF NOT EXISTS idx_performance_reviews_tenant_status ON performance_reviews (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_performance_review_cycles_tenant_id ON performance_review_cycles (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_performance_review_cycles_tenant_status ON performance_review_cycles (tenant_id, status);
+
+CREATE TABLE IF NOT EXISTS performance_goals (
+  tenant_id VARCHAR(80) NOT NULL,
+  goal_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  review_cycle_id UUID NOT NULL,
+  employee_id UUID NOT NULL,
+  owner_employee_id UUID NOT NULL,
+  title VARCHAR(160) NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  metric_name VARCHAR(120) NOT NULL,
+  target_value NUMERIC(10,2) NOT NULL,
+  current_value NUMERIC(10,2) NOT NULL DEFAULT 0,
+  weight NUMERIC(5,2) NOT NULL,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Submitted', 'Approved', 'Rejected')),
+  workflow_id UUID,
+  approved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_performance_goals_tenant_goal UNIQUE (tenant_id, goal_id),
+  CONSTRAINT fk_performance_goals_cycle FOREIGN KEY (tenant_id, review_cycle_id)
+    REFERENCES performance_review_cycles (tenant_id, review_cycle_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_goals_employee FOREIGN KEY (tenant_id, employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_goals_owner FOREIGN KEY (tenant_id, owner_employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_performance_goals_tenant_employee ON performance_goals (tenant_id, employee_id);
+CREATE INDEX IF NOT EXISTS idx_performance_goals_tenant_status ON performance_goals (tenant_id, status);
+
+CREATE TABLE IF NOT EXISTS performance_feedback (
+  tenant_id VARCHAR(80) NOT NULL,
+  feedback_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  employee_id UUID NOT NULL,
+  provider_employee_id UUID NOT NULL,
+  review_cycle_id UUID,
+  feedback_type VARCHAR(20) NOT NULL CHECK (feedback_type IN ('Manager', 'Peer', 'Self', 'Upward')),
+  strengths TEXT NOT NULL DEFAULT '',
+  opportunities TEXT NOT NULL DEFAULT '',
+  visibility VARCHAR(20) NOT NULL CHECK (visibility IN ('Private', 'Employee', 'ManagerAndHR')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_performance_feedback_tenant_feedback UNIQUE (tenant_id, feedback_id),
+  CONSTRAINT fk_performance_feedback_employee FOREIGN KEY (tenant_id, employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_feedback_provider FOREIGN KEY (tenant_id, provider_employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_feedback_cycle FOREIGN KEY (tenant_id, review_cycle_id)
+    REFERENCES performance_review_cycles (tenant_id, review_cycle_id) ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_performance_feedback_tenant_employee ON performance_feedback (tenant_id, employee_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS performance_calibrations (
+  tenant_id VARCHAR(80) NOT NULL,
+  calibration_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  review_cycle_id UUID NOT NULL,
+  facilitator_employee_id UUID NOT NULL,
+  department_id UUID NOT NULL,
+  proposed_rating NUMERIC(2,1) NOT NULL,
+  final_rating NUMERIC(2,1),
+  notes TEXT NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Submitted', 'Finalized', 'Rejected')),
+  workflow_id UUID,
+  finalized_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_performance_calibrations_tenant_calibration UNIQUE (tenant_id, calibration_id),
+  CONSTRAINT fk_performance_calibrations_cycle FOREIGN KEY (tenant_id, review_cycle_id)
+    REFERENCES performance_review_cycles (tenant_id, review_cycle_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_calibrations_facilitator FOREIGN KEY (tenant_id, facilitator_employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_calibrations_department FOREIGN KEY (tenant_id, department_id)
+    REFERENCES departments (tenant_id, department_id) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_performance_calibrations_tenant_cycle ON performance_calibrations (tenant_id, review_cycle_id, status);
+
+CREATE TABLE IF NOT EXISTS performance_pip_plans (
+  tenant_id VARCHAR(80) NOT NULL,
+  pip_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  employee_id UUID NOT NULL,
+  manager_employee_id UUID NOT NULL,
+  review_cycle_id UUID,
+  reason TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Draft', 'Submitted', 'Active', 'Completed', 'Cancelled', 'Rejected')),
+  workflow_id UUID,
+  started_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_performance_pip_plans_tenant_pip UNIQUE (tenant_id, pip_id),
+  CONSTRAINT fk_performance_pip_plans_employee FOREIGN KEY (tenant_id, employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_pip_plans_manager FOREIGN KEY (tenant_id, manager_employee_id)
+    REFERENCES employees (tenant_id, employee_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_performance_pip_plans_cycle FOREIGN KEY (tenant_id, review_cycle_id)
+    REFERENCES performance_review_cycles (tenant_id, review_cycle_id) ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_performance_pip_plans_tenant_employee ON performance_pip_plans (tenant_id, employee_id, status);
+
+CREATE TABLE IF NOT EXISTS performance_pip_milestones (
+  tenant_id VARCHAR(80) NOT NULL,
+  pip_milestone_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pip_id UUID NOT NULL,
+  title VARCHAR(160) NOT NULL,
+  due_date DATE NOT NULL,
+  success_metric TEXT NOT NULL,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_performance_pip_milestones_tenant_milestone UNIQUE (tenant_id, pip_milestone_id),
+  CONSTRAINT fk_performance_pip_milestones_pip FOREIGN KEY (tenant_id, pip_id)
+    REFERENCES performance_pip_plans (tenant_id, pip_id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_performance_pip_milestones_tenant_pip ON performance_pip_milestones (tenant_id, pip_id);
+
+

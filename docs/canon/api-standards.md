@@ -7,7 +7,8 @@ This document defines the canonical Service Contract Standard (SCS) for SME-HRMS
 ### Route namespace
 - All public routes are versioned under `/api/v1`.
 - Service-specific route groups align to the API gateway registry:
-  - `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/performance-reviews`
+  - `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`
+  - `/api/v1/performance/*`
   - `/api/v1/attendance`
   - `/api/v1/leave`
   - `/api/v1/payroll`

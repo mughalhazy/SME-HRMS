@@ -68,12 +68,12 @@ This catalog defines query-optimized projections and validates each read model a
 - **Primary consumers:** candidate pipeline, dashboard
 
 ## 8) `performance_review_view`
-- **Source services:** `employee-service`
-- **Source workflows:** `performance_review`
-- **Source entities:** `PerformanceReview`, `Employee`, `Department`
-- **Key/grain:** one row per performance review (`performance_review_id`)
-- **Fields:** `performance_review_id`, `employee_id`, `employee_name`, `reviewer_employee_id`, `reviewer_name`, `department_id`, `department_name`, `review_period_start`, `review_period_end`, `overall_rating`, `status`, `submitted_at`, `finalized_at`, `updated_at`
-- **Primary consumers:** performance reviews, employee profile, dashboard
+- **Source services:** `performance-service`, `employee-service`
+- **Source workflows:** `performance_management`
+- **Source entities:** `ReviewCycle`, `Goal`, `Feedback`, `CalibrationSession`, `PipPlan`, `Employee`, `Department`
+- **Key/grain:** one row per employee per review cycle (`review_cycle_id`, `employee_id`)
+- **Fields:** `review_cycle_id`, `goal_id`, `employee_id`, `employee_name`, `manager_employee_id`, `manager_name`, `department_id`, `department_name`, `goal_title`, `goal_status`, `progress_percent`, `feedback_count`, `calibration_status`, `final_rating`, `pip_id`, `pip_status`, `pip_completion_percent`, `updated_at`
+- **Primary consumers:** performance workspace, employee profile, executive dashboard
 
 ## 9) `settings_configuration_view`
 - **Source services:** `settings-service`

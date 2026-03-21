@@ -6,7 +6,8 @@ This document defines the canonical backend domain for SME-HRMS and aligns entit
 
 | Service | Canonical entities |
 |---|---|
-| `employee-service` | `Employee`, `Department`, `BusinessUnit`, `LegalEntity`, `Location`, `CostCenter`, `GradeBand`, `JobPosition`, `Role`, `PerformanceReview` |
+| `employee-service` | `Employee`, `Department`, `BusinessUnit`, `LegalEntity`, `Location`, `CostCenter`, `GradeBand`, `JobPosition`, `Role` |
+| `performance-service` | `ReviewCycle`, `Goal`, `Feedback`, `CalibrationSession`, `PipPlan` |
 | `attendance-service` | `AttendanceRecord` |
 | `leave-service` | `LeaveRequest` |
 | `payroll-service` | `PayrollRecord` |
@@ -69,7 +70,7 @@ Represents a person employed by the organization, including identity, reporting 
 - Has many `AttendanceRecord` entries.
 - Has many `LeaveRequest` entries.
 - Has many `PayrollRecord` entries.
-- Has many `PerformanceReview` entries as review subject.
+- Has many performance-management artifacts (`Goal`, `Feedback`, `CalibrationSession`, and `PipPlan`) as the subject employee.
 - May have one linked `UserAccount`.
 
 ### Lifecycle states
@@ -214,41 +215,86 @@ Represents a standardized job role definition used for employee assignment and h
 - `Inactive`
 - `Archived`
 
-## PerformanceReview
+## ReviewCycle
 
 ### Owning service
-- `employee-service`
+- `performance-service`
 
 ### Description
-Represents a structured performance assessment for a review cycle.
+Represents an enterprise performance window that anchors goals, feedback collection, calibration, and PIP governance.
 
 ### Attributes
 | Attribute | Type | Required | Notes |
 |---|---|---|---|
-| performance_review_id | UUID | Yes | Primary identifier. |
-| employee_id | UUID | Yes | Reviewed employee. |
-| reviewer_employee_id | UUID | Yes | Reviewer/manager. |
+| review_cycle_id | UUID | Yes | Primary identifier. |
+| code | String | Yes | Unique cycle code. |
+| name | String | Yes | Human-readable cycle name. |
 | review_period_start | Date | Yes | Cycle start date. |
 | review_period_end | Date | Yes | Cycle end date. |
-| overall_rating | Decimal(2,1) | No | Optional rating, typically `1.0-5.0`. |
-| strengths | Text | No | Strength narrative. |
-| improvement_areas | Text | No | Development areas. |
-| goals_next_period | Text | No | Future goals. |
-| status | Enum | Yes | `Draft`, `Submitted`, `Finalized`. |
-| submitted_at | DateTime | No | Reviewer submission timestamp. |
-| finalized_at | DateTime | No | Review finalization timestamp. |
-| created_at | DateTime | Yes | Record creation timestamp. |
-| updated_at | DateTime | Yes | Record last update timestamp. |
+| owner_employee_id | UUID | Yes | HR or performance lead responsible for the cycle. |
+| status | Enum | Yes | `Draft`, `Open`, `Closed`. |
+| workflow_id | UUID | No | Central workflow instance used to authorize cycle opening. |
+| created_at | DateTime | Yes | Creation timestamp. |
+| updated_at | DateTime | Yes | Last update timestamp. |
 
-### Relationships
-- Belongs to one subject `Employee`.
-- Belongs to one reviewer `Employee`.
-- Is surfaced in employee and manager review read models.
+## Goal
+
+### Owning service
+- `performance-service`
+
+### Description
+Represents an employee goal/OKR aligned to a review cycle and routed through manager approval.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| goal_id | UUID | Yes | Primary identifier. |
+| review_cycle_id | UUID | Yes | Parent `ReviewCycle`. |
+| employee_id | UUID | Yes | Employee whose performance is being measured. |
+| owner_employee_id | UUID | Yes | Goal owner, typically the employee. |
+| title | String | Yes | Goal title. |
+| description | Text | Yes | Business context for the OKR. |
+| metric_name | String | Yes | KPI/metric tracked for completion. |
+| target_value | Numeric | Yes | Goal target. |
+| current_value | Numeric | Yes | Current progress. |
+| weight | Numeric | Yes | Relative weighting, usually percent. |
+| status | Enum | Yes | `Draft`, `Submitted`, `Approved`, `Rejected`. |
+| workflow_id | UUID | No | Approval workflow instance. |
+| approved_at | DateTime | No | Approval timestamp. |
+| created_at | DateTime | Yes | Creation timestamp. |
+| updated_at | DateTime | Yes | Last update timestamp. |
+
+## Feedback
+
+### Owning service
+- `performance-service`
+
+### Description
+Represents continuous feedback captured for an employee inside or outside a review cycle.
+
+## CalibrationSession
+
+### Owning service
+- `performance-service`
+
+### Description
+Represents the calibration step used to normalize proposed ratings before final sign-off.
+
+## PipPlan
+
+### Owning service
+- `performance-service`
+
+### Description
+Represents a performance improvement plan with explicit milestones, approval workflow, and closure tracking.
 
 ### Lifecycle states
 - `Draft`
 - `Submitted`
-- `Finalized`
+- `Active`
+- `Completed`
+- `Cancelled`
+- `Rejected`
 
 ## AttendanceRecord
 

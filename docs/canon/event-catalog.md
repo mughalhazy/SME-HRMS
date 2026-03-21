@@ -33,8 +33,23 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `GradeBandUpdated` | `employee-service` | `GradeBand` | Grade/band metadata/status updated. |
 | `JobPositionCreated` | `employee-service` | `JobPosition` | Job position created. |
 | `JobPositionUpdated` | `employee-service` | `JobPosition` | Job position metadata/status updated. |
-| `PerformanceReviewSubmitted` | `employee-service` | `PerformanceReview` | Review submitted by reviewer. |
-| `PerformanceReviewFinalized` | `employee-service` | `PerformanceReview` | Review finalized from the submitted state. |
+| `PerformanceReviewCycleCreated` | `performance-service` | `ReviewCycle` | Review cycle created in draft. |
+| `PerformanceReviewCycleOpened` | `performance-service` | `ReviewCycle` | Review cycle approved and opened. |
+| `PerformanceReviewCycleClosed` | `performance-service` | `ReviewCycle` | Review cycle closed. |
+| `PerformanceGoalCreated` | `performance-service` | `Goal` | Goal/OKR drafted. |
+| `PerformanceGoalSubmitted` | `performance-service` | `Goal` | Goal submitted for approval. |
+| `PerformanceGoalApproved` | `performance-service` | `Goal` | Goal approved through workflow. |
+| `PerformanceGoalRejected` | `performance-service` | `Goal` | Goal rejected through workflow. |
+| `PerformanceFeedbackRecorded` | `performance-service` | `Feedback` | Continuous feedback recorded. |
+| `PerformanceCalibrationCreated` | `performance-service` | `CalibrationSession` | Calibration session drafted. |
+| `PerformanceCalibrationSubmitted` | `performance-service` | `CalibrationSession` | Calibration sign-off requested. |
+| `PerformanceCalibrationFinalized` | `performance-service` | `CalibrationSession` | Calibration approved and finalized. |
+| `PerformanceCalibrationRejected` | `performance-service` | `CalibrationSession` | Calibration rejected. |
+| `PerformancePipCreated` | `performance-service` | `PipPlan` | Performance improvement plan drafted. |
+| `PerformancePipSubmitted` | `performance-service` | `PipPlan` | PIP submitted for approval. |
+| `PerformancePipActive` | `performance-service` | `PipPlan` | PIP approved and activated. |
+| `PerformancePipRejected` | `performance-service` | `PipPlan` | PIP rejected. |
+| `PerformancePipProgressUpdated` | `performance-service` | `PipPlan` | PIP milestone progress updated. |
 | `AttendanceCaptured` | `attendance-service` | `AttendanceRecord` | Attendance record captured. |
 | `AttendanceValidated` | `attendance-service` | `AttendanceRecord` | Attendance validated. |
 | `AttendanceApproved` | `attendance-service` | `AttendanceRecord` | Attendance approved for payroll/reporting. |
@@ -117,17 +132,41 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - **Minimum payload:** `role_id`, `changed_fields`, `status`, `updated_at`.
 - **Consumers:** `hiring-service`, read-model pipelines.
 
-### `PerformanceReviewSubmitted`
-- **Aggregate:** `PerformanceReview`
+### `PerformanceGoalSubmitted`
+- **Aggregate:** `Goal`
 - **Transition:** `Draft -> Submitted`.
-- **Minimum payload:** `performance_review_id`, `employee_id`, `reviewer_employee_id`, `status`, `submitted_at`.
-- **Consumers:** `notification-service`, talent analytics.
+- **Minimum payload:** `goal_id`, `employee_id`, `review_cycle_id`, `status`, `workflow_id`.
+- **Consumers:** `workflow-service`, `notification-service`, talent analytics.
 
-### `PerformanceReviewFinalized`
-- **Aggregate:** `PerformanceReview`
+### `PerformanceGoalApproved`
+- **Aggregate:** `Goal`
+- **Transition:** `Submitted -> Approved`.
+- **Minimum payload:** `goal_id`, `employee_id`, `approved_at`, `status`.
+- **Consumers:** dashboards, compensation planning, talent analytics.
+
+### `PerformanceFeedbackRecorded`
+- **Aggregate:** `Feedback`
+- **Transition:** feedback persisted.
+- **Minimum payload:** `feedback_id`, `employee_id`, `provider_employee_id`, `feedback_type`, `created_at`.
+- **Consumers:** dashboards, employee profile, analytics.
+
+### `PerformanceCalibrationFinalized`
+- **Aggregate:** `CalibrationSession`
 - **Transition:** `Submitted -> Finalized`.
-- **Minimum payload:** `performance_review_id`, `employee_id`, `status`, `updated_at`.
-- **Consumers:** compensation planning, analytics, notification pipelines.
+- **Minimum payload:** `calibration_id`, `review_cycle_id`, `final_rating`, `status`.
+- **Consumers:** talent analytics, compensation planning, audit.
+
+### `PerformancePipActive`
+- **Aggregate:** `PipPlan`
+- **Transition:** `Submitted -> Active`.
+- **Minimum payload:** `pip_id`, `employee_id`, `manager_employee_id`, `status`, `started_at`.
+- **Consumers:** HR operations, audit, notification pipelines.
+
+### `PerformancePipProgressUpdated`
+- **Aggregate:** `PipPlan`
+- **Transition:** milestone progress mutation while `Active`.
+- **Minimum payload:** `pip_id`, `employee_id`, `milestone_index`, `status`, `updated_at`.
+- **Consumers:** HR operations, dashboards, audit.
 
 ## attendance-service events
 
