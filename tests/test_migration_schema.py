@@ -140,3 +140,18 @@ def test_tenant_foundation_schema_adds_tenant_registry_and_config_store() -> Non
 
     for fragment in expected_fragments:
         assert fragment in TENANT_FOUNDATION_SCHEMA
+
+
+def test_event_outbox_schema_adds_dispatch_and_consumer_dedupe_tables() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS service_outbox',
+        'source_service VARCHAR(80) NOT NULL',
+        'event_payload JSONB NOT NULL',
+        "status VARCHAR(20) NOT NULL DEFAULT 'Pending'",
+        'CREATE TABLE IF NOT EXISTS processed_events',
+        'consumer_name VARCHAR(120) NOT NULL',
+        'metadata JSONB NOT NULL DEFAULT',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in EVENT_OUTBOX_SCHEMA

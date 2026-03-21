@@ -9,6 +9,9 @@ from typing import Any
 from uuid import uuid4
 
 CANONICAL_EVENT_TYPES: dict[str, str] = {
+    "EmployeeCreated": "employee.created",
+    "EmployeeUpdated": "employee.updated",
+    "EmployeeStatusChanged": "employee.status.changed",
     "LeaveRequestSubmitted": "leave.request.submitted",
     "LeaveRequestApproved": "leave.request.approved",
     "LeaveRequestRejected": "leave.request.rejected",
@@ -25,10 +28,12 @@ CANONICAL_EVENT_TYPES: dict[str, str] = {
     "PayrollDrafted": "payroll.record.drafted",
     "PayrollProcessed": "payroll.record.processed",
     "PayrollPaid": "payroll.record.paid",
+    "PayrollCancelled": "payroll.record.cancelled",
     "PayrollMonthlyTriggerExecuted": "payroll.run.monthly_trigger_executed",
     "PayrollRecordRejected": "payroll.record.rejected",
     "PayrollRecordFailed": "payroll.record.failed",
     "JobPostingOpened": "hiring.job_posting.opened",
+    "JobPostingOnHold": "hiring.job_posting.on_hold",
     "JobPostingClosed": "hiring.job_posting.closed",
     "CandidateApplied": "hiring.candidate.applied",
     "CandidateStageChanged": "hiring.candidate.stage.changed",

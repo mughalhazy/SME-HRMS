@@ -134,11 +134,12 @@ class HiringService:
 
     def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None) -> None:
         self.job_postings = PersistentKVStore[str, JobPosting](service='hiring-service', namespace='job_postings', db_path=db_path)
-        self.candidates = PersistentKVStore[str, Candidate](service='hiring-service', namespace='candidates', db_path=db_path)
-        self.candidate_stage_transitions = PersistentKVStore[str, CandidateStageTransition](service='hiring-service', namespace='candidate_stage_transitions', db_path=db_path)
-        self.interviews = PersistentKVStore[str, Interview](service='hiring-service', namespace='interviews', db_path=db_path)
-        self.employee_profiles = PersistentKVStore[str, EmployeeProfile](service='hiring-service', namespace='employee_profiles', db_path=db_path)
-        self.hired_candidate_index = PersistentKVStore[str, str](service='hiring-service', namespace='hired_candidate_index', db_path=db_path)
+        shared_db_path = self.job_postings.db_path
+        self.candidates = PersistentKVStore[str, Candidate](service='hiring-service', namespace='candidates', db_path=shared_db_path)
+        self.candidate_stage_transitions = PersistentKVStore[str, CandidateStageTransition](service='hiring-service', namespace='candidate_stage_transitions', db_path=shared_db_path)
+        self.interviews = PersistentKVStore[str, Interview](service='hiring-service', namespace='interviews', db_path=shared_db_path)
+        self.employee_profiles = PersistentKVStore[str, EmployeeProfile](service='hiring-service', namespace='employee_profiles', db_path=shared_db_path)
+        self.hired_candidate_index = PersistentKVStore[str, str](service='hiring-service', namespace='hired_candidate_index', db_path=shared_db_path)
         self.events: list[dict[str, Any]] = []
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
@@ -147,6 +148,14 @@ class HiringService:
         self.error_logger = CentralErrorLogger("hiring-service")
         self.dead_letters = DeadLetterQueue()
         self.observability = Observability("hiring-service")
+        self.outbox = OutboxManager(
+            service_name='hiring-service',
+            tenant_id=self.tenant_id,
+            db_path=shared_db_path,
+            observability=self.observability,
+            dead_letters=self.dead_letters,
+            event_registry=self.event_registry,
+        )
         self.integration_breakers = {
             "google-calendar": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
             "linkedin": CircuitBreaker(failure_threshold=2, recovery_timeout=1.0),
@@ -982,16 +991,16 @@ class HiringService:
         else:
             idempotency_key = self._new_id()
 
-        event = emit_canonical_event(
-            self.events,
+        self.outbox.tenant_id = self.tenant_id
+        event = self.outbox.enqueue(
             legacy_event_name=event_type,
             data=payload,
-            source="hiring-service",
-            tenant_id=self.tenant_id,
-            registry=self.event_registry,
             idempotency_key=idempotency_key,
-            aliases={"payload": payload, "occurred_at": self._now().isoformat()},
+            metadata={"occurred_at": self._now().isoformat()},
         )
+        self.outbox.dispatch_pending(self.events.append)
+        event["payload"] = payload
+        event["occurred_at"] = self._now().isoformat()
         event["legacy_event_type"] = event_type
 
     def _now(self) -> datetime:

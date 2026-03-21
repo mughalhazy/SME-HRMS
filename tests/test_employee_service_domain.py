@@ -30,6 +30,9 @@ const manager = service.createEmployee({
   role_id: 'role-hr-director',
 });
 
+assert.equal(service.eventOutbox.events[0].event_type, 'employee.created');
+assert.equal(service.eventOutbox.events[0].tenant_id, 'tenant-default');
+
 const employee = service.createEmployee({
   tenant_id: 'tenant-default',
   employee_number: 'E-101',
@@ -63,6 +66,7 @@ const updated = service.updateEmployee(employee.employee_id, {
 });
 assert.equal(updated.department_id, 'dep-fin');
 assert.equal(updated.role_id, 'role-finance-manager');
+assert.equal(service.eventOutbox.events.at(-1).event_type, 'employee.updated');
 
 const listed = service.listEmployees({ tenant_id: 'tenant-default', department_id: 'dep-fin', role_id: 'role-finance-manager', limit: 10 });
 assert.equal(listed.data.length, 1);
@@ -83,6 +87,7 @@ assert.equal(isolatedService.listEmployees({ tenant_id: 'tenant-other', limit: 1
 
 const activated = service.updateStatus(employee.employee_id, 'Active');
 assert.equal(activated.status, 'Active');
+assert.equal(service.eventOutbox.events.some((event) => event.event_type === 'employee.status.changed'), true);
 const onLeave = service.updateStatus(employee.employee_id, 'OnLeave');
 assert.equal(onLeave.status, 'OnLeave');
 const backToActive = service.updateStatus(employee.employee_id, 'Active');
