@@ -330,6 +330,36 @@ EVENT_NOTIFICATION_PLANS: dict[str, tuple[EventNotificationPlan, ...]] = {
             channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
         ),
     ),
+    "OfferApproved": (
+        EventNotificationPlan(
+            template_code="offer.approved.candidate",
+            subject_type="Candidate",
+            subject_id_field="candidate_id",
+            destination_field="candidate_email",
+            topic_code="hiring.offer_approved",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
+    "OfferSent": (
+        EventNotificationPlan(
+            template_code="offer.sent.candidate",
+            subject_type="Candidate",
+            subject_id_field="candidate_id",
+            destination_field="candidate_email",
+            topic_code="hiring.offer_sent",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
+    "OfferAccepted": (
+        EventNotificationPlan(
+            template_code="offer.accepted.candidate",
+            subject_type="Candidate",
+            subject_id_field="candidate_id",
+            destination_field="candidate_email",
+            topic_code="hiring.offer_accepted",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
     "UserProvisioned": (
         EventNotificationPlan(
             template_code="auth.user_provisioned",
@@ -415,6 +445,12 @@ DEFAULT_TEMPLATE_SEED = (
     ("interview.scheduled.candidate", NotificationChannel.EMAIL, "Interview scheduled", "Your interview is booked for {scheduled_start}. Join via {location}."),
     ("interview.calendar_synced.candidate", NotificationChannel.IN_APP, "Calendar invite available", "Your interview invite is now synced to calendar."),
     ("interview.calendar_synced.candidate", NotificationChannel.EMAIL, "Calendar invite synced", "A calendar invite was synced for your interview."),
+    ("offer.approved.candidate", NotificationChannel.IN_APP, "Offer approved", "Your offer for {job_title} is approved and ready for dispatch."),
+    ("offer.approved.candidate", NotificationChannel.EMAIL, "Offer approved", "Your offer for {job_title} has been approved and is being finalized."),
+    ("offer.sent.candidate", NotificationChannel.IN_APP, "Offer sent", "Your offer for {job_title} was sent."),
+    ("offer.sent.candidate", NotificationChannel.EMAIL, "Offer sent", "Your offer for {job_title} was sent. Start date: {start_date}."),
+    ("offer.accepted.candidate", NotificationChannel.IN_APP, "Offer accepted", "Your acceptance was recorded. Welcome aboard."),
+    ("offer.accepted.candidate", NotificationChannel.EMAIL, "Offer acceptance confirmed", "We recorded your acceptance for {job_title}."),
     ("auth.user_provisioned", NotificationChannel.IN_APP, "Account provisioned", "Your {legal_entity} account is ready to use."),
     ("auth.user_provisioned", NotificationChannel.EMAIL, "Welcome to SME HRMS", "Your account is provisioned and ready."),
     ("auth.session_revoked", NotificationChannel.IN_APP, "Session revoked", "A session was revoked. Please sign in again if needed."),
