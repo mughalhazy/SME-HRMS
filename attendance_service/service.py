@@ -91,6 +91,7 @@ class AttendanceService:
         self._corrections = PersistentKVStore[UUID, AttendanceCorrection](service='attendance-service', namespace='corrections', db_path=shared_db_path)
         self.events: List[dict] = []
         self.observability = Observability("attendance-service")
+        self.outbox_observability = Observability("attendance-service-outbox")
         self._late_after = late_after
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
@@ -98,7 +99,7 @@ class AttendanceService:
             service_name='attendance-service',
             tenant_id=self.tenant_id,
             db_path=shared_db_path,
-            observability=self.observability,
+            observability=self.outbox_observability,
             event_registry=self.event_registry,
         )
         self.workflow_service = workflow_service or WorkflowService()

@@ -113,10 +113,14 @@ class OutboxManager:
         retryable: Callable[[Exception], bool] | None = None,
     ) -> list[dict[str, Any]]:
         dispatched: list[dict[str, Any]] = []
-        for outbox_id in sorted(self.records.keys()):
-            record = self.records.get(outbox_id)
-            if record is None or record.status == 'dispatched':
-                continue
+        pending_records = [
+            record
+            for record in self.records.values()
+            if record is not None and record.status != 'dispatched'
+        ]
+        pending_records.sort(key=lambda record: (record.created_at, record.outbox_id))
+        for record in pending_records:
+            outbox_id = record.outbox_id
 
             def _publish() -> None:
                 publisher(record.payload)

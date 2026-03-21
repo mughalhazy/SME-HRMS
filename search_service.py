@@ -126,6 +126,7 @@ class SearchIndexingService:
         self.processed_events = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='processed_events', db_path=db_path)
         self.projection_state = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='projection_state', db_path=db_path)
         self.query_audit = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='query_audit', db_path=db_path)
+        self.observability = Observability("search-service")
         self._query_cache: dict[str, CachedSearchResult] = {}
         self._tenant_doc_ids: dict[str, set[str]] = {}
         self.cache_ttl_seconds = 5.0
@@ -837,6 +838,16 @@ class SearchIndexingService:
             'states': states,
             'last_query': self.query_audit.get('last_query'),
         }
+
+    def health_snapshot(self) -> dict[str, Any]:
+        return self.observability.health_status(
+            checks={
+                'source_rows': len(self.source_rows),
+                'index_documents': len(self.index_documents),
+                'processed_events': len(self.processed_events),
+                'projection_states': len(self.projection_state),
+            }
+        )
 
     def require_tenant(self, tenant_id: str | None) -> str:
         tenant = self._tenant(tenant_id)

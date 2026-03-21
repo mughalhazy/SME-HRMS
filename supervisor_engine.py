@@ -532,7 +532,12 @@ class SupervisorEngine:
         actions.extend(reroutes)
         if self.workflow_service is not None:
             before = self.workflow_service.get_instance(incident.source_id, tenant_id=incident.tenant_id or "tenant-default")
-            escalated = self.workflow_service.escalate_due_workflows(now=current, tenant_id=incident.tenant_id)
+            escalated = self.workflow_service.escalate_due_workflows(
+                now=current,
+                tenant_id=incident.tenant_id,
+                workflow_id=incident.source_id,
+                include_stalled=incident.summary == "workflow exceeded stall threshold",
+            )
             after = self.workflow_service.get_instance(incident.source_id, tenant_id=incident.tenant_id or "tenant-default")
             recovered = any(item["workflow_id"] == incident.source_id for item in escalated)
             if recovered:
