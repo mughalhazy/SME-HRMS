@@ -77,23 +77,17 @@ export function createEmployeeRouter(): Router {
   const roleService = new RoleService(roleRepository);
   const departmentService = new DepartmentService(departmentRepository, repository);
   const orgStructureService = new OrgStructureService(orgRepository, repository, departmentRepository, roleRepository);
-  const performanceReviewRepository = new PerformanceReviewRepository({
-    findEmployeeById: (employeeId) => repository.findById(employeeId),
-    findDepartmentById: (departmentId) => repository.findDepartmentById(departmentId),
-  });
   const compensationRepository = new CompensationRepository({
     findEmployeeById: (employeeId) => repository.findById(employeeId),
     findDepartmentById: (departmentId) => repository.findDepartmentById(departmentId),
     findGradeBandById: (gradeBandId) => repository.findGradeBandById(gradeBandId),
   });
-  const service = new EmployeeService(repository, roleService, departmentRepository, performanceReviewRepository);
+  const service = new EmployeeService(repository, roleService, departmentRepository);
   const documentComplianceRepository = new DocumentComplianceRepository();
   const documentComplianceService = new DocumentComplianceService(documentComplianceRepository, repository);
-  const performanceReviewService = new PerformanceReviewService(performanceReviewRepository, repository);
   const compensationService = new CompensationService(compensationRepository, repository);
   const controller = new EmployeeController(service);
   const documentComplianceController = new DocumentComplianceController(documentComplianceService, service);
-  const performanceReviewController = new PerformanceReviewController(performanceReviewService);
   const compensationController = new CompensationController(compensationService);
   const departmentController = new DepartmentController(departmentService);
   const orgController = new OrgStructureController(orgStructureService);
@@ -118,7 +112,6 @@ export function createEmployeeRouter(): Router {
   router.post('/api/v1/employees', createEmployeeRateLimit, authorizeEmployeeAction('create'), controller.createEmployee);
   router.post('/api/v1/departments', createDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.createDepartment);
   router.post('/api/v1/roles', createRoleRateLimit, authorizeEmployeeAction('createRole'), roleController.createRole);
-  router.post('/api/v1/performance-reviews', createPerformanceReviewRateLimit, authorizeEmployeeAction('createReview'), performanceReviewController.createReview);
   router.post('/api/v1/documents', createEmployeeRateLimit, authorizeEmployeeAction('createDocument'), documentComplianceController.createDocument);
   router.post('/api/v1/documents/:documentId/acknowledgements', updateEmployeeRateLimit, authorizeEmployeeAction('acknowledgePolicy'), documentComplianceController.acknowledgePolicy);
   router.post('/api/v1/compliance-tasks', createEmployeeRateLimit, authorizeEmployeeAction('createComplianceTask'), documentComplianceController.createComplianceTask);

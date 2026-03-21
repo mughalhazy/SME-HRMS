@@ -352,7 +352,15 @@ class WorkflowService:
             self.observability.track('workflow.delegate', trace_id=trace, started_at=started_at, success=True, context={'tenant_id': instance.tenant_id, 'workflow_id': instance.workflow_id, 'workflow_definition': instance.definition_code, 'status': instance.status, 'trace_stage': 'workflow'})
             return instance.to_dict()
 
-    def escalate_due_workflows(self, *, now: datetime | None = None, tenant_id: str | None = None, trace_id: str | None = None) -> list[dict[str, Any]]:
+    def escalate_due_workflows(
+        self,
+        *,
+        now: datetime | None = None,
+        tenant_id: str | None = None,
+        workflow_id: str | None = None,
+        include_stalled: bool = False,
+        trace_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         trace = self._trace(trace_id)
         started_at = time.perf_counter()
         current = now or self._now()
@@ -361,6 +369,8 @@ class WorkflowService:
         with self._lock:
             for instance in self.instances.values():
                 if tenant_filter and instance.tenant_id != tenant_filter:
+                    continue
+                if workflow_id and instance.workflow_id != workflow_id:
                     continue
                 if instance.status != "pending":
                     continue
@@ -375,7 +385,7 @@ class WorkflowService:
                     if metadata.get("escalated_at"):
                         continue
                     deadline = datetime.fromisoformat(str(deadline_at).replace("Z", "+00:00"))
-                    if deadline > current:
+                    if deadline > current and not include_stalled:
                         continue
                     previous_assignee = step["assignee"]
                     step["assignee"] = escalation_assignee
