@@ -342,7 +342,7 @@ export function LeaveManagement() {
               <CardDescription>Selected employee: {selectedRequest.employee}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-slate-50 p-4">
+              <div className="flex items-center gap-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-slate-50 p-4">
                 <Avatar className="h-12 w-12">
                   <AvatarFallback>{selectedRequest.initials}</AvatarFallback>
                 </Avatar>
@@ -390,7 +390,7 @@ export function LeaveManagement() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Calendar month={new Date('2026-03-01T00:00:00')} selected={selectedDate} onSelect={(date) => setSelectedDate(date)} events={calendarEvents} />
-              <div className="space-y-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+              <div className="space-y-2 rounded-[var(--radius-control)] border border-dashed border-slate-200 bg-slate-50 p-4">
                 {calendarEvents.slice(0, 3).map((event) => (
                   <div key={event.date} className="flex items-start justify-between gap-3 text-sm">
                     <div>
