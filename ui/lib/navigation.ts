@@ -12,6 +12,95 @@ export type NavigationItemKey =
   | 'settings'
   | 'notifications'
 
+export const NAV_ITEMS = [
+  { label: 'Dashboard', path: '/dashboard', priority: 1 },
+  { label: 'Employees', path: '/employees', priority: 2 },
+  { label: 'Organization', path: '/organization', priority: 3 },
+  { label: 'Attendance', path: '/attendance', priority: 4 },
+  { label: 'Leave', path: '/leave', priority: 5 },
+  { label: 'Payroll', path: '/payroll', priority: 6 },
+  { label: 'Hiring', path: '/hiring', priority: 7 },
+  { label: 'Performance', path: '/performance', priority: 8 },
+] as const
+
+type PrimaryNavigationPath = (typeof NAV_ITEMS)[number]['path']
+
+type PrimaryNavigationItemDefinition = {
+  key: Exclude<NavigationItemKey, 'settings' | 'notifications'>
+  shortLabel: string
+  icon: 'layout' | 'users' | 'clock' | 'calendar' | 'wallet' | 'briefcase' | 'chart' | 'building'
+  description: string
+  section: Exclude<NavigationSectionKey, 'admin'>
+  matcherPrefixes: string[]
+}
+
+const primaryNavigationDefinitions: Record<PrimaryNavigationPath, PrimaryNavigationItemDefinition> = {
+  '/dashboard': {
+    key: 'dashboard',
+    shortLabel: 'Dashboard',
+    icon: 'layout',
+    description: 'Track workforce health, approvals, and operational priorities from one calm command center.',
+    section: 'overview',
+    matcherPrefixes: ['/dashboard'],
+  },
+  '/employees': {
+    key: 'employees',
+    shortLabel: 'Employees',
+    icon: 'users',
+    description: 'Manage employee records, search the directory, and move into detailed profiles without losing context.',
+    section: 'workforce',
+    matcherPrefixes: ['/employees'],
+  },
+  '/organization': {
+    key: 'organization',
+    shortLabel: 'Organization',
+    icon: 'building',
+    description: 'Review departments, role coverage, and staffing structure with clean organizational visibility.',
+    section: 'workforce',
+    matcherPrefixes: ['/organization', '/departments', '/roles'],
+  },
+  '/attendance': {
+    key: 'attendance',
+    shortLabel: 'Attendance',
+    icon: 'clock',
+    description: 'Monitor daily presence, identify exceptions, and keep time-tracking workflows aligned.',
+    section: 'operations',
+    matcherPrefixes: ['/attendance'],
+  },
+  '/leave': {
+    key: 'leave',
+    shortLabel: 'Leave',
+    icon: 'calendar',
+    description: 'Review leave requests, balances, and team coverage with consistent filters and approvals.',
+    section: 'operations',
+    matcherPrefixes: ['/leave', '/leave-requests'],
+  },
+  '/payroll': {
+    key: 'payroll',
+    shortLabel: 'Payroll',
+    icon: 'wallet',
+    description: 'Track payroll cycles, exceptions, and settlement readiness across the organization.',
+    section: 'operations',
+    matcherPrefixes: ['/payroll'],
+  },
+  '/hiring': {
+    key: 'hiring',
+    shortLabel: 'Hiring',
+    icon: 'briefcase',
+    description: 'Keep requisitions and candidate flow in one polished hiring workspace.',
+    section: 'talent',
+    matcherPrefixes: ['/hiring', '/job-postings', '/candidate-pipeline'],
+  },
+  '/performance': {
+    key: 'performance',
+    shortLabel: 'Performance',
+    icon: 'chart',
+    description: 'Review cycle progress, calibration status, and manager follow-up across the business.',
+    section: 'talent',
+    matcherPrefixes: ['/performance', '/performance-reviews'],
+  },
+}
+
 export type NavigationItem = {
   key: NavigationItemKey
   href: string
@@ -21,6 +110,7 @@ export type NavigationItem = {
   description: string
   section: NavigationSectionKey
   matcherPrefixes: string[]
+  priority?: number
 }
 
 export const navigationSections: { key: NavigationSectionKey; title: string }[] = [
@@ -31,87 +121,18 @@ export const navigationSections: { key: NavigationSectionKey; title: string }[] 
   { key: 'admin', title: 'Admin' },
 ]
 
-export const navigationItems: NavigationItem[] = [
-  {
-    key: 'dashboard',
-    href: '/dashboard',
-    label: 'Dashboard',
-    shortLabel: 'Dashboard',
-    icon: 'layout',
-    description: 'Track workforce health, approvals, and operational priorities from one calm command center.',
-    section: 'overview',
-    matcherPrefixes: ['/dashboard'],
-  },
-  {
-    key: 'employees',
-    href: '/employees',
-    label: 'Employees',
-    shortLabel: 'Employees',
-    icon: 'users',
-    description: 'Manage employee records, search the directory, and move into detailed profiles without losing context.',
-    section: 'workforce',
-    matcherPrefixes: ['/employees'],
-  },
-  {
-    key: 'organization',
-    href: '/organization',
-    label: 'Organization',
-    shortLabel: 'Organization',
-    icon: 'building',
-    description: 'Review departments, role coverage, and staffing structure with clean organizational visibility.',
-    section: 'workforce',
-    matcherPrefixes: ['/organization', '/departments', '/roles'],
-  },
-  {
-    key: 'attendance',
-    href: '/attendance',
-    label: 'Attendance',
-    shortLabel: 'Attendance',
-    icon: 'clock',
-    description: 'Monitor daily presence, identify exceptions, and keep time-tracking workflows aligned.',
-    section: 'operations',
-    matcherPrefixes: ['/attendance'],
-  },
-  {
-    key: 'leave',
-    href: '/leave',
-    label: 'Leave',
-    shortLabel: 'Leave',
-    icon: 'calendar',
-    description: 'Review leave requests, balances, and team coverage with consistent filters and approvals.',
-    section: 'operations',
-    matcherPrefixes: ['/leave', '/leave-requests'],
-  },
-  {
-    key: 'payroll',
-    href: '/payroll',
-    label: 'Payroll',
-    shortLabel: 'Payroll',
-    icon: 'wallet',
-    description: 'Track payroll cycles, exceptions, and settlement readiness across the organization.',
-    section: 'operations',
-    matcherPrefixes: ['/payroll'],
-  },
-  {
-    key: 'hiring',
-    href: '/hiring',
-    label: 'Hiring',
-    shortLabel: 'Hiring',
-    icon: 'briefcase',
-    description: 'Keep requisitions and candidate flow in one polished hiring workspace.',
-    section: 'talent',
-    matcherPrefixes: ['/hiring', '/job-postings', '/candidate-pipeline'],
-  },
-  {
-    key: 'performance',
-    href: '/performance',
-    label: 'Performance',
-    shortLabel: 'Performance',
-    icon: 'chart',
-    description: 'Review cycle progress, calibration status, and manager follow-up across the business.',
-    section: 'talent',
-    matcherPrefixes: ['/performance', '/performance-reviews'],
-  },
+export const primaryNavigationItems: NavigationItem[] = NAV_ITEMS.map((item) => {
+  const definition = primaryNavigationDefinitions[item.path]
+
+  return {
+    ...definition,
+    href: item.path,
+    label: item.label,
+    priority: item.priority,
+  }
+}).sort((left, right) => left.priority - right.priority)
+
+const utilityNavigationDefinitions: NavigationItem[] = [
   {
     key: 'settings',
     href: '/settings',
@@ -134,11 +155,9 @@ export const navigationItems: NavigationItem[] = [
   },
 ]
 
-export const primaryNavigationItems = navigationItems.filter((item) =>
-  ['dashboard', 'employees', 'organization', 'attendance', 'leave', 'payroll', 'hiring', 'performance'].includes(item.key),
-)
+export const navigationItems: NavigationItem[] = [...primaryNavigationItems, ...utilityNavigationDefinitions]
 
-export const utilityNavigationItems = navigationItems.filter((item) => ['notifications', 'settings'].includes(item.key))
+export const utilityNavigationItems = utilityNavigationDefinitions
 
 export function isNavigationItemActive(pathname: string | undefined, item: NavigationItem) {
   if (!pathname) {

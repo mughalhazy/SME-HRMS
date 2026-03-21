@@ -10,7 +10,7 @@ import { useAuth } from '@/components/auth/auth-provider'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { getNavigationItem, isNavigationItemActive, navigationSections, primaryNavigationItems, utilityNavigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
@@ -172,8 +172,10 @@ export function AppShell({
     }
   }, [recalculateNavigation])
 
-  const visibleNavigationItems = primaryNavigationItems.slice(0, visibleNavigationCount)
-  const overflowNavigationItems = primaryNavigationItems.slice(visibleNavigationCount)
+  const { visibleNavigationItems, overflowNavigationItems } = useMemo(() => ({
+    visibleNavigationItems: primaryNavigationItems.slice(0, visibleNavigationCount),
+    overflowNavigationItems: primaryNavigationItems.slice(visibleNavigationCount),
+  }), [visibleNavigationCount])
   const hasOverflowNavigation = overflowNavigationItems.length > 0
   const overflowActive = overflowNavigationItems.some((item) => isNavigationItemActive(activePath, item))
 
@@ -249,20 +251,18 @@ export function AppShell({
                         const isPending = pendingHref === item.href
 
                         return (
-                          <button
+                          <DropdownMenuItem
                             key={item.key}
                             aria-current={active ? 'page' : undefined}
                             className={cn(
-                              'flex w-full items-center justify-between gap-3 rounded-[calc(var(--radius-control)-4px)] px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
-                              active ? 'bg-[var(--accent)] text-[var(--primary)]' : 'text-[var(--foreground)]',
+                              'justify-between gap-3 text-left font-medium',
+                              active && 'bg-[var(--accent)] text-[var(--primary)]',
                             )}
                             onClick={() => handleOverflowNavigation(item.href)}
-                            role="menuitem"
-                            type="button"
                           >
                             <span className="whitespace-nowrap">{item.label}</span>
                             {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                          </button>
+                          </DropdownMenuItem>
                         )
                       })}
                     </DropdownMenuContent>
