@@ -10,20 +10,30 @@ from attendance_service import (
     AttendanceService,
     AttendanceServiceError,
     AttendanceStatus,
+    CorrectionStatus,
     EmployeeSnapshot,
     InMemoryEmployeeDirectory,
     RecordState,
 )
 from attendance_service.api import (
     get_attendance_absence_alerts,
+    get_attendance_anomalies,
     get_attendance_record,
     get_attendance_records,
     get_attendance_summary,
+    get_roster,
     patch_attendance_record,
     post_attendance_approval,
+    post_attendance_correction,
+    post_attendance_correction_decision,
     post_attendance_log,
     post_attendance_period_lock,
     post_attendance_records,
+    post_overtime_rule,
+    post_roster_assignment,
+    post_schedule,
+    post_schedule_publish,
+    post_shift,
 )
 
 
@@ -483,6 +493,271 @@ class AttendanceServiceTests(unittest.TestCase):
         self.assertEqual(status, 409)
         self.assertEqual(payload["error"]["code"], "APPROVAL_REQUIRES_VALIDATED")
 
+
+    def test_roster_and_overtime_drive_anomaly_detection(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        shift = self.service.create_shift(
+            admin,
+            code="DAY",
+            name="Day Shift",
+            start_time=datetime(2026, 1, 1, 9, 0).time(),
+            end_time=datetime(2026, 1, 1, 17, 0).time(),
+            break_minutes=60,
+            department_id=self.dep_a,
+        )
+        schedule = self.service.create_schedule(
+            admin,
+            name="Week 1",
+            effective_from=date(2026, 6, 1),
+            effective_to=date(2026, 6, 7),
+            department_id=self.dep_a,
+        )
+        self.service.publish_schedule(admin, schedule.schedule_id)
+        self.service.assign_roster(
+            admin,
+            employee_id=self.emp_1,
+            shift_id=shift.shift_id,
+            schedule_id=schedule.schedule_id,
+            roster_date=date(2026, 6, 2),
+        )
+        self.service.set_overtime_rule(
+            admin,
+            name="Default OT",
+            applies_after_hours=8,
+            multiplier=1.5,
+            max_overtime_hours=3,
+            department_id=self.dep_a,
+        )
+
+        record = self.service.create_record(
+            admin,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 6, 2),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 6, 2, 9, 45),
+            check_out_time=datetime(2026, 6, 2, 18, 30),
+        )
+
+        self.assertEqual(str(record.overtime_hours), "0.75")
+        self.assertEqual(str(record.scheduled_hours), "7.0")
+        self.assertIn(AttendanceAnomaly.LATE, record.anomalies)
+        self.assertIn(AttendanceAnomaly.OVERTIME, record.anomalies)
+        self.assertEqual(record.roster_assignment_id is not None, True)
+
+    def test_missing_roster_anomaly_and_anomaly_listing(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        schedule = self.service.create_schedule(
+            admin,
+            name="Week 1",
+            effective_from=date(2026, 6, 1),
+            effective_to=date(2026, 6, 7),
+            department_id=self.dep_a,
+        )
+        self.service.publish_schedule(admin, schedule.schedule_id)
+        self.service.create_record(
+            admin,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 6, 3),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 6, 3, 9, 0),
+            check_out_time=datetime(2026, 6, 3, 17, 0),
+        )
+
+        anomalies = self.service.list_anomalies(
+            admin,
+            employee_id=self.emp_1,
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        self.assertEqual(anomalies["count"], 1)
+        self.assertIn("MissingRoster", anomalies["records"][0]["anomalies"])
+        self.assertEqual(self.service.events[-1]["type"], "attendance.anomaly.detected")
+
+    def test_correction_workflow_approval_updates_record(self) -> None:
+        manager_id = uuid4()
+        self.directory = InMemoryEmployeeDirectory(
+            [
+                EmployeeSnapshot(employee_id=self.emp_1, status="Active", department_id=self.dep_a, manager_employee_id=manager_id),
+                EmployeeSnapshot(employee_id=self.emp_2, status="Active", department_id=self.dep_b),
+            ]
+        )
+        self.service = AttendanceService(self.directory)
+        employee_actor = Actor(employee_id=self.emp_1, role="Employee")
+        manager_actor = Actor(employee_id=manager_id, role="Manager", department_id=self.dep_a)
+        record = self.service.create_record(
+            employee_actor,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 6, 4),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 6, 4, 9, 0),
+        )
+
+        correction = self.service.submit_correction(
+            employee_actor,
+            record.attendance_id,
+            reason="Missed check-out on mobile app",
+            requested_check_out_time=datetime(2026, 6, 4, 17, 30),
+            requested_correction_note="Manager reviewed kiosk outage",
+        )
+        self.assertIsNotNone(correction.workflow_id)
+
+        reviewed = self.service.review_correction(
+            manager_actor,
+            correction.correction_id,
+            approve=True,
+            decision_note="Approved after roster verification",
+        )
+        updated = self.service.get_record(manager_actor, record.attendance_id)
+        self.assertEqual(reviewed.status, CorrectionStatus.APPROVED)
+        self.assertEqual(updated.anomalies, [])
+        self.assertEqual(updated.check_out_time, datetime(2026, 6, 4, 17, 30))
+        self.assertEqual(updated.lifecycle_state, RecordState.VALIDATED)
+
+    def test_api_supports_workforce_scheduling_and_correction_flows(self) -> None:
+        admin = Actor(employee_id=uuid4(), role="Admin")
+        manager_id = uuid4()
+        self.directory = InMemoryEmployeeDirectory(
+            [
+                EmployeeSnapshot(employee_id=self.emp_1, status="Active", department_id=self.dep_a, manager_employee_id=manager_id),
+                EmployeeSnapshot(employee_id=self.emp_2, status="Active", department_id=self.dep_b),
+            ]
+        )
+        self.service = AttendanceService(self.directory)
+        employee_actor = Actor(employee_id=self.emp_1, role="Employee")
+        manager_actor = Actor(employee_id=manager_id, role="Manager", department_id=self.dep_a)
+
+        status, shift_payload = post_shift(
+            self.service,
+            admin,
+            {
+                "code": "DAY",
+                "name": "Day Shift",
+                "start_time": "09:00:00",
+                "end_time": "17:00:00",
+                "break_minutes": 60,
+                "department_id": str(self.dep_a),
+            },
+            trace_id="trace-shift",
+        )
+        self.assertEqual(status, 201)
+
+        status, schedule_payload = post_schedule(
+            self.service,
+            admin,
+            {
+                "name": "Week 2",
+                "effective_from": "2026-06-08",
+                "effective_to": "2026-06-14",
+                "department_id": str(self.dep_a),
+            },
+            trace_id="trace-schedule",
+        )
+        self.assertEqual(status, 201)
+
+        status, published = post_schedule_publish(
+            self.service,
+            admin,
+            schedule_payload["data"]["schedule_id"],
+            trace_id="trace-schedule-publish",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(published["data"]["status"], "Published")
+
+        status, _ = post_overtime_rule(
+            self.service,
+            admin,
+            {
+                "name": "Dept OT",
+                "applies_after_hours": "8",
+                "multiplier": "1.5",
+                "max_overtime_hours": "2",
+                "department_id": str(self.dep_a),
+            },
+            trace_id="trace-ot",
+        )
+        self.assertEqual(status, 201)
+
+        status, roster_payload = post_roster_assignment(
+            self.service,
+            admin,
+            {
+                "employee_id": str(self.emp_1),
+                "shift_id": shift_payload["data"]["shift_id"],
+                "schedule_id": schedule_payload["data"]["schedule_id"],
+                "roster_date": "2026-06-09",
+            },
+            trace_id="trace-roster",
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(roster_payload["data"]["status"], "Published")
+
+        status, roster_list = get_roster(
+            self.service,
+            manager_actor,
+            {
+                "employee_id": str(self.emp_1),
+                "from_date": "2026-06-08",
+                "to_date": "2026-06-10",
+            },
+            trace_id="trace-roster-list",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(roster_list["meta"]["pagination"]["count"], 1)
+
+        record = self.service.create_record(
+            employee_actor,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 6, 9),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 6, 9, 9, 30),
+            check_out_time=datetime(2026, 6, 9, 18, 15),
+        )
+        status, anomalies = get_attendance_anomalies(
+            self.service,
+            manager_actor,
+            {
+                "employee_id": str(self.emp_1),
+                "from_date": "2026-06-01",
+                "to_date": "2026-06-30",
+            },
+            trace_id="trace-anomalies",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(anomalies["data"]["count"], 1)
+
+        missing_record = self.service.create_record(
+            employee_actor,
+            employee_id=self.emp_1,
+            attendance_date=date(2026, 6, 10),
+            attendance_status=AttendanceStatus.PRESENT,
+            check_in_time=datetime(2026, 6, 10, 9, 0),
+        )
+        status, correction_payload = post_attendance_correction(
+            self.service,
+            employee_actor,
+            str(missing_record.attendance_id),
+            {
+                "reason": "Missed checkout",
+                "requested_check_out_time": "2026-06-10T17:10:00",
+                "requested_correction_note": "Manual correction request",
+            },
+            trace_id="trace-correction",
+        )
+        self.assertEqual(status, 201)
+
+        status, reviewed = post_attendance_correction_decision(
+            self.service,
+            manager_actor,
+            correction_payload["data"]["correction_id"],
+            {
+                "approve": True,
+                "decision_note": "Approved",
+            },
+            trace_id="trace-correction-review",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(reviewed["data"]["status"], "Approved")
+        self.assertEqual(missing_record.lifecycle_state, RecordState.VALIDATED)
 
 
 if __name__ == "__main__":

@@ -38,6 +38,112 @@ class AttendanceAnomaly(str, Enum):
     LATE = "Late"
     MISSING_CHECK_IN = "MissingCheckIn"
     MISSING_CHECK_OUT = "MissingCheckOut"
+    EARLY_DEPARTURE = "EarlyDeparture"
+    MISSING_ROSTER = "MissingRoster"
+    UNSCHEDULED_ATTENDANCE = "UnscheduledAttendance"
+    OVERTIME = "Overtime"
+    SHORT_SHIFT = "ShortShift"
+
+
+class ScheduleStatus(str, Enum):
+    DRAFT = "Draft"
+    PUBLISHED = "Published"
+    ARCHIVED = "Archived"
+
+
+class RosterStatus(str, Enum):
+    ASSIGNED = "Assigned"
+    PUBLISHED = "Published"
+    CANCELLED = "Cancelled"
+
+
+class CorrectionStatus(str, Enum):
+    SUBMITTED = "Submitted"
+    APPROVED = "Approved"
+    REJECTED = "Rejected"
+
+
+@dataclass
+class Shift:
+    code: str
+    name: str
+    start_time: time
+    end_time: time
+    break_minutes: int = 0
+    late_grace_minutes: int = 15
+    overtime_eligible: bool = True
+    department_id: Optional[UUID] = None
+    shift_id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def scheduled_hours(self) -> Decimal:
+        start_minutes = self.start_time.hour * 60 + self.start_time.minute
+        end_minutes = self.end_time.hour * 60 + self.end_time.minute
+        if end_minutes < start_minutes:
+            raise ValueError("shift end_time cannot be before start_time")
+        total_minutes = end_minutes - start_minutes - self.break_minutes
+        if total_minutes < 0:
+            raise ValueError("break_minutes cannot exceed shift duration")
+        return Decimal(str(round(total_minutes / 60, 2)))
+
+
+@dataclass
+class Schedule:
+    name: str
+    effective_from: date
+    effective_to: date
+    department_id: Optional[UUID] = None
+    status: ScheduleStatus = ScheduleStatus.DRAFT
+    schedule_id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class RosterAssignment:
+    employee_id: UUID
+    shift_id: UUID
+    roster_date: date
+    schedule_id: Optional[UUID] = None
+    status: RosterStatus = RosterStatus.ASSIGNED
+    roster_id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class OvertimeRule:
+    name: str
+    applies_after_hours: Decimal
+    multiplier: Decimal
+    max_overtime_hours: Decimal
+    department_id: Optional[UUID] = None
+    active: bool = True
+    rule_id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class AttendanceCorrection:
+    attendance_id: UUID
+    employee_id: UUID
+    requested_by_employee_id: UUID
+    reason: str
+    approver_employee_id: Optional[UUID] = None
+    requested_status: Optional[AttendanceStatus] = None
+    requested_check_in_time: Optional[datetime] = None
+    requested_check_out_time: Optional[datetime] = None
+    requested_correction_note: Optional[str] = None
+    status: CorrectionStatus = CorrectionStatus.SUBMITTED
+    workflow_id: Optional[str] = None
+    decision_note: Optional[str] = None
+    correction_id: UUID = field(default_factory=uuid4)
+    submitted_at: datetime = field(default_factory=datetime.utcnow)
+    decided_at: Optional[datetime] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
 
 
 @dataclass
@@ -53,6 +159,12 @@ class AttendanceRecord:
     lifecycle_state: RecordState = RecordState.CAPTURED
     anomalies: list[AttendanceAnomaly] = field(default_factory=list)
     correction_note: Optional[str] = None
+    scheduled_shift_id: Optional[UUID] = None
+    scheduled_start_time: Optional[time] = None
+    scheduled_end_time: Optional[time] = None
+    scheduled_hours: Optional[Decimal] = None
+    roster_assignment_id: Optional[UUID] = None
+    overtime_hours: Optional[Decimal] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -75,7 +187,7 @@ class AttendanceRecord:
             if self.check_in_time or self.check_out_time:
                 raise ValueError("absent or holiday records cannot include check-in/check-out times")
 
-    def derive_anomalies(self, *, late_after: time) -> None:
+    def derive_base_anomalies(self, *, late_after: time) -> list[AttendanceAnomaly]:
         anomalies: list[AttendanceAnomaly] = []
         if self.check_in_time and self.check_in_time.time() > late_after:
             anomalies.append(AttendanceAnomaly.LATE)
@@ -89,6 +201,4 @@ class AttendanceRecord:
                 anomalies.append(AttendanceAnomaly.MISSING_CHECK_IN)
             if self.check_out_time is None:
                 anomalies.append(AttendanceAnomaly.MISSING_CHECK_OUT)
-
-        self.anomalies = anomalies
-        self.updated_at = datetime.utcnow()
+        return anomalies
