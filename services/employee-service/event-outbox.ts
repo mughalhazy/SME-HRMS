@@ -17,6 +17,18 @@ const EVENT_TYPES: Record<string, string> = {
   EmployeeCreated: 'employee.created',
   EmployeeUpdated: 'employee.updated',
   EmployeeStatusChanged: 'employee.status.changed',
+  BusinessUnitCreated: 'organization.business_unit.created',
+  BusinessUnitUpdated: 'organization.business_unit.updated',
+  LegalEntityCreated: 'organization.legal_entity.created',
+  LegalEntityUpdated: 'organization.legal_entity.updated',
+  LocationCreated: 'organization.location.created',
+  LocationUpdated: 'organization.location.updated',
+  CostCenterCreated: 'organization.cost_center.created',
+  CostCenterUpdated: 'organization.cost_center.updated',
+  GradeBandCreated: 'organization.grade_band.created',
+  GradeBandUpdated: 'organization.grade_band.updated',
+  JobPositionCreated: 'organization.job_position.created',
+  JobPositionUpdated: 'organization.job_position.updated',
 };
 
 export class EmployeeEventOutbox {

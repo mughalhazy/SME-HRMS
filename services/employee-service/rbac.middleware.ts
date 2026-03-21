@@ -33,15 +33,18 @@ type ResourceAction =
   | 'listReviews'
   | 'updateReview'
   | 'submitReview'
-  | 'finalizeReview';
+  | 'finalizeReview'
+  | 'readOrgStructure'
+  | 'listOrgStructure'
+  | 'manageOrgStructure';
 
 const ROLE_ACTIONS: Record<AuthRole, ResourceAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview'],
-  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews'],
-  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles'],
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
+  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews', 'readOrgStructure', 'listOrgStructure'],
+  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles', 'readOrgStructure', 'listOrgStructure'],
   Recruiter: [],
-  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview'],
+  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
 };
 
 const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
@@ -63,6 +66,9 @@ const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
   updateReview: 'CAP-PRF-001',
   submitReview: 'CAP-PRF-001',
   finalizeReview: 'CAP-PRF-001',
+  readOrgStructure: 'CAP-EMP-001',
+  listOrgStructure: 'CAP-EMP-001',
+  manageOrgStructure: 'CAP-EMP-002',
 };
 
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;
@@ -234,7 +240,7 @@ export function authorizeEmployeeAction(action: ResourceAction): RequestHandler 
       return;
     }
 
-    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles') {
+    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles' && action !== 'readOrgStructure' && action !== 'listOrgStructure') {
       sendError(req, res, 403, 'FORBIDDEN', 'Insufficient permissions');
       return;
     }

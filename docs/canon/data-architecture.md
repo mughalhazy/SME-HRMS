@@ -33,6 +33,95 @@ This document maps the canonical domain model to a relational data architecture 
 - `idx_departments_head_employee_id (head_employee_id)`
 - `idx_departments_status (status)`
 
+
+### Table: `business_units`
+
+| Column | Type | Null | Key | Constraints / Notes |
+|---|---|---:|---|---|
+| business_unit_id | UUID | No | PK | Primary identifier. |
+| name | VARCHAR(150) | No | UQ | Unique business-unit name. |
+| code | VARCHAR(30) | No | UQ | Unique code. |
+| parent_business_unit_id | UUID | Yes | FK | Self-reference for hierarchy. |
+| leader_employee_id | UUID | Yes | FK | Optional employee leader. |
+| status | VARCHAR(20) | No |  | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
+| updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
+
+### Table: `legal_entities`
+
+| Column | Type | Null | Key | Constraints / Notes |
+|---|---|---:|---|---|
+| legal_entity_id | UUID | No | PK | Primary identifier. |
+| name | VARCHAR(150) | No | UQ | Legal-entity name. |
+| code | VARCHAR(30) | No | UQ | Unique code. |
+| registration_number | VARCHAR(80) | Yes |  | Registration reference. |
+| tax_identifier | VARCHAR(80) | Yes |  | Tax identifier. |
+| business_unit_id | UUID | Yes | FK | References `business_units.business_unit_id`. |
+| status | VARCHAR(20) | No |  | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
+| updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
+
+### Table: `locations`
+
+| Column | Type | Null | Key | Constraints / Notes |
+|---|---|---:|---|---|
+| location_id | UUID | No | PK | Primary identifier. |
+| name | VARCHAR(150) | No | UQ | Location name. |
+| code | VARCHAR(30) | No | UQ | Unique code. |
+| country_code | CHAR(2) | No |  | ISO country code. |
+| timezone | VARCHAR(80) | No |  | IANA timezone. |
+| legal_entity_id | UUID | Yes | FK | References `legal_entities.legal_entity_id`. |
+| status | VARCHAR(20) | No |  | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
+| updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
+
+### Table: `cost_centers`
+
+| Column | Type | Null | Key | Constraints / Notes |
+|---|---|---:|---|---|
+| cost_center_id | UUID | No | PK | Primary identifier. |
+| name | VARCHAR(150) | No | UQ | Cost-center name. |
+| code | VARCHAR(30) | No | UQ | Unique code. |
+| business_unit_id | UUID | Yes | FK | References `business_units.business_unit_id`. |
+| department_id | UUID | Yes | FK | References `departments.department_id`. |
+| legal_entity_id | UUID | Yes | FK | References `legal_entities.legal_entity_id`. |
+| manager_employee_id | UUID | Yes | FK | Optional cost-center owner. |
+| status | VARCHAR(20) | No |  | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
+| updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
+
+### Table: `grade_bands`
+
+| Column | Type | Null | Key | Constraints / Notes |
+|---|---|---:|---|---|
+| grade_band_id | UUID | No | PK | Primary identifier. |
+| name | VARCHAR(80) | No | UQ | Display name. |
+| code | VARCHAR(30) | No | UQ | Unique code. |
+| family | VARCHAR(80) | Yes |  | Optional band family. |
+| level_order | INTEGER | No |  | Sort order for ladder progression. |
+| status | VARCHAR(20) | No |  | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
+| updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
+
+### Table: `job_positions`
+
+| Column | Type | Null | Key | Constraints / Notes |
+|---|---|---:|---|---|
+| job_position_id | UUID | No | PK | Primary identifier. |
+| title | VARCHAR(150) | No |  | Position title. |
+| code | VARCHAR(30) | No | UQ | Unique code. |
+| department_id | UUID | No | FK | References `departments.department_id`. |
+| business_unit_id | UUID | Yes | FK | References `business_units.business_unit_id`. |
+| legal_entity_id | UUID | Yes | FK | References `legal_entities.legal_entity_id`. |
+| location_id | UUID | Yes | FK | References `locations.location_id`. |
+| grade_band_id | UUID | Yes | FK | References `grade_bands.grade_band_id`. |
+| role_id | UUID | Yes | FK | References `roles.role_id`. |
+| reports_to_position_id | UUID | Yes | FK | Self-reference for position hierarchy. |
+| default_cost_center_id | UUID | Yes | FK | References `cost_centers.cost_center_id`. |
+| status | VARCHAR(20) | No |  | `Draft`, `Active`, `Inactive`, `Archived`. |
+| created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
+| updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
+
 ### Table: `roles`
 
 | Column | Type | Null | Key | Constraints / Notes |
@@ -67,6 +156,14 @@ This document maps the canonical domain model to a relational data architecture 
 | department_id | UUID | No | FK | References `departments.department_id`. |
 | role_id | UUID | No | FK | References `roles.role_id`. |
 | manager_employee_id | UUID | Yes | FK | Self-reference to `employees.employee_id`. |
+| business_unit_id | UUID | Yes | FK | References `business_units.business_unit_id`. |
+| legal_entity_id | UUID | Yes | FK | References `legal_entities.legal_entity_id`. |
+| location_id | UUID | Yes | FK | References `locations.location_id`. |
+| cost_center_id | UUID | Yes | FK | References `cost_centers.cost_center_id`. |
+| job_position_id | UUID | Yes | FK | References `job_positions.job_position_id`. |
+| grade_band_id | UUID | Yes | FK | References `grade_bands.grade_band_id`. |
+| matrix_manager_employee_ids | JSONB | No |  | Array of matrix manager employee IDs. |
+| cost_allocations | JSONB | No |  | Cost-center split allocations that total 100%. |
 | created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
 | updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
 
@@ -77,6 +174,12 @@ This document maps the canonical domain model to a relational data architecture 
 - `idx_employees_department_id (department_id)`
 - `idx_employees_role_id (role_id)`
 - `idx_employees_manager_employee_id (manager_employee_id)`
+- `idx_employees_business_unit_id (business_unit_id)`
+- `idx_employees_legal_entity_id (legal_entity_id)`
+- `idx_employees_location_id (location_id)`
+- `idx_employees_cost_center_id (cost_center_id)`
+- `idx_employees_job_position_id (job_position_id)`
+- `idx_employees_grade_band_id (grade_band_id)`
 - `idx_employees_status (status)`
 
 ### Table: `performance_reviews`
