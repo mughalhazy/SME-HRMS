@@ -123,10 +123,10 @@ export function AppShell({
                       aria-current={active ? 'page' : undefined}
                       aria-busy={isPending}
                       className={cn(
-                        'inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-transparent px-4 text-sm font-medium whitespace-nowrap transition-colors duration-150',
+                        'inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent px-4 text-sm font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow] duration-150',
                         active
-                          ? 'bg-slate-100 text-[var(--primary)] shadow-[inset_0_-2px_0_0_var(--primary)]'
-                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+                          ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--primary)] shadow-[var(--shadow-control)]'
+                          : 'text-slate-600 hover:bg-[var(--surface-subtle)] hover:text-slate-950',
                       )}
                     >
                       {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
@@ -151,8 +151,8 @@ export function AppShell({
                       variant="outline"
                       size="icon"
                       className={cn(
-                        'h-10 w-10 rounded-xl border-slate-200 bg-white text-slate-600 shadow-none transition-colors duration-150 hover:bg-slate-100 hover:text-slate-950',
-                        active && 'border-slate-200 bg-slate-100 text-[var(--primary)] shadow-[inset_0_0_0_1px_var(--primary-soft)]',
+                        'h-10 w-10 rounded-[var(--radius-control)] border-slate-200 bg-white text-slate-600 shadow-none transition-[background-color,color,border-color] duration-150 hover:bg-[var(--surface-subtle)] hover:text-slate-950',
+                        active && 'border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--primary)]',
                       )}
                     >
                       {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
@@ -162,7 +162,7 @@ export function AppShell({
               })}
             </div>
 
-            <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+            <div className="flex min-w-0 items-center gap-3 rounded-[var(--radius-surface)] border border-slate-200 bg-white px-3 py-2">
               <Avatar className="h-10 w-10 border-slate-200">
                 <AvatarFallback>{getProfileInitials(profileName)}</AvatarFallback>
               </Avatar>
@@ -194,9 +194,9 @@ export function AppShell({
               <div className="col-span-12 flex flex-col gap-3 xl:col-span-5 xl:items-end xl:justify-end">
                 <div className="relative w-full xl:max-w-[360px]">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input className="h-11 rounded-xl border-slate-200 bg-white pl-9 shadow-none" placeholder="Search employees, payroll, reviews, or policies" />
+                  <Input className="h-11 border-slate-200 bg-white pl-9 shadow-none" placeholder="Search employees, payroll, reviews, or policies" />
                 </div>
-                <div className="flex w-full flex-wrap items-center gap-3 xl:w-auto xl:justify-end">{pageActions ?? <Button className="h-11 rounded-xl shadow-none">New request</Button>}</div>
+                <div className="flex w-full flex-wrap items-center gap-3 xl:w-auto xl:justify-end">{pageActions ?? <Button className="h-11 shadow-none">New request</Button>}</div>
               </div>
             </div>
 

@@ -7,7 +7,15 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import { Select } from '@/components/ui/input'
-import { PageGrid, PageStack, StatCard } from '@/components/ui/page'
+import {
+  PageGrid,
+  PageSection,
+  PageSectionHeader,
+  PageStack,
+  StatCard,
+  pageIconChipClassName,
+  pageSurfaceClassName,
+} from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -118,7 +126,7 @@ const employeeCellClassName = 'w-[28%] px-6 py-4 align-top'
 const numericCellClassName = 'w-[14%] px-6 py-4 text-right align-top tabular-nums'
 const statusCellClassName = 'w-[16%] px-6 py-4 align-top'
 const filterFieldClassName = 'space-y-2'
-const metricClassName = 'rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-surface)]'
+const metricClassName = `${pageSurfaceClassName} p-4`
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -185,36 +193,39 @@ export function Payroll() {
 
   return (
     <PageStack className="text-slate-900">
-      <section className="grid gap-6 xl:grid-cols-12 xl:items-start">
-        <div className="space-y-4 xl:col-span-8">
-          <Badge variant="outline" className="w-fit border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--muted-foreground)]">
-            Payroll control
-          </Badge>
-          <p className="max-w-3xl text-sm leading-6 text-slate-600">
-            Review each payroll line with financial clarity, confirm settlement readiness, and keep the active cycle controlled from one register.
-          </p>
-        </div>
+      <PageSection>
+        <PageSectionHeader
+          eyebrow="Payroll workspace"
+          title="Payroll register control"
+          description="Review each payroll line with financial clarity, confirm settlement readiness, and keep the active cycle controlled from one register."
+          badge={
+            <Badge variant="outline" className="w-fit border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--muted-foreground)]">
+              Payroll control
+            </Badge>
+          }
+          actions={
+            <div className="grid w-full gap-4 xl:w-[320px]">
+              <div className={filterFieldClassName}>
+                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-foreground)]" htmlFor="payroll-cycle-selector">
+                  Payroll cycle
+                </label>
+                <Select id="payroll-cycle-selector" value={selectedCycle} onChange={(event) => setSelectedCycle(event.target.value as (typeof payrollCycles)[number])}>
+                  {payrollCycles.map((cycle) => (
+                    <option key={cycle} value={cycle}>
+                      {cycle}
+                    </option>
+                  ))}
+                </Select>
+              </div>
 
-        <div className="space-y-4 xl:col-span-4">
-          <div className={filterFieldClassName}>
-            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-foreground)]" htmlFor="payroll-cycle-selector">
-              Payroll cycle
-            </label>
-            <Select id="payroll-cycle-selector" value={selectedCycle} onChange={(event) => setSelectedCycle(event.target.value as (typeof payrollCycles)[number])}>
-              {payrollCycles.map((cycle) => (
-                <option key={cycle} value={cycle}>
-                  {cycle}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <Button className="w-full xl:justify-center" type="button">
-            <BadgeDollarSign className="h-4 w-4" />
-            Run payroll
-          </Button>
-        </div>
-      </section>
+              <Button className="w-full xl:justify-center" type="button">
+                <BadgeDollarSign className="h-4 w-4" />
+                Run payroll
+              </Button>
+            </div>
+          }
+        />
+      </PageSection>
 
       <PageGrid className="md:grid-cols-3">
         <StatCard title="Total payroll" value={formatCurrency(summary.totalPayroll)} hint={`${filteredEntries.length} employees in current register.`} icon={Wallet} />
@@ -223,7 +234,7 @@ export function Payroll() {
       </PageGrid>
 
       <section className="space-y-4">
-        <div className="rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-surface)]">
+        <PageSection className="p-4">
           <div className="grid gap-4 xl:grid-cols-12 xl:items-end">
             <div className={cn(filterFieldClassName, 'xl:col-span-4')}>
               <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-foreground)]" htmlFor="control-cycle-filter">
@@ -273,7 +284,7 @@ export function Payroll() {
               <span>{filteredEntries.length} rows</span>
             </div>
           </div>
-        </div>
+        </PageSection>
 
         <div className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
           <div className="flex flex-col gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-6 py-4 md:flex-row md:items-center md:justify-between">
@@ -373,7 +384,7 @@ export function Payroll() {
         <div className="grid gap-4 md:grid-cols-3">
           <div className={metricClassName}>
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-[var(--surface-subtle)] p-2 text-slate-700">
+              <div className={pageIconChipClassName}>
                 <Wallet className="h-4 w-4" />
               </div>
               <div className="space-y-1">
@@ -385,7 +396,7 @@ export function Payroll() {
 
           <div className={metricClassName}>
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-[var(--surface-subtle)] p-2 text-slate-700">
+              <div className={pageIconChipClassName}>
                 <BadgeDollarSign className="h-4 w-4" />
               </div>
               <div className="space-y-1">
@@ -397,7 +408,7 @@ export function Payroll() {
 
           <div className={metricClassName}>
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-[var(--surface-subtle)] p-2 text-slate-700">
+              <div className={pageIconChipClassName}>
                 <RefreshCw className="h-4 w-4" />
               </div>
               <div className="space-y-1">

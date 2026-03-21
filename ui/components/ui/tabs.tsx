@@ -42,7 +42,7 @@ function Tabs({
 function TabsList({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('inline-flex w-full flex-wrap gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] p-2', className)}
+      className={cn('inline-flex w-full flex-wrap gap-2 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-subtle)] p-2', className)}
       {...props}
     />
   )
@@ -54,9 +54,9 @@ function TabsTrigger({ value, className, children, ...props }: React.ButtonHTMLA
   return (
     <button
       className={cn(
-        'inline-flex min-w-[9rem] items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow,transform,opacity] duration-150 ease-out hover:-translate-y-px active:translate-y-0 active:scale-[0.98] active:opacity-90',
+        'inline-flex min-h-10 min-w-[9rem] items-center justify-center rounded-[calc(var(--radius-control)-2px)] px-4 py-2 text-sm font-semibold transition-[background-color,color,box-shadow,opacity] duration-150 ease-out active:opacity-90',
         selectedValue === value
-          ? 'bg-[var(--surface)] text-[var(--foreground)] shadow-sm'
+          ? 'bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-control)]'
           : 'text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)]',
         className,
       )}

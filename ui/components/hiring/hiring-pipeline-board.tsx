@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
 import { Input, Select } from '@/components/ui/input'
-import { PageStack } from '@/components/ui/page'
+import { PageStack, pageIconChipClassName, pageSurfaceClassName } from '@/components/ui/page'
 import { apiRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -477,7 +477,7 @@ export function HiringPipelineBoard() {
 
   return (
     <PageStack className="gap-6">
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className={cn(pageSurfaceClassName, 'p-4')}>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -542,7 +542,7 @@ export function HiringPipelineBoard() {
         />
       ) : (
         <div className="grid gap-6 xl:grid-cols-12">
-          <section className="min-w-0 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 xl:col-span-9">
+          <section className={cn(pageSurfaceClassName, 'min-w-0 overflow-x-auto p-4 xl:col-span-9')}>
             <div className="grid min-w-[1280px] grid-cols-5 gap-4">
               {STAGES.map((stage) => {
                 const draggedCandidate = candidates.find((candidate) => candidate.id === draggedCandidateId)
@@ -554,7 +554,7 @@ export function HiringPipelineBoard() {
                   <section
                     key={stage.id}
                     className={cn(
-                      'flex min-h-[680px] min-w-0 flex-col rounded-lg border border-slate-200 bg-slate-50 p-4 transition-colors',
+                      'flex min-h-[680px] min-w-0 flex-col rounded-[var(--radius-surface)] border border-slate-200 bg-slate-50 p-4 transition-colors',
                       isHovered && canDrop && 'border-slate-300 bg-slate-100',
                       isHovered && !canDrop && draggedStage && 'border-rose-200 bg-rose-50',
                     )}
@@ -608,7 +608,7 @@ export function HiringPipelineBoard() {
                               setHoverStage(null)
                             }}
                             className={cn(
-                              'flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 transition-colors duration-150 hover:border-slate-300',
+                              'flex flex-col gap-3 rounded-[var(--radius-control)] border border-slate-200 bg-white p-4 transition-colors duration-150 hover:border-slate-300',
                               isSelected && 'border-slate-300 bg-slate-50',
                               isDragging && 'border-slate-300 opacity-70',
                             )}
@@ -669,7 +669,7 @@ export function HiringPipelineBoard() {
             </div>
           </section>
 
-          <aside className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 xl:col-span-3">
+          <aside className={cn(pageSurfaceClassName, 'space-y-4 p-4 xl:col-span-3')}>
             {selectedCandidate ? (
               <>
                 <div className="space-y-3 border-b border-slate-200 pb-4">
@@ -797,7 +797,7 @@ export function HiringPipelineBoard() {
                       <h3 className="text-sm font-semibold text-slate-950">Notes and scheduling</h3>
                       <p className="text-xs text-slate-600">Keep secondary actions here so the board stays focused on progression.</p>
                     </div>
-                    <div className="rounded-full bg-slate-100 p-2 text-slate-500">
+                    <div className={pageIconChipClassName}>
                       <CircleDotDashed className="h-4 w-4" />
                     </div>
                   </div>

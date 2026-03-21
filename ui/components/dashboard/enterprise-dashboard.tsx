@@ -17,7 +17,16 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PageStack } from '@/components/ui/page'
+import {
+  PageSection,
+  PageSectionHeader,
+  PageStack,
+  pageSectionBodyClassName,
+  pageEyebrowClassName,
+  pageIconChipClassName,
+  pageMetaTextClassName,
+  pageSectionTitleClassName,
+} from '@/components/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 type MetricCard = {
@@ -219,10 +228,10 @@ const directoryHighlights = [
   },
 ]
 
-const sectionLabelClassName = 'text-xs font-medium uppercase tracking-[0.16em] text-slate-500'
-const sectionTitleClassName = 'text-lg font-semibold tracking-tight text-slate-950'
-const sectionBodyClassName = 'text-sm leading-6 text-slate-600'
-const mutedMetaClassName = 'text-xs font-medium text-slate-500'
+const sectionLabelClassName = pageEyebrowClassName
+const sectionTitleClassName = pageSectionTitleClassName
+const sectionBodyClassName = pageSectionBodyClassName
+const mutedMetaClassName = pageMetaTextClassName
 
 function statusBadge(status: TeamMember['status'] | ReviewItem['status']) {
   if (status === 'Active' || status === 'Ready') {
@@ -230,42 +239,37 @@ function statusBadge(status: TeamMember['status'] | ReviewItem['status']) {
   }
 
   if (status === 'On leave' || status === 'In progress') {
-    return <Badge className="border-transparent bg-amber-50 text-amber-700">{status}</Badge>
+    return <Badge variant="warning">{status}</Badge>
   }
 
-  return <Badge className="border-transparent bg-red-50 text-red-700">{status}</Badge>
+  return <Badge variant="danger">{status}</Badge>
 }
 
 export function EnterpriseDashboard() {
   return (
     <PageStack className="animate-[page-enter_180ms_ease-out] gap-6">
-      <section className="grid gap-6 border-b border-slate-200 pb-6 lg:grid-cols-12 lg:items-end">
-        <div className="space-y-4 lg:col-span-8">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge>March workforce snapshot</Badge>
-            <Badge variant="outline">Command center</Badge>
-          </div>
-
-          <div className="space-y-3">
-            <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-              Workforce command center for today&apos;s highest-impact decisions.
-            </h1>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-              Monitor workforce health, clear approvals, and keep payroll, hiring, and coverage decisions moving from one structured operating view.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-start lg:col-span-4 lg:justify-end">
-          <Button size="lg" className="w-full justify-between sm:w-auto sm:min-w-56">
-            <span className="inline-flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Add employee
-            </span>
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </section>
+      <PageSection>
+        <PageSectionHeader
+          eyebrow="Dashboard workspace"
+          title="Today&apos;s workforce command center"
+          description="Monitor workforce health, clear approvals, and keep payroll, hiring, and coverage decisions moving from one structured operating view."
+          actions={
+            <Button size="lg" className="w-full justify-between sm:w-auto sm:min-w-56">
+              <span className="inline-flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Add employee
+              </span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          }
+          badge={
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>March workforce snapshot</Badge>
+              <Badge variant="outline">Command center</Badge>
+            </div>
+          }
+        />
+      </PageSection>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
         {metrics.map((metric) => {
@@ -275,7 +279,7 @@ export function EnterpriseDashboard() {
             <Card key={metric.title} className="flex min-h-48 flex-col xl:col-span-3">
               <CardContent className="flex h-full flex-col justify-between p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="rounded-[var(--radius-control)] bg-slate-100 p-2 text-slate-700">
+                  <div className={pageIconChipClassName}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <p className={mutedMetaClassName}>{metric.change}</p>
@@ -420,7 +424,7 @@ export function EnterpriseDashboard() {
         </div>
 
         <aside className="space-y-4 xl:col-span-4">
-          <Card className="border-slate-200 bg-slate-50/70 shadow-none">
+          <Card className="bg-[var(--surface-subtle)] shadow-none">
             <CardHeader className="gap-3 p-4">
               <div className="space-y-1">
                 <p className={sectionLabelClassName}>Priorities</p>
