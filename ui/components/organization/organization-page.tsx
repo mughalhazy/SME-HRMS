@@ -5,6 +5,7 @@ import { Building2, ChevronRight, GitBranch, Plus, Users2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { pagePanelClassName } from '@/components/ui/page'
 
 type OrganizationMember = {
   name: string
@@ -156,9 +157,9 @@ const executiveLeads = [
   { label: 'Chief Revenue Officer', name: 'Priya Nair' },
 ]
 
-const surfaceClassName = 'border-slate-200 bg-white shadow-sm'
+const surfaceClassName = ''
 const badgeClassName = 'border-slate-200 bg-slate-50 text-slate-600'
-const summaryItemClassName = 'space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-4'
+const summaryItemClassName = `${pagePanelClassName} space-y-1 p-4`
 const statsClassName = 'grid gap-4 sm:grid-cols-3'
 
 export function OrganizationPage() {
@@ -183,7 +184,7 @@ export function OrganizationPage() {
                 </p>
               </div>
             </div>
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6">
+            <div className="rounded-[var(--radius-control)] border border-dashed border-slate-200 bg-slate-50 p-6">
               <div className="space-y-3">
                 <p className="text-base font-semibold text-slate-950">No organization structure yet</p>
                 <p className="max-w-xl text-sm leading-6 text-slate-600">
@@ -313,7 +314,7 @@ export function OrganizationPage() {
                           {team.membersList.map((member) => (
                             <div
                               key={`${team.name}-${member.name}`}
-                              className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-12 md:items-center"
+                              className="grid gap-3 rounded-[var(--radius-control)] border border-slate-200 bg-slate-50 p-4 md:grid-cols-12 md:items-center"
                             >
                               <div className="space-y-1 md:col-span-7">
                                 <p className="text-sm font-semibold text-slate-950">{member.name}</p>

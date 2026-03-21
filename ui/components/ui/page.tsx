@@ -8,6 +8,12 @@ export const pageSurfaceClassName =
 export const pageMutedSurfaceClassName =
   'rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface-subtle)] shadow-[var(--shadow-surface)]'
 
+export const pagePanelClassName =
+  'rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-subtle)]'
+
+export const pagePillClassName =
+  'inline-flex items-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1 text-xs font-semibold text-[var(--muted-foreground)]'
+
 export const pageSectionPaddingClassName = 'p-4 sm:p-5'
 export const pageSectionHeaderClassName = 'flex flex-col gap-3 border-b border-[var(--border)] px-4 py-4 sm:px-5'
 export const pageEyebrowClassName = 'text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]'

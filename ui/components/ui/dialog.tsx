@@ -77,7 +77,7 @@ function DialogContent({ className, children }: { className?: string; children: 
       <button aria-label="Close dialog overlay" className="absolute inset-0 cursor-default" onClick={() => setOpen(false)} />
       <div
         className={cn(
-          'relative z-10 w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl',
+          'relative z-10 w-full max-w-lg rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-surface)]',
           className,
         )}
         role="dialog"

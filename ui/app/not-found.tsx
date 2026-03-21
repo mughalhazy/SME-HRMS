@@ -4,14 +4,15 @@ import { Compass, Home, SearchX } from 'lucide-react'
 import AppShell from '@/components/hrms/shell/app-shell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { pageIconChipClassName } from '@/components/ui/page'
 
 export default function NotFound() {
   return (
     <AppShell pageTitle="Page not found" pageDescription="The route you requested is not available in the HRMS workspace.">
       <div className="flex min-h-[70vh] items-center justify-center">
-        <Card className="w-full max-w-2xl border-slate-200 bg-white shadow-sm">
-          <CardContent className="flex flex-col items-center gap-5 px-6 py-12 text-center sm:px-10">
-            <div className="rounded-3xl bg-slate-100 p-4 text-slate-700">
+        <Card className="w-full max-w-2xl">
+          <CardContent className="flex flex-col items-center gap-6 px-6 py-12 text-center sm:px-6">
+            <div className={pageIconChipClassName}>
               <SearchX className="h-8 w-8" />
             </div>
             <div className="space-y-2">
@@ -28,7 +29,7 @@ export default function NotFound() {
                   Go to dashboard
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="border-slate-200 bg-white">
+              <Button asChild variant="outline">
                 <Link href="/employees">
                   <Compass className="h-4 w-4" />
                   Open employees

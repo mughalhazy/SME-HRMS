@@ -95,7 +95,7 @@ export function AppShell({
         <div className="grid min-h-20 grid-cols-12 items-center gap-x-6 gap-y-4 px-4 py-4 sm:px-6 xl:px-8">
           <div className="col-span-12 flex min-w-0 items-center lg:col-span-3 xl:col-span-2">
             <Link href="/dashboard" onClick={onNavigationStart('/dashboard')} className="flex min-w-0 items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]">
                 HR
               </span>
               <span className="min-w-0">
@@ -162,7 +162,7 @@ export function AppShell({
               })}
             </div>
 
-            <div className="flex min-w-0 items-center gap-3 rounded-[var(--radius-surface)] border border-slate-200 bg-white px-3 py-2">
+            <div className="flex min-w-0 items-center gap-3 rounded-[var(--radius-control)] border border-slate-200 bg-white px-3 py-2">
               <Avatar className="h-10 w-10 border-slate-200">
                 <AvatarFallback>{getProfileInitials(profileName)}</AvatarFallback>
               </Avatar>
