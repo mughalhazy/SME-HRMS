@@ -8,7 +8,8 @@ CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_
 WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
 PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_normalization.sql').read_text()
 TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
-FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}"
+EVENT_OUTBOX_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_event_outbox.sql').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{EVENT_OUTBOX_SCHEMA}"
 
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
@@ -116,3 +117,18 @@ def test_tenant_foundation_schema_adds_tenant_registry_and_config_store() -> Non
 
     for fragment in expected_fragments:
         assert fragment in TENANT_FOUNDATION_SCHEMA
+
+
+def test_event_outbox_schema_adds_dispatch_and_consumer_dedupe_tables() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS service_outbox',
+        'source_service VARCHAR(80) NOT NULL',
+        'event_payload JSONB NOT NULL',
+        "status VARCHAR(20) NOT NULL DEFAULT 'Pending'",
+        'CREATE TABLE IF NOT EXISTS processed_events',
+        'consumer_name VARCHAR(120) NOT NULL',
+        'metadata JSONB NOT NULL DEFAULT',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in EVENT_OUTBOX_SCHEMA

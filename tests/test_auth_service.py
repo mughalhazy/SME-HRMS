@@ -47,6 +47,7 @@ class AuthServiceTests(unittest.TestCase):
         )
 
     def test_login_issues_bearer_and_refresh_tokens(self) -> None:
+        self.assertEqual(self.service.events[0]['event_type'], 'auth.user.provisioned')
         token_payload = self.service.login('ava.manager', 'Password123!')
         self.assertEqual(token_payload['token_type'], 'Bearer')
         self.assertTrue(token_payload['access_token'])
@@ -127,6 +128,7 @@ class AuthServiceTests(unittest.TestCase):
         self.service.logout(token)
         with self.assertRaises(AuthServiceError):
             self.service.authenticate_token(token)
+        self.assertEqual(self.service.events[-1]['event_type'], 'auth.session.revoked')
 
     def test_api_login_refresh_logout_and_me_follow_scs_envelope(self) -> None:
         login_status, login_payload = post_auth_login(

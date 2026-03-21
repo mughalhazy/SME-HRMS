@@ -8,6 +8,7 @@ import {
 } from './employee.model';
 import { DepartmentRepository } from './department.repository';
 import { EmployeeRepository } from './employee.repository';
+import { EmployeeEventOutbox } from './event-outbox';
 import { validateCreateEmployee, validateStatus, validateUpdateEmployee, ValidationError } from './employee.validation';
 import { RoleService } from './role.service';
 import { ConflictError, NotFoundError } from './service.errors';
@@ -25,6 +26,8 @@ interface EmployeePerformanceReviewReferenceRepository {
 }
 
 export class EmployeeService {
+  readonly eventOutbox = new EmployeeEventOutbox();
+
   constructor(
     private readonly repository: EmployeeRepository,
     private readonly roleService?: RoleService,
@@ -48,6 +51,15 @@ export class EmployeeService {
 
     const employee = this.repository.create({ ...input, tenant_id: this.tenantId });
     this.roleService?.linkEmployee(employee.role_id, employee.employee_id);
+    this.eventOutbox.enqueue('EmployeeCreated', this.tenantId, {
+      employee_id: employee.employee_id,
+      employee_number: employee.employee_number,
+      department_id: employee.department_id,
+      role_id: employee.role_id,
+      status: employee.status,
+      created_at: employee.created_at,
+    }, employee.employee_id);
+    this.eventOutbox.dispatchPending();
     return employee;
   }
 
@@ -115,6 +127,15 @@ export class EmployeeService {
       this.ensureActivationRequirements(updated.department_id, updated.role_id);
     }
 
+    this.eventOutbox.enqueue('EmployeeUpdated', this.tenantId, {
+      employee_id: updated.employee_id,
+      department_id: updated.department_id,
+      role_id: updated.role_id,
+      status: updated.status,
+      updated_at: updated.updated_at,
+    }, updated.employee_id);
+    this.eventOutbox.dispatchPending();
+
     return updated;
   }
 
@@ -166,6 +187,13 @@ export class EmployeeService {
     if (!updated) {
       throw new NotFoundError('employee not found');
     }
+
+    this.eventOutbox.enqueue('EmployeeStatusChanged', this.tenantId, {
+      employee_id: updated.employee_id,
+      status: updated.status,
+      updated_at: updated.updated_at,
+    }, `${updated.employee_id}:${updated.status}`);
+    this.eventOutbox.dispatchPending();
 
     return updated;
   }

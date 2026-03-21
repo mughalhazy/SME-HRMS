@@ -10,6 +10,7 @@ from threading import RLock
 from time import perf_counter
 
 from event_contract import EventRegistry, emit_canonical_event
+from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
@@ -136,6 +137,7 @@ class LeaveServiceError(Exception):
 class LeaveService:
     def __init__(self, db_path: str | None = None):
         self.requests = PersistentKVStore[str, LeaveRequest](service='leave-service', namespace='requests', db_path=db_path)
+        shared_db_path = self.requests.db_path
         self.events: list[dict] = []
         self.error_logger = CentralErrorLogger("leave-service")
         self.dead_letters = DeadLetterQueue()
@@ -143,7 +145,15 @@ class LeaveService:
         self.observability = Observability("leave-service")
         self.tenant_id = DEFAULT_TENANT_ID
         self.event_registry = EventRegistry()
-        self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=db_path)
+        self.outbox = OutboxManager(
+            service_name='leave-service',
+            tenant_id=self.tenant_id,
+            db_path=shared_db_path,
+            observability=self.observability,
+            dead_letters=self.dead_letters,
+            event_registry=self.event_registry,
+        )
+        self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=shared_db_path)
         seeded_employees = {
             "emp-admin": EmployeeRecord(self.tenant_id, "emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
             "emp-manager": EmployeeRecord(self.tenant_id, "emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE),
@@ -153,8 +163,8 @@ class LeaveService:
         for employee_id, employee in seeded_employees.items():
             if employee_id not in self.employees:
                 self.employees[employee_id] = employee
-        self.leave_balances = PersistentKVStore[tuple[str, LeaveType], LeaveBalance](service='leave-service', namespace='leave_balances', db_path=db_path)
-        self.attendance_impacts = PersistentKVStore[str, list[dict]](service='leave-service', namespace='attendance_impacts', db_path=db_path)
+        self.leave_balances = PersistentKVStore[tuple[str, LeaveType], LeaveBalance](service='leave-service', namespace='leave_balances', db_path=shared_db_path)
+        self.attendance_impacts = PersistentKVStore[str, list[dict]](service='leave-service', namespace='attendance_impacts', db_path=shared_db_path)
         self._lock = RLock()
         self._seed_leave_balances()
 
@@ -318,7 +328,14 @@ class LeaveService:
         try:
             if simulate_failure:
                 raise RuntimeError(f"simulated failure while emitting {event}")
-            emit_canonical_event(self.events, legacy_event_name=event, data={**payload, "tenant_id": self.tenant_id}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=self._trace(trace_id), idempotency_key=payload.get("leave_request_id"))
+            self.outbox.tenant_id = self.tenant_id
+            self.outbox.enqueue(
+                legacy_event_name=event,
+                data={**payload, "tenant_id": self.tenant_id},
+                correlation_id=self._trace(trace_id),
+                idempotency_key=payload.get("leave_request_id"),
+            )
+            self.outbox.dispatch_pending(self.events.append)
             self.observability.logger.info(
                 "leave.event_emitted",
                 trace_id=self._trace(trace_id),
@@ -393,7 +410,14 @@ class LeaveService:
         for entry in recovered:
             payload = dict(entry.payload)
             payload.pop("simulate_failure", None)
-            emit_canonical_event(self.events, legacy_event_name=entry.operation, data={**payload, "tenant_id": self.tenant_id, "recovered_from_dead_letter": True}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=entry.trace_id, idempotency_key=payload.get("leave_request_id"))
+            self.outbox.tenant_id = self.tenant_id
+            self.outbox.enqueue(
+                legacy_event_name=entry.operation,
+                data={**payload, "tenant_id": self.tenant_id, "recovered_from_dead_letter": True},
+                correlation_id=entry.trace_id,
+                idempotency_key=payload.get("leave_request_id"),
+            )
+        self.outbox.dispatch_pending(self.events.append)
         return [entry.__dict__ for entry in recovered]
 
     def create_request(

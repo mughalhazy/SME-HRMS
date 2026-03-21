@@ -10,6 +10,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
+from event_contract import EventRegistry
+from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import Observability
 from tenant_support import DEFAULT_TENANT_ID, normalize_tenant_id
@@ -118,9 +120,19 @@ class AuthService:
         self._issuer = issuer
         self._audience = audience
         self._users_by_name = PersistentKVStore[str, UserAccount](service='auth-service', namespace='users_by_name', db_path=db_path)
-        self._users_by_id = PersistentKVStore[UUID, UserAccount](service='auth-service', namespace='users_by_id', db_path=db_path)
-        self._sessions_by_id = PersistentKVStore[str, SessionRecord](service='auth-service', namespace='sessions_by_id', db_path=db_path)
+        shared_db_path = self._users_by_name.db_path
+        self._users_by_id = PersistentKVStore[UUID, UserAccount](service='auth-service', namespace='users_by_id', db_path=shared_db_path)
+        self._sessions_by_id = PersistentKVStore[str, SessionRecord](service='auth-service', namespace='sessions_by_id', db_path=shared_db_path)
         self.observability = Observability('auth-service')
+        self.events: list[dict[str, Any]] = []
+        self.event_registry = EventRegistry()
+        self.outbox = OutboxManager(
+            service_name='auth-service',
+            tenant_id=DEFAULT_TENANT_ID,
+            db_path=shared_db_path,
+            observability=self.observability,
+            event_registry=self.event_registry,
+        )
 
     def register_user(
         self,
@@ -166,6 +178,18 @@ class AuthService:
             entity='UserAccount',
             entity_id=str(user.user_id),
             context={'username': normalized_username, 'role': role, 'tenant_id': tenant_id},
+        )
+        self._emit_event(
+            'UserProvisioned',
+            {
+                'user_id': str(user.user_id),
+                'employee_id': str(user.employee_id) if user.employee_id else None,
+                'role': user.role,
+                'status': 'Active' if user.active else 'Disabled',
+                'email': user.username,
+            },
+            tenant_id=tenant_id,
+            idempotency_key=str(user.user_id),
         )
         return user
 
@@ -394,6 +418,17 @@ class AuthService:
             entity_id=session_id,
             context={'role': role, 'tenant_id': user.tenant_id if user else None},
         )
+        if user is not None:
+            self._emit_event(
+                'SessionRevoked',
+                {
+                    'session_id': session_id,
+                    'user_id': str(user.user_id),
+                    'revoked_at': session.revoked_at.isoformat() if session.revoked_at else None,
+                },
+                tenant_id=user.tenant_id,
+                idempotency_key=session_id,
+            )
 
     def _get_session_by_refresh_token(self, refresh_token: str) -> SessionRecord:
         if not refresh_token:
@@ -403,6 +438,15 @@ class AuthService:
             if hmac.compare_digest(session.refresh_token_hash, hashed):
                 return session
         raise AuthServiceError('TOKEN_INVALID', 'Refresh token is invalid')
+
+    def _emit_event(self, event_name: str, data: dict[str, Any], *, tenant_id: str, idempotency_key: str) -> None:
+        self.outbox.tenant_id = normalize_tenant_id(tenant_id)
+        self.outbox.enqueue(
+            legacy_event_name=event_name,
+            data=data,
+            idempotency_key=idempotency_key,
+        )
+        self.outbox.dispatch_pending(self.events.append)
 
 
     def _serialize_session(self, session: SessionRecord, role: str | None, tenant_id: str | None = None, *, now: datetime | None = None) -> dict[str, Any]:
