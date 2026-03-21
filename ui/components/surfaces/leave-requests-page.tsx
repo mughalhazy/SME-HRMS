@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, CheckCircle2, Clock3, RefreshCw, ShieldCheck } from 'lucide-react'
 
 import { EmptyState, ErrorState, StatSkeletonGrid, TableSkeleton } from '@/components/ui/feedback'
-import { PageGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
+import { KpiGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { apiRequest } from '@/lib/api/client'
@@ -89,12 +89,12 @@ export function LeaveRequestsPage() {
         <ErrorState title="Unable to load leave requests" message={query.error.message} onRetry={() => query.refetch()} />
       ) : (
         <>
-          <PageGrid className="md:grid-cols-3">
+          <KpiGrid className="xl:grid-cols-3">
             {coverageSignals.map((signal) => {
               const Icon = coverageIcons[signal.key]
               return <StatCard key={signal.label} title={signal.label} value={signal.value} hint={signal.hint} icon={Icon} />
             })}
-          </PageGrid>
+          </KpiGrid>
 
           <section className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-surface)]">
             <SectionHeading

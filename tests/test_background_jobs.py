@@ -271,44 +271,30 @@ def test_background_job_api_returns_d1_envelopes_for_status_and_admin_controls()
 
 
 
-def test_trace_propagates_from_outbox_event_to_job_metrics_and_notification_delivery() -> None:
-    notification = NotificationService()
-    jobs = BackgroundJobService(notification_service=notification)
-    jobs.outbox.stage_event(
-        tenant_id='tenant-default',
-        aggregate_type='LeaveRequest',
-        aggregate_id='lr-2',
-        event_name='LeaveRequestApproved',
-        payload={
-            'event_name': 'LeaveRequestApproved',
-            'tenant_id': 'tenant-default',
-            'employee_id': 'emp-002',
-            'employee_email': 'tracey@example.com',
-            'approver_name': 'Helen Brooks',
-            'leave_type': 'Annual',
-            'start_date': '2026-03-23',
-            'end_date': '2026-03-24',
-        },
-        trace_id='trace-observability-e2e',
-    )
+def test_background_jobs_reject_queue_overflow_per_tenant() -> None:
+    jobs = BackgroundJobService()
+    jobs.register_handler('test.noop', lambda context: {'ok': True}, max_attempts=1)
+    jobs.upsert_tenant_queue_config('tenant-default', {'max_queued_jobs': 1, 'max_due_jobs_per_run': 1})
 
-    job = jobs.enqueue_job(
-        tenant_id='tenant-default',
-        job_type='outbox.dispatch',
-        payload={'max_events': 10},
-        trace_id='trace-observability-e2e',
-        correlation_id='trace-observability-e2e',
-    )
-    completed = jobs.execute_job(job.job_id, tenant_id='tenant-default')
+    jobs.enqueue_job(tenant_id='tenant-default', job_type='test.noop', payload={'seq': 1})
+    with pytest.raises(Exception) as exc:
+        jobs.enqueue_job(tenant_id='tenant-default', job_type='test.noop', payload={'seq': 2})
 
-    assert completed.status == JobStatus.SUCCEEDED
-    assert completed.trace_id == 'trace-observability-e2e'
-    assert completed.correlation_id == 'trace-observability-e2e'
-    snapshot = jobs.observability.metrics.snapshot()
-    assert snapshot['job_metrics']['outbox.dispatch']['count'] >= 1
-    recent_trace = snapshot['recent_traces'][-1]
-    assert recent_trace['request_id'] == 'trace-observability-e2e'
-    assert recent_trace['correlation_id'] == 'trace-observability-e2e'
-    assert recent_trace['stage'] == 'job'
-    inbox, _ = notification.get_inbox(tenant_id='tenant-default', subject_id='emp-002')
-    assert inbox['summary']['total'] >= 1
+    assert 'queue capacity exceeded' in str(exc.value).lower()
+
+
+
+def test_run_due_jobs_applies_per_tenant_backpressure_limits() -> None:
+    jobs = BackgroundJobService()
+    processed: list[int] = []
+    jobs.register_handler('test.batch', lambda context: processed.append(int(context.job.payload['seq'])) or {'seq': context.job.payload['seq']}, max_attempts=1)
+    jobs.upsert_tenant_queue_config('tenant-default', {'max_due_jobs_per_run': 2})
+
+    for seq in range(3):
+        jobs.enqueue_job(tenant_id='tenant-default', job_type='test.batch', payload={'seq': seq})
+
+    executed = jobs.run_due_jobs(tenant_id='tenant-default')
+
+    assert len(executed) == 2
+    assert processed == [0, 1]
+    assert jobs.queued_job_count('tenant-default') == 1

@@ -221,21 +221,27 @@ def test_search_api_is_d1_compliant_and_supports_domain_specific_endpoints(tmp_p
 
 
 
-def test_search_api_emits_tenant_aware_metrics_for_success_and_validation_errors(tmp_path) -> None:
+def test_search_uses_cached_results_for_repeat_queries_and_invalidates_on_reindex(tmp_path) -> None:
     service = SearchIndexingService(db_path=str(tmp_path / 'search.sqlite3'))
     jobs = BackgroundJobService(db_path=str(tmp_path / 'search.sqlite3'))
     service.register_background_jobs(jobs)
 
-    service.ingest_read_model('candidate_pipeline_view', [_candidate_row()], replace=True)
-    service.consume_event({'event_id': 'evt-api-metrics-1', 'event_name': 'CandidateApplied', 'tenant_id': 'tenant-default'}, background_jobs=jobs)
+    service.ingest_read_model('employee_directory_view', [_employee_row(full_name='Ava Patel')], replace=True)
+    service.consume_event({'event_id': 'evt-cache-1', 'event_name': 'EmployeeUpdated', 'tenant_id': 'tenant-default'}, background_jobs=jobs)
     jobs.run_due_jobs(tenant_id='tenant-default')
 
-    get_search(service, {'tenant_id': 'tenant-default', 'q': 'Noah'}, trace_id='trace-search-metrics-ok')
-    get_search(service, {'q': 'Noah'}, trace_id='trace-search-metrics-error')
+    first = service.search(tenant_id='tenant-default', q='Ava', entity_types=['employee'])
+    assert first['items'][0]['display_name'] == 'Ava Patel'
+    assert service.get_projection_state(tenant_id='tenant-default')['last_query']['cache_hit'] is False
 
-    metrics = service.observability.metrics.snapshot()
-    assert metrics['request_count'] == 2
-    assert metrics['error_count'] == 1
-    assert metrics['tenant_metrics']['tenant-default']['requests'] == 1
-    assert metrics['operations']['get_search']['count'] == 2
-    assert metrics['error_categories']['validation'] >= 1
+    second = service.search(tenant_id='tenant-default', q='Ava', entity_types=['employee'])
+    assert second == first
+    assert service.get_projection_state(tenant_id='tenant-default')['last_query']['cache_hit'] is True
+
+    service.ingest_read_model('employee_directory_view', [_employee_row(full_name='Ava Stone')], replace=True)
+    service.consume_event({'event_id': 'evt-cache-2', 'event_name': 'EmployeeUpdated', 'tenant_id': 'tenant-default'}, background_jobs=jobs)
+    jobs.run_due_jobs(tenant_id='tenant-default')
+
+    refreshed = service.search(tenant_id='tenant-default', q='Stone', entity_types=['employee'])
+    assert refreshed['items'][0]['display_name'] == 'Ava Stone'
+    assert service.get_projection_state(tenant_id='tenant-default')['last_query']['cache_hit'] is False

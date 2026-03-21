@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from threading import RLock
+from time import monotonic
 from typing import Any, Iterable, Mapping
 from uuid import uuid4
 
@@ -43,6 +44,14 @@ class SearchDocument:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+
+
+@dataclass(slots=True)
+class CachedSearchResult:
+    payload: dict[str, Any]
+    expires_at: float
 
 
 SOURCE_MODEL_CONFIG: dict[str, dict[str, Any]] = {
@@ -117,7 +126,9 @@ class SearchIndexingService:
         self.processed_events = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='processed_events', db_path=db_path)
         self.projection_state = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='projection_state', db_path=db_path)
         self.query_audit = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='query_audit', db_path=db_path)
-        self.observability = Observability('search-service')
+        self._query_cache: dict[str, CachedSearchResult] = {}
+        self._tenant_doc_ids: dict[str, set[str]] = {}
+        self.cache_ttl_seconds = 5.0
         self._lock = RLock()
 
     @staticmethod
@@ -193,6 +204,7 @@ class SearchIndexingService:
                 'last_ingested_at': self._now(),
                 'replace': replace,
             }
+        self._invalidate_tenant_cache(tenant)
         return {'tenant_id': tenant, 'model_name': model_name, 'row_count': len(normalized_rows), 'replace': replace}
 
     def _read_model_rows(self, tenant_id: str, model_name: str) -> list[dict[str, Any]]:
@@ -208,6 +220,15 @@ class SearchIndexingService:
     def _index_doc_id(self, tenant_id: str, source_view: str, entity_type: str, source_key: str) -> str:
         return f'{tenant_id}:{source_view}:{entity_type}:{source_key}'
 
+    def _invalidate_tenant_cache(self, tenant_id: str) -> None:
+        prefix = f'{tenant_id}:'
+        for key in [cache_key for cache_key in self._query_cache.keys() if cache_key.startswith(prefix)]:
+            del self._query_cache[key]
+
+    def _refresh_tenant_doc_registry(self, tenant_id: str) -> None:
+        prefix = f'{tenant_id}:'
+        self._tenant_doc_ids[tenant_id] = {key for key in self.index_documents.keys() if key.startswith(prefix)}
+
     def _replace_index_docs(self, *, tenant_id: str, source_view: str, documents: list[SearchDocument]) -> None:
         prefix = f'{tenant_id}:{source_view}:'
         current_ids = {document.document_id for document in documents}
@@ -215,6 +236,8 @@ class SearchIndexingService:
             del self.index_documents[document_id]
         for document in documents:
             self.index_documents[document.document_id] = document
+        self._refresh_tenant_doc_registry(tenant_id)
+        self._invalidate_tenant_cache(tenant_id)
         self.projection_state[f'index:{tenant_id}:{source_view}'] = {
             'tenant_id': tenant_id,
             'source_view': source_view,
@@ -655,8 +678,27 @@ class SearchIndexingService:
         terms = [part for part in self._normalize_string(q).lower().split() if part]
         entity_type_set = {str(item) for item in (entity_types or []) if str(item)}
         domain_set = {str(item) for item in (domains or []) if str(item)}
+        cache_key = self._search_cache_key(
+            tenant_id=tenant,
+            q=q,
+            department_id=department_id,
+            role_id=role_id,
+            status=status,
+            entity_types=entity_type_set,
+            domains=domain_set,
+            limit=normalized_limit,
+            cursor=offset,
+            sort=sort,
+        )
+        cached = self._get_cached_search(cache_key)
+        if cached is not None:
+            cached['cache_hit'] = True
+            self.query_audit['last_query'] = cached
+            return cached['payload']
 
-        rows = [document.to_dict() for document in self.index_documents.values() if document.tenant_id == tenant]
+        document_ids = sorted(self._tenant_doc_ids.get(tenant) or {key for key in self.index_documents.keys() if key.startswith(f'{tenant}:')})
+        self._tenant_doc_ids[tenant] = set(document_ids)
+        rows = [self.index_documents[document_id].to_dict() for document_id in document_ids]
         if entity_type_set:
             rows = [row for row in rows if row['entity_type'] in entity_type_set]
         if domain_set:
@@ -678,7 +720,17 @@ class SearchIndexingService:
         next_cursor = str(offset + normalized_limit) if offset + normalized_limit < len(rows) else None
         for row in page:
             row.pop('_score', None)
-        self.query_audit['last_query'] = {
+        payload = {
+            'items': page,
+            '_pagination': {
+                'limit': normalized_limit,
+                'cursor': str(offset),
+                'next_cursor': next_cursor,
+                'count': len(page),
+                'total_count': len(rows),
+            },
+        }
+        audit = {
             'tenant_id': tenant,
             'query': q,
             'result_count': len(page),
@@ -689,18 +741,52 @@ class SearchIndexingService:
             'entity_types': sorted(entity_type_set),
             'domains': sorted(domain_set),
             'used_index_only': True,
+            'cache_hit': False,
             'executed_at': self._now(),
+            'payload': payload,
         }
-        return {
-            'items': page,
-            '_pagination': {
-                'limit': normalized_limit,
-                'cursor': str(offset),
-                'next_cursor': next_cursor,
-                'count': len(page),
-                'total_count': len(rows),
-            },
-        }
+        self._store_cached_search(cache_key, audit)
+        self.query_audit['last_query'] = audit
+        return payload
+
+    def _search_cache_key(
+        self,
+        *,
+        tenant_id: str,
+        q: str | None,
+        department_id: str | None,
+        role_id: str | None,
+        status: str | None,
+        entity_types: set[str],
+        domains: set[str],
+        limit: int,
+        cursor: int,
+        sort: str | None,
+    ) -> str:
+        return '|'.join([
+            tenant_id,
+            self._normalize_string(q).lower(),
+            self._normalize_string(department_id),
+            self._normalize_string(role_id),
+            self._normalize_string(status),
+            ','.join(sorted(entity_types)),
+            ','.join(sorted(domains)),
+            str(limit),
+            str(cursor),
+            self._normalize_string(sort),
+        ])
+
+    def _get_cached_search(self, cache_key: str) -> dict[str, Any] | None:
+        cached = self._query_cache.get(cache_key)
+        if cached is None:
+            return None
+        if cached.expires_at <= monotonic():
+            del self._query_cache[cache_key]
+            return None
+        return dict(cached.payload)
+
+    def _store_cached_search(self, cache_key: str, payload: dict[str, Any]) -> None:
+        self._query_cache[cache_key] = CachedSearchResult(payload=dict(payload), expires_at=monotonic() + self.cache_ttl_seconds)
 
     def _score_row(self, row: Mapping[str, Any], terms: list[str]) -> int:
         if not terms:

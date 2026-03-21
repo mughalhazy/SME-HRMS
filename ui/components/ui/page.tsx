@@ -21,6 +21,7 @@ export const pageSectionTitleClassName = 'text-lg font-semibold tracking-tight t
 export const pageSectionBodyClassName = 'text-sm leading-6 text-[var(--muted-foreground)]'
 export const pageMetaTextClassName = 'text-xs font-medium text-[var(--muted-foreground)]'
 export const pageIconChipClassName = 'rounded-[var(--radius-control)] bg-[var(--surface-subtle)] p-2 text-[var(--foreground)]'
+export const pageKpiGridClassName = 'grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4'
 
 export function PageStack({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn('flex flex-col gap-6', className)} {...props} />
@@ -28,6 +29,10 @@ export function PageStack({ className, ...props }: React.HTMLAttributes<HTMLDivE
 
 export function PageGrid({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn('grid gap-6', className)} {...props} />
+}
+
+export function KpiGrid({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn(pageKpiGridClassName, className)} {...props} />
 }
 
 export function PageHero({
@@ -101,22 +106,31 @@ export function StatCard({
   value,
   hint,
   icon: Icon,
+  meta,
   className,
 }: {
   title: string
   value: string
   hint: string
   icon: ComponentType<{ className?: string }>
+  meta?: ReactNode
   className?: string
 }) {
   return (
-    <div className={cn(pageSurfaceClassName, 'p-5', className)}>
-      <div className={cn('w-fit', pageIconChipClassName)}>
-        <Icon className="h-4 w-4" />
+    <div className={cn(pageSurfaceClassName, 'flex h-full flex-col justify-between p-4', className)}>
+      <div className="flex h-full flex-col">
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <div className={cn('w-fit self-start', pageIconChipClassName)}>
+            <Icon className="h-5 w-5" />
+          </div>
+          {meta ? <div className={cn('pt-0.5 text-right', pageMetaTextClassName)}>{meta}</div> : null}
+        </div>
+        <p className={cn('mb-1 truncate', pageEyebrowClassName)} title={title}>
+          {title}
+        </p>
+        <p className="mb-1.5 whitespace-nowrap text-2xl font-semibold tracking-tight text-[var(--foreground)]">{value}</p>
+        <p className={cn('mt-auto line-clamp-2', pageSectionBodyClassName)}>{hint}</p>
       </div>
-      <p className={cn('mt-4', pageEyebrowClassName)}>{title}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">{value}</p>
-      <p className={cn('mt-2', pageSectionBodyClassName)}>{hint}</p>
     </div>
   )
 }

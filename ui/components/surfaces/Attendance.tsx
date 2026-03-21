@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
-import { PageGrid, PageStack, StatCard } from "@/components/ui/page";
+import { KpiGrid, PageStack, StatCard } from "@/components/ui/page";
 import {
   Table,
   TableBody,
@@ -302,7 +302,7 @@ export function Attendance() {
         </div>
       </section>
 
-      <PageGrid className="md:grid-cols-2 xl:grid-cols-4">
+      <KpiGrid>
         <StatCard
           title="Present"
           value={String(summary.present)}
@@ -327,7 +327,7 @@ export function Attendance() {
           hint="Open anomalies or incomplete logs that need action."
           icon={TriangleAlert}
         />
-      </PageGrid>
+      </KpiGrid>
 
       <section className="grid gap-6 xl:grid-cols-12">
         <div className="xl:col-span-12">
