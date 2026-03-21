@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, PaginatedResult, QueryOptimizer, applyCursorPagination } from '../../db/optimization';
 import { Department, Employee } from './employee.model';
+import { DEFAULT_TENANT_ID } from './domain-seed';
 import {
   CreatePerformanceReviewInput,
   PerformanceReview,
@@ -30,12 +31,17 @@ export class PerformanceReviewRepository {
   private readonly pool = new ConnectionPool(12);
   private readonly optimizer = new QueryOptimizer(10);
 
-  constructor(private readonly referenceRepository: PerformanceReviewReferenceRepository) {}
+  constructor(
+    private readonly referenceRepository: PerformanceReviewReferenceRepository,
+    private readonly tenantId: string = DEFAULT_TENANT_ID,
+  ) {}
 
   create(input: CreatePerformanceReviewInput): PerformanceReview {
+    this.assertTenantFilter(input.tenant_id);
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.create' }, () => {
       const timestamp = new Date().toISOString();
       const record: PerformanceReview = {
+        tenant_id: this.tenantId,
         performance_review_id: randomUUID(),
         employee_id: input.employee_id,
         reviewer_employee_id: input.reviewer_employee_id,
@@ -63,25 +69,26 @@ export class PerformanceReviewRepository {
   }
 
   findById(performanceReviewId: string): PerformanceReview | null {
-    const cacheKey = `${PERFORMANCE_REVIEW_CACHE_PREFIX}:by-id:${performanceReviewId}`;
+    const cacheKey = `${PERFORMANCE_REVIEW_CACHE_PREFIX}:by-id:${this.tenantId}:${performanceReviewId}`;
     const cached = this.cache.get<PerformanceReview>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.findById', expectedIndex: 'pk_performance_reviews' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.findById', expectedIndex: 'idx_performance_reviews_tenant_id + pk_performance_reviews' }, () => {
       const review = this.reviews.get(performanceReviewId) ?? null;
-      if (review) {
+      if (review && review.tenant_id === this.tenantId) {
         this.cache.set(cacheKey, review);
+        return review;
       }
-      return review;
+      return null;
     }));
   }
 
   findByCycle(employeeId: string, reviewPeriodStart: string, reviewPeriodEnd: string): PerformanceReview | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.findByCycle', expectedIndex: 'uq_performance_reviews_cycle' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.findByCycle', expectedIndex: 'uq_performance_reviews_tenant_cycle' }, () => {
       const reviewId = this.cycleIndex.get(this.toCycleKey(employeeId, reviewPeriodStart, reviewPeriodEnd));
-      return reviewId ? (this.reviews.get(reviewId) ?? null) : null;
+      return reviewId ? this.findById(reviewId) : null;
     }));
   }
 
@@ -93,7 +100,8 @@ export class PerformanceReviewRepository {
   }
 
   list(filters: PerformanceReviewFilters): PaginatedResult<PerformanceReview> {
-    const cacheKey = `${PERFORMANCE_REVIEW_CACHE_PREFIX}:list:${JSON.stringify(filters)}`;
+    this.assertTenantFilter(filters.tenant_id);
+    const cacheKey = `${PERFORMANCE_REVIEW_CACHE_PREFIX}:list:${this.tenantId}:${JSON.stringify(filters)}`;
     const cached = this.cache.get<PaginatedResult<PerformanceReview>>(cacheKey);
     if (cached) {
       return cached;
@@ -103,7 +111,7 @@ export class PerformanceReviewRepository {
       const candidateIds = this.collectCandidateIds(filters);
       const rows = candidateIds
         .map((reviewId) => this.reviews.get(reviewId))
-        .filter((review): review is PerformanceReview => Boolean(review))
+        .filter((review): review is PerformanceReview => Boolean(review) && review.tenant_id === this.tenantId)
         .filter((review) => {
           if (filters.employee_id && review.employee_id !== filters.employee_id) {
             return false;
@@ -131,8 +139,8 @@ export class PerformanceReviewRepository {
   }
 
   update(performanceReviewId: string, input: UpdatePerformanceReviewInput): PerformanceReview | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.update', expectedIndex: 'pk_performance_reviews' }, () => {
-      const review = this.reviews.get(performanceReviewId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.update', expectedIndex: 'idx_performance_reviews_tenant_id + pk_performance_reviews' }, () => {
+      const review = this.findById(performanceReviewId);
       if (!review) {
         return null;
       }
@@ -149,6 +157,7 @@ export class PerformanceReviewRepository {
       const updated: PerformanceReview = {
         ...review,
         ...input,
+        tenant_id: this.tenantId,
         updated_at: new Date().toISOString(),
       };
 
@@ -159,8 +168,8 @@ export class PerformanceReviewRepository {
   }
 
   updateStatus(performanceReviewId: string, status: PerformanceReviewStatus): PerformanceReview | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.updateStatus', expectedIndex: 'pk_performance_reviews' }, () => {
-      const review = this.reviews.get(performanceReviewId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'performance_reviews.updateStatus', expectedIndex: 'idx_performance_reviews_tenant_id + pk_performance_reviews' }, () => {
+      const review = this.findById(performanceReviewId);
       if (!review) {
         return null;
       }
@@ -193,11 +202,12 @@ export class PerformanceReviewRepository {
   private toPerformanceReviewReadModel(review: PerformanceReview): PerformanceReviewReadModel {
     const employee = this.referenceRepository.findEmployeeById(review.employee_id);
     const reviewer = this.referenceRepository.findEmployeeById(review.reviewer_employee_id);
-    const employeeName = employee ? `${employee.first_name} ${employee.last_name}` : review.employee_id;
-    const reviewerName = reviewer ? `${reviewer.first_name} ${reviewer.last_name}` : review.reviewer_employee_id;
-    const department = employee ? this.referenceRepository.findDepartmentById(employee.department_id) : null;
+    const employeeName = employee && employee.tenant_id === this.tenantId ? `${employee.first_name} ${employee.last_name}` : review.employee_id;
+    const reviewerName = reviewer && reviewer.tenant_id === this.tenantId ? `${reviewer.first_name} ${reviewer.last_name}` : review.reviewer_employee_id;
+    const department = employee && employee.tenant_id === this.tenantId ? this.referenceRepository.findDepartmentById(employee.department_id) : null;
 
     return {
+      tenant_id: review.tenant_id,
       performance_review_id: review.performance_review_id,
       employee_id: review.employee_id,
       employee_name: employeeName,
@@ -233,20 +243,26 @@ export class PerformanceReviewRepository {
 
   private resolveExpectedIndex(filters: PerformanceReviewFilters): string {
     if (filters.employee_id) {
-      return 'idx_performance_reviews_employee_id';
+      return 'idx_performance_reviews_tenant_employee_id';
     }
     if (filters.reviewer_employee_id) {
-      return 'idx_performance_reviews_reviewer_employee_id';
+      return 'idx_performance_reviews_tenant_reviewer_employee_id';
     }
     if (filters.status) {
-      return 'idx_performance_reviews_status';
+      return 'idx_performance_reviews_tenant_status';
     }
-    return 'idx_performance_reviews_status';
+    return 'idx_performance_reviews_tenant_id';
+  }
+
+  private assertTenantFilter(tenantId?: string): void {
+    if (tenantId && tenantId !== this.tenantId) {
+      throw new Error('cross_tenant_filter_blocked');
+    }
   }
 
   private invalidatePerformanceReviewCache(performanceReviewId: string): void {
-    this.cache.invalidate(`${PERFORMANCE_REVIEW_CACHE_PREFIX}:by-id:${performanceReviewId}`);
-    this.cache.invalidateByPrefix(`${PERFORMANCE_REVIEW_CACHE_PREFIX}:list:`);
+    this.cache.invalidate(`${PERFORMANCE_REVIEW_CACHE_PREFIX}:by-id:${this.tenantId}:${performanceReviewId}`);
+    this.cache.invalidateByPrefix(`${PERFORMANCE_REVIEW_CACHE_PREFIX}:list:${this.tenantId}:`);
   }
 
   private addToIndex(index: Map<string, Set<string>>, key: string, reviewId: string): void {
@@ -263,12 +279,10 @@ export class PerformanceReviewRepository {
     existing.delete(reviewId);
     if (existing.size === 0) {
       index.delete(key);
-      return;
     }
-    index.set(key, existing);
   }
 
   private toCycleKey(employeeId: string, reviewPeriodStart: string, reviewPeriodEnd: string): string {
-    return `${employeeId}:${reviewPeriodStart}:${reviewPeriodEnd}`;
+    return `${this.tenantId}:${employeeId}:${reviewPeriodStart}:${reviewPeriodEnd}`;
   }
 }

@@ -2,6 +2,7 @@ export const PERFORMANCE_REVIEW_STATUSES = ['Draft', 'Submitted', 'Finalized'] a
 export type PerformanceReviewStatus = (typeof PERFORMANCE_REVIEW_STATUSES)[number];
 
 export interface PerformanceReview {
+  tenant_id: string;
   performance_review_id: string;
   employee_id: string;
   reviewer_employee_id: string;
@@ -19,6 +20,7 @@ export interface PerformanceReview {
 }
 
 export interface PerformanceReviewReadModel {
+  tenant_id: string;
   performance_review_id: string;
   employee_id: string;
   employee_name: string;
@@ -44,6 +46,7 @@ export interface PerformanceReviewListReadModelBundle {
 }
 
 export interface CreatePerformanceReviewInput {
+  tenant_id?: string;
   employee_id: string;
   reviewer_employee_id: string;
   review_period_start: string;
@@ -65,6 +68,7 @@ export interface UpdatePerformanceReviewInput {
 }
 
 export interface PerformanceReviewFilters {
+  tenant_id?: string;
   employee_id?: string;
   reviewer_employee_id?: string;
   status?: PerformanceReviewStatus;

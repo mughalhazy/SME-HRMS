@@ -13,10 +13,11 @@ const { EmployeeRepository } = require('./services/employee-service/employee.rep
 const { EmployeeService, ConflictError } = require('./services/employee-service/employee.service.js');
 const { ValidationError } = require('./services/employee-service/employee.validation.js');
 
-const repository = new EmployeeRepository();
-const service = new EmployeeService(repository);
+const repository = new EmployeeRepository({ tenantId: 'tenant-default' });
+const service = new EmployeeService(repository, undefined, undefined, undefined, 'tenant-default');
 
 const manager = service.createEmployee({
+  tenant_id: 'tenant-default',
   employee_number: 'E-100',
   first_name: 'Helen',
   last_name: 'Brooks',
@@ -30,6 +31,7 @@ const manager = service.createEmployee({
 });
 
 const employee = service.createEmployee({
+  tenant_id: 'tenant-default',
   employee_number: 'E-101',
   first_name: 'Noah',
   last_name: 'Bennett',
@@ -44,11 +46,13 @@ const employee = service.createEmployee({
 
 const fetched = service.getEmployeeById(employee.employee_id);
 assert.equal(fetched.employee_number, 'E-101');
+assert.equal(fetched.tenant_id, 'tenant-default');
 
 const readModels = service.getEmployeeReadModels(employee.employee_id);
 assert.equal(readModels.employee_directory_view.department_name, 'Engineering');
 assert.equal(readModels.employee_directory_view.role_title, 'Frontend Engineer');
 assert.equal(readModels.employee_directory_view.manager_name, 'Helen Brooks');
+assert.equal(readModels.employee_directory_view.tenant_id, 'tenant-default');
 assert.equal(readModels.organization_structure_view.department_code, 'ENG');
 
 const updated = service.updateEmployee(employee.employee_id, {
@@ -60,12 +64,22 @@ const updated = service.updateEmployee(employee.employee_id, {
 assert.equal(updated.department_id, 'dep-fin');
 assert.equal(updated.role_id, 'role-finance-manager');
 
-const listed = service.listEmployees({ department_id: 'dep-fin', role_id: 'role-finance-manager', limit: 10 });
+const listed = service.listEmployees({ tenant_id: 'tenant-default', department_id: 'dep-fin', role_id: 'role-finance-manager', limit: 10 });
 assert.equal(listed.data.length, 1);
 assert.equal(listed.data[0].employee_id, employee.employee_id);
-const listReadModels = service.listEmployeeReadModels({ department_id: 'dep-fin', role_id: 'role-finance-manager', limit: 10 });
+const listReadModels = service.listEmployeeReadModels({ tenant_id: 'tenant-default', department_id: 'dep-fin', role_id: 'role-finance-manager', limit: 10 });
 assert.equal(listReadModels.employee_directory_view[0].department_name, 'Finance');
 assert.equal(listReadModels.employee_directory_view[0].role_title, 'Finance Manager');
+
+assert.throws(
+  () => service.listEmployees({ tenant_id: 'tenant-other', limit: 10 }),
+  ValidationError,
+);
+
+const isolatedRepository = new EmployeeRepository({ tenantId: 'tenant-other' });
+const isolatedService = new EmployeeService(isolatedRepository, undefined, undefined, undefined, 'tenant-other');
+assert.throws(() => isolatedService.getEmployeeById(employee.employee_id), /employee not found/);
+assert.equal(isolatedService.listEmployees({ tenant_id: 'tenant-other', limit: 10 }).data.length, 0);
 
 const activated = service.updateStatus(employee.employee_id, 'Active');
 assert.equal(activated.status, 'Active');
@@ -82,6 +96,7 @@ assert.throws(() => service.updateStatus(employee.employee_id, 'Active'), Confli
 assert.throws(
   () =>
     service.createEmployee({
+      tenant_id: 'tenant-default',
       employee_number: 'E-102',
       first_name: 'Invalid',
       last_name: 'Department',
@@ -130,6 +145,9 @@ def test_employee_service_crud_lifecycle_and_relationships() -> None:
                     "noEmitOnError": false
                   }},
                   "include": [
+                    "{ROOT / 'services/employee-service/department.model.ts'}",
+                    "{ROOT / 'services/employee-service/role.model.ts'}",
+                    "{ROOT / 'services/employee-service/domain-seed.ts'}",
                     "{ROOT / 'services/employee-service/employee.model.ts'}",
                     "{ROOT / 'services/employee-service/employee.validation.ts'}",
                     "{ROOT / 'services/employee-service/employee.repository.ts'}",

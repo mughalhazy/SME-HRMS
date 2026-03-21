@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_text()
 WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}"
 
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
+    assert 'tenant_id VARCHAR(80) NOT NULL' in CORE_SCHEMA
     assert 'description TEXT' in CORE_SCHEMA
     assert 'parent_department_id UUID' in CORE_SCHEMA
     assert 'head_employee_id UUID' in CORE_SCHEMA
@@ -22,6 +25,7 @@ def test_core_schema_matches_canonical_employee_tables() -> None:
 
 def test_workflow_schema_matches_canonical_operational_tables() -> None:
     expected_fragments = [
+        'tenant_id VARCHAR(80) NOT NULL',
         'check_in_time TIMESTAMPTZ',
         'check_out_time TIMESTAMPTZ',
         'leave_type VARCHAR(20) NOT NULL',
@@ -54,13 +58,20 @@ def test_workflow_schema_matches_canonical_operational_tables() -> None:
 
 def test_workflow_schema_enforces_referential_integrity() -> None:
     foreign_keys = [
-        'REFERENCES employees (employee_id)',
-        'REFERENCES departments (department_id)',
-        'REFERENCES roles (role_id)',
-        'REFERENCES job_postings (job_posting_id)',
-        'REFERENCES candidates (candidate_id)',
+        'REFERENCES employees (tenant_id, employee_id)',
+        'REFERENCES departments (tenant_id, department_id)',
+        'REFERENCES roles (tenant_id, role_id)',
+        'REFERENCES job_postings (tenant_id, job_posting_id)',
+        'REFERENCES candidates (tenant_id, candidate_id)',
         'ON UPDATE CASCADE',
     ]
 
     for fragment in foreign_keys:
         assert fragment in CORE_SCHEMA or fragment in WORKFLOW_SCHEMA
+
+
+def test_all_tables_include_tenant_id() -> None:
+    create_table_blocks = re.findall(r'CREATE TABLE IF NOT EXISTS\s+\w+\s*\((.*?)\);', FULL_SCHEMA, re.S)
+    assert create_table_blocks
+    for block in create_table_blocks:
+        assert 'tenant_id VARCHAR(80) NOT NULL' in block

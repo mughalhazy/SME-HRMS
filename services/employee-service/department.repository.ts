@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, PaginatedResult, QueryOptimizer, applyCursorPagination } from '../../db/optimization';
 import { CreateDepartmentInput, Department, DepartmentFilters, DepartmentStatus, UpdateDepartmentInput } from './department.model';
-import { seedDepartments } from './domain-seed';
+import { DEFAULT_TENANT_ID, seedDepartments } from './domain-seed';
 
 const DEPARTMENT_CACHE_PREFIX = 'departments';
 
@@ -17,8 +17,14 @@ export class DepartmentRepository {
   private readonly pool = new ConnectionPool(16);
   private readonly optimizer = new QueryOptimizer(10);
 
-  constructor(seedData: Department[] = seedDepartments()) {
+  constructor(
+    private readonly tenantId: string = DEFAULT_TENANT_ID,
+    seedData: Department[] = seedDepartments(tenantId),
+  ) {
     for (const department of seedData) {
+      if (department.tenant_id !== this.tenantId) {
+        continue;
+      }
       this.departments.set(department.department_id, { ...department });
       this.nameIndex.set(department.name, department.department_id);
       this.codeIndex.set(department.code, department.department_id);
@@ -36,6 +42,7 @@ export class DepartmentRepository {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.create' }, () => {
       const timestamp = new Date().toISOString();
       const record: Department = {
+        tenant_id: this.tenantId,
         department_id: randomUUID(),
         name: input.name,
         code: input.code,
@@ -63,44 +70,46 @@ export class DepartmentRepository {
   }
 
   findById(departmentId: string): Department | null {
-    const cacheKey = `${DEPARTMENT_CACHE_PREFIX}:by-id:${departmentId}`;
+    const cacheKey = `${DEPARTMENT_CACHE_PREFIX}:by-id:${this.tenantId}:${departmentId}`;
     const cached = this.cache.get<Department>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findById', expectedIndex: 'pk_departments' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findById', expectedIndex: 'idx_departments_tenant_id + pk_departments' }, () => {
       const department = this.departments.get(departmentId) ?? null;
-      if (department) {
+      if (department && department.tenant_id === this.tenantId) {
         this.cache.set(cacheKey, department);
+        return department;
       }
-      return department;
+      return null;
     }));
   }
 
   findByName(name: string): Department | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findByName', expectedIndex: 'uq_departments_name' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findByName', expectedIndex: 'uq_departments_tenant_name' }, () => {
       const departmentId = this.nameIndex.get(name);
-      return departmentId ? (this.departments.get(departmentId) ?? null) : null;
+      return departmentId ? this.findById(departmentId) : null;
     }));
   }
 
   findByCode(code: string): Department | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findByCode', expectedIndex: 'uq_departments_code' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findByCode', expectedIndex: 'uq_departments_tenant_code' }, () => {
       const departmentId = this.codeIndex.get(code);
-      return departmentId ? (this.departments.get(departmentId) ?? null) : null;
+      return departmentId ? this.findById(departmentId) : null;
     }));
   }
 
   findByHeadEmployeeId(employeeId: string): Department | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findByHeadEmployeeId', expectedIndex: 'idx_departments_head_employee_id' }, () => {
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.findByHeadEmployeeId', expectedIndex: 'idx_departments_tenant_head_employee_id' }, () => {
       const departmentId = this.headEmployeeIndex.get(employeeId);
-      return departmentId ? (this.departments.get(departmentId) ?? null) : null;
+      return departmentId ? this.findById(departmentId) : null;
     }));
   }
 
   list(filters: DepartmentFilters): PaginatedResult<Department> {
-    const cacheKey = `${DEPARTMENT_CACHE_PREFIX}:list:${JSON.stringify(filters)}`;
+    this.assertTenantFilter(filters.tenant_id);
+    const cacheKey = `${DEPARTMENT_CACHE_PREFIX}:list:${this.tenantId}:${JSON.stringify(filters)}`;
     const cached = this.cache.get<PaginatedResult<Department>>(cacheKey);
     if (cached) {
       return cached;
@@ -110,7 +119,7 @@ export class DepartmentRepository {
       const candidateIds = this.collectCandidateIds(filters);
       const rows = candidateIds
         .map((departmentId) => this.departments.get(departmentId))
-        .filter((department): department is Department => Boolean(department))
+        .filter((department): department is Department => Boolean(department) && department.tenant_id === this.tenantId)
         .filter((department) => {
           if (filters.status && department.status !== filters.status) {
             return false;
@@ -138,9 +147,8 @@ export class DepartmentRepository {
   }
 
   update(departmentId: string, input: UpdateDepartmentInput): Department | null {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.update', expectedIndex: 'pk_departments' }, () => {
-      const department = this.departments.get(departmentId);
-
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.update', expectedIndex: 'idx_departments_tenant_id + pk_departments' }, () => {
+      const department = this.findById(departmentId);
       if (!department) {
         return null;
       }
@@ -148,6 +156,7 @@ export class DepartmentRepository {
       const updated: Department = {
         ...department,
         ...input,
+        tenant_id: this.tenantId,
         updated_at: new Date().toISOString(),
       };
 
@@ -159,8 +168,8 @@ export class DepartmentRepository {
   }
 
   delete(departmentId: string): boolean {
-    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.delete', expectedIndex: 'pk_departments' }, () => {
-      const existing = this.departments.get(departmentId);
+    return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'departments.delete', expectedIndex: 'idx_departments_tenant_id + pk_departments' }, () => {
+      const existing = this.findById(departmentId);
       if (!existing) {
         return false;
       }
@@ -213,21 +222,27 @@ export class DepartmentRepository {
 
   private resolveExpectedIndex(filters: DepartmentFilters): string {
     if (filters.department_id) {
-      return 'pk_departments';
+      return 'idx_departments_tenant_id + pk_departments';
     }
     if (filters.head_employee_id) {
-      return 'idx_departments_head_employee_id';
+      return 'idx_departments_tenant_head_employee_id';
     }
     if (filters.parent_department_id && filters.status) {
-      return 'idx_departments_parent_department_id + idx_departments_status';
+      return 'idx_departments_tenant_parent_department_id + idx_departments_tenant_status';
     }
     if (filters.parent_department_id) {
-      return 'idx_departments_parent_department_id';
+      return 'idx_departments_tenant_parent_department_id';
     }
     if (filters.status) {
-      return 'idx_departments_status';
+      return 'idx_departments_tenant_status';
     }
-    return 'pk_departments';
+    return 'idx_departments_tenant_id';
+  }
+
+  private assertTenantFilter(tenantId?: string): void {
+    if (tenantId && tenantId !== this.tenantId) {
+      throw new Error('cross_tenant_filter_blocked');
+    }
   }
 
   private addToIndex<K>(index: Map<K, Set<string>>, key: K, departmentId: string): void {
@@ -283,7 +298,7 @@ export class DepartmentRepository {
   }
 
   private invalidateDepartmentCache(departmentId: string): void {
-    this.cache.invalidate(`${DEPARTMENT_CACHE_PREFIX}:by-id:${departmentId}`);
-    this.cache.invalidateByPrefix(`${DEPARTMENT_CACHE_PREFIX}:list:`);
+    this.cache.invalidate(`${DEPARTMENT_CACHE_PREFIX}:by-id:${this.tenantId}:${departmentId}`);
+    this.cache.invalidateByPrefix(`${DEPARTMENT_CACHE_PREFIX}:list:${this.tenantId}:`);
   }
 }

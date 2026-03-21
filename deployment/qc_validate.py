@@ -49,6 +49,7 @@ checks.append(("build containers", all(df in WORKFLOW_BUILD for df in ["Dockerfi
 
 # 9 matches data architecture relational postgres
 schema_markers = [
+    "tenant_id VARCHAR(80) NOT NULL",
     "first_name VARCHAR(100) NOT NULL",
     "manager_employee_id UUID",
     "leave_type VARCHAR(20) NOT NULL",
@@ -59,12 +60,16 @@ schema_markers = [
 ]
 checks.append(("data architecture match", "postgres:16-alpine" in COMPOSE and all(marker in (CORE_SCHEMA + WORKFLOW_SCHEMA) for marker in schema_markers)))
 
-# 10 secrets not committed
+# 10 multi-tenant safety
+all_tables_have_tenant_id = all('tenant_id VARCHAR(80) NOT NULL' in block for block in __import__('re').findall(r'CREATE TABLE IF NOT EXISTS\s+\w+\s*\((.*?)\);', CORE_SCHEMA + '\n' + WORKFLOW_SCHEMA, __import__('re').S))
+checks.append(("multi-tenant tenant_id enforcement", all_tables_have_tenant_id and 'REFERENCES employees (tenant_id, employee_id)' in WORKFLOW_SCHEMA))
+
+# 11 secrets not committed
 checks.append(("no committed secrets", not re.search(r"AKIA|PRIVATE KEY|BEGIN RSA", ENV_EXAMPLE + COMPOSE)))
 
 score = sum(1 for _, ok in checks)
 for name, ok in checks:
     print(f"[{ 'PASS' if ok else 'FAIL' }] {name}")
-print(f"QC score: {score}/10")
-if score < 10:
+print(f"QC score: {score}/{len(checks)}")
+if score < len(checks):
     raise SystemExit(1)
