@@ -24,11 +24,15 @@ export type StructuredLogRecord = {
   level: 'INFO' | 'ERROR';
   service: string;
   event: string;
+  action: string;
+  status: string;
+  requestId: string;
   traceId: string;
+  correlationId: string;
+  tenantId?: string;
   message: string;
   context: Record<string, unknown>;
 };
-
 
 function deepFreeze<T>(value: T): T {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) {
@@ -70,6 +74,16 @@ export function sanitizeLogContext<T>(value: T): T {
   return result as T;
 }
 
+function resolveTenantId(context: Record<string, unknown>): string | undefined {
+  const raw = context.tenantId ?? context.tenant_id;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : undefined;
+}
+
+function resolveCorrelationId(traceId: string, context: Record<string, unknown>): string {
+  const raw = context.correlationId ?? context.correlation_id ?? context.requestId ?? context.request_id ?? context.traceId ?? context.trace_id;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : traceId;
+}
+
 export class StructuredLogger {
   readonly records: StructuredLogRecord[] = [];
   private readonly auditRecordsInternal: AuditRecord[] = [];
@@ -80,15 +94,28 @@ export class StructuredLogger {
     return Object.freeze([...this.auditRecordsInternal]);
   }
 
-  private write(level: 'INFO' | 'ERROR', event: string, traceId: string, message: string, context: Record<string, unknown> = {}): StructuredLogRecord {
+  private write(
+    level: 'INFO' | 'ERROR',
+    event: string,
+    traceId: string,
+    message: string,
+    context: Record<string, unknown> = {},
+    overrides: { action?: string; status?: string; tenantId?: string; correlationId?: string } = {},
+  ): StructuredLogRecord {
+    const sanitizedContext = sanitizeLogContext(context);
     const record: StructuredLogRecord = {
       timestamp: new Date().toISOString(),
       level,
       service: this.serviceName,
       event,
+      action: overrides.action ?? (typeof sanitizedContext.action === 'string' ? sanitizedContext.action : event),
+      status: overrides.status ?? (typeof sanitizedContext.status === 'string' ? sanitizedContext.status : level === 'ERROR' ? 'error' : 'ok'),
+      requestId: traceId,
       traceId,
+      correlationId: overrides.correlationId ?? resolveCorrelationId(traceId, sanitizedContext),
+      tenantId: overrides.tenantId ?? resolveTenantId(sanitizedContext),
       message,
-      context: sanitizeLogContext(context),
+      context: sanitizedContext,
     };
     this.records.push(record);
     if (this.records.length > 500) {
@@ -98,12 +125,24 @@ export class StructuredLogger {
     return record;
   }
 
-  info(event: string, traceId: string, message: string, context: Record<string, unknown> = {}): StructuredLogRecord {
-    return this.write('INFO', event, traceId, message, context);
+  info(
+    event: string,
+    traceId: string,
+    message: string,
+    context: Record<string, unknown> = {},
+    overrides: { action?: string; status?: string; tenantId?: string; correlationId?: string } = {},
+  ): StructuredLogRecord {
+    return this.write('INFO', event, traceId, message, context, overrides);
   }
 
-  error(event: string, traceId: string, message: string, context: Record<string, unknown> = {}): StructuredLogRecord {
-    return this.write('ERROR', event, traceId, message, context);
+  error(
+    event: string,
+    traceId: string,
+    message: string,
+    context: Record<string, unknown> = {},
+    overrides: { action?: string; status?: string; tenantId?: string; correlationId?: string } = {},
+  ): StructuredLogRecord {
+    return this.write('ERROR', event, traceId, message, context, { status: 'error', ...overrides });
   }
 
   audit(input: AuditLogInput): AuditRecord {
@@ -122,7 +161,12 @@ export class StructuredLogger {
 
     this.auditRecordsInternal.push(record);
     appendCentralizedAuditRecord(record, this.serviceName);
-    this.write('INFO', 'audit', input.traceId, input.action, { audit_record: record });
+    this.write('INFO', 'audit', input.traceId, input.action, { audit_record: record, tenantId: input.tenantId }, {
+      action: input.action,
+      status: 'success',
+      tenantId: input.tenantId,
+      correlationId: input.traceId,
+    });
     return record;
   }
 }
@@ -139,21 +183,57 @@ export function getStructuredLogger(serviceName: string): StructuredLogger {
   return logger;
 }
 
+function resolveRequestTenant(req: Request): string | undefined {
+  const headerTenant = typeof req.headers['x-tenant-id'] === 'string'
+    ? req.headers['x-tenant-id']
+    : typeof req.headers['x-tenant'] === 'string'
+      ? req.headers['x-tenant']
+      : undefined;
+  const bodyTenant = req.body && typeof req.body === 'object' && typeof req.body.tenant_id === 'string'
+    ? req.body.tenant_id
+    : undefined;
+  return req.tenantId ?? headerTenant ?? bodyTenant;
+}
+
+function resolveCorrelationIdFromRequest(req: Request): string {
+  const headerCorrelationId = typeof req.headers['x-correlation-id'] === 'string' && req.headers['x-correlation-id'].length > 0
+    ? req.headers['x-correlation-id']
+    : undefined;
+  return headerCorrelationId ?? req.traceId ?? 'missing-trace-id';
+}
+
 export function createLoggerMiddleware(serviceName: string): RequestHandler {
   const logger = getStructuredLogger(serviceName);
   return (req: Request, res: Response, next: NextFunction): void => {
     const startedAt = process.hrtime.bigint();
-    logger.info('request.started', req.traceId ?? 'missing-trace-id', `${req.method} ${req.originalUrl}`, {
+    const requestId = req.traceId ?? 'missing-trace-id';
+    const tenantId = resolveRequestTenant(req);
+    const correlationId = resolveCorrelationIdFromRequest(req);
+    logger.info('request.started', requestId, `${req.method} ${req.originalUrl}`, {
       method: req.method,
       path: req.originalUrl,
+      tenantId,
+      correlationId,
+    }, {
+      action: `${req.method} ${req.path}`,
+      status: 'started',
+      tenantId,
+      correlationId,
     });
     res.on('finish', () => {
       const latencyMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-      logger.info('request.completed', req.traceId ?? 'missing-trace-id', `${req.method} ${req.originalUrl}`, {
+      logger.info('request.completed', requestId, `${req.method} ${req.originalUrl}`, {
         method: req.method,
         path: req.originalUrl,
         statusCode: res.statusCode,
         latencyMs: Number(latencyMs.toFixed(3)),
+        tenantId,
+        correlationId,
+      }, {
+        action: `${req.method} ${req.path}`,
+        status: String(res.statusCode),
+        tenantId,
+        correlationId,
       });
     });
     next();

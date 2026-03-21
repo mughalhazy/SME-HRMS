@@ -10,6 +10,7 @@ from uuid import uuid4
 from event_contract import normalize_event_type
 from persistent_store import PersistentKVStore
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from resilience import Observability
 
 
 class SearchServiceError(ValueError):

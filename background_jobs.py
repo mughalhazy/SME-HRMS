@@ -234,6 +234,7 @@ class BackgroundJobService:
             message=job.job_type,
             context={'job_id': job.job_id, 'tenant_id': job.tenant_id, 'scheduled_at': job.scheduled_at, 'queued_jobs': queued_jobs + 1, 'queue_limit': queue_config.max_queued_jobs},
         )
+        self.observability.record_trace('job.enqueue', request_id=job.trace_id, status=job.status.value, stage='job', context={'tenant_id': job.tenant_id, 'job_id': job.job_id, 'job_type': job.job_type, 'scheduled_at': job.scheduled_at, 'correlation_id': job.correlation_id})
         return job
 
     def get_job(self, job_id: str, *, tenant_id: str, actor_role: str = 'Admin') -> JobRecord:
@@ -316,7 +317,7 @@ class BackgroundJobService:
         with self._lock:
             job = self.get_job(job_id, tenant_id=tenant_id)
             if job.status == JobStatus.SUCCEEDED:
-                self.observability.track('execute_job', trace_id=job.trace_id, started_at=started, success=True, context={'job_id': job.job_id, 'replayed': True})
+                self.observability.track('execute_job', trace_id=job.trace_id, started_at=started, success=True, context={'job_id': job.job_id, 'job_type': job.job_type, 'tenant_id': job.tenant_id, 'status': job.status.value, 'replayed': True, 'trace_stage': 'job', 'correlation_id': job.correlation_id})
                 return job
             if job.status == JobStatus.CANCELLED:
                 raise BackgroundJobError(409, 'INVALID_JOB_STATE', 'Cancelled jobs cannot be executed')
@@ -370,7 +371,7 @@ class BackgroundJobService:
                 entity_id=job.job_id,
                 context={'job_type': job.job_type, 'tenant_id': job.tenant_id, 'attempts': job.attempts},
             )
-            self.observability.track('execute_job', trace_id=job.trace_id, started_at=started, success=True, context={'job_id': job.job_id, 'job_type': job.job_type})
+            self.observability.track('execute_job', trace_id=job.trace_id, started_at=started, success=True, context={'job_id': job.job_id, 'job_type': job.job_type, 'tenant_id': job.tenant_id, 'status': job.status.value, 'trace_stage': 'job', 'correlation_id': job.correlation_id})
             return job
         except Exception as exc:  # noqa: BLE001
             with self._lock:
@@ -403,7 +404,7 @@ class BackgroundJobService:
                     retryable=not terminal,
                 )
             self.error_logger.log(job.job_type, exc, trace_id=job.trace_id, details={'job_id': job.job_id, 'tenant_id': job.tenant_id})
-            self.observability.track('execute_job', trace_id=job.trace_id, started_at=started, success=False, context={'job_id': job.job_id, 'job_type': job.job_type, 'status': job.status.value})
+            self.observability.track('execute_job', trace_id=job.trace_id, started_at=started, success=False, context={'job_id': job.job_id, 'job_type': job.job_type, 'tenant_id': job.tenant_id, 'status': job.status.value, 'trace_stage': 'job', 'error_category': 'system', 'correlation_id': job.correlation_id})
             if job.status == JobStatus.DEAD_LETTERED:
                 self.observability.logger.error('job.dead_lettered', trace_id=job.trace_id, message=job.job_type, context={'job_id': job.job_id, 'dead_letter_id': dead_letter.dead_letter_id})
             return job
