@@ -36,15 +36,24 @@ type ResourceAction =
   | 'finalizeReview'
   | 'readOrgStructure'
   | 'listOrgStructure'
-  | 'manageOrgStructure';
+  | 'manageOrgStructure'
+  | 'createDocument'
+  | 'readDocument'
+  | 'listDocuments'
+  | 'updateDocument'
+  | 'acknowledgePolicy'
+  | 'createComplianceTask'
+  | 'readComplianceTask'
+  | 'listComplianceTasks'
+  | 'updateComplianceTask';
 
 const ROLE_ACTIONS: Record<AuthRole, ResourceAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
-  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews', 'readOrgStructure', 'listOrgStructure'],
-  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles', 'readOrgStructure', 'listOrgStructure'],
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask'],
+  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews', 'readOrgStructure', 'listOrgStructure', 'readDocument', 'listDocuments', 'acknowledgePolicy', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask'],
+  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles', 'readOrgStructure', 'listOrgStructure', 'readDocument', 'listDocuments', 'readComplianceTask', 'listComplianceTasks'],
   Recruiter: [],
-  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure'],
+  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask'],
 };
 
 const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
@@ -69,6 +78,15 @@ const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
   readOrgStructure: 'CAP-EMP-001',
   listOrgStructure: 'CAP-EMP-001',
   manageOrgStructure: 'CAP-EMP-002',
+  createDocument: 'CAP-EMP-002',
+  readDocument: 'CAP-EMP-001',
+  listDocuments: 'CAP-EMP-001',
+  updateDocument: 'CAP-EMP-002',
+  acknowledgePolicy: 'CAP-EMP-002',
+  createComplianceTask: 'CAP-EMP-002',
+  readComplianceTask: 'CAP-EMP-001',
+  listComplianceTasks: 'CAP-EMP-001',
+  updateComplianceTask: 'CAP-EMP-002',
 };
 
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;

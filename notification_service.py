@@ -369,6 +369,26 @@ EVENT_NOTIFICATION_PLANS: dict[str, tuple[EventNotificationPlan, ...]] = {
             channels=(NotificationChannel.IN_APP,),
         ),
     ),
+    "ComplianceTaskAssigned": (
+        EventNotificationPlan(
+            template_code="compliance.task.assigned",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="employee_email",
+            topic_code="compliance.task_assigned",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
+    "DocumentExpiryTracked": (
+        EventNotificationPlan(
+            template_code="compliance.document.expiry",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="employee_email",
+            topic_code="compliance.document_expiry",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
 }
 
 
@@ -400,6 +420,10 @@ DEFAULT_TEMPLATE_SEED = (
     ("auth.session_revoked", NotificationChannel.IN_APP, "Session revoked", "A session was revoked. Please sign in again if needed."),
     ("workflow.task.assigned", NotificationChannel.IN_APP, "Workflow task assigned", "A workflow task for {workflow_definition} is awaiting your action before {deadline_at}."),
     ("workflow.task.escalated", NotificationChannel.IN_APP, "Workflow task escalated", "A workflow task for {workflow_definition} was escalated to you. Deadline: {deadline_at}."),
+    ("compliance.task.assigned", NotificationChannel.IN_APP, "Compliance task assigned", "{title} is due on {due_date}."),
+    ("compliance.task.assigned", NotificationChannel.EMAIL, "Compliance task assigned", "You have a compliance task: {title}. Due date: {due_date}."),
+    ("compliance.document.expiry", NotificationChannel.IN_APP, "Document expiry approaching", "{document_title} expires on {expiry_date}."),
+    ("compliance.document.expiry", NotificationChannel.EMAIL, "Document expiry approaching", "Your document {document_title} expires on {expiry_date}."),
 )
 
 
