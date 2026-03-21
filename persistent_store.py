@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 import threading
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Generic, TypeVar
 
@@ -14,6 +15,10 @@ V = TypeVar('V')
 
 class PersistentKVStore(Generic[K, V]):
     """Sqlite-backed mapping with an in-process cache for live object mutation safety."""
+
+    _shared_connections: dict[str, sqlite3.Connection] = {}
+    _shared_locks: dict[str, threading.RLock] = {}
+    _registry_lock = threading.RLock()
 
     def __init__(self, *, service: str, namespace: str, db_path: str | None = None):
         self.service = service
@@ -26,9 +31,16 @@ class PersistentKVStore(Generic[K, V]):
         resolved.parent.mkdir(parents=True, exist_ok=True)
         self.db_path = str(resolved)
         self._lock = threading.RLock()
-        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        self._conn.execute('PRAGMA journal_mode=WAL')
-        self._conn.execute('PRAGMA synchronous=NORMAL')
+        with self._registry_lock:
+            if self.db_path not in self._shared_connections:
+                conn = sqlite3.connect(self.db_path, check_same_thread=False, isolation_level=None)
+                conn.execute('PRAGMA journal_mode=WAL')
+                conn.execute('PRAGMA synchronous=NORMAL')
+                self._shared_connections[self.db_path] = conn
+                self._shared_locks[self.db_path] = threading.RLock()
+        self._conn = self._shared_connections[self.db_path]
+        self._shared_lock = self._shared_locks[self.db_path]
+        self._transaction_depth = 0
         self._conn.execute(
             '''
             CREATE TABLE IF NOT EXISTS persistent_kv (
@@ -54,17 +66,18 @@ class PersistentKVStore(Generic[K, V]):
         return pickle.loads(payload)
 
     def _load_cache(self) -> None:
-        cursor = self._conn.execute(
-            'SELECT key, value FROM persistent_kv WHERE service = ? AND namespace = ?',
-            (self.service, self.namespace),
-        )
-        self._cache = {
-            self._load(row[0]): self._load(row[1])
-            for row in cursor.fetchall()
-        }
+        with self._shared_lock:
+            cursor = self._conn.execute(
+                'SELECT key, value FROM persistent_kv WHERE service = ? AND namespace = ?',
+                (self.service, self.namespace),
+            )
+            self._cache = {
+                self._load(row[0]): self._load(row[1])
+                for row in cursor.fetchall()
+            }
 
-    def _flush(self) -> None:
-        with self._lock, self._conn:
+    def _flush(self, *, in_transaction: bool = False) -> None:
+        with self._lock, self._shared_lock:
             self._conn.execute(
                 'DELETE FROM persistent_kv WHERE service = ? AND namespace = ?',
                 (self.service, self.namespace),
@@ -76,10 +89,13 @@ class PersistentKVStore(Generic[K, V]):
                     for key, value in self._cache.items()
                 ],
             )
+            if not in_transaction:
+                self._conn.commit()
 
     def __setitem__(self, key: K, value: V) -> None:
         self._cache[key] = value
-        self._flush()
+        if self._transaction_depth == 0:
+            self._flush()
 
     def __getitem__(self, key: K) -> V:
         self._flush()
@@ -90,24 +106,29 @@ class PersistentKVStore(Generic[K, V]):
         return self._cache.get(key, default)
 
     def pop(self, key: K, default: V | None = None) -> V | None:
-        self._flush()
+        if self._transaction_depth == 0:
+            self._flush()
         if key not in self._cache:
             return default
         value = self._cache.pop(key)
-        self._flush()
+        if self._transaction_depth == 0:
+            self._flush()
         return value
 
     def setdefault(self, key: K, default: V) -> V:
-        self._flush()
+        if self._transaction_depth == 0:
+            self._flush()
         if key not in self._cache:
             self._cache[key] = default
-            self._flush()
+            if self._transaction_depth == 0:
+                self._flush()
         return self._cache[key]
 
     def __delitem__(self, key: K) -> None:
         if key in self._cache:
             del self._cache[key]
-            self._flush()
+            if self._transaction_depth == 0:
+                self._flush()
 
     def __contains__(self, key: object) -> bool:
         self._flush()
@@ -138,4 +159,44 @@ class PersistentKVStore(Generic[K, V]):
 
     def clear(self) -> None:
         self._cache.clear()
-        self._flush()
+        if self._transaction_depth == 0:
+            self._flush()
+
+    @classmethod
+    @contextmanager
+    def transaction(cls, *stores: 'PersistentKVStore[object, object]'):
+        unique_stores = []
+        seen: set[int] = set()
+        for store in stores:
+            if id(store) not in seen:
+                unique_stores.append(store)
+                seen.add(id(store))
+        if not unique_stores:
+            yield
+            return
+        db_paths = {store.db_path for store in unique_stores}
+        if len(db_paths) != 1:
+            raise ValueError('all stores in a transaction must share the same db_path')
+        shared_lock = unique_stores[0]._shared_lock
+        connection = unique_stores[0]._conn
+        snapshots = {
+            id(store): pickle.loads(pickle.dumps(store._cache, protocol=pickle.HIGHEST_PROTOCOL))
+            for store in unique_stores
+        }
+        with shared_lock:
+            for store in unique_stores:
+                store._transaction_depth += 1
+            connection.execute('BEGIN IMMEDIATE')
+            try:
+                yield
+                for store in unique_stores:
+                    store._flush(in_transaction=True)
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                for store in unique_stores:
+                    store._cache = snapshots[id(store)]
+                raise
+            finally:
+                for store in unique_stores:
+                    store._transaction_depth = max(0, store._transaction_depth - 1)

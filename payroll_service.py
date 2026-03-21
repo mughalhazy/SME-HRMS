@@ -13,8 +13,10 @@ from typing import Any
 from uuid import uuid4
 
 from event_contract import EventRegistry, emit_canonical_event
+from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
+from workflow_service import WorkflowService, WorkflowServiceError
 
 
 class Role(str, Enum):
@@ -61,6 +63,7 @@ class PayrollRecord:
     net_pay: Decimal
     currency: str
     payment_date: date | None
+    payment_workflow_id: str | None
     status: PayrollStatus
     created_at: datetime
     updated_at: datetime
@@ -81,6 +84,7 @@ class PayrollRecord:
             "net_pay": str(self.net_pay),
             "currency": self.currency,
             "payment_date": self.payment_date.isoformat() if self.payment_date else None,
+            "payment_workflow_id": self.payment_workflow_id,
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
@@ -213,18 +217,19 @@ class ServiceError(Exception):
 class PayrollService:
     """Canonical payroll-service business logic and API-compatible handlers."""
 
-    def __init__(self, db_path: str | None = None):
+    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None):
         self.records = PersistentKVStore[str, PayrollRecord](service='payroll-service', namespace='records', db_path=db_path)
-        self.employee_profiles = PersistentKVStore[str, EmployeePayrollProfile](service='payroll-service', namespace='employee_profiles', db_path=db_path)
-        self.attendance_summaries = PersistentKVStore[tuple[str, date, date], dict[str, Any]](service='payroll-service', namespace='attendance_summaries', db_path=db_path)
-        self.period_index = PersistentKVStore[tuple[str, date, date], str](service='payroll-service', namespace='period_index', db_path=db_path)
-        self.payroll_cycles = PersistentKVStore[str, PayrollCycle](service='payroll-service', namespace='payroll_cycles', db_path=db_path)
-        self.payroll_cycle_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='payroll_cycle_index', db_path=db_path)
-        self.salary_structures = PersistentKVStore[str, SalaryStructure](service='payroll-service', namespace='salary_structures', db_path=db_path)
-        self.salary_structure_index = PersistentKVStore[str, list[str]](service='payroll-service', namespace='salary_structure_index', db_path=db_path)
-        self.batches = PersistentKVStore[str, PayrollBatch](service='payroll-service', namespace='batches', db_path=db_path)
-        self.batch_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='batch_index', db_path=db_path)
-        self.record_batches = PersistentKVStore[str, str](service='payroll-service', namespace='record_batches', db_path=db_path)
+        shared_db_path = self.records.db_path
+        self.employee_profiles = PersistentKVStore[str, EmployeePayrollProfile](service='payroll-service', namespace='employee_profiles', db_path=shared_db_path)
+        self.attendance_summaries = PersistentKVStore[tuple[str, date, date], dict[str, Any]](service='payroll-service', namespace='attendance_summaries', db_path=shared_db_path)
+        self.period_index = PersistentKVStore[tuple[str, date, date], str](service='payroll-service', namespace='period_index', db_path=shared_db_path)
+        self.payroll_cycles = PersistentKVStore[str, PayrollCycle](service='payroll-service', namespace='payroll_cycles', db_path=shared_db_path)
+        self.payroll_cycle_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='payroll_cycle_index', db_path=shared_db_path)
+        self.salary_structures = PersistentKVStore[str, SalaryStructure](service='payroll-service', namespace='salary_structures', db_path=shared_db_path)
+        self.salary_structure_index = PersistentKVStore[str, list[str]](service='payroll-service', namespace='salary_structure_index', db_path=shared_db_path)
+        self.batches = PersistentKVStore[str, PayrollBatch](service='payroll-service', namespace='batches', db_path=shared_db_path)
+        self.batch_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='batch_index', db_path=shared_db_path)
+        self.record_batches = PersistentKVStore[str, str](service='payroll-service', namespace='record_batches', db_path=shared_db_path)
         self.events: list[dict[str, Any]] = []
         self.dead_letters = DeadLetterQueue()
         self.error_logger = CentralErrorLogger("payroll-service")
@@ -232,13 +237,52 @@ class PayrollService:
         self.observability = Observability("payroll-service")
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
+        self.notification_service = notification_service or NotificationService()
+        self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
         self._lock = RLock()
+        self.workflow_service.register_definition(
+            tenant_id=self.tenant_id,
+            code="payroll_disbursement_approval",
+            source_service="payroll-service",
+            subject_type="PayrollRecord",
+            description="Centralized payroll disbursement approval workflow.",
+            steps=[
+                {
+                    "name": "payroll-disbursement-approval",
+                    "type": "approval",
+                    "assignee_template": "{approver_assignee}",
+                    "sla": "PT4H",
+                    "escalation_assignee_template": "{escalation_assignee}",
+                }
+            ],
+        )
 
     def _trace(self, trace_id: str | None = None) -> str:
         return self.observability.trace_id(trace_id)
 
+
+    def _audit_payroll_mutation(self, action: str, ctx: AuthContext, entity: str, entity_id: str, before: dict[str, Any], after: dict[str, Any], *, trace_id: str | None = None) -> None:
+        self.observability.logger.audit(
+            action,
+            trace_id=trace_id,
+            actor={'id': ctx.employee_id or ctx.role.value, 'type': 'user', 'role': ctx.role.value, 'department_id': ctx.department_id},
+            entity=entity,
+            entity_id=entity_id,
+            context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
+        )
+
     def _finalize_observation(self, operation: str, trace_id: str, started: float, success: bool, context: dict[str, Any] | None = None) -> None:
         self.observability.track(operation, trace_id=trace_id, started_at=started, success=success, context=context)
+
+    def _emit_event(self, event_name: str, data: dict[str, Any], *, correlation_id: str, idempotency_key: str) -> None:
+        self.outbox.tenant_id = self.tenant_id
+        self.outbox.enqueue(
+            legacy_event_name=event_name,
+            data=data,
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+        )
+        self.outbox.dispatch_pending(self.events.append)
 
     @staticmethod
     def decode_bearer_token(authorization: str | None) -> AuthContext:
@@ -468,6 +512,7 @@ class PayrollService:
             net_pay=net,
             currency=currency,
             payment_date=payroll_cycle.payment_date if payroll_cycle else None,
+            payment_workflow_id=None,
             status=PayrollStatus.DRAFT,
             created_at=ts,
             updated_at=ts,
@@ -647,14 +692,7 @@ class PayrollService:
                     self.payroll_cycles[cycle.payroll_cycle_id] = cycle
                     self.payroll_cycle_index[cycle_key] = cycle.payroll_cycle_id
                     status_code = 201
-            self.observability.logger.audit(
-                "payroll_cycle_upserted",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="PayrollCycle",
-                entity_id=cycle.payroll_cycle_id,
-                context={"status": cycle.status},
-            )
+            self._audit_payroll_mutation('payroll_cycle_upserted', ctx, 'PayrollCycle', cycle.payroll_cycle_id, {}, cycle.to_dict(), trace_id=trace)
             self._finalize_observation("upsert_payroll_cycle", trace, started, True, {"status": status_code})
             return status_code, cycle.to_dict()
         except Exception as exc:
@@ -707,14 +745,7 @@ class PayrollService:
                 )
                 self.salary_structures[structure.salary_structure_id] = structure
                 self.salary_structure_index.setdefault(employee_id, []).append(structure.salary_structure_id)
-            self.observability.logger.audit(
-                "salary_structure_created",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="SalaryStructure",
-                entity_id=structure.salary_structure_id,
-                context={"employee_id": employee_id},
-            )
+            self._audit_payroll_mutation('salary_structure_created', ctx, 'SalaryStructure', structure.salary_structure_id, {}, structure.to_dict(), trace_id=trace)
             self._finalize_observation("create_salary_structure", trace, started, True, {"status": 201})
             return self._record_idempotent_result(replay_key, fingerprint, 201, structure.to_dict())
         except Exception as exc:
@@ -781,14 +812,7 @@ class PayrollService:
                 self.records[record.payroll_record_id] = record
                 self.period_index[key] = record.payroll_record_id
                 emit_canonical_event(self.events, legacy_event_name="PayrollDrafted", data={"payroll_record_id": record.payroll_record_id, "at": record.created_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
-            self.observability.logger.audit(
-                "payroll_record_drafted",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="PayrollRecord",
-                entity_id=record.payroll_record_id,
-                context={"employee_id": employee_id, "status": record.status.value},
-            )
+            self._audit_payroll_mutation('payroll_record_drafted', ctx, 'PayrollRecord', record.payroll_record_id, {}, record.to_dict(), trace_id=trace)
             self._finalize_observation("create_payroll_record", trace, started, True, {"status": 201})
             return self._record_idempotent_result(replay_key, fingerprint, 201, record.to_dict())
         except Exception as exc:
@@ -845,7 +869,21 @@ class PayrollService:
                     if record.status == PayrollStatus.DRAFT:
                         record.status = PayrollStatus.PROCESSED
                         record.updated_at = self._now()
-                        emit_canonical_event(self.events, legacy_event_name="PayrollProcessed", data={"payroll_record_id": record_id, "at": record.updated_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record_id)
+                        self._emit_event(
+                            "PayrollProcessed",
+                            {
+                                "payroll_record_id": record_id,
+                                "employee_id": record.employee_id,
+                                "pay_period_start": record.pay_period_start.isoformat(),
+                                "pay_period_end": record.pay_period_end.isoformat(),
+                                "gross_pay": str(record.gross_pay),
+                                "net_pay": str(record.net_pay),
+                                "currency": record.currency,
+                                "status": record.status.value,
+                            },
+                            correlation_id=trace,
+                            idempotency_key=record_id,
+                        )
                     if record.status in {PayrollStatus.PROCESSED, PayrollStatus.PAID}:
                         processed_ids.add(record_id)
 
@@ -855,7 +893,21 @@ class PayrollService:
                         if record.status == PayrollStatus.DRAFT:
                             record.status = PayrollStatus.PROCESSED
                             record.updated_at = self._now()
-                            emit_canonical_event(self.events, legacy_event_name="PayrollProcessed", data={"payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
+                            self._emit_event(
+                                "PayrollProcessed",
+                                {
+                                    "payroll_record_id": record.payroll_record_id,
+                                    "employee_id": record.employee_id,
+                                    "pay_period_start": record.pay_period_start.isoformat(),
+                                    "pay_period_end": record.pay_period_end.isoformat(),
+                                    "gross_pay": str(record.gross_pay),
+                                    "net_pay": str(record.net_pay),
+                                    "currency": record.currency,
+                                    "status": record.status.value,
+                                },
+                                correlation_id=trace,
+                                idempotency_key=record.payroll_record_id,
+                            )
                         if record.status in {PayrollStatus.PROCESSED, PayrollStatus.PAID}:
                             processed_ids.add(record.payroll_record_id)
 
@@ -873,19 +925,7 @@ class PayrollService:
                         "consistency": validation,
                     }
                 }
-            self.observability.logger.audit(
-                "payroll_run_processed",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="PayrollRun",
-                entity_id=f"{period_start}:{period_end}",
-                context={
-                    "batch_id": batch.batch_id,
-                    "processed_count": batch.processed_count,
-                    "failed_count": batch.failed_count,
-                    "status": batch.status.value,
-                },
-            )
+            self._audit_payroll_mutation('payroll_run_processed', ctx, 'PayrollRun', f'{period_start}:{period_end}', {}, {'batch': batch.to_dict(), 'period_start': period_start, 'period_end': period_end, 'processed_count': batch.processed_count, 'failed_count': batch.failed_count}, trace_id=trace)
             self._finalize_observation(
                 "run_payroll",
                 trace,
@@ -931,7 +971,12 @@ class PayrollService:
             "at": self._now().isoformat(),
         }
         if not self.events or self.events[-1] != event:
-            emit_canonical_event(self.events, legacy_event_name="PayrollMonthlyTriggerExecuted", data={k: v for k, v in event.items() if k != "type"}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace_id or self._trace(None), idempotency_key=f"monthly:{trigger_date.isoformat()}")
+            self._emit_event(
+                "PayrollMonthlyTriggerExecuted",
+                {k: v for k, v in event.items() if k != "type"},
+                correlation_id=trace_id or self._trace(None),
+                idempotency_key=f"monthly:{trigger_date.isoformat()}",
+            )
         return status, {
             "data": {
                 "trigger": "monthly",
@@ -947,6 +992,7 @@ class PayrollService:
         self._require_admin(ctx)
         with self._lock:
             record = self.records.get(payroll_record_id)
+            before = record.to_dict() if record else {}
             if not record:
                 raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
             if record.status in {PayrollStatus.PAID, PayrollStatus.CANCELLED}:
@@ -976,14 +1022,7 @@ class PayrollService:
             batch_id = self.record_batches.get(record.payroll_record_id)
             if batch_id and batch_id in self.batches:
                 self._recompute_batch(self.batches[batch_id])
-        self.observability.logger.audit(
-            "payroll_record_adjusted",
-            trace_id=trace,
-            actor=ctx.employee_id or ctx.role.value,
-            entity="PayrollRecord",
-            entity_id=record.payroll_record_id,
-            context={"fields": sorted(payload.keys())},
-        )
+        self._audit_payroll_mutation('payroll_record_adjusted', ctx, 'PayrollRecord', record.payroll_record_id, before, record.to_dict(), trace_id=trace)
         self._finalize_observation("patch_payroll_record", trace, started, True, {"status": 200})
         return 200, record.to_dict()
 
@@ -1003,6 +1042,7 @@ class PayrollService:
         self._require_admin(ctx)
         with self._lock:
             record = self.records.get(payroll_record_id)
+            before = record.to_dict() if record else {}
             if not record:
                 raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
 
@@ -1019,24 +1059,60 @@ class PayrollService:
             if record.status != PayrollStatus.PROCESSED:
                 raise ServiceError("CONFLICT", "Only processed records can be marked paid", 409)
 
+            if not record.payment_workflow_id:
+                workflow = self.workflow_service.start_workflow(
+                    tenant_id=self.tenant_id,
+                    definition_code="payroll_disbursement_approval",
+                    source_service="payroll-service",
+                    subject_type="PayrollRecord",
+                    subject_id=record.payroll_record_id,
+                    actor_id=ctx.employee_id or ctx.role.value,
+                    actor_type="user",
+                    context={
+                        "approver_assignee": f"role:{ctx.role.value}",
+                        "escalation_assignee": "role:Admin",
+                    },
+                    trace_id=trace,
+                )
+                record.payment_workflow_id = workflow["workflow_id"]
+            try:
+                workflow = self.workflow_service.approve_step(
+                    record.payment_workflow_id,
+                    tenant_id=self.tenant_id,
+                    actor_id=ctx.employee_id or ctx.role.value,
+                    actor_type="user",
+                    actor_role=ctx.role.value,
+                    comment="Payroll disbursement approved",
+                    trace_id=trace,
+                )
+            except WorkflowServiceError as exc:
+                raise ServiceError(exc.code, exc.message, exc.status_code, exc.details) from exc
+            if workflow.get("metadata", {}).get("terminal_result") != "approved":
+                raise ServiceError("CONFLICT", "Workflow approval did not complete payroll disbursement", 409)
+
             record.payment_date = date.fromisoformat(payment_date) if payment_date else date.today()
             record.status = PayrollStatus.PAID
             record.updated_at = self._now()
-            emit_canonical_event(self.events, legacy_event_name="PayrollPaid", data={"payroll_record_id": record.payroll_record_id, "at": record.updated_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
+            self._emit_event(
+                "PayrollPaid",
+                {
+                    "payroll_record_id": record.payroll_record_id,
+                    "employee_id": record.employee_id,
+                    "payment_date": record.payment_date.isoformat() if record.payment_date else None,
+                    "net_pay": str(record.net_pay),
+                    "currency": record.currency,
+                    "status": record.status.value,
+                },
+                correlation_id=trace,
+                idempotency_key=record.payroll_record_id,
+            )
             batch_id = self.record_batches.get(record.payroll_record_id)
             batch_payload = None
             if batch_id and batch_id in self.batches:
                 batch = self.batches[batch_id]
                 self._recompute_batch(batch)
                 batch_payload = batch.to_dict()
-        self.observability.logger.audit(
-            "payroll_record_paid",
-            trace_id=trace,
-            actor=ctx.employee_id or ctx.role.value,
-            entity="PayrollRecord",
-            entity_id=record.payroll_record_id,
-            context={"payment_date": record.payment_date.isoformat(), "batch_id": self.record_batches.get(record.payroll_record_id)},
-        )
+        self._audit_payroll_mutation('payroll_record_paid', ctx, 'PayrollRecord', record.payroll_record_id, before, record.to_dict(), trace_id=trace)
         self._finalize_observation("mark_paid", trace, started, True, {"status": 200})
         payload = record.to_dict()
         if batch_payload is not None:
@@ -1088,6 +1164,7 @@ class PayrollService:
         ctx = self.decode_bearer_token(authorization)
         with self._lock:
             record = self.records.get(payroll_record_id)
+            before = record.to_dict() if record else {}
             if not record:
                 raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
             self._assert_read_scope(ctx, record)

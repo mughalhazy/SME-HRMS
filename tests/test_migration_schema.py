@@ -8,8 +8,8 @@ CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_
 WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
 PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_normalization.sql').read_text()
 TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
-BACKGROUND_JOBS_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_background_jobs_schema.sql').read_text()
-FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{BACKGROUND_JOBS_SCHEMA}"
+NOTIFICATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_notification_service.sql').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{NOTIFICATION_SCHEMA}"
 
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
@@ -102,6 +102,29 @@ def test_persistence_normalization_schema_adds_auth_and_attendance_persistence()
         assert fragment in PERSISTENCE_SCHEMA
 
 
+
+
+def test_notification_schema_adds_canonical_notification_tables() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS notification_templates',
+        'topic_code VARCHAR(100) NOT NULL',
+        "status VARCHAR(20) NOT NULL DEFAULT 'Active'",
+        'CREATE TABLE IF NOT EXISTS notification_messages',
+        'recipient VARCHAR(100) NOT NULL',
+        'delivered_at TIMESTAMPTZ',
+        'failed_at TIMESTAMPTZ',
+        'retry_count INTEGER NOT NULL DEFAULT 0',
+        'CREATE TABLE IF NOT EXISTS delivery_attempts',
+        "outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('Sent', 'Failed', 'Deferred', 'Suppressed'))",
+        'CREATE TABLE IF NOT EXISTS notification_preferences',
+        'CONSTRAINT uq_notification_preferences_subject_topic UNIQUE (tenant_id, subject_type, subject_id, topic_code)',
+        'REFERENCES notification_templates (template_id)',
+        'REFERENCES notification_messages (message_id)',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in NOTIFICATION_SCHEMA
+
 def test_tenant_foundation_schema_adds_tenant_registry_and_config_store() -> None:
     expected_fragments = [
         'CREATE TABLE IF NOT EXISTS tenants',
@@ -119,18 +142,16 @@ def test_tenant_foundation_schema_adds_tenant_registry_and_config_store() -> Non
         assert fragment in TENANT_FOUNDATION_SCHEMA
 
 
-def test_background_jobs_schema_adds_job_and_outbox_persistence() -> None:
+def test_event_outbox_schema_adds_dispatch_and_consumer_dedupe_tables() -> None:
     expected_fragments = [
-        'CREATE TABLE IF NOT EXISTS event_outbox',
-        'aggregate_type VARCHAR(80) NOT NULL',
-        'payload JSONB NOT NULL',
-        'CREATE TABLE IF NOT EXISTS background_jobs',
-        'job_type VARCHAR(120) NOT NULL',
-        "status VARCHAR(20) NOT NULL CHECK (status IN ('Scheduled', 'Running', 'Succeeded', 'Failed', 'DeadLettered', 'Cancelled'))",
-        'CREATE TABLE IF NOT EXISTS background_job_failures',
-        'retryable BOOLEAN NOT NULL DEFAULT TRUE',
-        'REFERENCES background_jobs (tenant_id, job_id)',
+        'CREATE TABLE IF NOT EXISTS service_outbox',
+        'source_service VARCHAR(80) NOT NULL',
+        'event_payload JSONB NOT NULL',
+        "status VARCHAR(20) NOT NULL DEFAULT 'Pending'",
+        'CREATE TABLE IF NOT EXISTS processed_events',
+        'consumer_name VARCHAR(120) NOT NULL',
+        'metadata JSONB NOT NULL DEFAULT',
     ]
 
     for fragment in expected_fragments:
-        assert fragment in BACKGROUND_JOBS_SCHEMA
+        assert fragment in EVENT_OUTBOX_SCHEMA

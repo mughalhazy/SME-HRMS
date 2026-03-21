@@ -10,9 +10,11 @@ from threading import RLock
 from time import perf_counter
 
 from event_contract import EventRegistry, emit_canonical_event
+from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from workflow_service import WorkflowService, WorkflowServiceError
 
 
 class Role(str, Enum):
@@ -101,6 +103,7 @@ class LeaveRequest:
     total_days: float
     reason: str | None
     approver_employee_id: str | None
+    workflow_id: str | None
     status: LeaveStatus
     submitted_at: datetime | None
     decision_at: datetime | None
@@ -134,8 +137,9 @@ class LeaveServiceError(Exception):
 
 
 class LeaveService:
-    def __init__(self, db_path: str | None = None):
+    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None):
         self.requests = PersistentKVStore[str, LeaveRequest](service='leave-service', namespace='requests', db_path=db_path)
+        shared_db_path = self.requests.db_path
         self.events: list[dict] = []
         self.error_logger = CentralErrorLogger("leave-service")
         self.dead_letters = DeadLetterQueue()
@@ -143,6 +147,8 @@ class LeaveService:
         self.observability = Observability("leave-service")
         self.tenant_id = DEFAULT_TENANT_ID
         self.event_registry = EventRegistry()
+        self.notification_service = notification_service or NotificationService()
+        self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
         self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=db_path)
         seeded_employees = {
             "emp-admin": EmployeeRecord(self.tenant_id, "emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
@@ -153,10 +159,26 @@ class LeaveService:
         for employee_id, employee in seeded_employees.items():
             if employee_id not in self.employees:
                 self.employees[employee_id] = employee
-        self.leave_balances = PersistentKVStore[tuple[str, LeaveType], LeaveBalance](service='leave-service', namespace='leave_balances', db_path=db_path)
-        self.attendance_impacts = PersistentKVStore[str, list[dict]](service='leave-service', namespace='attendance_impacts', db_path=db_path)
+        self.leave_balances = PersistentKVStore[tuple[str, LeaveType], LeaveBalance](service='leave-service', namespace='leave_balances', db_path=shared_db_path)
+        self.attendance_impacts = PersistentKVStore[str, list[dict]](service='leave-service', namespace='attendance_impacts', db_path=shared_db_path)
         self._lock = RLock()
         self._seed_leave_balances()
+        self.workflow_service.register_definition(
+            tenant_id=self.tenant_id,
+            code="leave_request_approval",
+            source_service="leave-service",
+            subject_type="LeaveRequest",
+            description="Centralized leave approval workflow aligned to the workflow catalog.",
+            steps=[
+                {
+                    "name": "manager-approval",
+                    "type": "approval",
+                    "assignee_template": "{approver_employee_id}",
+                    "sla": "PT24H",
+                    "escalation_assignee_template": "{escalation_assignee}",
+                }
+            ],
+        )
 
     def _seed_leave_balances(self) -> None:
         for employee_id in self.employees:
@@ -318,7 +340,14 @@ class LeaveService:
         try:
             if simulate_failure:
                 raise RuntimeError(f"simulated failure while emitting {event}")
-            emit_canonical_event(self.events, legacy_event_name=event, data={**payload, "tenant_id": self.tenant_id}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=self._trace(trace_id), idempotency_key=payload.get("leave_request_id"))
+            self.outbox.tenant_id = self.tenant_id
+            self.outbox.enqueue(
+                legacy_event_name=event,
+                data={**payload, "tenant_id": self.tenant_id},
+                correlation_id=self._trace(trace_id),
+                idempotency_key=payload.get("leave_request_id"),
+            )
+            self.outbox.dispatch_pending(self.events.append)
             self.observability.logger.info(
                 "leave.event_emitted",
                 trace_id=self._trace(trace_id),
@@ -383,50 +412,26 @@ class LeaveService:
         payload["attendance_impacts"] = list(self.attendance_impacts.get(leave.leave_request_id, []))
         payload["employee_status"] = self.employees[leave.employee_id].status.value
         payload["tenant_id"] = leave.tenant_id
+        payload["workflow"] = self.workflow_service.get_instance(leave.workflow_id, tenant_id=leave.tenant_id) if leave.workflow_id else None
         return payload
 
-    def recompute_employee_balance(self, employee_id: str, tenant_id: str | None = None, trace_id: str | None = None) -> dict:
-        self.tenant_id = self._resolve_tenant(tenant_id)
-        trace = self._trace(trace_id)
-        started = perf_counter()
-        with self._lock:
-            employee = self.employees.get(employee_id)
-            if employee and employee.tenant_id != self.tenant_id:
-                employee = None
-            if not employee:
-                self._fail(404, "EMPLOYEE_NOT_FOUND", "Employee not found", trace)
 
-            for leave_type, entitlement_days in BALANCE_CAPS.items():
-                self.leave_balances[(employee_id, leave_type)] = LeaveBalance(
-                    tenant_id=self.tenant_id,
-                    employee_id=employee_id,
-                    leave_type=leave_type,
-                    entitlement_days=entitlement_days,
-                    reserved_days=0.0,
-                    approved_days=0.0,
-                )
+    def _actor_payload(self, actor_role: str, actor_employee_id: str, *, actor_type: str = 'user') -> dict[str, str | None]:
+        return {
+            'id': actor_employee_id or actor_role,
+            'type': actor_type,
+            'role': actor_role,
+        }
 
-            for leave in self.requests.values():
-                if leave.tenant_id != self.tenant_id or leave.employee_id != employee_id:
-                    continue
-                balance = self._get_balance(employee_id, leave.leave_type)
-                if leave.status == LeaveStatus.SUBMITTED:
-                    balance.reserved_days += leave.total_days
-                elif leave.status == LeaveStatus.APPROVED:
-                    balance.approved_days += leave.total_days
-
-            self._sync_employee_leave_status(employee_id)
-            employee_detail = self.get_employee_detail(employee_id)
+    def _audit_leave_mutation(self, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, before: dict, after: dict, trace_id: str | None) -> None:
         self.observability.logger.audit(
-            "leave_balance_recomputed",
-            trace_id=trace,
-            actor=employee_id,
-            entity="Employee",
-            entity_id=employee_id,
-            context={"tenant_id": self.tenant_id},
+            action,
+            trace_id=trace_id,
+            actor=self._actor_payload(actor_role, actor_employee_id),
+            entity='LeaveRequest',
+            entity_id=leave_request_id,
+            context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
         )
-        self._finalize_observation("recompute_employee_balance", trace, started, True, {"status": 200, "employee_id": employee_id})
-        return employee_detail
 
     def replay_dead_letters(self) -> list[dict]:
         recovered = self.dead_letters.recover(
@@ -436,7 +441,14 @@ class LeaveService:
         for entry in recovered:
             payload = dict(entry.payload)
             payload.pop("simulate_failure", None)
-            emit_canonical_event(self.events, legacy_event_name=entry.operation, data={**payload, "tenant_id": self.tenant_id, "recovered_from_dead_letter": True}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=entry.trace_id, idempotency_key=payload.get("leave_request_id"))
+            self.outbox.tenant_id = self.tenant_id
+            self.outbox.enqueue(
+                legacy_event_name=entry.operation,
+                data={**payload, "tenant_id": self.tenant_id, "recovered_from_dead_letter": True},
+                correlation_id=entry.trace_id,
+                idempotency_key=payload.get("leave_request_id"),
+            )
+        self.outbox.dispatch_pending(self.events.append)
         return [entry.__dict__ for entry in recovered]
 
     def create_request(
@@ -478,6 +490,7 @@ class LeaveService:
                     total_days=self._total_days(start_date, end_date),
                     reason=reason,
                     approver_employee_id=approver_employee_id,
+                    workflow_id=None,
                     status=LeaveStatus.DRAFT,
                     submitted_at=None,
                     decision_at=None,
@@ -485,6 +498,7 @@ class LeaveService:
                     updated_at=now,
                 )
                 self.requests[leave.leave_request_id] = leave
+            self._audit_leave_mutation('leave_request_created', actor_role, actor_employee_id, leave.leave_request_id, {}, self._response_payload(leave), trace)
             self.observability.logger.info(
                 "leave.request_created",
                 trace_id=trace,
@@ -503,6 +517,7 @@ class LeaveService:
         role = Role(actor_role)
         with self._lock:
             leave = self.requests.get(leave_request_id)
+            before = self._response_payload(leave) if leave else {}
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
             self._assert_resource_tenant(leave.tenant_id, trace)
@@ -527,6 +542,24 @@ class LeaveService:
 
             self._reserve_balance(leave, trace)
             ts = self._now()
+            if not leave.approver_employee_id:
+                employee = self.employees[leave.employee_id]
+                leave.approver_employee_id = employee.manager_employee_id or "emp-admin"
+            workflow = self.workflow_service.start_workflow(
+                tenant_id=self.tenant_id,
+                definition_code="leave_request_approval",
+                source_service="leave-service",
+                subject_type="LeaveRequest",
+                subject_id=leave.leave_request_id,
+                actor_id=actor_employee_id,
+                actor_type="user",
+                context={
+                    "approver_employee_id": leave.approver_employee_id,
+                    "escalation_assignee": "emp-admin",
+                },
+                trace_id=trace,
+            )
+            leave.workflow_id = workflow["workflow_id"]
             leave.status = LeaveStatus.SUBMITTED
             leave.submitted_at = ts
             leave.updated_at = ts
@@ -548,14 +581,7 @@ class LeaveService:
                 simulate_failure=simulate_event_failure,
             )
             self.idempotency.record(key, fingerprint, 200, payload)
-        self.observability.logger.audit(
-            "leave_request_submitted",
-            trace_id=trace,
-            actor=actor_employee_id,
-            entity="LeaveRequest",
-            entity_id=leave.leave_request_id,
-            context={"employee_id": leave.employee_id},
-        )
+        self._audit_leave_mutation('leave_request_submitted', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
         self._finalize_observation("submit_request", trace, started, True, {"status": 200})
         return 200, payload
 
@@ -566,6 +592,7 @@ class LeaveService:
         role = Role(actor_role)
         with self._lock:
             leave = self.requests.get(leave_request_id)
+            before = self._response_payload(leave) if leave else {}
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
             self._assert_resource_tenant(leave.tenant_id, trace)
@@ -590,20 +617,48 @@ class LeaveService:
             if replay is not None:
                 self._finalize_observation("decide_request", trace, started, True, {"status": replay.status_code, "replayed": True, "action": action})
                 return replay.status_code, replay.payload
+            if not leave.workflow_id:
+                self._fail(409, "WORKFLOW_MISSING", "Leave request is missing its centralized workflow", trace)
+
+            try:
+                workflow = (
+                    self.workflow_service.approve_step(
+                        leave.workflow_id,
+                        tenant_id=self.tenant_id,
+                        actor_id=actor_employee_id,
+                        actor_type="user",
+                        actor_role=actor_role,
+                        comment=reason,
+                        trace_id=trace,
+                    )
+                    if action == "approve"
+                    else self.workflow_service.reject_step(
+                        leave.workflow_id,
+                        tenant_id=self.tenant_id,
+                        actor_id=actor_employee_id,
+                        actor_type="user",
+                        actor_role=actor_role,
+                        comment=reason,
+                        trace_id=trace,
+                    )
+                )
+            except WorkflowServiceError as exc:
+                self._fail(exc.status_code, exc.code, exc.message, trace, exc.details)
 
             ts = self._now()
-            if action == "approve":
+            terminal_result = workflow.get("metadata", {}).get("terminal_result")
+            if action == "approve" and terminal_result == "approved":
                 self._consume_reserved_balance(leave)
                 leave.status = LeaveStatus.APPROVED
                 event = "LeaveRequestApproved"
-            elif action == "reject":
+            elif action == "reject" and terminal_result == "rejected":
                 self._release_reserved_balance(leave)
                 leave.status = LeaveStatus.REJECTED
                 if reason:
                     leave.reason = f"{leave.reason or ''}\n[Rejection] {reason}".strip()
                 event = "LeaveRequestRejected"
             else:
-                self._fail(400, "BAD_REQUEST", "Unknown action", trace)
+                self._fail(409, "INVALID_TRANSITION", "Workflow resolution did not produce a valid leave decision", trace)
             leave.approver_employee_id = actor_employee_id
             leave.decision_at = ts
             leave.updated_at = ts
@@ -622,14 +677,7 @@ class LeaveService:
                 event_payload.update({"total_days": leave.total_days, "leave_type": leave.leave_type.value})
             self._emit_event(event, event_payload, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
             self.idempotency.record(key, fingerprint, 200, payload)
-        self.observability.logger.audit(
-            f"leave_request_{action}",
-            trace_id=trace,
-            actor=actor_employee_id,
-            entity="LeaveRequest",
-            entity_id=leave.leave_request_id,
-            context={"employee_id": leave.employee_id, "status": leave.status.value},
-        )
+        self._audit_leave_mutation(f'leave_request_{action}', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
         self._finalize_observation("decide_request", trace, started, True, {"status": 200, "action": action})
         return 200, payload
 
@@ -640,6 +688,7 @@ class LeaveService:
         role = Role(actor_role)
         with self._lock:
             leave = self.requests.get(leave_request_id)
+            before = self._response_payload(leave) if leave else {}
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
             self._assert_resource_tenant(leave.tenant_id, trace)
@@ -674,16 +723,10 @@ class LeaveService:
                     workflow="leave_request",
                     trace_id=trace,
                 )
-                self.observability.logger.audit(
-                    "leave_request_cancelled",
-                    trace_id=trace,
-                    actor=actor_employee_id,
-                    entity="LeaveRequest",
-                    entity_id=leave.leave_request_id,
-                    context={"employee_id": leave.employee_id},
-                )
+                payload = self._response_payload(leave)
+                self._audit_leave_mutation('leave_request_cancelled', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
                 self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": True})
-                return 200, self._response_payload(leave)
+                return 200, payload
 
             start = date.fromisoformat(patch.get("start_date")) if patch.get("start_date") else leave.start_date
             end = date.fromisoformat(patch.get("end_date")) if patch.get("end_date") else leave.end_date
@@ -706,13 +749,15 @@ class LeaveService:
                 leave.approver_employee_id = patch["approver_employee_id"]
             leave.total_days = next_total_days
             leave.updated_at = self._now()
+        payload = self._response_payload(leave)
+        self._audit_leave_mutation('leave_request_updated', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
         self.observability.logger.info(
             "leave.request_patched",
             trace_id=trace,
             context={"leave_request_id": leave.leave_request_id, "fields": sorted(patch.keys())},
         )
         self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": False})
-        return 200, self._response_payload(leave)
+        return 200, payload
 
     def get_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None, tenant_id: str | None = None) -> tuple[int, dict]:
         self.tenant_id = self._resolve_tenant(tenant_id)
