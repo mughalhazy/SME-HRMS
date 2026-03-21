@@ -13,19 +13,18 @@ export type NavigationItemKey =
   | 'notifications'
 
 export const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', path: '/dashboard', priority: 1 },
-  { key: 'employees', label: 'Employees', path: '/employees', priority: 2 },
-  { key: 'organization', label: 'Organization', path: '/organization', priority: 3 },
-  { key: 'attendance', label: 'Attendance', path: '/attendance', priority: 4 },
-  { key: 'leave', label: 'Leave', path: '/leave', priority: 5 },
-  { key: 'payroll', label: 'Payroll', path: '/payroll', priority: 6 },
-  { key: 'hiring', label: 'Hiring', path: '/hiring', priority: 7 },
-  { key: 'performance', label: 'Performance', path: '/performance', priority: 8 },
+  { key: 'dashboard', label: 'Dashboard', path: '/dashboard' },
+  { key: 'employees', label: 'Employees', path: '/employees' },
+  { key: 'organization', label: 'Organization', path: '/organization' },
+  { key: 'attendance', label: 'Attendance', path: '/attendance' },
+  { key: 'leave', label: 'Leave', path: '/leave' },
+  { key: 'payroll', label: 'Payroll', path: '/payroll' },
+  { key: 'hiring', label: 'Hiring', path: '/hiring' },
+  { key: 'performance', label: 'Performance', path: '/performance' },
 ] as const satisfies readonly {
   key: Exclude<NavigationItemKey, 'settings' | 'notifications'>
   label: string
   path: string
-  priority: number
 }[]
 
 type PrimaryNavigationPath = (typeof NAV_ITEMS)[number]['path']
@@ -115,7 +114,6 @@ export type NavigationItem = {
   description: string
   section: NavigationSectionKey
   matcherPrefixes: string[]
-  priority?: number
 }
 
 export const navigationSections: { key: NavigationSectionKey; title: string }[] = [
@@ -134,18 +132,8 @@ export const primaryNavigationItems: NavigationItem[] = NAV_ITEMS.map((item) => 
     key: item.key,
     href: item.path,
     label: item.label,
-    priority: item.priority,
   }
-}).sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0))
-
-export function partitionPrimaryNavigationItems(maxVisibleItems: number) {
-  const safeVisibleCount = Math.min(Math.max(maxVisibleItems, 0), primaryNavigationItems.length)
-
-  return {
-    visibleNavigationItems: primaryNavigationItems.slice(0, safeVisibleCount),
-    overflowNavigationItems: primaryNavigationItems.slice(safeVisibleCount),
-  }
-}
+})
 
 const utilityNavigationDefinitions: NavigationItem[] = [
   {
