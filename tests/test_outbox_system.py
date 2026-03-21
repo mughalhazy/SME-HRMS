@@ -72,3 +72,33 @@ def test_outbox_consumer_is_replay_safe(tmp_path: Path) -> None:
     assert duplicate_second is True
     assert first == second
     assert invocations['count'] == 1
+
+
+def test_event_registry_scopes_idempotency_keys_by_tenant(tmp_path: Path) -> None:
+    manager = OutboxManager(
+        service_name='integration-service',
+        tenant_id='tenant-default',
+        db_path=str(tmp_path / 'tenant-scope.sqlite3'),
+    )
+
+    first = manager.enqueue(
+        legacy_event_name='PayrollProcessed',
+        data={
+            'payroll_record_id': 'pay-1',
+            'employee_id': 'emp-1',
+            'tenant_id': 'tenant-default',
+        },
+        idempotency_key='pay-1',
+    )
+
+    second, duplicate = manager.registry.register(
+        {
+            **first,
+            'event_id': 'evt-tenant-b',
+            'tenant_id': 'tenant-other',
+            'data': {**first['data'], 'tenant_id': 'tenant-other'},
+        }
+    )
+
+    assert duplicate is False
+    assert second['tenant_id'] == 'tenant-other'

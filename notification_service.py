@@ -471,6 +471,7 @@ class NotificationService:
         self.messages: dict[str, NotificationMessage] = {}
         self.delivery_attempts: list[DeliveryAttempt] = []
         self.events: list[dict[str, Any]] = []
+        self.processed_events: dict[str, dict[str, Any]] = {}
         self.event_registry = EventRegistry()
         self.dead_letters = DeadLetterQueue()
         self.observability = Observability("notification-service")
@@ -711,7 +712,7 @@ class NotificationService:
 
     def ingest_event(self, event: dict[str, Any], *, trace_id: str | None = None) -> list[NotificationMessage]:
         try:
-            canonical_event, _ = ensure_event_contract(event, source="notification-api", registry=self.event_registry)
+            canonical_event, duplicate = ensure_event_contract(event, source="notification-api", registry=self.event_registry)
         except EventContractError as exc:
             if str(exc) == "missing_tenant_context":
                 raise NotificationServiceError("VALIDATION_ERROR", "tenant_id is required") from exc
@@ -719,6 +720,13 @@ class NotificationService:
 
         tenant_id = normalize_tenant_id(str(canonical_event["tenant_id"]))
         self._assert_event_payload_is_tenant_safe(tenant_id=tenant_id, event=canonical_event)
+        processed_key = f"{tenant_id}:{canonical_event['event_id']}"
+        if processed_key in self.processed_events:
+            return [
+                self.messages[message_id]
+                for message_id in self.processed_events[processed_key]["message_ids"]
+                if message_id in self.messages
+            ]
         event_type = canonical_event["event_type"]
         event_name = str(canonical_event["metadata"].get("legacy_event_name") or legacy_event_name_for(event_type))
 
@@ -752,6 +760,7 @@ class NotificationService:
                         ),
                         payload=self._enrich_payload(
                             tenant_id=tenant_id,
+                            event_id=str(canonical_event["event_id"]),
                             event_name=event_name,
                             event_type=event_type,
                             payload=canonical_event["data"],
@@ -762,6 +771,14 @@ class NotificationService:
                         trace_id=trace_id,
                     )
                 )
+        self.processed_events[processed_key] = {
+            "event_id": str(canonical_event["event_id"]),
+            "tenant_id": tenant_id,
+            "event_type": event_type,
+            "duplicate": duplicate,
+            "message_ids": [message.message_id for message in created],
+            "processed_at": self._now().isoformat(),
+        }
         return created
 
     def _assert_event_payload_is_tenant_safe(self, *, tenant_id: str, event: dict[str, Any]) -> None:
@@ -780,6 +797,7 @@ class NotificationService:
         self,
         *,
         tenant_id: str,
+        event_id: str,
         event_name: str,
         event_type: str,
         payload: dict[str, Any],
@@ -788,6 +806,7 @@ class NotificationService:
         tenant_config = self._tenant_config(tenant_id)
         return {
             **payload,
+            "source_event_id": event_id,
             "event_name": event_name,
             "event_type": event_type,
             "tenant_id": tenant_id,

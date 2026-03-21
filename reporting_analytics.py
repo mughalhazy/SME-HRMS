@@ -9,7 +9,9 @@ from threading import RLock
 from typing import Any, Iterable
 from uuid import uuid4
 
+from event_contract import EventContractError, EventRegistry, ensure_event_contract
 from persistent_store import PersistentKVStore
+from tenant_support import normalize_tenant_id
 
 
 class ReportingAnalyticsError(ValueError):
@@ -111,7 +113,7 @@ class ReportingAnalyticsService:
     CADENCES = {'daily', 'weekly', 'monthly'}
 
     def __init__(self, db_path: str | None = None, *, tenant_id: str = 'tenant-default') -> None:
-        self.tenant_id = tenant_id
+        self.tenant_id = normalize_tenant_id(tenant_id)
         self.aggregate_snapshots = PersistentKVStore[str, AggregateSnapshot](service='reporting-analytics', namespace='aggregate_snapshots', db_path=db_path)
         self.report_definitions = PersistentKVStore[str, ReportDefinition](service='reporting-analytics', namespace='report_definitions', db_path=db_path)
         self.report_runs = PersistentKVStore[str, ReportRun](service='reporting-analytics', namespace='report_runs', db_path=db_path)
@@ -120,6 +122,7 @@ class ReportingAnalyticsService:
         self.processed_events = PersistentKVStore[str, dict[str, Any]](service='reporting-analytics', namespace='processed_events', db_path=db_path)
         self.read_models = PersistentKVStore[str, dict[str, Any]](service='reporting-analytics', namespace='read_models', db_path=db_path)
         self.projection_state = PersistentKVStore[str, dict[str, Any]](service='reporting-analytics', namespace='projection_state', db_path=db_path)
+        self.event_registry = EventRegistry()
         self._lock = RLock()
 
     @staticmethod
@@ -151,7 +154,11 @@ class ReportingAnalyticsService:
     def ingest_read_model(self, model_name: str, rows: Iterable[dict[str, Any]]) -> None:
         payload = {
             'model_name': model_name,
-            'rows': [dict(row) for row in rows],
+            'rows': [
+                {**dict(row), 'tenant_id': normalize_tenant_id(dict(row).get('tenant_id') or self.tenant_id)}
+                for row in rows
+                if normalize_tenant_id(dict(row).get('tenant_id') or self.tenant_id) == self.tenant_id
+            ],
             'updated_at': self._now(),
         }
         self.read_models[model_name] = payload
@@ -176,13 +183,25 @@ class ReportingAnalyticsService:
         }
 
     def ingest_event(self, event: dict[str, Any]) -> None:
-        event_id = str(event.get('event_id') or uuid4())
-        payload = dict(event)
+        try:
+            payload, _ = ensure_event_contract(event, source=str(event.get('source') or 'reporting-analytics'), registry=self.event_registry)
+        except EventContractError as exc:
+            if str(exc) == 'missing_tenant_context':
+                raise ReportingAnalyticsError('tenant_id is required') from exc
+            raise ReportingAnalyticsError(f'event contract validation failed: {exc}') from exc
+
+        tenant_id = normalize_tenant_id(str(payload.get('tenant_id') or self.tenant_id))
+        if tenant_id != self.tenant_id:
+            raise ReportingAnalyticsError('cross_tenant_event_blocked')
+
+        event_id = str(payload.get('event_id') or uuid4())
+        if self.processed_events.get(event_id) is not None:
+            return
         payload['ingested_at'] = self._now()
         self.processed_events[event_id] = payload
         self.projection_state['last_event'] = {
             'event_id': event_id,
-            'event_type': event.get('event_type') or event.get('legacy_event_type') or event.get('event_name'),
+            'event_type': payload.get('event_type') or payload.get('legacy_event_type') or payload.get('event_name'),
             'processed_at': self._now(),
         }
         self.rebuild_projections()

@@ -75,12 +75,37 @@ CANONICAL_EVENT_TYPES: dict[str, str] = {
     "NotificationSent": "notification.message.sent",
     "NotificationFailed": "notification.message.failed",
     "NotificationSuppressed": "notification.message.suppressed",
+    "DocumentStored": "employee.document.stored",
+    "DocumentUpdated": "employee.document.updated",
+    "DocumentExpiryTracked": "employee.document.expiry.tracked",
+    "PolicyAcknowledged": "employee.policy.acknowledged",
+    "ComplianceTaskCreated": "employee.compliance.task.created",
+    "ComplianceTaskAssigned": "employee.compliance.task.assigned",
+    "ComplianceTaskCompleted": "employee.compliance.task.completed",
+    "ContractActivated": "employee.contract.activated",
     "UserProvisioned": "auth.user.provisioned",
+    "UserAuthenticated": "auth.user.authenticated",
     "SessionRevoked": "auth.session.revoked",
+    "RefreshTokenRotated": "auth.refresh_token.rotated",
+    "RoleBindingChanged": "auth.role_binding.changed",
+    "AuthorizationPolicyUpdated": "auth.authorization.policy.updated",
 }
 
 LEGACY_EVENT_NAMES = {value: key for key, value in CANONICAL_EVENT_TYPES.items()}
-_RESERVED_KEYS = {"event_id", "event_type", "event_name", "type", "tenant_id", "timestamp", "source", "data", "metadata"}
+_RESERVED_KEYS = {
+    "event_id",
+    "event_type",
+    "event_name",
+    "type",
+    "tenant_id",
+    "timestamp",
+    "occurred_at",
+    "source",
+    "producer_service",
+    "trace_id",
+    "data",
+    "metadata",
+}
 
 
 class EventContractError(ValueError):
@@ -106,7 +131,7 @@ class EventRegistry:
             raise EventContractError("non_idempotent_events")
 
         if idempotency_key:
-            compound_key = f"{event['event_type']}::{idempotency_key}"
+            compound_key = f"{event['tenant_id']}::{event['event_type']}::{idempotency_key}"
             existing = self.events_by_idempotency_key.get(compound_key)
             if existing is not None:
                 if _event_fingerprint(existing) != fingerprint:
@@ -115,7 +140,7 @@ class EventRegistry:
 
         self.events_by_id[event_id] = event
         if idempotency_key:
-            self.events_by_idempotency_key[f"{event['event_type']}::{idempotency_key}"] = event
+            self.events_by_idempotency_key[f"{event['tenant_id']}::{event['event_type']}::{idempotency_key}"] = event
         return event, False
 
 
@@ -125,6 +150,9 @@ def normalize_event_type(raw: str) -> str:
         raise EventContractError("invalid_event_structure")
     if candidate in CANONICAL_EVENT_TYPES:
         return CANONICAL_EVENT_TYPES[candidate]
+    if "." in candidate:
+        parts = [segment for segment in candidate.split(".") if segment]
+        return ".".join(_normalize_segment(part) for part in parts)
     normalized = candidate.replace("-", ".").replace("_", ".")
     if "." in normalized:
         parts = [segment for segment in normalized.split(".") if segment]
@@ -225,7 +253,7 @@ def _normalize_structure(
 ) -> tuple[dict[str, Any], list[str]]:
     auto_fixed: list[str] = []
     metadata = dict(raw.get("metadata") or {})
-    payload_source = str(raw.get("source") or source)
+    payload_source = str(raw.get("source") or raw.get("producer_service") or source)
     raw_event_type = raw.get("event_type") or raw.get("event_name") or raw.get("type")
     if raw_event_type is None:
         raise EventContractError("invalid_event_structure")
@@ -245,19 +273,36 @@ def _normalize_structure(
     if "version" not in metadata or "correlation_id" not in metadata:
         auto_fixed.append("inject_missing_metadata")
 
+    resolved_tenant_id = raw.get("tenant_id") or tenant_id
+    if data.get("tenant_id") and resolved_tenant_id and str(data.get("tenant_id")) != str(resolved_tenant_id):
+        raise EventContractError("invalid_event_structure")
+    if resolved_tenant_id is not None and "tenant_id" not in data:
+        data["tenant_id"] = resolved_tenant_id
+        auto_fixed.append("propagate_tenant_context")
+
     if raw.get("event_name") or raw.get("type"):
         metadata.setdefault("legacy_event_name", str(raw.get("event_name") or raw.get("type")))
     metadata.setdefault("version", "v1")
     metadata.setdefault("correlation_id", correlation_id or str(uuid4()))
     if idempotency_key is not None:
         metadata.setdefault("idempotency_key", str(idempotency_key))
+    metadata.setdefault("trace_id", metadata.get("correlation_id"))
 
+    normalized_timestamp = _normalize_timestamp(raw.get("timestamp") or raw.get("occurred_at") or metadata.get("occurred_at"))
+    metadata.setdefault("occurred_at", normalized_timestamp)
+    metadata.setdefault("producer_service", payload_source)
+
+    legacy_name = str(metadata.get("legacy_event_name") or legacy_event_name_for(normalized_event_type))
     event = {
         "event_id": str(raw.get("event_id") or uuid4()),
         "event_type": normalized_event_type,
-        "tenant_id": raw.get("tenant_id") or tenant_id,
-        "timestamp": _normalize_timestamp(raw.get("timestamp")),
+        "event_name": legacy_name,
+        "tenant_id": resolved_tenant_id,
+        "timestamp": normalized_timestamp,
+        "occurred_at": normalized_timestamp,
         "source": payload_source,
+        "producer_service": payload_source,
+        "trace_id": str(metadata["correlation_id"]),
         "data": data,
         "metadata": metadata,
     }
@@ -274,7 +319,7 @@ def _normalize_timestamp(raw: Any) -> str:
 
 
 def _normalize_segment(segment: str) -> str:
-    if segment.islower():
+    if re.fullmatch(r"[a-z0-9_]+", segment):
         return segment
     pieces = re.findall(r"[A-Z]?[a-z0-9]+|[A-Z]+(?=[A-Z]|$)", segment)
     if not pieces:
@@ -300,6 +345,7 @@ def _qc_checks(event: dict[str, Any]) -> list[dict[str, Any]]:
         {"name": "event_naming_valid", "passed": _is_event_name_valid(event.get("event_type"))},
         {"name": "schema_compliant", "passed": _is_schema_compliant(event)},
         {"name": "tenant_id_present", "passed": bool(event.get("tenant_id"))},
+        {"name": "tenant_id_propagated_to_payload", "passed": event.get("data", {}).get("tenant_id") == event.get("tenant_id")},
         {"name": "correlation_id_present", "passed": bool(event.get("metadata", {}).get("correlation_id"))},
         {"name": "event_id_unique", "passed": bool(event.get("event_id"))},
     ]
@@ -316,7 +362,7 @@ def _is_event_name_valid(event_type: Any) -> bool:
     if not isinstance(event_type, str):
         return False
     parts = event_type.split(".")
-    return len(parts) >= 3 and all(bool(re.fullmatch(r"[a-z][a-z0-9_]*", part)) for part in parts)
+    return len(parts) >= 2 and all(bool(re.fullmatch(r"[a-z][a-z0-9_]*", part)) for part in parts)
 
 
 def _is_schema_compliant(event: dict[str, Any]) -> bool:
@@ -328,6 +374,8 @@ def _is_schema_compliant(event: dict[str, Any]) -> bool:
     return (
         isinstance(event.get("event_id"), str)
         and isinstance(event.get("event_type"), str)
+        and isinstance(event.get("event_name"), str)
+        and isinstance(event.get("trace_id"), str)
         and isinstance(event.get("source"), str)
         and isinstance(event.get("data"), dict)
         and isinstance(metadata, dict)
