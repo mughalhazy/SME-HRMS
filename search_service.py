@@ -9,6 +9,7 @@ from uuid import uuid4
 from event_contract import normalize_event_type
 from persistent_store import PersistentKVStore
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from resilience import Observability
 
 
 class SearchServiceError(ValueError):
@@ -116,6 +117,7 @@ class SearchIndexingService:
         self.processed_events = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='processed_events', db_path=db_path)
         self.projection_state = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='projection_state', db_path=db_path)
         self.query_audit = PersistentKVStore[str, dict[str, Any]](service='search-service', namespace='query_audit', db_path=db_path)
+        self.observability = Observability('search-service')
         self._lock = RLock()
 
     @staticmethod

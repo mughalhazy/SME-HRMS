@@ -218,3 +218,24 @@ def test_search_api_is_d1_compliant_and_supports_domain_specific_endpoints(tmp_p
     assert error_payload['status'] == 'error'
     assert error_payload['error']['code'] == 'VALIDATION_ERROR'
     assert error_payload['meta']['request_id'] == 'trace-search-missing-tenant'
+
+
+
+def test_search_api_emits_tenant_aware_metrics_for_success_and_validation_errors(tmp_path) -> None:
+    service = SearchIndexingService(db_path=str(tmp_path / 'search.sqlite3'))
+    jobs = BackgroundJobService(db_path=str(tmp_path / 'search.sqlite3'))
+    service.register_background_jobs(jobs)
+
+    service.ingest_read_model('candidate_pipeline_view', [_candidate_row()], replace=True)
+    service.consume_event({'event_id': 'evt-api-metrics-1', 'event_name': 'CandidateApplied', 'tenant_id': 'tenant-default'}, background_jobs=jobs)
+    jobs.run_due_jobs(tenant_id='tenant-default')
+
+    get_search(service, {'tenant_id': 'tenant-default', 'q': 'Noah'}, trace_id='trace-search-metrics-ok')
+    get_search(service, {'q': 'Noah'}, trace_id='trace-search-metrics-error')
+
+    metrics = service.observability.metrics.snapshot()
+    assert metrics['request_count'] == 2
+    assert metrics['error_count'] == 1
+    assert metrics['tenant_metrics']['tenant-default']['requests'] == 1
+    assert metrics['operations']['get_search']['count'] == 2
+    assert metrics['error_categories']['validation'] >= 1

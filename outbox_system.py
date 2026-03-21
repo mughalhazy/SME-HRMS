@@ -91,6 +91,18 @@ class OutboxManager:
             metadata={'legacy_event_name': legacy_event_name, **(metadata or {})},
         )
         self.records[record.outbox_id] = record
+        correlation = str(event.get('metadata', {}).get('correlation_id') or correlation_id or event.get('event_id'))
+        self.observability.logger.info(
+            'outbox.enqueued',
+            trace_id=correlation,
+            message=legacy_event_name,
+            action='outbox.enqueue',
+            status='pending',
+            tenant_id=self.tenant_id,
+            correlation_id=correlation,
+            context={'event_id': record.event_id, 'event_name': legacy_event_name, 'event_type': record.event_type, 'tenant_id': self.tenant_id, 'trace_stage': 'event'},
+        )
+        self.observability.record_trace('outbox.enqueue', request_id=correlation, status='pending', stage='event', context={'tenant_id': self.tenant_id, 'event_id': record.event_id, 'event_name': legacy_event_name, 'event_type': record.event_type, 'correlation_id': correlation})
         return event
 
     def dispatch_pending(
@@ -133,6 +145,9 @@ class OutboxManager:
                     'dispatched_at': now,
                     'attempt_count': record.attempt_count,
                 }
+                trace_id = str(record.payload.get('metadata', {}).get('correlation_id') or record.event_id)
+                self.observability.metrics.record_request('outbox.dispatch_pending', trace_id=trace_id, latency_ms=0.0, success=True, context={'tenant_id': record.tenant_id, 'event_name': record.event_type, 'event_id': record.event_id, 'status': 'dispatched', 'trace_stage': 'event', 'correlation_id': trace_id})
+                self.observability.record_trace('outbox.dispatch_pending', request_id=trace_id, status='dispatched', stage='event', context={'tenant_id': record.tenant_id, 'event_name': record.event_type, 'event_id': record.event_id, 'correlation_id': trace_id})
                 dispatched.append(record.payload)
             except Exception as exc:  # noqa: BLE001
                 now = _utc_now().isoformat()
@@ -152,10 +167,18 @@ class OutboxManager:
                     'last_error': str(exc),
                 }
                 self.dead_letters.push('outbox_dispatch', record.event_type, record.payload, str(exc), retryable=True)
+                trace_id = str(record.payload.get('metadata', {}).get('correlation_id') or record.event_id)
+                self.observability.metrics.record_request('outbox.dispatch_pending', trace_id=trace_id, latency_ms=0.0, success=False, context={'tenant_id': record.tenant_id, 'event_name': record.event_type, 'event_id': record.event_id, 'status': 'failed', 'trace_stage': 'event', 'error_category': 'dependency', 'correlation_id': trace_id})
+                self.observability.record_trace('outbox.dispatch_pending', request_id=trace_id, status='failed', stage='event', context={'tenant_id': record.tenant_id, 'event_name': record.event_type, 'event_id': record.event_id, 'error': str(exc), 'correlation_id': trace_id})
                 self.observability.logger.error(
                     'outbox.dispatch_failed',
+                    trace_id=trace_id,
                     message=record.event_type,
-                    context={'event_id': record.event_id, 'tenant_id': record.tenant_id, 'error': str(exc)},
+                    action='outbox.dispatch_pending',
+                    status='failed',
+                    tenant_id=record.tenant_id,
+                    correlation_id=trace_id,
+                    context={'event_id': record.event_id, 'tenant_id': record.tenant_id, 'error': str(exc), 'event_name': record.event_type, 'trace_stage': 'event'},
                 )
         return dispatched
 
@@ -172,8 +195,12 @@ class OutboxManager:
         replay = self.consumer_dedupe.replay_or_conflict(dedupe_key, fingerprint)
         if replay is not None:
             return replay.payload['result'], True
+        trace_id = str(event.get('metadata', {}).get('correlation_id') or event.get('trace_id') or event_id)
+        self.observability.record_trace('outbox.consume_once', request_id=trace_id, status='processing', stage='event', context={'tenant_id': str(event.get('tenant_id') or self.tenant_id), 'event_id': event_id, 'event_name': str(event.get('event_type') or event.get('event_name') or ''), 'consumer_name': consumer_name, 'correlation_id': trace_id})
         result = handler(event)
         outcome = {'consumer': consumer_name, 'event_id': event_id, 'processed_at': _utc_now().isoformat(), 'result': result}
         self.consumers[dedupe_key] = outcome
+        self.observability.metrics.record_request('outbox.consume_once', trace_id=trace_id, latency_ms=0.0, success=True, context={'tenant_id': str(event.get('tenant_id') or self.tenant_id), 'event_name': str(event.get('event_type') or event.get('event_name') or ''), 'event_id': event_id, 'consumer_name': consumer_name, 'status': 'processed', 'trace_stage': 'event', 'correlation_id': trace_id})
+        self.observability.record_trace('outbox.consume_once', request_id=trace_id, status='processed', stage='event', context={'tenant_id': str(event.get('tenant_id') or self.tenant_id), 'event_id': event_id, 'event_name': str(event.get('event_type') or event.get('event_name') or ''), 'consumer_name': consumer_name, 'correlation_id': trace_id})
         self.consumer_dedupe.record(dedupe_key, fingerprint, 200, outcome)
         return result, False

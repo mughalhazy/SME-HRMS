@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from persistent_store import PersistentKVStore
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from resilience import Observability
 
 
 @dataclass
@@ -31,6 +32,7 @@ class OutboxEvent:
 class EventOutbox:
     def __init__(self, *, db_path: str | None = None):
         self.events = PersistentKVStore[str, OutboxEvent](service='background-jobs', namespace='event_outbox', db_path=db_path)
+        self.observability = Observability('event-outbox')
         self._lock = RLock()
 
     @staticmethod
@@ -65,6 +67,23 @@ class EventOutbox:
                 created_at=self._now(),
             )
             self.events[outbox_event.event_id] = outbox_event
+            self.observability.logger.info(
+                'outbox.event_staged',
+                trace_id=trace_id,
+                message=event_name,
+                action='outbox.stage_event',
+                status='pending',
+                tenant_id=tenant,
+                correlation_id=trace_id,
+                context={'event_id': outbox_event.event_id, 'event_name': event_name, 'aggregate_type': aggregate_type, 'aggregate_id': aggregate_id, 'tenant_id': tenant, 'event_type': event_name, 'trace_stage': 'event'},
+            )
+            self.observability.record_trace(
+                'outbox.stage_event',
+                request_id=trace_id,
+                status='pending',
+                stage='event',
+                context={'tenant_id': tenant, 'event_name': event_name, 'event_id': outbox_event.event_id, 'aggregate_type': aggregate_type, 'aggregate_id': aggregate_id, 'correlation_id': trace_id},
+            )
             return outbox_event
 
     def stage_canonical_event(self, event: dict[str, Any], *, aggregate_type: str, aggregate_id: str) -> OutboxEvent:
@@ -132,9 +151,13 @@ class EventOutbox:
             try:
                 dispatcher(row)
                 self.mark_published(row.event_id)
+                self.observability.metrics.record_request('outbox.dispatch_pending', trace_id=row.trace_id, latency_ms=0.0, success=True, context={'tenant_id': row.tenant_id, 'event_name': row.event_name, 'event_id': row.event_id, 'status': 'published', 'trace_stage': 'event', 'correlation_id': row.trace_id})
+                self.observability.record_trace('outbox.dispatch_pending', request_id=row.trace_id, status='published', stage='event', context={'tenant_id': row.tenant_id, 'event_name': row.event_name, 'event_id': row.event_id, 'correlation_id': row.trace_id})
                 dispatched.append(row.event_id)
             except Exception as exc:  # noqa: BLE001
                 self.mark_failed(row.event_id)
+                self.observability.metrics.record_request('outbox.dispatch_pending', trace_id=row.trace_id, latency_ms=0.0, success=False, context={'tenant_id': row.tenant_id, 'event_name': row.event_name, 'event_id': row.event_id, 'status': 'failed', 'error_category': 'dependency', 'trace_stage': 'event', 'correlation_id': row.trace_id})
+                self.observability.record_trace('outbox.dispatch_pending', request_id=row.trace_id, status='failed', stage='event', context={'tenant_id': row.tenant_id, 'event_name': row.event_name, 'event_id': row.event_id, 'correlation_id': row.trace_id, 'error': str(exc)})
                 failed.append({'event_id': row.event_id, 'reason': str(exc), 'event_name': row.event_name})
         return {
             'dispatched_count': len(dispatched),

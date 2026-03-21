@@ -63,6 +63,7 @@ def get_search(service: SearchIndexingService, query: dict | None = None, *, tra
             'request_id': trace,
             'duration_ms': round((perf_counter() - started) * 1000, 3),
         }
+        service.observability.track('get_search', trace_id=trace, started_at=started, success=True, context={'tenant_id': str(tenant_id), 'status': 200, 'trace_stage': 'service'})
         return success_response(
             200,
             payload['items'],
@@ -74,9 +75,11 @@ def get_search(service: SearchIndexingService, query: dict | None = None, *, tra
     except (TypeError, ValueError) as exc:
         error = SearchServiceError(422, 'VALIDATION_ERROR', 'limit must be an integer')
         service.query_audit['last_api_error'] = {'operation': 'get_search', 'request_id': trace, 'message': str(exc)}
+        service.observability.track('get_search', trace_id=trace, started_at=started, success=False, context={'tenant_id': str(tenant_id) if tenant_id else None, 'status': 422, 'error_category': 'validation', 'trace_stage': 'service'})
         return _error(error, trace_id=trace, service=service, tenant_id=str(tenant_id) if tenant_id else None)
     except SearchServiceError as exc:
         service.query_audit['last_api_error'] = {'operation': 'get_search', 'request_id': trace, 'message': exc.message}
+        service.observability.track('get_search', trace_id=trace, started_at=started, success=False, context={'tenant_id': str(tenant_id) if tenant_id else None, 'status': exc.status_code, 'code': exc.code, 'error_category': 'validation' if exc.status_code < 500 else 'system', 'trace_stage': 'service'})
         return _error(exc, trace_id=trace, service=service, tenant_id=str(tenant_id) if tenant_id else None)
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+import time
 from datetime import datetime, timezone
 from threading import RLock
 from typing import Any
@@ -190,6 +191,8 @@ class WorkflowService:
     ) -> dict[str, Any]:
         tenant = normalize_tenant_id(tenant_id)
         trace = self._trace(trace_id)
+        started = self._now()
+        started_at = time.perf_counter()
         definition = self._require_definition(tenant, definition_code)
         ctx = dict(context or {})
         with self._lock:
@@ -231,6 +234,7 @@ class WorkflowService:
                 entity_id=instance.workflow_id,
                 context={"tenant_id": tenant, "definition_code": definition_code, "subject_id": subject_id},
             )
+            self.observability.track('workflow.start', trace_id=trace, started_at=started_at, success=True, context={'tenant_id': tenant, 'workflow_id': instance.workflow_id, 'workflow_definition': definition_code, 'status': instance.status, 'source_service': source_service, 'trace_stage': 'workflow'})
             return instance.to_dict()
 
     def get_instance(self, workflow_id: str, *, tenant_id: str, actor_id: str | None = None) -> dict[str, Any]:
@@ -331,6 +335,7 @@ class WorkflowService:
         trace_id: str | None = None,
     ) -> dict[str, Any]:
         trace = self._trace(trace_id)
+        started_at = time.perf_counter()
         with self._lock:
             instance = self._require_instance(workflow_id)
             assert_tenant_access(instance.tenant_id, normalize_tenant_id(tenant_id))
@@ -344,10 +349,12 @@ class WorkflowService:
             self._append_history(instance, action="step_delegated", actor_id=actor_id, actor_type="user", step_id=step["step_id"], from_status=step["status"], to_status=step["status"], details={"delegate_to": delegate_to})
             self._emit_workflow_event("WorkflowTaskDelegated", instance, trace, {"step_id": step["step_id"], "delegate_to": delegate_to})
             self._notify_assignment(instance, trace, target_steps=[step])
+            self.observability.track('workflow.delegate', trace_id=trace, started_at=started_at, success=True, context={'tenant_id': instance.tenant_id, 'workflow_id': instance.workflow_id, 'workflow_definition': instance.definition_code, 'status': instance.status, 'trace_stage': 'workflow'})
             return instance.to_dict()
 
     def escalate_due_workflows(self, *, now: datetime | None = None, tenant_id: str | None = None, trace_id: str | None = None) -> list[dict[str, Any]]:
         trace = self._trace(trace_id)
+        started_at = time.perf_counter()
         current = now or self._now()
         tenant_filter = normalize_tenant_id(tenant_id) if tenant_id else None
         escalated: list[dict[str, Any]] = []
@@ -379,6 +386,7 @@ class WorkflowService:
                     self._emit_workflow_event("WorkflowTaskEscalated", instance, trace, {"step_id": step["step_id"], "from": previous_assignee, "to": escalation_assignee})
                     self._notify_assignment(instance, trace, target_steps=[step], event_name="WorkflowTaskEscalated")
                     escalated.append(instance.to_dict())
+        self.observability.track('workflow.escalate', trace_id=trace, started_at=started_at, success=True, context={'tenant_id': tenant_filter, 'workflow_definition': 'workflow.escalation', 'status': 'completed', 'trace_stage': 'workflow'})
         return escalated
 
     def _resolve_step(
@@ -394,6 +402,7 @@ class WorkflowService:
         trace_id: str | None,
     ) -> dict[str, Any]:
         trace = self._trace(trace_id)
+        started_at = time.perf_counter()
         with self._lock:
             instance = self._require_instance(workflow_id)
             assert_tenant_access(instance.tenant_id, normalize_tenant_id(tenant_id))
@@ -431,6 +440,7 @@ class WorkflowService:
                 entity_id=instance.workflow_id,
                 context={"step_id": step["step_id"], "tenant_id": instance.tenant_id, "terminal_result": instance.metadata.get("terminal_result")},
             )
+            self.observability.track(f'workflow.{action}', trace_id=trace, started_at=started_at, success=True, context={'tenant_id': instance.tenant_id, 'workflow_id': instance.workflow_id, 'workflow_definition': instance.definition_code, 'status': instance.status, 'trace_stage': 'workflow'})
             return instance.to_dict()
 
     def _advance_after_approval(self, instance: WorkflowInstance) -> None:

@@ -268,3 +268,47 @@ def test_background_job_api_returns_d1_envelopes_for_status_and_admin_controls()
     )
     assert retry_status == 202
     assert retried['data']['status'] == 'Scheduled'
+
+
+
+def test_trace_propagates_from_outbox_event_to_job_metrics_and_notification_delivery() -> None:
+    notification = NotificationService()
+    jobs = BackgroundJobService(notification_service=notification)
+    jobs.outbox.stage_event(
+        tenant_id='tenant-default',
+        aggregate_type='LeaveRequest',
+        aggregate_id='lr-2',
+        event_name='LeaveRequestApproved',
+        payload={
+            'event_name': 'LeaveRequestApproved',
+            'tenant_id': 'tenant-default',
+            'employee_id': 'emp-002',
+            'employee_email': 'tracey@example.com',
+            'approver_name': 'Helen Brooks',
+            'leave_type': 'Annual',
+            'start_date': '2026-03-23',
+            'end_date': '2026-03-24',
+        },
+        trace_id='trace-observability-e2e',
+    )
+
+    job = jobs.enqueue_job(
+        tenant_id='tenant-default',
+        job_type='outbox.dispatch',
+        payload={'max_events': 10},
+        trace_id='trace-observability-e2e',
+        correlation_id='trace-observability-e2e',
+    )
+    completed = jobs.execute_job(job.job_id, tenant_id='tenant-default')
+
+    assert completed.status == JobStatus.SUCCEEDED
+    assert completed.trace_id == 'trace-observability-e2e'
+    assert completed.correlation_id == 'trace-observability-e2e'
+    snapshot = jobs.observability.metrics.snapshot()
+    assert snapshot['job_metrics']['outbox.dispatch']['count'] >= 1
+    recent_trace = snapshot['recent_traces'][-1]
+    assert recent_trace['request_id'] == 'trace-observability-e2e'
+    assert recent_trace['correlation_id'] == 'trace-observability-e2e'
+    assert recent_trace['stage'] == 'job'
+    inbox, _ = notification.get_inbox(tenant_id='tenant-default', subject_id='emp-002')
+    assert inbox['summary']['total'] >= 1

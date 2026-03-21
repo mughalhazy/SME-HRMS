@@ -34,3 +34,22 @@ def test_structured_logger_redacts_sensitive_context_before_persisting() -> None
     assert record['context']['authorization'] == '[REDACTED]'
     assert record['context']['password_hash'] == '[REDACTED]'
     assert record['context']['username'] == 'ava.manager'
+
+
+
+def test_structured_logger_emits_standard_observability_fields() -> None:
+    logger = StructuredLogger('security-test')
+    record = logger.info(
+        'request.completed',
+        trace_id='trace-standard-fields',
+        message='get_profile',
+        context={'tenant_id': 'tenant-acme', 'status': 200, 'correlation_id': 'corr-123', 'action': 'employee.get_profile'},
+    )
+
+    assert record['service'] == 'security-test'
+    assert record['request_id'] == 'trace-standard-fields'
+    assert record['trace_id'] == 'trace-standard-fields'
+    assert record['correlation_id'] == 'corr-123'
+    assert record['tenant_id'] == 'tenant-acme'
+    assert record['action'] == 'employee.get_profile'
+    assert record['status'] == '200'
