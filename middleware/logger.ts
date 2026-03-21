@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { AuditActor, AuditRecord } from './audit';
+import { appendCentralizedAuditRecord } from './audit-store';
 
 export type StructuredLogRecord = {
   timestamp: string;
@@ -74,6 +75,7 @@ export class StructuredLogger {
     });
 
     this.auditRecordsInternal.push(record);
+    appendCentralizedAuditRecord(record, this.serviceName);
     this.write('INFO', 'audit', input.traceId, input.action, { audit_record: record });
     return record;
   }

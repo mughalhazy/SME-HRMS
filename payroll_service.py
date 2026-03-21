@@ -237,6 +237,17 @@ class PayrollService:
     def _trace(self, trace_id: str | None = None) -> str:
         return self.observability.trace_id(trace_id)
 
+
+    def _audit_payroll_mutation(self, action: str, ctx: AuthContext, entity: str, entity_id: str, before: dict[str, Any], after: dict[str, Any], *, trace_id: str | None = None) -> None:
+        self.observability.logger.audit(
+            action,
+            trace_id=trace_id,
+            actor={'id': ctx.employee_id or ctx.role.value, 'type': 'user', 'role': ctx.role.value, 'department_id': ctx.department_id},
+            entity=entity,
+            entity_id=entity_id,
+            context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
+        )
+
     def _finalize_observation(self, operation: str, trace_id: str, started: float, success: bool, context: dict[str, Any] | None = None) -> None:
         self.observability.track(operation, trace_id=trace_id, started_at=started, success=success, context=context)
 
@@ -647,14 +658,7 @@ class PayrollService:
                     self.payroll_cycles[cycle.payroll_cycle_id] = cycle
                     self.payroll_cycle_index[cycle_key] = cycle.payroll_cycle_id
                     status_code = 201
-            self.observability.logger.audit(
-                "payroll_cycle_upserted",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="PayrollCycle",
-                entity_id=cycle.payroll_cycle_id,
-                context={"status": cycle.status},
-            )
+            self._audit_payroll_mutation('payroll_cycle_upserted', ctx, 'PayrollCycle', cycle.payroll_cycle_id, {}, cycle.to_dict(), trace_id=trace)
             self._finalize_observation("upsert_payroll_cycle", trace, started, True, {"status": status_code})
             return status_code, cycle.to_dict()
         except Exception as exc:
@@ -707,14 +711,7 @@ class PayrollService:
                 )
                 self.salary_structures[structure.salary_structure_id] = structure
                 self.salary_structure_index.setdefault(employee_id, []).append(structure.salary_structure_id)
-            self.observability.logger.audit(
-                "salary_structure_created",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="SalaryStructure",
-                entity_id=structure.salary_structure_id,
-                context={"employee_id": employee_id},
-            )
+            self._audit_payroll_mutation('salary_structure_created', ctx, 'SalaryStructure', structure.salary_structure_id, {}, structure.to_dict(), trace_id=trace)
             self._finalize_observation("create_salary_structure", trace, started, True, {"status": 201})
             return self._record_idempotent_result(replay_key, fingerprint, 201, structure.to_dict())
         except Exception as exc:
@@ -781,14 +778,7 @@ class PayrollService:
                 self.records[record.payroll_record_id] = record
                 self.period_index[key] = record.payroll_record_id
                 emit_canonical_event(self.events, legacy_event_name="PayrollDrafted", data={"payroll_record_id": record.payroll_record_id, "at": record.created_at.isoformat()}, source="payroll-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=trace, idempotency_key=record.payroll_record_id)
-            self.observability.logger.audit(
-                "payroll_record_drafted",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="PayrollRecord",
-                entity_id=record.payroll_record_id,
-                context={"employee_id": employee_id, "status": record.status.value},
-            )
+            self._audit_payroll_mutation('payroll_record_drafted', ctx, 'PayrollRecord', record.payroll_record_id, {}, record.to_dict(), trace_id=trace)
             self._finalize_observation("create_payroll_record", trace, started, True, {"status": 201})
             return self._record_idempotent_result(replay_key, fingerprint, 201, record.to_dict())
         except Exception as exc:
@@ -873,19 +863,7 @@ class PayrollService:
                         "consistency": validation,
                     }
                 }
-            self.observability.logger.audit(
-                "payroll_run_processed",
-                trace_id=trace,
-                actor=ctx.employee_id or ctx.role.value,
-                entity="PayrollRun",
-                entity_id=f"{period_start}:{period_end}",
-                context={
-                    "batch_id": batch.batch_id,
-                    "processed_count": batch.processed_count,
-                    "failed_count": batch.failed_count,
-                    "status": batch.status.value,
-                },
-            )
+            self._audit_payroll_mutation('payroll_run_processed', ctx, 'PayrollRun', f'{period_start}:{period_end}', {}, {'batch': batch.to_dict(), 'period_start': period_start, 'period_end': period_end, 'processed_count': batch.processed_count, 'failed_count': batch.failed_count}, trace_id=trace)
             self._finalize_observation(
                 "run_payroll",
                 trace,
@@ -947,6 +925,7 @@ class PayrollService:
         self._require_admin(ctx)
         with self._lock:
             record = self.records.get(payroll_record_id)
+            before = record.to_dict() if record else {}
             if not record:
                 raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
             if record.status in {PayrollStatus.PAID, PayrollStatus.CANCELLED}:
@@ -976,14 +955,7 @@ class PayrollService:
             batch_id = self.record_batches.get(record.payroll_record_id)
             if batch_id and batch_id in self.batches:
                 self._recompute_batch(self.batches[batch_id])
-        self.observability.logger.audit(
-            "payroll_record_adjusted",
-            trace_id=trace,
-            actor=ctx.employee_id or ctx.role.value,
-            entity="PayrollRecord",
-            entity_id=record.payroll_record_id,
-            context={"fields": sorted(payload.keys())},
-        )
+        self._audit_payroll_mutation('payroll_record_adjusted', ctx, 'PayrollRecord', record.payroll_record_id, before, record.to_dict(), trace_id=trace)
         self._finalize_observation("patch_payroll_record", trace, started, True, {"status": 200})
         return 200, record.to_dict()
 
@@ -1003,6 +975,7 @@ class PayrollService:
         self._require_admin(ctx)
         with self._lock:
             record = self.records.get(payroll_record_id)
+            before = record.to_dict() if record else {}
             if not record:
                 raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
 
@@ -1029,14 +1002,7 @@ class PayrollService:
                 batch = self.batches[batch_id]
                 self._recompute_batch(batch)
                 batch_payload = batch.to_dict()
-        self.observability.logger.audit(
-            "payroll_record_paid",
-            trace_id=trace,
-            actor=ctx.employee_id or ctx.role.value,
-            entity="PayrollRecord",
-            entity_id=record.payroll_record_id,
-            context={"payment_date": record.payment_date.isoformat(), "batch_id": self.record_batches.get(record.payroll_record_id)},
-        )
+        self._audit_payroll_mutation('payroll_record_paid', ctx, 'PayrollRecord', record.payroll_record_id, before, record.to_dict(), trace_id=trace)
         self._finalize_observation("mark_paid", trace, started, True, {"status": 200})
         payload = record.to_dict()
         if batch_payload is not None:
@@ -1088,6 +1054,7 @@ class PayrollService:
         ctx = self.decode_bearer_token(authorization)
         with self._lock:
             record = self.records.get(payroll_record_id)
+            before = record.to_dict() if record else {}
             if not record:
                 raise ServiceError("NOT_FOUND", "Payroll record not found", 404)
             self._assert_read_scope(ctx, record)

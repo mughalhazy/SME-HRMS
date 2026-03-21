@@ -71,6 +71,41 @@ class AttendanceService:
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
 
+    def _actor_payload(self, actor: Actor, *, actor_type: str = 'user') -> dict[str, str | None]:
+        return {
+            'id': str(actor.employee_id) if actor.employee_id else actor.role,
+            'type': actor_type,
+            'role': actor.role,
+            'department_id': str(actor.department_id) if actor.department_id else None,
+        }
+
+    def _record_payload(self, record: AttendanceRecord) -> dict:
+        return {
+            'attendance_id': str(record.attendance_id),
+            'employee_id': str(record.employee_id),
+            'attendance_date': record.attendance_date.isoformat(),
+            'attendance_status': record.attendance_status.value,
+            'source': record.source.value if record.source else None,
+            'check_in_time': record.check_in_time.isoformat() if record.check_in_time else None,
+            'check_out_time': record.check_out_time.isoformat() if record.check_out_time else None,
+            'total_hours': str(record.total_hours) if record.total_hours is not None else None,
+            'lifecycle_state': record.lifecycle_state.value,
+            'anomalies': [anomaly.value for anomaly in record.anomalies],
+            'correction_note': record.correction_note,
+            'created_at': record.created_at.isoformat(),
+            'updated_at': record.updated_at.isoformat(),
+            'tenant_id': self.tenant_id,
+        }
+
+    def _audit(self, action: str, actor: Actor, entity_id: str, before: dict, after: dict) -> None:
+        self.observability.logger.audit(
+            action,
+            actor=self._actor_payload(actor),
+            entity='AttendanceRecord',
+            entity_id=entity_id,
+            context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
+        )
+
     def create_record(
         self,
         actor: Actor,
@@ -119,6 +154,7 @@ class AttendanceService:
         )
 
         self._auto_validate(record)
+        self._audit('attendance_record_created', actor, str(record.attendance_id), {}, self._record_payload(record))
         return record
 
     def log_attendance(
@@ -147,6 +183,7 @@ class AttendanceService:
             )
         else:
             record = self._get_record(attendance_id)
+            before = self._record_payload(record)
             if record.lifecycle_state == RecordState.LOCKED:
                 raise AttendanceServiceError("ATTENDANCE_LOCKED", "Locked records cannot be modified")
             if source is not None:
@@ -172,6 +209,8 @@ class AttendanceService:
                 "event_type": event_type.value,
             },
         )
+        if attendance_id is not None:
+            self._audit('attendance_record_logged', actor, str(record.attendance_id), before, self._record_payload(record))
         return record
 
     def update_record(
@@ -185,6 +224,7 @@ class AttendanceService:
         correction_note: Optional[str] = None,
     ) -> AttendanceRecord:
         record = self._get_record(attendance_id)
+        before = self._record_payload(record)
         self._authorize_capture(actor, record.employee_id)
 
         if record.lifecycle_state == RecordState.LOCKED:
@@ -206,10 +246,12 @@ class AttendanceService:
             "attendance.updated",
             context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
         )
+        self._audit('attendance_record_corrected', actor, str(record.attendance_id), before, self._record_payload(record))
         return record
 
     def approve_record(self, actor: Actor, attendance_id: UUID) -> AttendanceRecord:
         record = self._get_record(attendance_id)
+        before = self._record_payload(record)
         self._authorize_validate_and_lock(actor, record.employee_id)
         if record.lifecycle_state == RecordState.LOCKED:
             raise AttendanceServiceError("ATTENDANCE_LOCKED", "Locked records cannot be approved")
@@ -228,6 +270,7 @@ class AttendanceService:
             "attendance.approved",
             context={"employee_id": str(record.employee_id), "attendance_id": str(record.attendance_id)},
         )
+        self._audit('attendance_record_approved', actor, str(record.attendance_id), before, self._record_payload(record))
         return record
 
     def get_record(self, actor: Actor, attendance_id: UUID) -> AttendanceRecord:
@@ -280,6 +323,7 @@ class AttendanceService:
         if to_date < from_date:
             raise AttendanceServiceError("DATE_RANGE_INVALID", "to must be >= from")
 
+        locked_before = [self._record_payload(record) for record in self._records.values() if from_date <= record.attendance_date <= to_date]
         locked_ids: list[str] = []
         for record in self._records.values():
             if from_date <= record.attendance_date <= to_date:
@@ -301,6 +345,13 @@ class AttendanceService:
         self.observability.logger.info(
             "attendance.period_locked",
             context={"period_id": period_id, "locked_count": len(locked_ids)},
+        )
+        self.observability.logger.audit(
+            'attendance_period_locked',
+            actor=self._actor_payload(actor),
+            entity='AttendancePeriod',
+            entity_id=period_id,
+            context={'tenant_id': self.tenant_id, 'before': {'records': locked_before}, 'after': {'period_id': period_id, 'record_ids': locked_ids, 'from_date': from_date.isoformat(), 'to_date': to_date.isoformat()}},
         )
         return {"periodId": period_id, "lockedCount": len(locked_ids)}
 
