@@ -11,6 +11,9 @@ import { DepartmentController } from './department.controller';
 import { DepartmentRepository } from './department.repository';
 import { DepartmentService } from './department.service';
 import { EmployeeController } from './employee.controller';
+import { DocumentComplianceController } from './document-compliance.controller';
+import { DocumentComplianceRepository } from './document-compliance.repository';
+import { DocumentComplianceService } from './document-compliance.service';
 import { EmployeeRepository } from './employee.repository';
 import { EmployeeService } from './employee.service';
 import { OrgStructureController } from './org.controller';
@@ -78,8 +81,11 @@ export function createEmployeeRouter(): Router {
     findDepartmentById: (departmentId) => repository.findDepartmentById(departmentId),
   });
   const service = new EmployeeService(repository, roleService, departmentRepository, performanceReviewRepository);
+  const documentComplianceRepository = new DocumentComplianceRepository();
+  const documentComplianceService = new DocumentComplianceService(documentComplianceRepository, repository);
   const performanceReviewService = new PerformanceReviewService(performanceReviewRepository, repository);
   const controller = new EmployeeController(service);
+  const documentComplianceController = new DocumentComplianceController(documentComplianceService, service);
   const performanceReviewController = new PerformanceReviewController(performanceReviewService);
   const departmentController = new DepartmentController(departmentService);
   const orgController = new OrgStructureController(orgStructureService);
@@ -105,10 +111,18 @@ export function createEmployeeRouter(): Router {
   router.post('/api/v1/departments', createDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.createDepartment);
   router.post('/api/v1/roles', createRoleRateLimit, authorizeEmployeeAction('createRole'), roleController.createRole);
   router.post('/api/v1/performance-reviews', createPerformanceReviewRateLimit, authorizeEmployeeAction('createReview'), performanceReviewController.createReview);
+  router.post('/api/v1/documents', createEmployeeRateLimit, authorizeEmployeeAction('createDocument'), documentComplianceController.createDocument);
+  router.post('/api/v1/documents/:documentId/acknowledgements', updateEmployeeRateLimit, authorizeEmployeeAction('acknowledgePolicy'), documentComplianceController.acknowledgePolicy);
+  router.post('/api/v1/compliance-tasks', createEmployeeRateLimit, authorizeEmployeeAction('createComplianceTask'), documentComplianceController.createComplianceTask);
   router.post('/api/v1/org/:kind', createOrgRateLimit, authorizeEmployeeAction('manageOrgStructure'), orgController.createEntity);
 
   router.get('/api/v1/employees/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), controller.getEmployee);
   router.get('/api/v1/employees', listEmployeeRateLimit, authorizeEmployeeAction('list'), controller.listEmployees);
+  router.get('/api/v1/documents/expiring', readEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listExpiringDocuments);
+  router.get('/api/v1/documents/:documentId', readEmployeeRateLimit, authorizeEmployeeAction('readDocument'), documentComplianceController.getDocument);
+  router.get('/api/v1/documents', listEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listDocuments);
+  router.get('/api/v1/compliance-tasks/:taskId', readEmployeeRateLimit, authorizeEmployeeAction('readComplianceTask'), documentComplianceController.getComplianceTask);
+  router.get('/api/v1/compliance-tasks', listEmployeeRateLimit, authorizeEmployeeAction('listComplianceTasks'), documentComplianceController.listComplianceTasks);
   router.get('/api/v1/departments/:departmentId', readDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.getDepartment);
   router.get('/api/v1/departments', listDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.listDepartments);
   router.get('/api/v1/roles/:roleId', readRoleRateLimit, authorizeEmployeeAction('readRole'), roleController.getRole);
@@ -119,6 +133,8 @@ export function createEmployeeRouter(): Router {
   router.get('/api/v1/org/:kind', readOrgRateLimit, authorizeEmployeeAction('listOrgStructure'), orgController.listEntities);
 
   router.patch('/api/v1/employees/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), controller.updateEmployee);
+  router.patch('/api/v1/documents/:documentId', updateEmployeeRateLimit, authorizeEmployeeAction('updateDocument'), documentComplianceController.updateDocument);
+  router.patch('/api/v1/compliance-tasks/:taskId', updateEmployeeRateLimit, authorizeEmployeeAction('updateComplianceTask'), documentComplianceController.updateComplianceTask);
   router.patch('/api/v1/departments/:departmentId', updateDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.updateDepartment);
   router.patch('/api/v1/roles/:roleId', updateRoleRateLimit, authorizeEmployeeAction('updateRole'), roleController.updateRole);
   router.patch('/api/v1/employees/:employeeId/department', updateEmployeeRateLimit, authorizeEmployeeAction('manageDepartment'), controller.assignDepartment);
