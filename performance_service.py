@@ -187,7 +187,7 @@ class PipPlan:
 
 
 class PerformanceService:
-    REVIEW_CYCLE_STATUSES = {'Draft', 'Open', 'Closed'}
+    REVIEW_CYCLE_STATUSES = {'Draft', 'PendingApproval', 'Open', 'Closed'}
     GOAL_STATUSES = {'Draft', 'Submitted', 'Approved', 'Rejected'}
     FEEDBACK_TYPES = {'Manager', 'Peer', 'Self', 'Upward'}
     FEEDBACK_VISIBILITY = {'Private', 'Employee', 'ManagerAndHR'}
@@ -282,13 +282,32 @@ class PerformanceService:
             trace_id=trace,
         )
         before = cycle.to_dict()
-        cycle.status = 'Open'
+        cycle.status = 'PendingApproval'
         cycle.workflow_id = workflow['workflow_id']
         cycle.updated_at = self._now()
         self.review_cycles[cycle.review_cycle_id] = cycle
-        self._audit('performance_review_cycle_opened', 'ReviewCycle', cycle.review_cycle_id, before, cycle.to_dict(), actor_id=actor_id, actor_type=actor_type, tenant_id=cycle.tenant_id, trace_id=trace)
-        self._emit('PerformanceReviewCycleOpened', {'review_cycle_id': cycle.review_cycle_id, 'status': cycle.status, 'workflow_id': cycle.workflow_id}, tenant_id=cycle.tenant_id, correlation_id=trace)
+        self._audit('performance_review_cycle_submitted', 'ReviewCycle', cycle.review_cycle_id, before, cycle.to_dict(), actor_id=actor_id, actor_type=actor_type, tenant_id=cycle.tenant_id, trace_id=trace)
         return 200, self._review_cycle_payload(cycle)
+
+    def decide_review_cycle(self, review_cycle_id: str, *, action: str, actor_id: str, actor_type: str = 'user', actor_role: str | None = None, comment: str | None = None, trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        cycle = self._require_review_cycle(review_cycle_id)
+        trace = trace_id or self.observability.trace_id()
+        if cycle.status != 'PendingApproval' or not cycle.workflow_id:
+            raise self._error(409, 'CONFLICT', 'review cycle is not awaiting approval', trace)
+        before = cycle.to_dict()
+        workflow = self._resolve_workflow(cycle.workflow_id, cycle.tenant_id, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
+        terminal_result = self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
+        cycle.status = 'Open' if terminal_result == 'approved' else 'Draft'
+        cycle.updated_at = self._now()
+        self.review_cycles[cycle.review_cycle_id] = cycle
+        if terminal_result == 'approved':
+            self._audit('performance_review_cycle_opened', 'ReviewCycle', cycle.review_cycle_id, before, cycle.to_dict(), actor_id=actor_id, actor_type=actor_type, tenant_id=cycle.tenant_id, trace_id=trace)
+            self._emit('PerformanceReviewCycleOpened', {'review_cycle_id': cycle.review_cycle_id, 'status': cycle.status, 'workflow_id': cycle.workflow_id}, tenant_id=cycle.tenant_id, correlation_id=trace)
+        else:
+            self._audit('performance_review_cycle_rejected', 'ReviewCycle', cycle.review_cycle_id, before, cycle.to_dict(), actor_id=actor_id, actor_type=actor_type, tenant_id=cycle.tenant_id, trace_id=trace)
+        payload = self._review_cycle_payload(cycle)
+        payload['workflow'] = workflow
+        return 200, payload
 
     def close_review_cycle(self, review_cycle_id: str, *, actor_id: str, actor_type: str = 'user', trace_id: str | None = None) -> tuple[int, dict[str, Any]]:
         cycle = self._require_review_cycle(review_cycle_id)
@@ -374,6 +393,7 @@ class PerformanceService:
             raise self._error(409, 'CONFLICT', 'goal is not awaiting approval', trace)
         before = goal.to_dict()
         workflow = self._resolve_workflow(goal.workflow_id, goal.tenant_id, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
+        self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
         goal.status = 'Approved' if action == 'approve' else 'Rejected'
         goal.approved_at = self._now() if action == 'approve' else None
         goal.updated_at = self._now()
@@ -475,6 +495,7 @@ class PerformanceService:
             raise self._error(409, 'CONFLICT', 'calibration session is not awaiting sign-off', trace)
         before = session.to_dict()
         workflow = self._resolve_workflow(session.workflow_id, session.tenant_id, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
+        self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
         session.status = 'Finalized' if action == 'approve' else 'Rejected'
         session.final_rating = self._coerce_float(final_rating if final_rating is not None else session.proposed_rating, 'final_rating', minimum=1.0, maximum=5.0) if action == 'approve' else None
         session.finalized_at = self._now() if action == 'approve' else None
@@ -554,6 +575,7 @@ class PerformanceService:
             raise self._error(409, 'CONFLICT', 'PIP plan is not awaiting approval', trace)
         before = plan.to_dict()
         workflow = self._resolve_workflow(plan.workflow_id, plan.tenant_id, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
+        self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
         plan.status = 'Active' if action == 'approve' else 'Rejected'
         plan.started_at = self._now() if action == 'approve' else None
         plan.updated_at = self._now()
@@ -741,6 +763,13 @@ class PerformanceService:
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
         )
+
+    def _require_terminal_workflow_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
+        terminal_result = workflow.get('metadata', {}).get('terminal_result')
+        expected = 'approved' if action == 'approve' else 'rejected'
+        if terminal_result != expected:
+            raise self._error(409, 'WORKFLOW_STATE_MISMATCH', f'workflow did not reach expected terminal result: {expected}', trace_id)
+        return expected
 
     def _resolve_workflow(self, workflow_id: str, tenant_id: str, *, action: str, actor_id: str, actor_type: str, actor_role: str | None, comment: str | None, trace_id: str) -> dict[str, Any]:
         try:

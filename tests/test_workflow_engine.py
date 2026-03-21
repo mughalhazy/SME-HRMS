@@ -151,3 +151,29 @@ def test_payroll_and_hiring_use_workflow_engine_for_terminal_approval_paths() ->
     hired = hiring.mark_candidate_hired(candidate["candidate_id"], {"changed_by": "admin-1", "approver_role": "Admin"})
     assert hired["status"] == "Hired"
     assert hired["hire_workflow_id"] is not None
+
+
+def test_workflow_engine_blocks_cross_scope_delegation_targets() -> None:
+    service = WorkflowService(notification_service=NotificationService())
+    service.register_definition(
+        tenant_id='tenant-default',
+        code='delegation-safety',
+        source_service='workflow-service',
+        subject_type='Task',
+        description='Delegation scope enforcement.',
+        steps=[{'type': 'approval', 'assignee_template': '{manager}', 'sla': 'PT1H'}],
+    )
+
+    workflow = service.start_workflow(
+        tenant_id='tenant-default',
+        definition_code='delegation-safety',
+        source_service='workflow-service',
+        subject_type='Task',
+        subject_id='task-1',
+        actor_id='emp-1',
+        actor_type='user',
+        context={'manager': 'mgr-1'},
+    )
+
+    with pytest.raises(WorkflowServiceError, match='assignment scope'):
+        service.delegate_step(workflow['workflow_id'], tenant_id='tenant-default', actor_id='mgr-1', actor_role=None, delegate_to='finance-1')
