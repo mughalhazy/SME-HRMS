@@ -2,6 +2,7 @@ from datetime import date
 
 import pytest
 
+from audit_service.service import get_audit_service
 from leave_service import EmployeeStatus, LeaveService, LeaveServiceError
 
 
@@ -177,3 +178,104 @@ def test_leave_events_include_tenant_context():
 
     assert svc.events[-1]['tenant_id'] == 'tenant-default'
     assert svc.events[-1]['data']['tenant_id'] == 'tenant-default'
+
+
+def test_partial_day_and_holiday_calendar_are_policy_driven():
+    svc = LeaveService()
+    svc.upsert_holiday_calendar(
+        'US-NY',
+        {
+            'name': 'US-NY Calendar',
+            'holidays': {
+                '2026-12-24': 'Founders Day',
+            },
+        },
+        trace_id='trace-holiday',
+    )
+
+    _, leave = svc.create_request(
+        'Employee',
+        'emp-001',
+        'emp-001',
+        'Annual',
+        date(2026, 12, 25),
+        date(2026, 12, 25),
+        partial_day_portion=0.5,
+    )
+
+    assert leave['total_days'] == 0.5
+    assert leave['partial_day_portion'] == 0.5
+    assert leave['holiday_dates'] == []
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.create_request(
+            'Employee',
+            'emp-001',
+            'emp-001',
+            'Annual',
+            date(2026, 12, 24),
+            date(2026, 12, 24),
+        )
+    assert ex.value.status_code == 422
+    assert ex.value.payload['error']['code'] == 'VALIDATION_ERROR'
+
+
+def test_unpaid_policy_uses_workflow_engine_even_when_auto_approved():
+    svc = LeaveService()
+    _, created = svc.create_request('Employee', 'emp-001', 'emp-001', 'Unpaid', date(2026, 8, 20), date(2026, 8, 21))
+
+    code, submitted = svc.submit_request('Employee', 'emp-001', created['leave_request_id'])
+    assert code == 200
+    assert submitted['status'] == 'Approved'
+    assert submitted['workflow']['metadata']['terminal_result'] == 'approved'
+    assert submitted['workflow']['status'] == 'completed'
+    assert any(item['action'] == 'step_approved' for item in submitted['workflow']['history'])
+
+
+def test_accrual_carry_forward_and_ledger_entries_are_recorded():
+    svc = LeaveService()
+    accrual_policy = svc.create_or_update_policy(
+        {
+            'code': 'ANNUAL-NY-G7',
+            'name': 'Annual NY G7',
+            'leave_type': 'Annual',
+            'location_codes': ['US-NY'],
+            'grade_codes': ['G7'],
+            'annual_entitlement_days': 0.0,
+            'accrual_frequency': 'Monthly',
+            'accrual_rate_days': 1.5,
+            'carry_forward_limit_days': 4.0,
+            'requires_approval': True,
+            'allow_negative_balance': False,
+            'allow_partial_days': True,
+            'status': 'Active',
+        },
+        trace_id='trace-policy',
+    )
+    svc.assign_policy_to_employee('emp-001', 'Annual', accrual_policy['leave_policy_id'], trace_id='trace-assign')
+
+    accrual = svc.accrue_balances(as_of=date(2026, 4, 1), employee_id='emp-001', trace_id='trace-accrual')
+    assert any(item['leave_type'] == 'Annual' and item['accrued_days'] > 0 for item in accrual['items'])
+
+    carry = svc.apply_carry_forward(year=2027, employee_id='emp-001', trace_id='trace-carry')
+    assert any(item['leave_type'] == 'Annual' for item in carry['items'])
+
+    ledger = svc.get_leave_ledger('emp-001', leave_type='Annual')
+    entry_types = {entry['entry_type'] for entry in ledger}
+    assert 'accrual' in entry_types
+    assert 'carry_forward' in entry_types
+
+    records, _ = get_audit_service().list_records(tenant_id='tenant-default', entity='LeaveBalanceLedger', limit=100)
+    assert any(record['action'] == 'leave_balance_ledger_recorded' for record in records)
+
+
+def test_recompute_employee_balance_rebuilds_reserved_and_approved_totals():
+    svc = LeaveService()
+    _, created = svc.create_request('Employee', 'emp-001', 'emp-001', 'Annual', date(2026, 1, 10), date(2026, 1, 11))
+    svc.submit_request('Employee', 'emp-001', created['leave_request_id'])
+    svc.decide_request('approve', 'Manager', 'emp-manager', created['leave_request_id'])
+
+    result = svc.recompute_employee_balance('emp-001', trace_id='trace-recompute')
+    annual = next(balance for balance in result['leave_balances'] if balance['leave_type'] == 'Annual')
+    assert annual['approved_days'] == 2.0
+    assert annual['reserved_days'] == 0.0
