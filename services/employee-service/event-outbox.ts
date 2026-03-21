@@ -29,6 +29,14 @@ const EVENT_TYPES: Record<string, string> = {
   GradeBandUpdated: 'organization.grade_band.updated',
   JobPositionCreated: 'organization.job_position.created',
   JobPositionUpdated: 'organization.job_position.updated',
+  DocumentStored: 'employee.document.stored',
+  DocumentUpdated: 'employee.document.updated',
+  ContractActivated: 'employee.contract.activated',
+  PolicyAcknowledged: 'employee.policy.acknowledged',
+  DocumentExpiryTracked: 'employee.document.expiry.tracked',
+  ComplianceTaskCreated: 'employee.compliance.task.created',
+  ComplianceTaskAssigned: 'employee.compliance.task.assigned',
+  ComplianceTaskCompleted: 'employee.compliance.task.completed',
 };
 
 export class EmployeeEventOutbox {

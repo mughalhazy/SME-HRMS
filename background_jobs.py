@@ -102,6 +102,7 @@ class BackgroundJobService:
         payroll_service: Any | None = None,
         leave_service: Any | None = None,
         notification_service: NotificationService | None = None,
+        reporting_service: Any | None = None,
         outbox: EventOutbox | None = None,
         db_path: str | None = None,
     ):
@@ -127,6 +128,8 @@ class BackgroundJobService:
         if notification_service is not None:
             self.register_notification_dispatch_handler(notification_service)
             self.register_outbox_dispatch_handler(notification_service)
+        if reporting_service is not None:
+            self.register_reporting_handlers(reporting_service)
         self.register_workflow_escalation_handler()
 
     @staticmethod
@@ -418,6 +421,61 @@ class BackgroundJobService:
             return result
 
         self.register_handler('outbox.dispatch', handler, max_attempts=3)
+
+    def register_reporting_handlers(self, reporting_service: Any) -> None:
+        def export_handler(context: JobExecutionContext) -> dict[str, Any]:
+            payload = context.job.payload
+            export = reporting_service.export_report(
+                report_id=str(payload['report_id']),
+                report_run_id=payload.get('report_run_id'),
+                export_format=str(payload.get('export_format') or 'json'),
+                trace_id=context.trace_id,
+                schedule_id=payload.get('schedule_id'),
+            )
+            self.outbox.stage_event(
+                tenant_id=context.tenant_id,
+                aggregate_type='ReportingExport',
+                aggregate_id=export['export_id'],
+                event_name='ReportingExportGenerated',
+                payload={
+                    'tenant_id': context.tenant_id,
+                    'report_id': export['report_id'],
+                    'report_run_id': export['report_run_id'],
+                    'export_id': export['export_id'],
+                    'schedule_id': export.get('schedule_id'),
+                    'export_format': export['export_format'],
+                    'row_count': export['row_count'],
+                    'file_name': export['file_name'],
+                },
+                trace_id=context.trace_id,
+            )
+            return export
+
+        self.register_handler('reporting.export', export_handler, max_attempts=3)
+
+        def schedule_dispatch_handler(context: JobExecutionContext) -> dict[str, Any]:
+            payload = context.job.payload
+            schedules = reporting_service.claim_due_schedules(now=payload.get('now'))
+            enqueued: list[dict[str, Any]] = []
+            for schedule in schedules:
+                idempotency_key = f"reporting.schedule:{schedule['schedule_id']}:{schedule['last_enqueued_at']}"
+                job = self.enqueue_job(
+                    tenant_id=context.tenant_id,
+                    job_type='reporting.export',
+                    payload={
+                        'report_id': schedule['report_id'],
+                        'export_format': schedule['export_format'],
+                        'schedule_id': schedule['schedule_id'],
+                    },
+                    actor_type='service',
+                    trace_id=context.trace_id,
+                    correlation_id=context.correlation_id,
+                    idempotency_key=idempotency_key,
+                )
+                enqueued.append({'job_id': job.job_id, 'schedule_id': schedule['schedule_id'], 'report_id': schedule['report_id']})
+            return {'schedule_count': len(schedules), 'enqueued_jobs': enqueued}
+
+        self.register_handler('reporting.schedule.dispatch', schedule_dispatch_handler, max_attempts=3)
 
     def register_workflow_escalation_handler(self) -> None:
         def handler(context: JobExecutionContext) -> dict[str, Any]:
