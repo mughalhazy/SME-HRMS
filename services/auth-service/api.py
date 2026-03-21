@@ -38,11 +38,20 @@ def post_auth_login(service: AuthService, payload: dict, trace_id: str | None = 
         )
 
     try:
-        token_payload = service.login(username=username, password=password, tenant_id=payload.get('tenant_id', 'tenant-default'))
+        token_payload = service.login(
+            username=username,
+            password=password,
+            tenant_id=payload.get('tenant_id', 'tenant-default'),
+            client_type=payload.get('client_type', 'Web'),
+            device_id=payload.get('device_id'),
+            ip_address=payload.get('ip_address'),
+            user_agent=payload.get('user_agent'),
+            service_scopes=payload.get('service_scopes'),
+        )
         service.observability.track('post_auth_login', trace_id=trace_id, started_at=started, success=True, context={'status': 200})
         return success_response(200, token_payload, request_id=trace_id)
     except AuthServiceError as exc:
-        service.observability.logger.error('auth.login_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details, 'username': username})
+        service.observability.logger.error('auth.login_failed', trace_id=trace_id, context={'code': exc.code, 'details': exc.details, 'username': username, 'tenant_id': payload.get('tenant_id', 'tenant-default')})
         service.observability.track('post_auth_login', trace_id=trace_id, started_at=started, success=False, context={'status': _ERROR_STATUS_BY_CODE.get(exc.code, 400), 'code': exc.code})
         return _error_response(exc.code, exc.message, details=exc.details, trace_id=trace_id)
 
@@ -190,13 +199,18 @@ def post_auth_session_revoke(service: AuthService, session_id: str, payload: dic
     trace_id = trace_id or uuid4().hex
     started = perf_counter()
     actor = payload.get('actor') if isinstance(payload, dict) else None
+    reason = payload.get('reason') if isinstance(payload, dict) else None
 
     if not isinstance(session_id, str) or not session_id:
         service.observability.track('post_auth_session_revoke', trace_id=trace_id, started_at=started, success=False, context={'status': 422, 'code': 'VALIDATION_ERROR'})
         return _error_response('VALIDATION_ERROR', 'session_id is required', details=[{'field': 'session_id', 'reason': 'must be a non-empty string'}], trace_id=trace_id)
 
     try:
-        data = service.revoke_session(session_id, actor=actor if isinstance(actor, str) and actor else None)
+        data = service.revoke_session(
+            session_id,
+            actor=actor if isinstance(actor, str) and actor else None,
+            reason=reason if isinstance(reason, str) and reason else 'admin_revoked',
+        )
         service.observability.track('post_auth_session_revoke', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'session_id': session_id})
         return success_response(200, data, request_id=trace_id)
     except AuthServiceError as exc:

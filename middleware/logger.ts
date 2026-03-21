@@ -3,6 +3,22 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { AuditActor, AuditRecord } from './audit';
 import { appendCentralizedAuditRecord } from './audit-store';
 
+const SENSITIVE_FIELD_NAMES = new Set([
+  'password',
+  'password_hash',
+  'refresh_token',
+  'refresh_token_hash',
+  'token_hash',
+  'access_token',
+  'authorization',
+  'secret',
+  'bank_account',
+  'bank_account_number',
+  'routing_number',
+  'tax_id',
+  'ssn',
+]);
+
 export type StructuredLogRecord = {
   timestamp: string;
   level: 'INFO' | 'ERROR';
@@ -24,6 +40,22 @@ export interface AuditLogInput {
   after: Record<string, unknown>;
 }
 
+export function sanitizeLogContext<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeLogContext(item)) as T;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    result[key] = SENSITIVE_FIELD_NAMES.has(key.toLowerCase()) ? '[REDACTED]' : sanitizeLogContext(item);
+  }
+  return result as T;
+}
+
 export class StructuredLogger {
   readonly records: StructuredLogRecord[] = [];
   private readonly auditRecordsInternal: AuditRecord[] = [];
@@ -42,7 +74,7 @@ export class StructuredLogger {
       event,
       traceId,
       message,
-      context,
+      context: sanitizeLogContext(context),
     };
     this.records.push(record);
     if (this.records.length > 500) {
@@ -68,8 +100,8 @@ export class StructuredLogger {
       action: input.action,
       entity: input.entity,
       entity_id: input.entityId,
-      before: input.before,
-      after: input.after,
+      before: sanitizeLogContext(input.before),
+      after: sanitizeLogContext(input.after),
       timestamp: new Date().toISOString(),
       trace_id: input.traceId,
     });

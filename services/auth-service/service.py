@@ -32,6 +32,9 @@ class AuthenticatedPrincipal:
     role: str
     department_id: UUID | None
     tenant_id: str
+    capabilities: tuple[str, ...] = ()
+    scopes: tuple[str, ...] = ()
+    subject_type: str = 'user'
 
 
 @dataclass
@@ -53,12 +56,59 @@ class UserAccount:
 class SessionRecord:
     session_id: str
     user_id: UUID
+    access_token_jti: str
     refresh_token_hash: str
     refresh_expires_at: datetime
     started_at: datetime
     last_rotated_at: datetime
+    client_type: str = 'Web'
+    device_id: str | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
     revoked: bool = False
     revoked_at: datetime | None = None
+    revocation_reason: str | None = None
+
+
+@dataclass
+class RefreshTokenRecord:
+    refresh_token_id: str
+    session_id: str
+    user_id: UUID
+    token_hash: str
+    issued_at: datetime
+    expires_at: datetime
+    rotated_from_token_id: str | None = None
+    revoked_at: datetime | None = None
+    replaced_by_token_id: str | None = None
+
+
+@dataclass
+class RoleBindingRecord:
+    binding_id: str
+    user_id: UUID
+    tenant_id: str
+    role_name: str
+    scope_type: str
+    scope_id: str | None
+    state: str = 'Active'
+    effective_from: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    effective_to: datetime | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass
+class PermissionPolicyRecord:
+    policy_id: str
+    capability_id: str
+    role_name: str
+    resource_type: str
+    scope_rule: str
+    effect: str
+    version: int
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AuthService:
@@ -110,6 +160,21 @@ class AuthService:
         },
         'Service': set(),
     }
+    _SENSITIVE_FIELD_NAMES = {
+        'password',
+        'password_hash',
+        'refresh_token',
+        'refresh_token_hash',
+        'token_hash',
+        'access_token',
+        'authorization',
+        'secret',
+        'bank_account',
+        'bank_account_number',
+        'routing_number',
+        'tax_id',
+        'ssn',
+    }
 
     def __init__(self, token_secret: str, issuer: str = 'sme-hrms.auth-service', audience: str = 'sme-hrms.api', db_path: str | None = None):
         if not token_secret:
@@ -123,6 +188,9 @@ class AuthService:
         shared_db_path = self._users_by_name.db_path
         self._users_by_id = PersistentKVStore[UUID, UserAccount](service='auth-service', namespace='users_by_id', db_path=shared_db_path)
         self._sessions_by_id = PersistentKVStore[str, SessionRecord](service='auth-service', namespace='sessions_by_id', db_path=shared_db_path)
+        self._refresh_tokens_by_id = PersistentKVStore[str, RefreshTokenRecord](service='auth-service', namespace='refresh_tokens_by_id', db_path=shared_db_path)
+        self._role_bindings_by_id = PersistentKVStore[str, RoleBindingRecord](service='auth-service', namespace='role_bindings_by_id', db_path=shared_db_path)
+        self._permission_policies_by_id = PersistentKVStore[str, PermissionPolicyRecord](service='auth-service', namespace='permission_policies_by_id', db_path=shared_db_path)
         self.observability = Observability('auth-service')
         self.events: list[dict[str, Any]] = []
         self.event_registry = EventRegistry()
@@ -159,8 +227,14 @@ class AuthService:
             'refresh_expires_at': session.refresh_expires_at.isoformat(),
             'started_at': session.started_at.isoformat(),
             'last_rotated_at': session.last_rotated_at.isoformat(),
+            'client_type': session.client_type,
+            'device_id': session.device_id,
+            'ip_address': session.ip_address,
+            'user_agent': session.user_agent,
+            'access_token_jti': session.access_token_jti,
             'revoked': session.revoked,
             'revoked_at': session.revoked_at.isoformat() if session.revoked_at else None,
+            'revocation_reason': session.revocation_reason,
         }
 
     def _audit_auth_mutation(self, action: str, actor_id: str | None, entity: str, entity_id: str, tenant_id: str, before: dict[str, Any], after: dict[str, Any], *, role: str | None = None, trace_id: str | None = None) -> None:
@@ -170,7 +244,7 @@ class AuthService:
             actor={'id': actor_id or 'system', 'type': 'user' if actor_id else 'system', 'role': role},
             entity=entity,
             entity_id=entity_id,
-            context={'tenant_id': tenant_id, 'before': before, 'after': after},
+            context={'tenant_id': tenant_id, 'before': self._sanitize_value(before), 'after': self._sanitize_value(after)},
         )
 
     def register_user(
@@ -211,10 +285,29 @@ class AuthService:
         )
         self._users_by_name[user_lookup_key] = user
         self._users_by_id[user.user_id] = user
+        self._emit_event(
+            'UserProvisioned',
+            {
+                'user_id': str(user.user_id),
+                'employee_id': str(user.employee_id) if user.employee_id else None,
+                'email': user.username,
+                'status': 'Active',
+                'identity_provider': 'local',
+            },
+            tenant_id=tenant_id,
+            idempotency_key=f'user-provisioned:{user.user_id}',
+        )
+        binding = self.assign_role_binding(
+            user.user_id,
+            role_name=role,
+            scope_type='Department' if department_id else 'Global',
+            scope_id=str(department_id) if department_id else None,
+            actor_id=str(user.user_id),
+        )
         self._audit_auth_mutation('auth_user_registered', str(user.user_id), 'UserAccount', str(user.user_id), tenant_id, {}, self._user_payload(user), role=role)
         return user
 
-    def login(self, username: str, password: str, *, tenant_id: str = DEFAULT_TENANT_ID, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800) -> dict[str, Any]:
+    def login(self, username: str, password: str, *, tenant_id: str = DEFAULT_TENANT_ID, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800, client_type: str = 'Web', device_id: str | None = None, ip_address: str | None = None, user_agent: str | None = None, service_scopes: list[str] | tuple[str, ...] | None = None) -> dict[str, Any]:
         self._validate_ttls(ttl_seconds, refresh_ttl_seconds)
         tenant_id = normalize_tenant_id(tenant_id)
         normalized_username = username.strip().lower()
@@ -226,16 +319,36 @@ class AuthService:
 
         user.last_login_at = datetime.now(timezone.utc)
         user.updated_at = user.last_login_at
-        token_payload = self._issue_session_tokens(user=user, ttl_seconds=ttl_seconds, refresh_ttl_seconds=refresh_ttl_seconds)
+        token_payload = self._issue_session_tokens(
+            user=user,
+            ttl_seconds=ttl_seconds,
+            refresh_ttl_seconds=refresh_ttl_seconds,
+            client_type=client_type,
+            device_id=device_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            service_scopes=service_scopes,
+        )
         self.observability.logger.info(
             'auth.login_succeeded',
-            context={'username': normalized_username, 'role': user.role, 'session_id': token_payload['session_id'], 'tenant_id': user.tenant_id},
+            context=self._sanitize_value({'username': normalized_username, 'role': user.role, 'session_id': token_payload['session_id'], 'tenant_id': user.tenant_id, 'client_type': client_type, 'device_id': device_id, 'ip_address': ip_address, 'user_agent': user_agent}),
+        )
+        self._emit_event(
+            'UserAuthenticated',
+            {
+                'session_id': token_payload['session_id'],
+                'user_id': str(user.user_id),
+                'client_type': client_type,
+                'expires_at': (datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)).isoformat(),
+            },
+            tenant_id=user.tenant_id,
+            idempotency_key=f'user-authenticated:{token_payload["session_id"]}',
         )
         return token_payload
 
     def refresh_session(self, refresh_token: str, *, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800) -> dict[str, Any]:
         self._validate_ttls(ttl_seconds, refresh_ttl_seconds)
-        session = self._get_session_by_refresh_token(refresh_token)
+        session, active_refresh_token = self._get_session_by_refresh_token(refresh_token)
         if session.revoked:
             raise AuthServiceError('TOKEN_REVOKED', 'Session has been revoked')
         if session.refresh_expires_at <= datetime.now(timezone.utc):
@@ -250,17 +363,45 @@ class AuthService:
         before = self._session_payload(session)
         now = datetime.now(timezone.utc)
         rotated_refresh_token = self._generate_refresh_token()
+        rotated_refresh_token_id = str(uuid4())
+        session.access_token_jti = str(uuid4())
         session.refresh_token_hash = self._hash_refresh_token(rotated_refresh_token)
         session.refresh_expires_at = now + timedelta(seconds=refresh_ttl_seconds)
         session.last_rotated_at = now
+        active_refresh_token.revoked_at = now
+        active_refresh_token.replaced_by_token_id = rotated_refresh_token_id
+        self._refresh_tokens_by_id[active_refresh_token.refresh_token_id] = active_refresh_token
+        self._refresh_tokens_by_id[rotated_refresh_token_id] = RefreshTokenRecord(
+            refresh_token_id=rotated_refresh_token_id,
+            session_id=session.session_id,
+            user_id=user.user_id,
+            token_hash=self._hash_refresh_token(rotated_refresh_token),
+            issued_at=now,
+            expires_at=now + timedelta(seconds=refresh_ttl_seconds),
+            rotated_from_token_id=active_refresh_token.refresh_token_id,
+        )
         token_payload = self._build_token_payload(
             user=user,
             session_id=session.session_id,
             ttl_seconds=ttl_seconds,
             refresh_token=rotated_refresh_token,
             refresh_ttl_seconds=refresh_ttl_seconds,
+            access_token_jti=session.access_token_jti,
+            service_scopes=self._service_scopes_for_user(user),
         )
         self._audit_auth_mutation('auth_refresh_rotated', str(user.user_id), 'Session', session.session_id, user.tenant_id, before, self._session_payload(session), role=user.role)
+        self._emit_event(
+            'RefreshTokenRotated',
+            {
+                'refresh_token_id': rotated_refresh_token_id,
+                'session_id': session.session_id,
+                'user_id': str(user.user_id),
+                'rotated_from_token_id': active_refresh_token.refresh_token_id,
+                'updated_at': now.isoformat(),
+            },
+            tenant_id=user.tenant_id,
+            idempotency_key=f'refresh-rotated:{rotated_refresh_token_id}',
+        )
         return token_payload
 
     def authenticate_token(self, token: str) -> AuthenticatedPrincipal:
@@ -269,6 +410,8 @@ class AuthService:
         session = self._sessions_by_id.get(sid) if isinstance(sid, str) else None
         if not sid or not session or session.revoked:
             raise AuthServiceError('TOKEN_REVOKED', 'Session has been revoked')
+        if claims.get('jti') != session.access_token_jti:
+            raise AuthServiceError('TOKEN_REVOKED', 'Session has been rotated or revoked')
         if session.refresh_expires_at <= datetime.now(timezone.utc):
             self._revoke_session(session.session_id, actor=str(session.user_id), role=self._users_by_id.get(session.user_id).role if self._users_by_id.get(session.user_id) else None)
             raise AuthServiceError('TOKEN_EXPIRED', 'Session has expired')
@@ -290,17 +433,20 @@ class AuthService:
             role=claims['role'],
             department_id=department_id,
             tenant_id=normalize_tenant_id(str(claims.get('tenant_id') or user.tenant_id)),
+            capabilities=tuple(str(item) for item in claims.get('capabilities', []) if isinstance(item, str)),
+            scopes=tuple(str(item) for item in claims.get('scopes', []) if isinstance(item, str)),
+            subject_type=str(claims.get('subject_type') or 'user'),
         )
 
     def logout(self, token: str) -> None:
         claims = self._decode_token(token)
         sid = claims.get('sid')
         if isinstance(sid, str):
-            self._revoke_session(sid, actor=claims.get('sub'), role=claims.get('role'))
+            self._revoke_session(sid, actor=claims.get('sub'), role=claims.get('role'), reason='logout')
 
     def logout_refresh_token(self, refresh_token: str) -> None:
-        session = self._get_session_by_refresh_token(refresh_token)
-        self._revoke_session(session.session_id, actor=str(session.user_id), role=self._users_by_id.get(session.user_id).role if self._users_by_id.get(session.user_id) else None)
+        session, _ = self._get_session_by_refresh_token(refresh_token)
+        self._revoke_session(session.session_id, actor=str(session.user_id), role=self._users_by_id.get(session.user_id).role if self._users_by_id.get(session.user_id) else None, reason='logout')
 
     def get_current_session(self, token: str) -> dict[str, Any]:
         claims = self._decode_token(token)
@@ -334,21 +480,145 @@ class AuthService:
         rows.sort(key=lambda row: row['started_at'], reverse=True)
         return rows
 
-    def revoke_session(self, session_id: str, *, actor: str | None = None) -> dict[str, Any]:
+    def revoke_session(self, session_id: str, *, actor: str | None = None, reason: str = 'admin_revoked') -> dict[str, Any]:
         session = self._sessions_by_id.get(session_id)
         if not session:
             raise AuthServiceError('TOKEN_INVALID', 'Session is invalid')
         user = self._users_by_id.get(session.user_id)
-        self._revoke_session(session_id, actor=actor or str(session.user_id), role=user.role if user else None)
+        self._revoke_session(session_id, actor=actor or str(session.user_id), role=user.role if user else None, reason=reason)
         return self._serialize_session(session, user.role if user else None, user.tenant_id if user else None)
 
     def validate_role(self, principal: AuthenticatedPrincipal, capability_id: str) -> bool:
+        explicit_effect = self._resolve_policy_effect(principal.role, capability_id)
+        if explicit_effect == 'Deny':
+            return False
+        if explicit_effect == 'Allow':
+            return True
         allowed = self._ROLE_CAPABILITY_MAP.get(principal.role, set())
-        return capability_id in allowed
+        if capability_id in allowed:
+            return True
+        return principal.role == 'Service' and capability_id in set(principal.capabilities)
 
     def require_capability(self, principal: AuthenticatedPrincipal, capability_id: str) -> None:
         if not self.validate_role(principal, capability_id):
             raise AuthServiceError('FORBIDDEN', 'Insufficient permissions for requested capability')
+
+    def require_tenant_access(self, principal: AuthenticatedPrincipal, tenant_id: str) -> None:
+        if normalize_tenant_id(tenant_id) != principal.tenant_id:
+            raise AuthServiceError('FORBIDDEN', 'Cross-tenant access is not permitted')
+
+    def require_scope(self, principal: AuthenticatedPrincipal, scope: str) -> None:
+        if principal.role == 'Admin':
+            return
+        if scope not in set(principal.scopes):
+            raise AuthServiceError('FORBIDDEN', 'Requested scope is not granted')
+
+    def assign_role_binding(self, user_id: UUID, *, role_name: str, scope_type: str, scope_id: str | None = None, actor_id: str | None = None) -> dict[str, Any]:
+        if role_name not in self._ROLE_CAPABILITY_MAP:
+            raise AuthServiceError('ROLE_INVALID', 'Role is not supported')
+        if scope_type not in {'Global', 'Department', 'Employee', 'Service'}:
+            raise AuthServiceError('VALIDATION_ERROR', 'scope_type is invalid', details=[{'field': 'scope_type', 'reason': 'must be Global, Department, Employee, or Service'}])
+        user = self._users_by_id.get(user_id)
+        if not user:
+            raise AuthServiceError('TOKEN_INVALID', 'User is invalid')
+        now = datetime.now(timezone.utc)
+        record = RoleBindingRecord(
+            binding_id=str(uuid4()),
+            user_id=user_id,
+            tenant_id=user.tenant_id,
+            role_name=role_name,
+            scope_type=scope_type,
+            scope_id=scope_id,
+            effective_from=now,
+            created_at=now,
+            updated_at=now,
+        )
+        self._role_bindings_by_id[record.binding_id] = record
+        payload = self._role_binding_payload(record)
+        self._audit_auth_mutation('auth_role_binding_changed', actor_id or str(user_id), 'RoleBinding', record.binding_id, user.tenant_id, {}, payload, role=role_name)
+        self._emit_event(
+            'RoleBindingChanged',
+            {
+                'binding_id': record.binding_id,
+                'user_id': str(user_id),
+                'role_name': role_name,
+                'scope_type': scope_type,
+                'scope_id': scope_id,
+                'state': record.state,
+                'updated_at': now.isoformat(),
+            },
+            tenant_id=user.tenant_id,
+            idempotency_key=f'role-binding:{record.binding_id}:{record.updated_at.isoformat()}',
+        )
+        return payload
+
+    def revoke_role_binding(self, binding_id: str, *, actor_id: str | None = None) -> dict[str, Any]:
+        binding = self._role_bindings_by_id.get(binding_id)
+        if not binding:
+            raise AuthServiceError('TOKEN_INVALID', 'Role binding is invalid')
+        before = self._role_binding_payload(binding)
+        binding.state = 'Revoked'
+        binding.updated_at = datetime.now(timezone.utc)
+        self._role_bindings_by_id[binding_id] = binding
+        payload = self._role_binding_payload(binding)
+        self._audit_auth_mutation('auth_role_binding_changed', actor_id or str(binding.user_id), 'RoleBinding', binding.binding_id, binding.tenant_id, before, payload, role=binding.role_name)
+        self._emit_event(
+            'RoleBindingChanged',
+            {
+                'binding_id': binding.binding_id,
+                'user_id': str(binding.user_id),
+                'role_name': binding.role_name,
+                'scope_type': binding.scope_type,
+                'scope_id': binding.scope_id,
+                'state': binding.state,
+                'updated_at': binding.updated_at.isoformat(),
+            },
+            tenant_id=binding.tenant_id,
+            idempotency_key=f'role-binding:{binding.binding_id}:{binding.updated_at.isoformat()}',
+        )
+        return payload
+
+    def upsert_permission_policy(self, *, capability_id: str, role_name: str, resource_type: str, scope_rule: str, effect: str, version: int, actor_id: str | None = None) -> dict[str, Any]:
+        if role_name not in self._ROLE_CAPABILITY_MAP:
+            raise AuthServiceError('ROLE_INVALID', 'Role is not supported')
+        if effect not in {'Allow', 'Deny'}:
+            raise AuthServiceError('VALIDATION_ERROR', 'effect is invalid', details=[{'field': 'effect', 'reason': 'must be Allow or Deny'}])
+        if version < 1:
+            raise AuthServiceError('VALIDATION_ERROR', 'version is invalid', details=[{'field': 'version', 'reason': 'must be greater than zero'}])
+        existing = next((policy for policy in self._permission_policies_by_id.values() if policy.capability_id == capability_id and policy.role_name == role_name and policy.version == version), None)
+        before = self._permission_policy_payload(existing) if existing else {}
+        now = datetime.now(timezone.utc)
+        policy = existing or PermissionPolicyRecord(
+            policy_id=str(uuid4()),
+            capability_id=capability_id,
+            role_name=role_name,
+            resource_type=resource_type,
+            scope_rule=scope_rule,
+            effect=effect,
+            version=version,
+            created_at=now,
+            updated_at=now,
+        )
+        policy.resource_type = resource_type
+        policy.scope_rule = scope_rule
+        policy.effect = effect
+        policy.updated_at = now
+        self._permission_policies_by_id[policy.policy_id] = policy
+        payload = self._permission_policy_payload(policy)
+        self._audit_auth_mutation('auth_permission_policy_updated', actor_id or 'system', 'PermissionPolicy', policy.policy_id, DEFAULT_TENANT_ID, before, payload, role=role_name)
+        self._emit_event(
+            'AuthorizationPolicyUpdated',
+            {
+                'policy_id': policy.policy_id,
+                'capability_id': capability_id,
+                'role_name': role_name,
+                'effect': effect,
+                'version': version,
+            },
+            tenant_id=DEFAULT_TENANT_ID,
+            idempotency_key=f'permission-policy:{policy.policy_id}:{version}',
+        )
+        return payload
 
 
     @staticmethod
@@ -361,21 +631,39 @@ class AuthService:
             checks={
                 'users': len(self._users_by_id),
                 'sessions': len(self._sessions_by_id),
+                'refresh_tokens': len(self._refresh_tokens_by_id),
+                'role_bindings': len(self._role_bindings_by_id),
+                'permission_policies': len(self._permission_policies_by_id),
                 'revoked_sessions': revoked_sessions,
             }
         )
 
-    def _issue_session_tokens(self, *, user: UserAccount, ttl_seconds: int, refresh_ttl_seconds: int) -> dict[str, Any]:
+    def _issue_session_tokens(self, *, user: UserAccount, ttl_seconds: int, refresh_ttl_seconds: int, client_type: str, device_id: str | None, ip_address: str | None, user_agent: str | None, service_scopes: list[str] | tuple[str, ...] | None) -> dict[str, Any]:
         session_id = str(uuid4())
         refresh_token = self._generate_refresh_token()
+        refresh_token_id = str(uuid4())
         now = datetime.now(timezone.utc)
+        access_token_jti = str(uuid4())
         self._sessions_by_id[session_id] = SessionRecord(
             session_id=session_id,
             user_id=user.user_id,
+            access_token_jti=access_token_jti,
             refresh_token_hash=self._hash_refresh_token(refresh_token),
             refresh_expires_at=now + timedelta(seconds=refresh_ttl_seconds),
             started_at=now,
             last_rotated_at=now,
+            client_type=client_type,
+            device_id=device_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        self._refresh_tokens_by_id[refresh_token_id] = RefreshTokenRecord(
+            refresh_token_id=refresh_token_id,
+            session_id=session_id,
+            user_id=user.user_id,
+            token_hash=self._hash_refresh_token(refresh_token),
+            issued_at=now,
+            expires_at=now + timedelta(seconds=refresh_ttl_seconds),
         )
         return self._build_token_payload(
             user=user,
@@ -383,6 +671,8 @@ class AuthService:
             ttl_seconds=ttl_seconds,
             refresh_token=refresh_token,
             refresh_ttl_seconds=refresh_ttl_seconds,
+            access_token_jti=access_token_jti,
+            service_scopes=service_scopes,
         )
 
     def _build_token_payload(
@@ -393,15 +683,22 @@ class AuthService:
         ttl_seconds: int,
         refresh_token: str,
         refresh_ttl_seconds: int,
+        access_token_jti: str,
+        service_scopes: list[str] | tuple[str, ...] | None,
     ) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
+        capabilities = sorted(self._ROLE_CAPABILITY_MAP.get(user.role, set()))
         claims = {
             'sub': str(user.user_id),
             'sid': session_id,
+            'jti': access_token_jti,
             'tenant_id': user.tenant_id,
             'role': user.role,
             'employee_id': str(user.employee_id) if user.employee_id else None,
             'department_id': str(user.department_id) if user.department_id else None,
+            'capabilities': capabilities,
+            'scopes': list(service_scopes or self._service_scopes_for_user(user)),
+            'subject_type': 'service' if user.role == 'Service' else 'user',
             'iat': int(now.timestamp()),
             'nbf': int(now.timestamp()),
             'exp': int((now + timedelta(seconds=ttl_seconds)).timestamp()),
@@ -418,7 +715,7 @@ class AuthService:
             'session_id': session_id,
         }
 
-    def _revoke_session(self, session_id: str, *, actor: str | None, role: str | None) -> None:
+    def _revoke_session(self, session_id: str, *, actor: str | None, role: str | None, reason: str = 'session_revoked') -> None:
         session = self._sessions_by_id.get(session_id)
         if not session:
             return
@@ -427,26 +724,50 @@ class AuthService:
         before = self._session_payload(session)
         session.revoked = True
         session.revoked_at = datetime.now(timezone.utc)
+        session.revocation_reason = reason
+        self._sessions_by_id[session_id] = session
         user = self._users_by_id.get(session.user_id)
         self._audit_auth_mutation('auth_logout', actor, 'Session', session_id, user.tenant_id if user else DEFAULT_TENANT_ID, before, self._session_payload(session), role=role)
+        for refresh_token in self._refresh_tokens_by_id.values():
+            if refresh_token.session_id == session_id and refresh_token.revoked_at is None:
+                refresh_token.revoked_at = session.revoked_at
+                self._refresh_tokens_by_id[refresh_token.refresh_token_id] = refresh_token
+        self._emit_event(
+            'SessionRevoked',
+            {
+                'session_id': session_id,
+                'user_id': str(session.user_id),
+                'revoked_at': session.revoked_at.isoformat(),
+                'reason': reason,
+            },
+            tenant_id=user.tenant_id if user else DEFAULT_TENANT_ID,
+            idempotency_key=f'session-revoked:{session_id}:{session.revoked_at.isoformat()}',
+        )
 
-    def _get_session_by_refresh_token(self, refresh_token: str) -> SessionRecord:
+    def _get_session_by_refresh_token(self, refresh_token: str) -> tuple[SessionRecord, RefreshTokenRecord]:
         if not refresh_token:
             raise AuthServiceError('TOKEN_INVALID', 'refresh_token is required')
         hashed = self._hash_refresh_token(refresh_token)
-        for session in self._sessions_by_id.values():
-            if hmac.compare_digest(session.refresh_token_hash, hashed):
-                return session
+        for refresh_record in self._refresh_tokens_by_id.values():
+            if hmac.compare_digest(refresh_record.token_hash, hashed):
+                if refresh_record.revoked_at is not None:
+                    raise AuthServiceError('TOKEN_INVALID', 'Refresh token is invalid')
+                session = self._sessions_by_id.get(refresh_record.session_id)
+                if session and hmac.compare_digest(session.refresh_token_hash, hashed):
+                    return session, refresh_record
+                raise AuthServiceError('TOKEN_INVALID', 'Refresh token is invalid')
         raise AuthServiceError('TOKEN_INVALID', 'Refresh token is invalid')
 
     def _emit_event(self, event_name: str, data: dict[str, Any], *, tenant_id: str, idempotency_key: str) -> None:
-        self.outbox.tenant_id = normalize_tenant_id(tenant_id)
-        self.outbox.enqueue(
-            legacy_event_name=event_name,
-            data=data,
-            idempotency_key=idempotency_key,
+        self.events.append(
+            {
+                'event_type': self._legacy_event_name(event_name),
+                'tenant_id': normalize_tenant_id(tenant_id),
+                'data': self._sanitize_value(data),
+                'idempotency_key': idempotency_key,
+                'occurred_at': datetime.now(timezone.utc).isoformat(),
+            }
         )
-        self.outbox.dispatch_pending(self.events.append)
 
 
     def _serialize_session(self, session: SessionRecord, role: str | None, tenant_id: str | None = None, *, now: datetime | None = None) -> dict[str, Any]:
@@ -460,7 +781,12 @@ class AuthService:
             'started_at': session.started_at.isoformat(),
             'last_rotated_at': session.last_rotated_at.isoformat(),
             'refresh_expires_at': session.refresh_expires_at.isoformat(),
+            'client_type': session.client_type,
+            'device_id': session.device_id,
+            'ip_address': session.ip_address,
+            'user_agent': session.user_agent,
             'revoked_at': session.revoked_at.isoformat() if session.revoked_at else None,
+            'revocation_reason': session.revocation_reason,
         }
 
     def _session_status(self, session: SessionRecord, *, now: datetime | None = None) -> str:
@@ -545,6 +871,86 @@ class AuthService:
     @staticmethod
     def _hash_refresh_token(refresh_token: str) -> str:
         return hashlib.sha256(refresh_token.encode('utf-8')).hexdigest()
+
+    def _resolve_policy_effect(self, role_name: str, capability_id: str) -> str | None:
+        policies = [
+            policy for policy in self._permission_policies_by_id.values()
+            if policy.role_name == role_name and policy.capability_id == capability_id
+        ]
+        if not policies:
+            return None
+        policies.sort(key=lambda item: item.version, reverse=True)
+        return policies[0].effect
+
+    def _service_scopes_for_user(self, user: UserAccount) -> tuple[str, ...]:
+        if user.role == 'Service':
+            return ('service:internal', 'resource:employee-service')
+        if user.role == 'Admin':
+            return ('scope:global',)
+        if user.role == 'Manager' and user.department_id:
+            return (f'department:{user.department_id}',)
+        if user.employee_id:
+            return (f'employee:{user.employee_id}',)
+        return ('scope:global',)
+
+    @classmethod
+    def _sanitize_value(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            sanitized: dict[str, Any] = {}
+            for key, item in value.items():
+                normalized_key = key.lower()
+                if normalized_key in cls._SENSITIVE_FIELD_NAMES:
+                    sanitized[key] = '[REDACTED]'
+                else:
+                    sanitized[key] = cls._sanitize_value(item)
+            return sanitized
+        if isinstance(value, list):
+            return [cls._sanitize_value(item) for item in value]
+        return value
+
+    @staticmethod
+    def _role_binding_payload(binding: RoleBindingRecord) -> dict[str, Any]:
+        return {
+            'binding_id': binding.binding_id,
+            'user_id': str(binding.user_id),
+            'tenant_id': binding.tenant_id,
+            'role_name': binding.role_name,
+            'scope_type': binding.scope_type,
+            'scope_id': binding.scope_id,
+            'state': binding.state,
+            'effective_from': binding.effective_from.isoformat(),
+            'effective_to': binding.effective_to.isoformat() if binding.effective_to else None,
+            'created_at': binding.created_at.isoformat(),
+            'updated_at': binding.updated_at.isoformat(),
+        }
+
+    @staticmethod
+    def _permission_policy_payload(policy: PermissionPolicyRecord | None) -> dict[str, Any]:
+        if policy is None:
+            return {}
+        return {
+            'policy_id': policy.policy_id,
+            'capability_id': policy.capability_id,
+            'role_name': policy.role_name,
+            'resource_type': policy.resource_type,
+            'scope_rule': policy.scope_rule,
+            'effect': policy.effect,
+            'version': policy.version,
+            'created_at': policy.created_at.isoformat(),
+            'updated_at': policy.updated_at.isoformat(),
+        }
+
+    @staticmethod
+    def _legacy_event_name(event_name: str) -> str:
+        mapping = {
+            'UserProvisioned': 'auth.user.provisioned',
+            'UserAuthenticated': 'auth.user.authenticated',
+            'SessionRevoked': 'auth.session.revoked',
+            'RefreshTokenRotated': 'auth.refresh_token.rotated',
+            'RoleBindingChanged': 'auth.role_binding.changed',
+            'AuthorizationPolicyUpdated': 'auth.authorization_policy.updated',
+        }
+        return mapping.get(event_name, event_name)
 
     @staticmethod
     def _b64url_encode(raw: bytes) -> str:

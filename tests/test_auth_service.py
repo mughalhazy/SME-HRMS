@@ -102,6 +102,7 @@ class AuthServiceTests(unittest.TestCase):
 
     def test_refresh_rotates_token_and_preserves_session(self) -> None:
         login_payload = self.service.login('ava.manager', 'Password123!')
+        original_access_token = login_payload['access_token']
         refreshed = self.service.refresh_session(login_payload['refresh_token'])
 
         self.assertNotEqual(login_payload['refresh_token'], refreshed['refresh_token'])
@@ -109,9 +110,29 @@ class AuthServiceTests(unittest.TestCase):
         principal = self.service.authenticate_token(refreshed['access_token'])
         self.assertEqual(principal.role, 'Manager')
 
+        with self.assertRaises(AuthServiceError) as revoked_access_ctx:
+            self.service.authenticate_token(original_access_token)
+        self.assertEqual(revoked_access_ctx.exception.code, 'TOKEN_REVOKED')
+
         with self.assertRaises(AuthServiceError) as ctx:
             self.service.refresh_session(login_payload['refresh_token'])
         self.assertEqual(ctx.exception.code, 'TOKEN_INVALID')
+
+    def test_login_tracks_session_metadata_and_preserves_it_in_session_views(self) -> None:
+        login_payload = self.service.login(
+            'ava.manager',
+            'Password123!',
+            client_type='Web',
+            device_id='device-001',
+            ip_address='203.0.113.10',
+            user_agent='pytest-agent',
+        )
+        session = self.service.get_current_session(login_payload['access_token'])
+
+        self.assertEqual(session['client_type'], 'Web')
+        self.assertEqual(session['device_id'], 'device-001')
+        self.assertEqual(session['ip_address'], '203.0.113.10')
+        self.assertEqual(session['user_agent'], 'pytest-agent')
 
     def test_role_validation_enforces_capability_matrix(self) -> None:
         token = self.service.login('ava.manager', 'Password123!')['access_token']
@@ -123,12 +144,63 @@ class AuthServiceTests(unittest.TestCase):
         with self.assertRaises(AuthServiceError):
             self.service.require_capability(principal, 'CAP-PAY-002')
 
+    def test_tenant_and_scope_checks_deny_cross_tenant_access(self) -> None:
+        token = self.service.login('ava.manager', 'Password123!')['access_token']
+        principal = self.service.authenticate_token(token)
+
+        self.service.require_tenant_access(principal, 'tenant-default')
+        self.service.require_scope(principal, f'department:{self.department_id}')
+
+        with self.assertRaises(AuthServiceError) as tenant_ctx:
+            self.service.require_tenant_access(principal, 'tenant-beta')
+        self.assertEqual(tenant_ctx.exception.code, 'FORBIDDEN')
+
+        with self.assertRaises(AuthServiceError) as scope_ctx:
+            self.service.require_scope(principal, 'resource:payroll-service')
+        self.assertEqual(scope_ctx.exception.code, 'FORBIDDEN')
+
     def test_logout_revokes_session(self) -> None:
         token = self.service.login('ava.manager', 'Password123!')['access_token']
         self.service.logout(token)
         with self.assertRaises(AuthServiceError):
             self.service.authenticate_token(token)
         self.assertEqual(self.service.events[-1]['event_type'], 'auth.session.revoked')
+
+    def test_role_binding_and_permission_policy_changes_are_audited(self) -> None:
+        user = self.service.register_user(username='policy.admin', password='Password123!', role='Admin')
+        binding = self.service.assign_role_binding(user.user_id, role_name='Manager', scope_type='Department', scope_id='dept-123', actor_id='security-admin')
+        policy = self.service.upsert_permission_policy(
+            capability_id='CAP-EMP-002',
+            role_name='Manager',
+            resource_type='Employee',
+            scope_rule='department-match',
+            effect='Deny',
+            version=1,
+            actor_id='security-admin',
+        )
+
+        self.assertEqual(binding['scope_type'], 'Department')
+        self.assertEqual(policy['effect'], 'Deny')
+        event_types = {event['event_type'] for event in self.service.events}
+        self.assertIn('auth.role_binding.changed', event_types)
+        self.assertIn('auth.authorization_policy.updated', event_types)
+
+    def test_explicit_permission_policy_can_deny_capability(self) -> None:
+        self.service.upsert_permission_policy(
+            capability_id='CAP-LEV-002',
+            role_name='Manager',
+            resource_type='LeaveRequest',
+            scope_rule='department-match',
+            effect='Deny',
+            version=1,
+            actor_id='security-admin',
+        )
+
+        token = self.service.login('ava.manager', 'Password123!')['access_token']
+        principal = self.service.authenticate_token(token)
+        self.assertFalse(self.service.validate_role(principal, 'CAP-LEV-002'))
+        with self.assertRaises(AuthServiceError):
+            self.service.require_capability(principal, 'CAP-LEV-002')
 
     def test_api_login_refresh_logout_and_me_follow_scs_envelope(self) -> None:
         login_status, login_payload = post_auth_login(
