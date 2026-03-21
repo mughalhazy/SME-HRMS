@@ -598,6 +598,10 @@ class AttendanceService:
                 [{"reason": str(exc)}],
             ) from exc
 
+    def _auto_validate(self, record: AttendanceRecord) -> None:
+        """Compatibility hook: records are normalized and validation events are queued before this call."""
+        return None
+
     def _validated_event_payload(self, record: AttendanceRecord) -> dict | None:
         if record.attendance_status in {AttendanceStatus.ABSENT, AttendanceStatus.HOLIDAY} or record.total_hours is not None:
             record.lifecycle_state = RecordState.VALIDATED

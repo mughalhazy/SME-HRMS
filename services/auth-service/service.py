@@ -305,6 +305,7 @@ class AuthService:
             actor_id=str(user.user_id),
         )
         self._audit_auth_mutation('auth_user_registered', str(user.user_id), 'UserAccount', str(user.user_id), tenant_id, {}, self._user_payload(user), role=role)
+        self._emit_event('auth.user.provisioned', {'user_id': str(user.user_id), 'tenant_id': tenant_id, 'role': role}, tenant_id=tenant_id, idempotency_key=str(user.user_id))
         return user
 
     def login(self, username: str, password: str, *, tenant_id: str = DEFAULT_TENANT_ID, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800, client_type: str = 'Web', device_id: str | None = None, ip_address: str | None = None, user_agent: str | None = None, service_scopes: list[str] | tuple[str, ...] | None = None) -> dict[str, Any]:
@@ -727,22 +728,9 @@ class AuthService:
         session.revocation_reason = reason
         self._sessions_by_id[session_id] = session
         user = self._users_by_id.get(session.user_id)
-        self._audit_auth_mutation('auth_logout', actor, 'Session', session_id, user.tenant_id if user else DEFAULT_TENANT_ID, before, self._session_payload(session), role=role)
-        for refresh_token in self._refresh_tokens_by_id.values():
-            if refresh_token.session_id == session_id and refresh_token.revoked_at is None:
-                refresh_token.revoked_at = session.revoked_at
-                self._refresh_tokens_by_id[refresh_token.refresh_token_id] = refresh_token
-        self._emit_event(
-            'SessionRevoked',
-            {
-                'session_id': session_id,
-                'user_id': str(session.user_id),
-                'revoked_at': session.revoked_at.isoformat(),
-                'reason': reason,
-            },
-            tenant_id=user.tenant_id if user else DEFAULT_TENANT_ID,
-            idempotency_key=f'session-revoked:{session_id}:{session.revoked_at.isoformat()}',
-        )
+        tenant_id = user.tenant_id if user else DEFAULT_TENANT_ID
+        self._audit_auth_mutation('auth_logout', actor, 'Session', session_id, tenant_id, before, self._session_payload(session), role=role)
+        self._emit_event('auth.session.revoked', {'session_id': session_id, 'user_id': str(session.user_id), 'tenant_id': tenant_id}, tenant_id=tenant_id, idempotency_key=session_id)
 
     def _get_session_by_refresh_token(self, refresh_token: str) -> tuple[SessionRecord, RefreshTokenRecord]:
         if not refresh_token:

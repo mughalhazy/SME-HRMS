@@ -8,8 +8,11 @@ from uuid import UUID
 
 from attendance_service.models import AttendanceLogEvent, AttendanceSource, AttendanceStatus
 from attendance_service.service import Actor, AttendanceService, AttendanceServiceError
-from api_contract import error_payload, success_response
+from api_contract import error_payload, pagination_payload, success_response
 from resilience import new_trace_id
+
+
+SERVICE_NAME = 'attendance-service'
 
 
 def _parse_date(raw: str) -> date:
@@ -20,21 +23,31 @@ def _parse_datetime(raw: str | None) -> datetime | None:
     return datetime.fromisoformat(raw) if raw else None
 
 
-def error_envelope(trace_id: str, exc: AttendanceServiceError) -> dict:
-    return error_payload(exc.code, exc.message, trace_id, exc.details)
+def _actor_meta(actor: Actor) -> dict[str, str | None]:
+    return {
+        'id': str(actor.employee_id),
+        'type': 'user',
+        'role': actor.role,
+        'department_id': str(actor.department_id) if actor.department_id else None,
+    }
+
+
+def error_envelope(trace_id: str, exc: AttendanceServiceError, *, actor: Actor | None = None) -> dict:
+    return error_payload(exc.code, exc.message, trace_id, exc.details, actor=_actor_meta(actor) if actor else None, service=SERVICE_NAME)
 
 
 def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[..., tuple[int, dict]]:
     def wrapped(*args: Any, **kwargs: Any) -> tuple[int, dict]:
         trace_id = kwargs.pop('trace_id', None) or new_trace_id()
         service = args[0]
+        actor = args[1] if len(args) > 1 and isinstance(args[1], Actor) else None
         operation = getattr(handler, '__name__', 'attendance.operation')
         started = perf_counter()
         try:
             status, payload = handler(*args, **kwargs)
             service.observability.track(operation, trace_id=trace_id, started_at=started, success=True, context={'status': status})
             pagination = payload.pop('_pagination', None) if isinstance(payload, dict) else None
-            return success_response(status, payload, request_id=trace_id, pagination=pagination)
+            return success_response(status, payload, request_id=trace_id, pagination=pagination, actor=_actor_meta(actor) if actor else None, service=SERVICE_NAME)
         except AttendanceServiceError as exc:
             status_map = {
                 'FORBIDDEN': 403,
@@ -55,7 +68,7 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
                 context={'code': exc.code, 'details': exc.details},
             )
             service.observability.track(operation, trace_id=trace_id, started_at=started, success=False, context={'status': status, 'code': exc.code})
-            return status, error_envelope(trace_id, exc)
+            return status, error_envelope(trace_id, exc, actor=actor)
         except ValueError:
             service.observability.logger.error(
                 'attendance.validation_error',
@@ -64,7 +77,7 @@ def with_error_handling(handler: Callable[..., Dict[str, Any]]) -> Callable[...,
                 context={},
             )
             service.observability.track(operation, trace_id=trace_id, started_at=started, success=False, context={'status': 422, 'code': 'VALIDATION_ERROR'})
-            return 422, error_payload('VALIDATION_ERROR', 'Invalid request payload.', trace_id)
+            return 422, error_payload('VALIDATION_ERROR', 'Invalid request payload.', trace_id, actor=_actor_meta(actor) if actor else None, service=SERVICE_NAME)
 
     return wrapped
 
@@ -106,7 +119,12 @@ def get_attendance_records(service: AttendanceService, actor: Actor, query: dict
     return 200, {
         'records': [_record_to_response(record) for record in records],
         'aggregation': aggregation,
-        '_pagination': {'count': len(records)},
+        'filters': {
+            'employee_id': str(employee_id),
+            'attendance_date_from': from_date.isoformat(),
+            'attendance_date_to': to_date.isoformat(),
+        },
+        '_pagination': pagination_payload(count=len(records), limit=len(records), cursor=None, next_cursor=None),
     }
 
 
