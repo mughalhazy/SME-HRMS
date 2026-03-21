@@ -182,31 +182,54 @@ This document maps the canonical domain model to a relational data architecture 
 - `idx_employees_grade_band_id (grade_band_id)`
 - `idx_employees_status (status)`
 
-### Table: `performance_reviews`
+### Table: `performance_review_cycles`
 
 | Column | Type | Null | Key | Constraints / Notes |
 |---|---|---:|---|---|
-| performance_review_id | UUID | No | PK | Primary identifier. |
-| employee_id | UUID | No | FK | Reviewed employee. |
-| reviewer_employee_id | UUID | No | FK | Reviewer employee. |
-| review_period_start | DATE | No |  | Review period start. |
+| review_cycle_id | UUID | No | PK | Primary identifier. |
+| code | VARCHAR(40) | No | UQ | Unique cycle code per tenant. |
+| name | VARCHAR(160) | No |  | Review-cycle display name. |
+| review_period_start | DATE | No |  | Cycle start date. |
 | review_period_end | DATE | No |  | `review_period_end >= review_period_start`. |
-| overall_rating | NUMERIC(2,1) | Yes |  | Optional score, typically `1.0-5.0`. |
-| strengths | TEXT | Yes |  | Strength narrative. |
-| improvement_areas | TEXT | Yes |  | Development areas. |
-| goals_next_period | TEXT | Yes |  | Goals for next cycle. |
-| status | VARCHAR(20) | No |  | `Draft`, `Submitted`, `Finalized`. |
-| submitted_at | TIMESTAMPTZ | Yes |  | Reviewer submission time. |
-| finalized_at | TIMESTAMPTZ | Yes |  | Review finalization time. |
+| owner_employee_id | UUID | No | FK | References `employees.employee_id`. |
+| workflow_id | UUID | Yes |  | Central workflow instance used to approve cycle opening. |
+| status | VARCHAR(20) | No |  | `Draft`, `Open`, `Closed`. |
 | created_at | TIMESTAMPTZ | No |  | Creation timestamp. |
 | updated_at | TIMESTAMPTZ | No |  | Last update timestamp. |
 
-**Indexes**
-- `pk_performance_reviews (performance_review_id)`
-- `idx_performance_reviews_employee_id (employee_id)`
-- `idx_performance_reviews_reviewer_employee_id (reviewer_employee_id)`
-- `uq_performance_reviews_cycle (employee_id, review_period_start, review_period_end)`
-- `idx_performance_reviews_status (status)`
+### Table: `performance_goals`
+
+| Column | Type | Null | Key | Constraints / Notes |
+|---|---|---:|---|---|
+| goal_id | UUID | No | PK | Primary identifier. |
+| review_cycle_id | UUID | No | FK | References `performance_review_cycles.review_cycle_id`. |
+| employee_id | UUID | No | FK | Performance subject. |
+| owner_employee_id | UUID | No | FK | Goal owner, typically the employee. |
+| title | VARCHAR(160) | No |  | Goal / OKR title. |
+| description | TEXT | No |  | Goal narrative and scope. |
+| metric_name | VARCHAR(120) | No |  | KPI or measure used for tracking. |
+| target_value | NUMERIC(10,2) | No |  | Goal target. |
+| current_value | NUMERIC(10,2) | No |  | Current progress against target. |
+| weight | NUMERIC(5,2) | No |  | Relative weighting in the cycle. |
+| status | VARCHAR(20) | No |  | `Draft`, `Submitted`, `Approved`, `Rejected`. |
+| workflow_id | UUID | Yes |  | Workflow approval instance. |
+| approved_at | TIMESTAMPTZ | Yes |  | Approval timestamp. |
+
+### Table: `performance_feedback`
+
+Continuous feedback captured from managers, peers, self, or upward reviewers against an employee and optionally a review cycle.
+
+### Table: `performance_calibrations`
+
+Calibration sessions that normalize proposed ratings before final approval and compensation planning.
+
+### Table: `performance_pip_plans`
+
+Performance improvement plans with approval workflow linkage, lifecycle timestamps, and supporting milestones.
+
+### Table: `performance_pip_milestones`
+
+Milestones attached to a `performance_pip_plans` record, including due dates, completion state, and success metrics.
 
 ## Time, leave, and payroll tables
 
@@ -591,8 +614,12 @@ This document maps the canonical domain model to a relational data architecture 
 - `employees.role_id -> roles.role_id`
 - `employees.manager_employee_id -> employees.employee_id`
 - `departments.head_employee_id -> employees.employee_id`
-- `performance_reviews.employee_id -> employees.employee_id`
-- `performance_reviews.reviewer_employee_id -> employees.employee_id`
+- `performance_review_cycles.owner_employee_id -> employees.employee_id`
+- `performance_goals.employee_id -> employees.employee_id`
+- `performance_feedback.provider_employee_id -> employees.employee_id`
+- `performance_calibrations.facilitator_employee_id -> employees.employee_id`
+- `performance_pip_plans.employee_id -> employees.employee_id`
+- `performance_pip_plans.manager_employee_id -> employees.employee_id`
 - `attendance_records.employee_id -> employees.employee_id`
 - `leave_requests.employee_id -> employees.employee_id`
 - `leave_requests.approver_employee_id -> employees.employee_id`

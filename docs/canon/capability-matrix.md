@@ -20,7 +20,7 @@ Source anchors:
 | `CAP-PAY-002` | Payroll disbursement completion | `payroll-service` | `PayrollRecord` | `payroll_summary_view` | `/api/v1/payroll/records/{payroll_record_id}/mark-paid` |
 | `CAP-HIR-001` | Job posting and requisition management | `hiring-service` | `JobPosting`, `Department`, `Role` | `job_posting_directory_view` | `/api/v1/hiring/job-postings`, `/api/v1/hiring/job-postings/{job_posting_id}/hold`, `/api/v1/hiring/job-postings/{job_posting_id}/reopen` |
 | `CAP-HIR-002` | Candidate pipeline and interview management | `hiring-service` | `Candidate`, `Interview`, `JobPosting` | `candidate_pipeline_view` | `/api/v1/hiring/candidates`, `/api/v1/hiring/interviews`, `/api/v1/hiring/interviews/{interview_id}/cancel`, `/api/v1/hiring/interviews/{interview_id}/mark-no-show` |
-| `CAP-PRF-001` | Performance review lifecycle | `employee-service` | `PerformanceReview`, `Employee` | `performance_review_view` | `/api/v1/performance-reviews`, `/api/v1/performance-reviews/{performance_review_id}`, `/submit`, `/finalize` |
+| `CAP-PRF-001` | Enterprise performance management | `performance-service` | `ReviewCycle`, `Goal`, `Feedback`, `CalibrationSession`, `PipPlan`, `Employee` | `performance_review_view` | `/api/v1/performance/review-cycles`, `/api/v1/performance/goals`, `/api/v1/performance/feedback`, `/api/v1/performance/calibrations`, `/api/v1/performance/pips` |
 | `CAP-AUT-001` | Identity and access administration | `auth-service` | `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Session`, `RefreshToken` | `access_control_view` | `/api/v1/auth/users`, `/api/v1/auth/sessions`, `/api/v1/auth/policies`, `/api/v1/auth/access` |
 | `CAP-NOT-001` | Notification template and delivery operations | `notification-service` | `NotificationTemplate`, `NotificationMessage`, `DeliveryAttempt` | `notification_delivery_view` | `/api/v1/notifications/send`, `/api/v1/notifications/templates`, `/api/v1/notifications/messages/{message_id}`, `/api/v1/notifications/delivery` |
 | `CAP-NOT-002` | Notification preference management | `notification-service` | `NotificationPreference` | `notification_delivery_view` | `GET/PATCH /api/v1/notifications/preferences/{subject_id}` |
@@ -32,7 +32,11 @@ Source anchors:
 | `Employee` | `employee-service` | `CAP-EMP-001`, `CAP-EMP-002` |
 | `Department` | `employee-service` | `CAP-EMP-001`, `CAP-HIR-001` |
 | `Role` | `employee-service` | `CAP-EMP-001`, `CAP-HIR-001` |
-| `PerformanceReview` | `employee-service` | `CAP-PRF-001` |
+| `ReviewCycle` | `performance-service` | `CAP-PRF-001` |
+| `Goal` | `performance-service` | `CAP-PRF-001` |
+| `Feedback` | `performance-service` | `CAP-PRF-001` |
+| `CalibrationSession` | `performance-service` | `CAP-PRF-001` |
+| `PipPlan` | `performance-service` | `CAP-PRF-001` |
 | `AttendanceRecord` | `attendance-service` | `CAP-ATT-001`, `CAP-ATT-002` |
 | `LeaveRequest` | `leave-service` | `CAP-LEV-001`, `CAP-LEV-002` |
 | `PayrollRecord` | `payroll-service` | `CAP-PAY-001`, `CAP-PAY-002` |
@@ -53,7 +57,8 @@ Source anchors:
 
 | Service | Linked capabilities |
 |---|---|
-| `employee-service` | `CAP-EMP-001`, `CAP-EMP-002`, `CAP-PRF-001` |
+| `employee-service` | `CAP-EMP-001`, `CAP-EMP-002` |
+| `performance-service` | `CAP-PRF-001` |
 | `attendance-service` | `CAP-ATT-001`, `CAP-ATT-002` |
 | `leave-service` | `CAP-LEV-001`, `CAP-LEV-002` |
 | `payroll-service` | `CAP-PAY-001`, `CAP-PAY-002` |

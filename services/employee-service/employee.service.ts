@@ -21,9 +21,6 @@ const STATUS_TRANSITIONS: Record<EmployeeStatus, EmployeeStatus[]> = {
   Terminated: [],
 };
 
-interface EmployeePerformanceReviewReferenceRepository {
-  hasEmployeeReference(employeeId: string): boolean;
-}
 
 export class EmployeeService {
   readonly eventOutbox = new EmployeeEventOutbox();
@@ -32,7 +29,6 @@ export class EmployeeService {
     private readonly repository: EmployeeRepository,
     private readonly roleService?: RoleService,
     private readonly departmentRepository?: DepartmentRepository,
-    private readonly performanceReviewRepository?: EmployeePerformanceReviewReferenceRepository,
     private readonly tenantId: string = 'tenant-default',
   ) {}
 
@@ -265,9 +261,6 @@ export class EmployeeService {
       throw new ConflictError('cannot delete employee assigned as department head');
     }
 
-    if (this.performanceReviewRepository?.hasEmployeeReference(employeeId)) {
-      throw new ConflictError('cannot delete employee referenced by performance reviews');
-    }
 
     if (!this.repository.delete(employeeId)) {
       throw new NotFoundError('employee not found');

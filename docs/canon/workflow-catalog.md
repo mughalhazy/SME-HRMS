@@ -281,138 +281,66 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 6. Move successful candidates to `Offered`.
 7. Mark accepted candidates as `Hired` and emit `CandidateHired`.
 
-## performance_review
+## performance_management
 
 ### Owning service
-- `employee-service`
-
-### Participating services
-- `auth-service`
-- `notification-service`
-
-### Entities referenced
-- `PerformanceReview`
-- `Employee`
-
-### Trigger
-- Review cycle launch or manager-initiated ad hoc review.
-
-### State transitions
-- `PerformanceReview: none -> Draft -> Submitted -> Finalized`
-
-### Events
-- Publishes:
-  - `PerformanceReviewSubmitted`
-  - `PerformanceReviewFinalized`
-
-### Steps
-1. Create the `PerformanceReview` in `Draft`.
-2. Capture manager comments, goals, and optional rating.
-3. Submit the review.
-4. Finalize the review once the submitted assessment is complete and policy checks pass.
-5. Persist outcomes for talent and compensation use.
-
-## access_provisioning
-
-### Owning service
-- `auth-service`
+- `performance-service`
 
 ### Participating services
 - `employee-service`
+- `auth-service`
+- `workflow-service`
+- `audit-service`
 - `notification-service`
 
 ### Entities referenced
-- `UserAccount`
-- `RoleBinding`
-- `PermissionPolicy`
-- `Session`
-- `RefreshToken`
+- `ReviewCycle`
+- `Goal`
+- `Feedback`
+- `CalibrationSession`
+- `PipPlan`
 - `Employee`
 
 ### Trigger
-- New employee onboarding, direct admin invitation, or role change requiring access updates.
+- HR opens a review cycle, an employee submits a goal/OKR, calibration sign-off is requested, or a manager launches a PIP.
 
 ### State transitions
-- `UserAccount: none -> Invited/Active -> Locked/Disabled`
-- `RoleBinding: none -> Active -> Revoked`
-- `Session: none -> Active -> Revoked`
-- `RefreshToken: none -> Active -> Rotated`
+- `ReviewCycle: none -> Draft -> Open -> Closed`
+- `Goal: none -> Draft -> Submitted -> Approved/Rejected`
+- `CalibrationSession: none -> Draft -> Submitted -> Finalized/Rejected`
+- `PipPlan: none -> Draft -> Submitted -> Active/Rejected -> Completed/Cancelled`
 
 ### Events
 - Consumes:
   - `EmployeeCreated`
+  - `EmployeeUpdated`
   - `EmployeeStatusChanged`
 - Publishes:
-  - `UserProvisioned`
-  - `UserAuthenticated`
-  - `SessionRevoked`
-  - `UserAccountStatusChanged`
-  - `RoleBindingChanged`
-  - `RefreshTokenRotated`
-  - `AuthorizationPolicyUpdated`
+  - `PerformanceReviewCycleCreated`
+  - `PerformanceReviewCycleOpened`
+  - `PerformanceReviewCycleClosed`
+  - `PerformanceGoalCreated`
+  - `PerformanceGoalSubmitted`
+  - `PerformanceGoalApproved`
+  - `PerformanceGoalRejected`
+  - `PerformanceFeedbackRecorded`
+  - `PerformanceCalibrationCreated`
+  - `PerformanceCalibrationSubmitted`
+  - `PerformanceCalibrationFinalized`
+  - `PerformanceCalibrationRejected`
+  - `PerformancePipCreated`
+  - `PerformancePipSubmitted`
+  - `PerformancePipActive`
+  - `PerformancePipRejected`
+  - `PerformancePipProgressUpdated`
 
 ### Steps
-1. Link or create a `UserAccount` for the subject.
-2. Apply baseline `RoleBinding` entries and scope.
-3. Activate the account or issue an invitation.
-4. Issue sessions and refresh tokens on successful authentication.
-5. Revoke sessions on logout, disablement, or compromise response.
-6. Publish user-status, role-binding, or token-rotation events when access posture changes.
-7. Publish policy updates when authorization rules change.
+1. Create the `ReviewCycle` in `Draft` and validate the owner against the `employee-service` read model.
+2. Open the cycle through the centralized workflow engine so performance windows are approval-gated.
+3. Create `Goal` records in `Draft`, then submit them for manager approval via workflow.
+4. Record continuous `Feedback` entries against the employee and optionally the active review cycle.
+5. Create `CalibrationSession` records, submit them to HR sign-off, and persist finalized ratings.
+6. Create `PipPlan` records with milestones, route them for approval, and track milestone completion until closure.
+7. Emit audit records and canonical events for every privileged state transition.
 
-## notification_dispatch
 
-### Owning service
-- `notification-service`
-
-### Participating services
-- `auth-service`
-- all event-producing domain services as upstream publishers
-
-### Entities referenced
-- `NotificationTemplate`
-- `NotificationMessage`
-- `DeliveryAttempt`
-- `NotificationPreference`
-- `Employee`
-- `Candidate`
-- `UserAccount`
-
-### Trigger
-- Domain event received, ad hoc send request created, or preference update requires send suppression/routing changes.
-
-### State transitions
-- `NotificationTemplate: Draft -> Active -> Retired`
-- `NotificationMessage: none -> Queued -> Sent/Failed/Suppressed`
-- `DeliveryAttempt: none -> Deferred/Sent/Failed`
-- `NotificationPreference: Active <-> Disabled`
-
-### Events
-- Consumes:
-  - `LeaveRequestSubmitted`
-  - `LeaveRequestApproved`
-  - `AttendanceCaptured`
-  - `PayrollProcessed`
-  - `PayrollPaid`
-  - `InterviewScheduled`
-  - `InterviewCalendarSynced`
-  - `UserProvisioned`
-  - `SessionRevoked`
-- Publishes:
-  - `NotificationQueued`
-  - `NotificationSent`
-  - `NotificationFailed`
-  - `NotificationSuppressed`
-
-### Steps
-1. Resolve the applicable template and subject preferences.
-2. Build a `NotificationMessage` in `Queued`.
-3. Execute one or more `DeliveryAttempt` records by channel/provider.
-4. Transition the message to `Sent`, `Failed`, or `Suppressed`.
-5. Publish delivery outcome events for dashboards and audit, including suppression outcomes.
-
-## Coverage checklist
-
-- Every service in `docs/canon/service-map.md` owns at least one workflow in this catalog.
-- Every workflow references only entities defined in `docs/canon/domain-model.md`.
-- Every published or consumed event is defined in `docs/canon/event-catalog.md`.

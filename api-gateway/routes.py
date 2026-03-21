@@ -20,11 +20,13 @@ class Route:
 ROUTES: tuple[Route, ...] = (
     Route(name="employees", path_prefix="/employees", upstream_service="employee-service"),
     Route(name="departments", path_prefix="/departments", upstream_service="employee-service"),
+    Route(name="performance", path_prefix="/performance", upstream_service="performance-service"),
     Route(name="attendance", path_prefix="/attendance", upstream_service="attendance-service"),
     Route(name="leave", path_prefix="/leave", upstream_service="leave-service"),
     Route(name="payroll", path_prefix="/payroll", upstream_service="payroll-service"),
     Route(name="hiring", path_prefix="/hiring", upstream_service="hiring-service"),
     Route(name="auth", path_prefix="/auth", upstream_service="auth-service"),
+    Route(name="workflows", path_prefix="/workflows", upstream_service="workflow-service"),
     Route(name="audit", path_prefix="/audit", upstream_service="audit-service"),
     Route(name="notifications", path_prefix="/notifications", upstream_service="notification-service"),
     Route(name="integrations", path_prefix="/integrations", upstream_service="integration-service"),
