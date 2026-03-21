@@ -104,3 +104,11 @@ This catalog defines query-optimized projections and validates each read model a
 - Every workflow in `docs/canon/workflow-catalog.md` produces or consumes at least one read model.
 - Every UI-facing operational area has a read model contract.
 - Every source entity listed above is defined in `docs/canon/domain-model.md`.
+
+## 12) `integration_delivery_view`
+- **Source services:** `integration-service`
+- **Source workflows:** outbound integration dispatch
+- **Source entities:** `WebhookEndpoint`, `WebhookDelivery`, `WebhookDeliveryAttempt`
+- **Key/grain:** one row per webhook delivery (`delivery_id`)
+- **Fields:** `delivery_id`, `webhook_id`, `tenant_id`, `target_url`, `event_id`, `event_type`, `status`, `attempt_count`, `last_http_status`, `last_error`, `dead_lettered_at`, `updated_at`
+- **Primary consumers:** integration operations, support tooling, audit/replay views

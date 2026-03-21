@@ -13,6 +13,7 @@ This document defines the canonical backend domain for SME-HRMS and aligns entit
 | `hiring-service` | `JobPosting`, `Candidate`, `Interview` |
 | `auth-service` | `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Session`, `RefreshToken` |
 | `notification-service` | `NotificationTemplate`, `NotificationMessage`, `DeliveryAttempt`, `NotificationPreference` |
+| `integration-service` | `WebhookEndpoint`, `WebhookDelivery`, `WebhookDeliveryAttempt` |
 | `settings-service` | `AttendanceRule`, `LeavePolicy`, `PayrollSettings` |
 
 ## Cross-entity rules
@@ -774,3 +775,71 @@ Represents channel and topic preferences for a subject receiving notifications.
 - Every entity owned in `docs/canon/service-map.md` is defined in this document.
 - Every workflow in `docs/canon/workflow-catalog.md` references only entities defined in this document.
 - Every state transition referenced in workflows maps to events in `docs/canon/event-catalog.md`.
+
+## WebhookEndpoint
+
+### Owning service
+- `integration-service`
+
+### Description
+Represents a tenant-scoped outbound webhook subscription for delivery of canonical HRMS events to an external endpoint.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| webhook_id | UUID | Yes | Primary identifier. |
+| tenant_id | UUID/String | Yes | Tenant/workspace scope for the registration. |
+| target_url | String | Yes | HTTPS endpoint for outbound delivery; localhost HTTP only for local development. |
+| subscribed_events | String[] | Yes | Canonical D2-aligned event types to deliver. |
+| secret | Secret | Yes | Managed secret used for request signing; never returned in plaintext. |
+| status | Enum | Yes | `Active`, `Disabled`, `Deleted`. |
+| signature_algorithm | Enum | Yes | Currently `hmac-sha256`. |
+| last_delivery_status | Enum | No | `Succeeded`, `Failed`, `DeadLettered`. |
+| retry_policy | Object | Yes | Attempt count and backoff metadata. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Last update timestamp. |
+
+## WebhookDelivery
+
+### Owning service
+- `integration-service`
+
+### Description
+Represents one webhook fan-out delivery for a specific tenant event and endpoint pairing.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| delivery_id | UUID | Yes | Primary identifier. |
+| webhook_id | UUID | Yes | Parent `WebhookEndpoint`. |
+| tenant_id | UUID/String | Yes | Tenant scope copied from the webhook and event. |
+| event_id | UUID | Yes | Canonical source event identifier. |
+| event_type | String | Yes | Canonical event type. |
+| status | Enum | Yes | `Scheduled`, `Delivering`, `Succeeded`, `DeadLettered`. |
+| attempt_count | Integer | Yes | Number of delivery attempts executed. |
+| last_http_status | Integer | No | Final HTTP response code if any. |
+| last_error | String | No | Final failure detail if any. |
+| dead_lettered_at | DateTime | No | When the delivery exhausted retries. |
+| created_at | DateTime | Yes | Record creation timestamp. |
+| updated_at | DateTime | Yes | Last status update timestamp. |
+
+## WebhookDeliveryAttempt
+
+### Owning service
+- `integration-service`
+
+### Description
+Represents an immutable attempt record for a single outbound webhook dispatch try.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| attempt_id | UUID | Yes | Primary identifier. |
+| delivery_id | UUID | Yes | Parent `WebhookDelivery`. |
+| webhook_id | UUID | Yes | Parent `WebhookEndpoint`. |
+| tenant_id | UUID/String | Yes | Tenant scope for the attempt. |
+| attempt_number | Integer | Yes | 1-based retry sequence. |
+| status | Enum | Yes | `Succeeded` or `Failed`. |
+| response_status | Integer | No | HTTP response code if any. |
+| error_message | String | No | Transport or validation failure text. |
+| created_at | DateTime | Yes | Attempt timestamp. |
