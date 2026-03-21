@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/feedback'
 import { Select } from '@/components/ui/input'
 import {
-  PageGrid,
+  KpiGrid,
   PageSection,
   PageSectionHeader,
   PageStack,
@@ -227,11 +227,11 @@ export function Payroll() {
         />
       </PageSection>
 
-      <PageGrid className="md:grid-cols-3">
+      <KpiGrid className="xl:grid-cols-3">
         <StatCard title="Total payroll" value={formatCurrency(summary.totalPayroll)} hint={`${filteredEntries.length} employees in current register.`} icon={Wallet} />
         <StatCard title="Processed" value={String(summary.processed).padStart(2, '0')} hint="Registers ready for settlement release." icon={BadgeDollarSign} />
         <StatCard title="Pending" value={String(summary.pending + summary.flagged).padStart(2, '0')} hint="Processing or review items still open in this cycle." icon={RefreshCw} />
-      </PageGrid>
+      </KpiGrid>
 
       <section className="space-y-4">
         <PageSection className="p-4">
