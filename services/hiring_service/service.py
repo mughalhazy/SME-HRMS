@@ -169,6 +169,15 @@ class HiringService:
             ],
         )
 
+    def _audit_hiring_mutation(self, action: str, entity: str, entity_id: str, before: dict[str, Any], after: dict[str, Any], *, actor_id: str | None = None, actor_type: str = 'user') -> None:
+        self.observability.logger.audit(
+            action,
+            actor={'id': actor_id or 'system', 'type': actor_type},
+            entity=entity,
+            entity_id=entity_id,
+            context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
+        )
+
     def create_job_posting(self, payload: dict[str, Any]) -> dict[str, Any]:
         started = perf_counter()
         with self._lock:
@@ -203,11 +212,14 @@ class HiringService:
             self.job_postings[job_posting.job_posting_id] = job_posting
             if status == "Open":
                 self._emit("JobPostingOpened", {"job_posting_id": job_posting.job_posting_id})
+        payload = self._serialize(job_posting)
+        self._audit_hiring_mutation('job_posting_created', 'JobPosting', job_posting.job_posting_id, {}, payload, actor_id=str(payload.get('changed_by') or payload.get('actor_id') or 'system'), actor_type='service' if payload.get('changed_by') is None else 'user')
         self.observability.track("create_job_posting", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "job_posting_id": job_posting.job_posting_id})
-        return self._serialize(job_posting)
+        return payload
 
     def update_job_posting(self, job_posting_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         posting = self._require_job_posting(job_posting_id)
+        before = self._serialize(posting)
         previous_status = posting.status
 
         for key in ["title", "department_id", "role_id", "location", "description"]:
@@ -246,7 +258,9 @@ class HiringService:
             if posting.status in {"Closed", "Filled"}:
                 self._emit("JobPostingClosed", {"job_posting_id": posting.job_posting_id, "status": posting.status})
 
-        return self._serialize(posting)
+        payload = self._serialize(posting)
+        self._audit_hiring_mutation('job_posting_updated', 'JobPosting', posting.job_posting_id, before, payload, actor_id=str(patch.get('changed_by') or 'system'), actor_type='user' if patch.get('changed_by') else 'system')
+        return payload
 
     def get_job_posting(self, job_posting_id: str) -> dict[str, Any]:
         posting = self._require_job_posting(job_posting_id)
@@ -294,6 +308,7 @@ class HiringService:
             payload = self._serialize(posting)
             payload["candidate_count"] = 0
             del self.job_postings[job_posting_id]
+            self._audit_hiring_mutation('job_posting_deleted', 'JobPosting', job_posting_id, payload, {}, actor_id='system', actor_type='system')
             return payload
 
     def create_candidate(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -334,6 +349,7 @@ class HiringService:
                 updated_at=self._now(),
             )
             self.candidates[candidate.candidate_id] = candidate
+            created_candidate = self._serialize(candidate)
             self._record_candidate_stage_transition(
                 candidate_id=candidate.candidate_id,
                 from_status=None,
@@ -344,7 +360,9 @@ class HiringService:
             )
             self._emit("CandidateApplied", {"candidate_id": candidate.candidate_id, "job_posting_id": candidate.job_posting_id})
         self.observability.track("create_candidate", trace_id=self.observability.trace_id(), started_at=started, success=True, context={"status": 201, "candidate_id": candidate.candidate_id})
-        return self.get_candidate(candidate.candidate_id)
+        payload = self.get_candidate(candidate.candidate_id)
+        self._audit_hiring_mutation('candidate_created', 'Candidate', candidate.candidate_id, {}, payload, actor_id=str(payload.get('stage_history', [{}])[0].get('changed_by') or 'system'), actor_type='user' if payload.get('stage_history', [{}])[0].get('changed_by') else 'system')
+        return payload
 
     def list_candidates(
         self,
@@ -391,6 +409,7 @@ class HiringService:
 
     def update_candidate(self, candidate_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
+        before = self.get_candidate(candidate_id)
         previous_status = candidate.status
 
         for key in [
@@ -453,7 +472,9 @@ class HiringService:
                 },
             )
 
-        return self.get_candidate(candidate.candidate_id)
+        payload = self.get_candidate(candidate.candidate_id)
+        self._audit_hiring_mutation('candidate_updated', 'Candidate', candidate.candidate_id, before, payload, actor_id=str(patch.get('changed_by') or 'system'), actor_type='user' if patch.get('changed_by') else 'system')
+        return payload
 
     def get_candidate(self, candidate_id: str) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
@@ -497,7 +518,9 @@ class HiringService:
 
         self.interviews[interview.interview_id] = interview
         self._emit("InterviewScheduled", {"interview_id": interview.interview_id, "candidate_id": interview.candidate_id})
-        return self.get_interview(interview.interview_id)
+        payload = self.get_interview(interview.interview_id)
+        self._audit_hiring_mutation('interview_created', 'Interview', interview.interview_id, {}, payload, actor_id=str(payload.get('created_by') or payload.get('candidate_id') or 'system'), actor_type='system')
+        return payload
 
     def get_interview(self, interview_id: str) -> dict[str, Any]:
         interview = self._require_interview(interview_id)
@@ -657,6 +680,7 @@ class HiringService:
 
     def update_interview(self, interview_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         interview = self._require_interview(interview_id)
+        before = self.get_interview(interview_id)
         previous_status = interview.status
 
         if "candidate_id" in patch and patch["candidate_id"] != interview.candidate_id:
@@ -701,7 +725,9 @@ class HiringService:
         if previous_status != interview.status and interview.status == "Completed":
             self._emit("InterviewCompleted", {"interview_id": interview.interview_id, "candidate_id": interview.candidate_id})
 
-        return self.get_interview(interview.interview_id)
+        payload = self.get_interview(interview.interview_id)
+        self._audit_hiring_mutation('interview_updated', 'Interview', interview.interview_id, before, payload, actor_id=str(patch.get('changed_by') or 'system'), actor_type='user' if patch.get('changed_by') else 'system')
+        return payload
 
     def mark_candidate_hired(self, candidate_id: str, employee_payload: dict[str, Any] | None = None) -> dict[str, Any]:
         candidate = self._require_candidate(candidate_id)
@@ -769,7 +795,9 @@ class HiringService:
                 "role_id": employee_profile.role_id,
             },
         )
-        return self.get_candidate(candidate_id)
+        payload = self.get_candidate(candidate_id)
+        self._audit_hiring_mutation('candidate_hired', 'Candidate', candidate_id, {'status': 'Offered'}, payload, actor_id=str((employee_payload or {}).get('changed_by') or 'system'), actor_type='user' if (employee_payload or {}).get('changed_by') else 'system')
+        return payload
 
     def get_employee_profile(self, employee_id: str) -> dict[str, Any]:
         employee = self.employee_profiles.get(employee_id)

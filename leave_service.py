@@ -407,6 +407,24 @@ class LeaveService:
         payload["workflow"] = self.workflow_service.get_instance(leave.workflow_id, tenant_id=leave.tenant_id) if leave.workflow_id else None
         return payload
 
+
+    def _actor_payload(self, actor_role: str, actor_employee_id: str, *, actor_type: str = 'user') -> dict[str, str | None]:
+        return {
+            'id': actor_employee_id or actor_role,
+            'type': actor_type,
+            'role': actor_role,
+        }
+
+    def _audit_leave_mutation(self, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, before: dict, after: dict, trace_id: str | None) -> None:
+        self.observability.logger.audit(
+            action,
+            trace_id=trace_id,
+            actor=self._actor_payload(actor_role, actor_employee_id),
+            entity='LeaveRequest',
+            entity_id=leave_request_id,
+            context={'tenant_id': self.tenant_id, 'before': before, 'after': after},
+        )
+
     def replay_dead_letters(self) -> list[dict]:
         recovered = self.dead_letters.recover(
             lambda entry: entry.workflow == "leave_request",
@@ -465,6 +483,7 @@ class LeaveService:
                     updated_at=now,
                 )
                 self.requests[leave.leave_request_id] = leave
+            self._audit_leave_mutation('leave_request_created', actor_role, actor_employee_id, leave.leave_request_id, {}, self._response_payload(leave), trace)
             self.observability.logger.info(
                 "leave.request_created",
                 trace_id=trace,
@@ -483,6 +502,7 @@ class LeaveService:
         role = Role(actor_role)
         with self._lock:
             leave = self.requests.get(leave_request_id)
+            before = self._response_payload(leave) if leave else {}
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
             self._assert_resource_tenant(leave.tenant_id, trace)
@@ -546,14 +566,7 @@ class LeaveService:
                 simulate_failure=simulate_event_failure,
             )
             self.idempotency.record(key, fingerprint, 200, payload)
-        self.observability.logger.audit(
-            "leave_request_submitted",
-            trace_id=trace,
-            actor=actor_employee_id,
-            entity="LeaveRequest",
-            entity_id=leave.leave_request_id,
-            context={"employee_id": leave.employee_id},
-        )
+        self._audit_leave_mutation('leave_request_submitted', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
         self._finalize_observation("submit_request", trace, started, True, {"status": 200})
         return 200, payload
 
@@ -564,6 +577,7 @@ class LeaveService:
         role = Role(actor_role)
         with self._lock:
             leave = self.requests.get(leave_request_id)
+            before = self._response_payload(leave) if leave else {}
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
             self._assert_resource_tenant(leave.tenant_id, trace)
@@ -648,14 +662,7 @@ class LeaveService:
                 event_payload.update({"total_days": leave.total_days, "leave_type": leave.leave_type.value})
             self._emit_event(event, event_payload, workflow="leave_request", trace_id=trace, simulate_failure=simulate_event_failure)
             self.idempotency.record(key, fingerprint, 200, payload)
-        self.observability.logger.audit(
-            f"leave_request_{action}",
-            trace_id=trace,
-            actor=actor_employee_id,
-            entity="LeaveRequest",
-            entity_id=leave.leave_request_id,
-            context={"employee_id": leave.employee_id, "status": leave.status.value},
-        )
+        self._audit_leave_mutation(f'leave_request_{action}', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
         self._finalize_observation("decide_request", trace, started, True, {"status": 200, "action": action})
         return 200, payload
 
@@ -666,6 +673,7 @@ class LeaveService:
         role = Role(actor_role)
         with self._lock:
             leave = self.requests.get(leave_request_id)
+            before = self._response_payload(leave) if leave else {}
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
             self._assert_resource_tenant(leave.tenant_id, trace)
@@ -700,16 +708,10 @@ class LeaveService:
                     workflow="leave_request",
                     trace_id=trace,
                 )
-                self.observability.logger.audit(
-                    "leave_request_cancelled",
-                    trace_id=trace,
-                    actor=actor_employee_id,
-                    entity="LeaveRequest",
-                    entity_id=leave.leave_request_id,
-                    context={"employee_id": leave.employee_id},
-                )
+                payload = self._response_payload(leave)
+                self._audit_leave_mutation('leave_request_cancelled', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
                 self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": True})
-                return 200, self._response_payload(leave)
+                return 200, payload
 
             start = date.fromisoformat(patch.get("start_date")) if patch.get("start_date") else leave.start_date
             end = date.fromisoformat(patch.get("end_date")) if patch.get("end_date") else leave.end_date
@@ -732,13 +734,15 @@ class LeaveService:
                 leave.approver_employee_id = patch["approver_employee_id"]
             leave.total_days = next_total_days
             leave.updated_at = self._now()
+        payload = self._response_payload(leave)
+        self._audit_leave_mutation('leave_request_updated', actor_role, actor_employee_id, leave.leave_request_id, before, payload, trace)
         self.observability.logger.info(
             "leave.request_patched",
             trace_id=trace,
             context={"leave_request_id": leave.leave_request_id, "fields": sorted(patch.keys())},
         )
         self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": False})
-        return 200, self._response_payload(leave)
+        return 200, payload
 
     def get_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None, tenant_id: str | None = None) -> tuple[int, dict]:
         self.tenant_id = self._resolve_tenant(tenant_id)

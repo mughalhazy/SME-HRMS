@@ -122,6 +122,45 @@ class AuthService:
         self._sessions_by_id = PersistentKVStore[str, SessionRecord](service='auth-service', namespace='sessions_by_id', db_path=db_path)
         self.observability = Observability('auth-service')
 
+    @staticmethod
+    def _user_payload(user: UserAccount) -> dict[str, Any]:
+        return {
+            'user_id': str(user.user_id),
+            'tenant_id': user.tenant_id,
+            'username': user.username,
+            'role': user.role,
+            'employee_id': str(user.employee_id) if user.employee_id else None,
+            'department_id': str(user.department_id) if user.department_id else None,
+            'active': user.active,
+            'last_login_at': user.last_login_at.isoformat() if user.last_login_at else None,
+            'created_at': user.created_at.isoformat(),
+            'updated_at': user.updated_at.isoformat(),
+        }
+
+    def _session_payload(self, session: SessionRecord) -> dict[str, Any]:
+        user = self._users_by_id.get(session.user_id)
+        return {
+            'session_id': session.session_id,
+            'user_id': str(session.user_id),
+            'tenant_id': user.tenant_id if user else DEFAULT_TENANT_ID,
+            'role': user.role if user else None,
+            'refresh_expires_at': session.refresh_expires_at.isoformat(),
+            'started_at': session.started_at.isoformat(),
+            'last_rotated_at': session.last_rotated_at.isoformat(),
+            'revoked': session.revoked,
+            'revoked_at': session.revoked_at.isoformat() if session.revoked_at else None,
+        }
+
+    def _audit_auth_mutation(self, action: str, actor_id: str | None, entity: str, entity_id: str, tenant_id: str, before: dict[str, Any], after: dict[str, Any], *, role: str | None = None, trace_id: str | None = None) -> None:
+        self.observability.logger.audit(
+            action,
+            trace_id=trace_id,
+            actor={'id': actor_id or 'system', 'type': 'user' if actor_id else 'system', 'role': role},
+            entity=entity,
+            entity_id=entity_id,
+            context={'tenant_id': tenant_id, 'before': before, 'after': after},
+        )
+
     def register_user(
         self,
         *,
@@ -160,13 +199,7 @@ class AuthService:
         )
         self._users_by_name[user_lookup_key] = user
         self._users_by_id[user.user_id] = user
-        self.observability.logger.audit(
-            'auth_user_registered',
-            actor=str(user.user_id),
-            entity='UserAccount',
-            entity_id=str(user.user_id),
-            context={'username': normalized_username, 'role': role, 'tenant_id': tenant_id},
-        )
+        self._audit_auth_mutation('auth_user_registered', str(user.user_id), 'UserAccount', str(user.user_id), tenant_id, {}, self._user_payload(user), role=role)
         return user
 
     def login(self, username: str, password: str, *, tenant_id: str = DEFAULT_TENANT_ID, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800) -> dict[str, Any]:
@@ -202,6 +235,7 @@ class AuthService:
             self._revoke_session(session.session_id, actor=str(session.user_id), role=user.role if user else None)
             raise AuthServiceError('ACCOUNT_DISABLED', 'User account is disabled')
 
+        before = self._session_payload(session)
         now = datetime.now(timezone.utc)
         rotated_refresh_token = self._generate_refresh_token()
         session.refresh_token_hash = self._hash_refresh_token(rotated_refresh_token)
@@ -214,13 +248,7 @@ class AuthService:
             refresh_token=rotated_refresh_token,
             refresh_ttl_seconds=refresh_ttl_seconds,
         )
-        self.observability.logger.audit(
-            'auth_refresh_rotated',
-            actor=str(user.user_id),
-            entity='Session',
-            entity_id=session.session_id,
-            context={'role': user.role},
-        )
+        self._audit_auth_mutation('auth_refresh_rotated', str(user.user_id), 'Session', session.session_id, user.tenant_id, before, self._session_payload(session), role=user.role)
         return token_payload
 
     def authenticate_token(self, token: str) -> AuthenticatedPrincipal:
@@ -384,16 +412,11 @@ class AuthService:
             return
         if session.revoked:
             return
+        before = self._session_payload(session)
         session.revoked = True
         session.revoked_at = datetime.now(timezone.utc)
         user = self._users_by_id.get(session.user_id)
-        self.observability.logger.audit(
-            'auth_logout',
-            actor=actor,
-            entity='Session',
-            entity_id=session_id,
-            context={'role': role, 'tenant_id': user.tenant_id if user else None},
-        )
+        self._audit_auth_mutation('auth_logout', actor, 'Session', session_id, user.tenant_id if user else DEFAULT_TENANT_ID, before, self._session_payload(session), role=role)
 
     def _get_session_by_refresh_token(self, refresh_token: str) -> SessionRecord:
         if not refresh_token:

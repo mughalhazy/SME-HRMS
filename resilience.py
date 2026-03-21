@@ -10,6 +10,8 @@ from threading import Lock
 from typing import Any, Callable, TypeVar
 from uuid import uuid4
 
+from audit_service.service import emit_audit_record
+
 LOGGER = logging.getLogger("sme_hrms.resilience")
 
 T = TypeVar("T")
@@ -58,8 +60,27 @@ class StructuredLogger:
     def error(self, event: str, *, trace_id: str | None = None, message: str | None = None, context: dict[str, Any] | None = None) -> dict[str, Any]:
         return self.log("ERROR", event, trace_id=trace_id, message=message, context=context)
 
-    def audit(self, action: str, *, trace_id: str | None = None, actor: str | None = None, entity: str | None = None, entity_id: str | None = None, outcome: str = "success", context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def audit(self, action: str, *, trace_id: str | None = None, actor: str | dict[str, Any] | None = None, entity: str | None = None, entity_id: str | None = None, outcome: str = "success", context: dict[str, Any] | None = None) -> dict[str, Any]:
         audit_context = {"actor": actor, "entity": entity, "entity_id": entity_id, "outcome": outcome, **(context or {})}
+        actor_payload = actor if isinstance(actor, dict) else {
+            'id': actor or str((context or {}).get('actor_id') or 'system'),
+            'type': str((context or {}).get('actor_type') or 'system'),
+            'role': (context or {}).get('actor_role'),
+            'department_id': (context or {}).get('actor_department_id'),
+        }
+        record = emit_audit_record(
+            service_name=self.service_name,
+            tenant_id=str((context or {}).get('tenant_id') or 'tenant-default'),
+            actor=actor_payload,
+            action=action,
+            entity=entity or str((context or {}).get('entity') or 'Unknown'),
+            entity_id=str(entity_id or (context or {}).get('entity_id') or 'unknown'),
+            before=(context or {}).get('before') or {},
+            after=(context or {}).get('after') or {},
+            trace_id=trace_id or new_trace_id(),
+            source={key: value for key, value in (context or {}).items() if key not in {'tenant_id', 'before', 'after', 'actor_type', 'actor_role', 'actor_department_id'}},
+        )
+        audit_context['audit_record'] = record
         return self.log("INFO", "audit", trace_id=trace_id, message=action, context=audit_context)
 
 
