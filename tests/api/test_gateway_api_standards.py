@@ -33,6 +33,7 @@ class GatewayApiStandardsTests(unittest.TestCase):
             "/api/v1/departments/123": "employee-service",
             "/api/v1/attendance/records": "attendance-service",
             "/api/v1/notifications/events": "notification-service",
+            "/api/v1/jobs/123": "api-gateway",
         }
         for path, service in test_cases.items():
             with self.subTest(path=path):
