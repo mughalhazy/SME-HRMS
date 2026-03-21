@@ -305,7 +305,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - HR opens a review cycle, an employee submits a goal/OKR, calibration sign-off is requested, or a manager launches a PIP.
 
 ### State transitions
-- `ReviewCycle: none -> Draft -> Open -> Closed`
+- `ReviewCycle: none -> Draft -> PendingApproval -> Open -> Closed`
 - `Goal: none -> Draft -> Submitted -> Approved/Rejected`
 - `CalibrationSession: none -> Draft -> Submitted -> Finalized/Rejected`
 - `PipPlan: none -> Draft -> Submitted -> Active/Rejected -> Completed/Cancelled`

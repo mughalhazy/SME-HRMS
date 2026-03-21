@@ -343,6 +343,7 @@ class WorkflowService:
             if step is None:
                 raise WorkflowServiceError(403, "FORBIDDEN", "No delegable task is assigned to this actor")
             metadata = step.setdefault("metadata", {})
+            self._assert_safe_delegate_target(step, delegate_to)
             metadata.setdefault("delegations", []).append({"from": step["assignee"], "to": delegate_to, "at": self._now().isoformat(), "by": actor_id})
             step["assignee"] = delegate_to
             instance.updated_at = self._now()
@@ -525,6 +526,26 @@ class WorkflowService:
             return assignee.split(":", 1)[1].lower() == actor_role.lower()
         return False
 
+    @staticmethod
+    def _assignment_scope(assignee: str) -> str:
+        if assignee.startswith('role:'):
+            return assignee
+        base = assignee.rsplit('-', 1)[0] if '-' in assignee else assignee
+        return f'user-scope:{base}'
+
+    def _assert_safe_delegate_target(self, step: dict[str, Any], delegate_to: str) -> None:
+        target = str(delegate_to or '').strip()
+        if not target:
+            raise WorkflowServiceError(422, 'VALIDATION_ERROR', 'delegate_to is required')
+        metadata = step.setdefault('metadata', {})
+        allowed_delegates = metadata.get('allowed_delegatees') or []
+        if allowed_delegates and target in allowed_delegates:
+            return
+        current_scope = metadata.get('assignment_scope') or self._assignment_scope(str(step.get('assignee') or ''))
+        target_scope = self._assignment_scope(target)
+        if current_scope != target_scope:
+            raise WorkflowServiceError(403, 'FORBIDDEN', 'Delegation target is outside the assignment scope for this workflow task')
+
     def _normalize_definition_step(self, *, index: int, step: dict[str, Any]) -> dict[str, Any]:
         raw = dict(step)
         step_type = str(raw.get("type") or "approval").lower()
@@ -585,6 +606,7 @@ class WorkflowService:
         step["metadata"]["parallel_group"] = raw.get("metadata", {}).get("parallel_group")
         step["metadata"]["active"] = False
         step["metadata"]["condition_key"] = raw.get("metadata", {}).get("condition_key")
+        step["metadata"]["assignment_scope"] = self._assignment_scope(step["assignee"])
         escalation_template = raw.get("metadata", {}).get("escalation_assignee_template")
         if escalation_template:
             step["metadata"]["escalation_assignee"] = self._resolve_template(escalation_template, context)

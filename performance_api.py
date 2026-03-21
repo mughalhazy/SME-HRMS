@@ -62,6 +62,12 @@ def post_review_cycle_close(service: PerformanceService, actor_role: str, actor_
 
 
 @with_error_handling
+def post_review_cycle_decision(service: PerformanceService, action: str, actor_role: str, actor_employee_id: str, review_cycle_id: str, payload: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    body = payload or {}
+    return service.decide_review_cycle(review_cycle_id, action=action, actor_id=actor_employee_id, actor_type='user', actor_role=actor_role, comment=body.get('comment'), trace_id=trace_id)
+
+
+@with_error_handling
 def get_review_cycle(service: PerformanceService, actor_role: str, actor_employee_id: str, review_cycle_id: str, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
     params = query or {}
     return service.get_review_cycle(review_cycle_id, tenant_id=params.get('tenant_id'))

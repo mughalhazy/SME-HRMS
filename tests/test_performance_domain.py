@@ -70,9 +70,13 @@ def test_performance_service_supports_cycles_goals_feedback_calibration_and_pips
     )
     assert cycle['status'] == 'Draft'
 
-    _, opened = service.submit_review_cycle(cycle['review_cycle_id'], actor_id='emp-hr-1', trace_id='trace-cycle-open')
+    _, submitted_cycle = service.submit_review_cycle(cycle['review_cycle_id'], actor_id='emp-hr-1', trace_id='trace-cycle-submit')
+    assert submitted_cycle['status'] == 'PendingApproval'
+    assert submitted_cycle['workflow']['definition_code'] == 'performance_cycle_approval'
+
+    _, opened = service.decide_review_cycle(cycle['review_cycle_id'], action='approve', actor_id='hr-admin', actor_role='Admin', trace_id='trace-cycle-open')
     assert opened['status'] == 'Open'
-    assert opened['workflow']['definition_code'] == 'performance_cycle_approval'
+    assert opened['workflow']['metadata']['terminal_result'] == 'approved'
 
     _, goal = service.create_goal(
         {
@@ -205,3 +209,29 @@ def test_performance_service_rejects_invalid_cross_service_references(tmp_path: 
         assert 'employee-service read model' in str(exc)
     else:  # pragma: no cover
         raise AssertionError('expected missing employee reference to fail')
+
+
+def test_performance_review_cycle_rejection_returns_to_draft(tmp_path: Path) -> None:
+    notifications = NotificationService()
+    workflows = WorkflowService(notification_service=notifications)
+    service = PerformanceService(db_path=str(tmp_path / 'performance-reject.sqlite3'), workflow_service=workflows, notification_service=notifications)
+    _seed_employees(service)
+
+    _, cycle = service.create_review_cycle(
+        {
+            'code': 'FY26-H2',
+            'name': 'FY26 H2 Review Cycle',
+            'review_period_start': '2026-07-01',
+            'review_period_end': '2026-12-31',
+            'owner_employee_id': 'emp-hr-1',
+        },
+        actor_id='emp-hr-1',
+        trace_id='trace-cycle-create-reject',
+    )
+
+    _, submitted = service.submit_review_cycle(cycle['review_cycle_id'], actor_id='emp-hr-1', trace_id='trace-cycle-submit-reject')
+    assert submitted['status'] == 'PendingApproval'
+
+    _, rejected = service.decide_review_cycle(cycle['review_cycle_id'], action='reject', actor_id='hr-admin', actor_role='Admin', comment='Need revised dates', trace_id='trace-cycle-reject')
+    assert rejected['status'] == 'Draft'
+    assert rejected['workflow']['metadata']['terminal_result'] == 'rejected'
