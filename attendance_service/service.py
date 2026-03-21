@@ -15,6 +15,7 @@ from attendance_service.models import (
     RecordState,
 )
 from event_contract import EventRegistry, emit_canonical_event
+from persistent_store import PersistentKVStore
 from resilience import Observability
 
 
@@ -60,10 +61,10 @@ class InMemoryEmployeeDirectory(EmployeeDirectory):
 
 
 class AttendanceService:
-    def __init__(self, employee_directory: EmployeeDirectory, *, late_after: time = time(9, 15)):
+    def __init__(self, employee_directory: EmployeeDirectory, *, late_after: time = time(9, 15), db_path: str | None = None):
         self._employee_directory = employee_directory
-        self._records: Dict[UUID, AttendanceRecord] = {}
-        self._employee_date_index: Dict[tuple[UUID, date], UUID] = {}
+        self._records = PersistentKVStore[UUID, AttendanceRecord](service='attendance-service', namespace='records', db_path=db_path)
+        self._employee_date_index = PersistentKVStore[tuple[UUID, date], UUID](service='attendance-service', namespace='employee_date_index', db_path=db_path)
         self.events: List[dict] = []
         self.observability = Observability("attendance-service")
         self._late_after = late_after

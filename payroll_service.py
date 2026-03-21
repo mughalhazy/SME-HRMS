@@ -13,6 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 from event_contract import EventRegistry, emit_canonical_event
+from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 
 
@@ -212,18 +213,18 @@ class ServiceError(Exception):
 class PayrollService:
     """Canonical payroll-service business logic and API-compatible handlers."""
 
-    def __init__(self):
-        self.records: dict[str, PayrollRecord] = {}
-        self.employee_profiles: dict[str, EmployeePayrollProfile] = {}
-        self.attendance_summaries: dict[tuple[str, date, date], dict[str, Any]] = {}
-        self.period_index: dict[tuple[str, date, date], str] = {}
-        self.payroll_cycles: dict[str, PayrollCycle] = {}
-        self.payroll_cycle_index: dict[tuple[date, date], str] = {}
-        self.salary_structures: dict[str, SalaryStructure] = {}
-        self.salary_structure_index: dict[str, list[str]] = {}
-        self.batches: dict[str, PayrollBatch] = {}
-        self.batch_index: dict[tuple[date, date], str] = {}
-        self.record_batches: dict[str, str] = {}
+    def __init__(self, db_path: str | None = None):
+        self.records = PersistentKVStore[str, PayrollRecord](service='payroll-service', namespace='records', db_path=db_path)
+        self.employee_profiles = PersistentKVStore[str, EmployeePayrollProfile](service='payroll-service', namespace='employee_profiles', db_path=db_path)
+        self.attendance_summaries = PersistentKVStore[tuple[str, date, date], dict[str, Any]](service='payroll-service', namespace='attendance_summaries', db_path=db_path)
+        self.period_index = PersistentKVStore[tuple[str, date, date], str](service='payroll-service', namespace='period_index', db_path=db_path)
+        self.payroll_cycles = PersistentKVStore[str, PayrollCycle](service='payroll-service', namespace='payroll_cycles', db_path=db_path)
+        self.payroll_cycle_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='payroll_cycle_index', db_path=db_path)
+        self.salary_structures = PersistentKVStore[str, SalaryStructure](service='payroll-service', namespace='salary_structures', db_path=db_path)
+        self.salary_structure_index = PersistentKVStore[str, list[str]](service='payroll-service', namespace='salary_structure_index', db_path=db_path)
+        self.batches = PersistentKVStore[str, PayrollBatch](service='payroll-service', namespace='batches', db_path=db_path)
+        self.batch_index = PersistentKVStore[tuple[date, date], str](service='payroll-service', namespace='batch_index', db_path=db_path)
+        self.record_batches = PersistentKVStore[str, str](service='payroll-service', namespace='record_batches', db_path=db_path)
         self.events: list[dict[str, Any]] = []
         self.dead_letters = DeadLetterQueue()
         self.error_logger = CentralErrorLogger("payroll-service")

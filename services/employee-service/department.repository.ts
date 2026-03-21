@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, PaginatedResult, QueryOptimizer, applyCursorPagination } from '../../db/optimization';
+import { PersistentMap } from '../../db/persistent-map';
 import { CreateDepartmentInput, Department, DepartmentFilters, DepartmentStatus, UpdateDepartmentInput } from './department.model';
 import { DEFAULT_TENANT_ID, seedDepartments } from './domain-seed';
 
 const DEPARTMENT_CACHE_PREFIX = 'departments';
 
 export class DepartmentRepository {
-  private readonly departments = new Map<string, Department>();
+  private readonly departments: PersistentMap<Department>;
   private readonly nameIndex = new Map<string, string>();
   private readonly codeIndex = new Map<string, string>();
   private readonly statusIndex = new Map<DepartmentStatus, Set<string>>();
@@ -21,6 +22,11 @@ export class DepartmentRepository {
     private readonly tenantId: string = DEFAULT_TENANT_ID,
     seedData: Department[] = seedDepartments(tenantId),
   ) {
+    this.departments = new PersistentMap<Department>(`employee-service:departments:${this.tenantId}`);
+    if (this.departments.keys().length > 0) {
+      this.rebuildIndexes();
+      return;
+    }
     for (const department of seedData) {
       if (department.tenant_id !== this.tenantId) {
         continue;
@@ -36,6 +42,7 @@ export class DepartmentRepository {
         this.headEmployeeIndex.set(department.head_employee_id, department.department_id);
       }
     }
+    this.rebuildIndexes();
   }
 
   create(input: CreateDepartmentInput): Department {
@@ -193,6 +200,26 @@ export class DepartmentRepository {
     return (this.parentDepartmentIndex.get(departmentId)?.size ?? 0) > 0;
   }
 
+
+  private rebuildIndexes(): void {
+    this.nameIndex.clear();
+    this.codeIndex.clear();
+    this.statusIndex.clear();
+    this.parentDepartmentIndex.clear();
+    this.headEmployeeIndex.clear();
+    for (const department of this.departments.values()) {
+      this.nameIndex.set(department.name, department.department_id);
+      this.codeIndex.set(department.code, department.department_id);
+      this.addToIndex(this.statusIndex, department.status, department.department_id);
+      if (department.parent_department_id) {
+        this.addToIndex(this.parentDepartmentIndex, department.parent_department_id, department.department_id);
+      }
+      if (department.head_employee_id) {
+        this.headEmployeeIndex.set(department.head_employee_id, department.department_id);
+      }
+    }
+  }
+
   private collectCandidateIds(filters: DepartmentFilters): string[] {
     if (filters.department_id) {
       return this.departments.has(filters.department_id) ? [filters.department_id] : [];
@@ -243,6 +270,7 @@ export class DepartmentRepository {
     if (tenantId && tenantId !== this.tenantId) {
       throw new Error('cross_tenant_filter_blocked');
     }
+    this.rebuildIndexes();
   }
 
   private addToIndex<K>(index: Map<K, Set<string>>, key: K, departmentId: string): void {
@@ -260,6 +288,7 @@ export class DepartmentRepository {
     if (set.size === 0) {
       index.delete(key);
     }
+    this.rebuildIndexes();
   }
 
   private reindexDepartment(previous: Department, next: Department): void {
@@ -295,6 +324,7 @@ export class DepartmentRepository {
         this.headEmployeeIndex.set(next.head_employee_id, next.department_id);
       }
     }
+    this.rebuildIndexes();
   }
 
   private invalidateDepartmentCache(departmentId: string): void {

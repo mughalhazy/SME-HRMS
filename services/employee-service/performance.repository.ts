@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, PaginatedResult, QueryOptimizer, applyCursorPagination } from '../../db/optimization';
+import { PersistentMap } from '../../db/persistent-map';
 import { Department, Employee } from './employee.model';
 import { DEFAULT_TENANT_ID } from './domain-seed';
 import {
@@ -22,7 +23,7 @@ export interface PerformanceReviewReferenceRepository {
 }
 
 export class PerformanceReviewRepository {
-  private readonly reviews = new Map<string, PerformanceReview>();
+  private readonly reviews: PersistentMap<PerformanceReview>;
   private readonly cycleIndex = new Map<string, string>();
   private readonly employeeIndex = new Map<string, Set<string>>();
   private readonly reviewerIndex = new Map<string, Set<string>>();
@@ -34,7 +35,10 @@ export class PerformanceReviewRepository {
   constructor(
     private readonly referenceRepository: PerformanceReviewReferenceRepository,
     private readonly tenantId: string = DEFAULT_TENANT_ID,
-  ) {}
+  ) {
+    this.reviews = new PersistentMap<PerformanceReview>(`employee-service:performance_reviews:${this.tenantId}`);
+    this.rebuildIndexes();
+  }
 
   create(input: CreatePerformanceReviewInput): PerformanceReview {
     this.assertTenantFilter(input.tenant_id);
@@ -197,6 +201,20 @@ export class PerformanceReviewRepository {
 
   toReadModelListBundle(reviews: PerformanceReview[]): PerformanceReviewListReadModelBundle {
     return { performance_review_view: reviews.map((review) => this.toPerformanceReviewReadModel(review)) };
+  }
+
+
+  private rebuildIndexes(): void {
+    this.cycleIndex.clear();
+    this.employeeIndex.clear();
+    this.reviewerIndex.clear();
+    this.statusIndex.clear();
+    for (const review of this.reviews.values()) {
+      this.cycleIndex.set(this.toCycleKey(review.employee_id, review.review_period_start, review.review_period_end), review.performance_review_id);
+      this.addToIndex(this.employeeIndex, review.employee_id, review.performance_review_id);
+      this.addToIndex(this.reviewerIndex, review.reviewer_employee_id, review.performance_review_id);
+      this.addToIndex(this.statusIndex, review.status, review.performance_review_id);
+    }
   }
 
   private toPerformanceReviewReadModel(review: PerformanceReview): PerformanceReviewReadModel {

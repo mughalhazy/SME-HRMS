@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, PaginatedResult, QueryOptimizer, applyCursorPagination } from '../../db/optimization';
+import { PersistentMap } from '../../db/persistent-map';
 import {
   CreateEmployeeInput,
   Department,
@@ -29,7 +30,7 @@ export interface EmployeeRepositoryOptions {
 }
 
 export class EmployeeRepository {
-  private readonly employees = new Map<string, Employee>();
+  private readonly employees: PersistentMap<Employee>;
   private readonly employeeNumberIndex = new Map<string, string>();
   private readonly emailIndex = new Map<string, string>();
   private readonly departmentIndex = new Map<string, Set<string>>();
@@ -46,9 +47,11 @@ export class EmployeeRepository {
     const hasRepo = typeof (options as EmployeeReferenceRepository).findDepartmentById === 'function';
     this.tenantId = hasRepo ? DEFAULT_TENANT_ID : ((options as EmployeeRepositoryOptions).tenantId ?? DEFAULT_TENANT_ID);
     const referenceRepository = hasRepo ? (options as EmployeeReferenceRepository) : (options as EmployeeRepositoryOptions).referenceRepository;
+    this.employees = new PersistentMap<Employee>(`employee-service:employees:${this.tenantId}`);
 
     if (referenceRepository) {
       this.referenceRepository = referenceRepository;
+      this.rebuildIndexes();
       return;
     }
 
@@ -64,6 +67,7 @@ export class EmployeeRepository {
         return role?.tenant_id === this.tenantId ? role : null;
       },
     };
+    this.rebuildIndexes();
   }
 
   create(input: CreateEmployeeInput): Employee {
@@ -269,6 +273,7 @@ export class EmployeeRepository {
       employee_directory_view: this.toEmployeeDirectoryReadModel(employee),
       organization_structure_view: this.toOrganizationStructureReadModel(employee),
     };
+    this.rebuildIndexes();
   }
 
   toReadModelListBundle(employees: Employee[]): EmployeeListReadModelBundle {
@@ -276,6 +281,7 @@ export class EmployeeRepository {
       employee_directory_view: employees.map((employee) => this.toEmployeeDirectoryReadModel(employee)),
       organization_structure_view: employees.map((employee) => this.toOrganizationStructureReadModel(employee)),
     };
+    this.rebuildIndexes();
   }
 
   private toEmployeeDirectoryReadModel(employee: Employee): EmployeeDirectoryReadModel {
@@ -301,6 +307,7 @@ export class EmployeeRepository {
       manager_name: manager ? this.toFullName(manager.first_name, manager.last_name) : undefined,
       updated_at: employee.updated_at,
     };
+    this.rebuildIndexes();
   }
 
   private toOrganizationStructureReadModel(employee: Employee): OrganizationStructureReadModel {
@@ -326,6 +333,7 @@ export class EmployeeRepository {
       role_title: role?.title ?? employee.role_id,
       updated_at: employee.updated_at,
     };
+    this.rebuildIndexes();
   }
 
   private collectCandidateIds(filters: EmployeeFilters): string[] {
@@ -382,6 +390,26 @@ export class EmployeeRepository {
       return 'idx_employees_tenant_status';
     }
     return 'idx_employees_tenant_id';
+  }
+
+
+  private rebuildIndexes(): void {
+    this.employeeNumberIndex.clear();
+    this.emailIndex.clear();
+    this.departmentIndex.clear();
+    this.roleIndex.clear();
+    this.statusIndex.clear();
+    this.managerIndex.clear();
+    for (const employee of this.employees.values()) {
+      this.employeeNumberIndex.set(employee.employee_number, employee.employee_id);
+      this.emailIndex.set(employee.email, employee.employee_id);
+      this.addToIndex(this.departmentIndex, employee.department_id, employee.employee_id);
+      this.addToIndex(this.roleIndex, employee.role_id, employee.employee_id);
+      this.addToIndex(this.statusIndex, employee.status, employee.employee_id);
+      if (employee.manager_employee_id) {
+        this.addToIndex(this.managerIndex, employee.manager_employee_id, employee.employee_id);
+      }
+    }
   }
 
   private assertTenantFilter(tenantId?: string): void {

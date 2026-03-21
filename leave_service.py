@@ -10,6 +10,7 @@ from threading import RLock
 from time import perf_counter
 
 from event_contract import EventRegistry, emit_canonical_event
+from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 
 
@@ -127,8 +128,8 @@ class LeaveServiceError(Exception):
 
 
 class LeaveService:
-    def __init__(self):
-        self.requests: dict[str, LeaveRequest] = {}
+    def __init__(self, db_path: str | None = None):
+        self.requests = PersistentKVStore[str, LeaveRequest](service='leave-service', namespace='requests', db_path=db_path)
         self.events: list[dict] = []
         self.error_logger = CentralErrorLogger("leave-service")
         self.dead_letters = DeadLetterQueue()
@@ -136,14 +137,18 @@ class LeaveService:
         self.observability = Observability("leave-service")
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()
-        self.employees: dict[str, EmployeeRecord] = {
+        self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=db_path)
+        seeded_employees = {
             "emp-admin": EmployeeRecord("emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
             "emp-manager": EmployeeRecord("emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE),
             "emp-001": EmployeeRecord("emp-001", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
             "emp-002": EmployeeRecord("emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
         }
-        self.leave_balances: dict[tuple[str, LeaveType], LeaveBalance] = {}
-        self.attendance_impacts: dict[str, list[dict]] = {}
+        for employee_id, employee in seeded_employees.items():
+            if employee_id not in self.employees:
+                self.employees[employee_id] = employee
+        self.leave_balances = PersistentKVStore[tuple[str, LeaveType], LeaveBalance](service='leave-service', namespace='leave_balances', db_path=db_path)
+        self.attendance_impacts = PersistentKVStore[str, list[dict]](service='leave-service', namespace='attendance_impacts', db_path=db_path)
         self._lock = RLock()
         self._seed_leave_balances()
 
