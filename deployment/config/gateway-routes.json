@@ -3,11 +3,13 @@
   "routes": {
     "employees": "http://employee-service:8001",
     "departments": "http://employee-service:8001",
+    "performance": "http://performance-service:8010",
     "attendance": "http://attendance-service:8002",
     "leave": "http://leave-service:8003",
     "payroll": "http://payroll-service:8004",
     "hiring": "http://hiring-service:8005",
     "auth": "http://auth-service:8006",
+    "workflows": "http://workflow-service:8009",
     "notifications": "http://notification-service:8007"
   }
 }

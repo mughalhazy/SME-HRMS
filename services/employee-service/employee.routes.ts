@@ -14,14 +14,14 @@ import { DepartmentController } from './department.controller';
 import { DepartmentRepository } from './department.repository';
 import { DepartmentService } from './department.service';
 import { EmployeeController } from './employee.controller';
+import { DocumentComplianceController } from './document-compliance.controller';
+import { DocumentComplianceRepository } from './document-compliance.repository';
+import { DocumentComplianceService } from './document-compliance.service';
 import { EmployeeRepository } from './employee.repository';
 import { EmployeeService } from './employee.service';
 import { OrgStructureController } from './org.controller';
 import { OrgStructureRepository } from './org.repository';
 import { OrgStructureService } from './org.service';
-import { PerformanceReviewController } from './performance.controller';
-import { PerformanceReviewRepository } from './performance.repository';
-import { PerformanceReviewService } from './performance.service';
 import { RoleController } from './role.controller';
 import { RoleRepository } from './role.repository';
 import { RoleService } from './role.service';
@@ -40,10 +40,6 @@ const listEmployeeRateLimit = createRateLimitMiddleware({ keyPrefix: 'employees:
 const updateEmployeeRateLimit = createRateLimitMiddleware({ keyPrefix: 'employees:update', windowMs: 60_000, maxRequests: 60 });
 const deleteEmployeeRateLimit = createRateLimitMiddleware({ keyPrefix: 'employees:delete', windowMs: 60_000, maxRequests: 20 });
 
-const createPerformanceReviewRateLimit = createRateLimitMiddleware({ keyPrefix: 'performance-reviews:create', windowMs: 60_000, maxRequests: 30 });
-const readPerformanceReviewRateLimit = createRateLimitMiddleware({ keyPrefix: 'performance-reviews:read', windowMs: 60_000, maxRequests: 180 });
-const listPerformanceReviewRateLimit = createRateLimitMiddleware({ keyPrefix: 'performance-reviews:list', windowMs: 60_000, maxRequests: 120 });
-const updatePerformanceReviewRateLimit = createRateLimitMiddleware({ keyPrefix: 'performance-reviews:update', windowMs: 60_000, maxRequests: 60 });
 
 const createRoleRateLimit = createRateLimitMiddleware({ keyPrefix: 'roles:create', windowMs: 60_000, maxRequests: 20 });
 const readRoleRateLimit = createRateLimitMiddleware({ keyPrefix: 'roles:read', windowMs: 60_000, maxRequests: 180 });
@@ -91,9 +87,12 @@ export function createEmployeeRouter(): Router {
     findGradeBandById: (gradeBandId) => repository.findGradeBandById(gradeBandId),
   });
   const service = new EmployeeService(repository, roleService, departmentRepository, performanceReviewRepository);
+  const documentComplianceRepository = new DocumentComplianceRepository();
+  const documentComplianceService = new DocumentComplianceService(documentComplianceRepository, repository);
   const performanceReviewService = new PerformanceReviewService(performanceReviewRepository, repository);
   const compensationService = new CompensationService(compensationRepository, repository);
   const controller = new EmployeeController(service);
+  const documentComplianceController = new DocumentComplianceController(documentComplianceService, service);
   const performanceReviewController = new PerformanceReviewController(performanceReviewService);
   const compensationController = new CompensationController(compensationService);
   const departmentController = new DepartmentController(departmentService);
@@ -120,6 +119,9 @@ export function createEmployeeRouter(): Router {
   router.post('/api/v1/departments', createDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.createDepartment);
   router.post('/api/v1/roles', createRoleRateLimit, authorizeEmployeeAction('createRole'), roleController.createRole);
   router.post('/api/v1/performance-reviews', createPerformanceReviewRateLimit, authorizeEmployeeAction('createReview'), performanceReviewController.createReview);
+  router.post('/api/v1/documents', createEmployeeRateLimit, authorizeEmployeeAction('createDocument'), documentComplianceController.createDocument);
+  router.post('/api/v1/documents/:documentId/acknowledgements', updateEmployeeRateLimit, authorizeEmployeeAction('acknowledgePolicy'), documentComplianceController.acknowledgePolicy);
+  router.post('/api/v1/compliance-tasks', createEmployeeRateLimit, authorizeEmployeeAction('createComplianceTask'), documentComplianceController.createComplianceTask);
   router.post('/api/v1/org/:kind', createOrgRateLimit, authorizeEmployeeAction('manageOrgStructure'), orgController.createEntity);
   router.post('/api/v1/compensation/bands', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createCompensationBand);
   router.post('/api/v1/compensation/salary-revisions', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createSalaryRevision);
@@ -129,12 +131,15 @@ export function createEmployeeRouter(): Router {
 
   router.get('/api/v1/employees/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), controller.getEmployee);
   router.get('/api/v1/employees', listEmployeeRateLimit, authorizeEmployeeAction('list'), controller.listEmployees);
+  router.get('/api/v1/documents/expiring', readEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listExpiringDocuments);
+  router.get('/api/v1/documents/:documentId', readEmployeeRateLimit, authorizeEmployeeAction('readDocument'), documentComplianceController.getDocument);
+  router.get('/api/v1/documents', listEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listDocuments);
+  router.get('/api/v1/compliance-tasks/:taskId', readEmployeeRateLimit, authorizeEmployeeAction('readComplianceTask'), documentComplianceController.getComplianceTask);
+  router.get('/api/v1/compliance-tasks', listEmployeeRateLimit, authorizeEmployeeAction('listComplianceTasks'), documentComplianceController.listComplianceTasks);
   router.get('/api/v1/departments/:departmentId', readDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.getDepartment);
   router.get('/api/v1/departments', listDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.listDepartments);
   router.get('/api/v1/roles/:roleId', readRoleRateLimit, authorizeEmployeeAction('readRole'), roleController.getRole);
   router.get('/api/v1/roles', readRoleRateLimit, authorizeEmployeeAction('listRoles'), roleController.listRoles);
-  router.get('/api/v1/performance-reviews/:performanceReviewId', readPerformanceReviewRateLimit, authorizeEmployeeAction('readReview'), performanceReviewController.getReview);
-  router.get('/api/v1/performance-reviews', listPerformanceReviewRateLimit, authorizeEmployeeAction('listReviews'), performanceReviewController.listReviews);
   router.get('/api/v1/org/:kind/:entityId', readOrgRateLimit, authorizeEmployeeAction('readOrgStructure'), orgController.getEntity);
   router.get('/api/v1/compensation/bands/:compensationBandId', readCompensationRateLimit, authorizeEmployeeAction('readCompensation'), compensationController.getCompensationBand);
   router.get('/api/v1/compensation/bands', listCompensationRateLimit, authorizeEmployeeAction('listCompensation'), compensationController.listCompensationBands);
@@ -150,10 +155,11 @@ export function createEmployeeRouter(): Router {
   router.get('/api/v1/org/:kind', readOrgRateLimit, authorizeEmployeeAction('listOrgStructure'), orgController.listEntities);
 
   router.patch('/api/v1/employees/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), controller.updateEmployee);
+  router.patch('/api/v1/documents/:documentId', updateEmployeeRateLimit, authorizeEmployeeAction('updateDocument'), documentComplianceController.updateDocument);
+  router.patch('/api/v1/compliance-tasks/:taskId', updateEmployeeRateLimit, authorizeEmployeeAction('updateComplianceTask'), documentComplianceController.updateComplianceTask);
   router.patch('/api/v1/departments/:departmentId', updateDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.updateDepartment);
   router.patch('/api/v1/roles/:roleId', updateRoleRateLimit, authorizeEmployeeAction('updateRole'), roleController.updateRole);
   router.patch('/api/v1/employees/:employeeId/department', updateEmployeeRateLimit, authorizeEmployeeAction('manageDepartment'), controller.assignDepartment);
-  router.patch('/api/v1/performance-reviews/:performanceReviewId', updatePerformanceReviewRateLimit, authorizeEmployeeAction('updateReview'), performanceReviewController.updateReview);
   router.patch('/api/v1/employees/:employeeId/status', updateEmployeeRateLimit, authorizeEmployeeAction('manageStatus'), controller.updateStatus);
   router.patch('/api/v1/org/:kind/:entityId', updateOrgRateLimit, authorizeEmployeeAction('manageOrgStructure'), orgController.updateEntity);
   router.patch('/api/v1/compensation/bands/:compensationBandId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateCompensationBand);
@@ -162,8 +168,6 @@ export function createEmployeeRouter(): Router {
   router.patch('/api/v1/benefits/enrollments/:benefitsEnrollmentId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateBenefitsEnrollment);
   router.patch('/api/v1/compensation/allowances/:allowanceId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateAllowance);
 
-  router.post('/api/v1/performance-reviews/:performanceReviewId/submit', updatePerformanceReviewRateLimit, authorizeEmployeeAction('submitReview'), performanceReviewController.submitReview);
-  router.post('/api/v1/performance-reviews/:performanceReviewId/finalize', updatePerformanceReviewRateLimit, authorizeEmployeeAction('finalizeReview'), performanceReviewController.finalizeReview);
 
   router.delete('/api/v1/employees/:employeeId', deleteEmployeeRateLimit, authorizeEmployeeAction('delete'), controller.deleteEmployee);
   router.delete('/api/v1/departments/:departmentId', deleteDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.deleteDepartment);

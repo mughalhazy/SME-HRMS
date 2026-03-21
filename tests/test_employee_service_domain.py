@@ -14,7 +14,7 @@ const { EmployeeService, ConflictError } = require('./services/employee-service/
 const { ValidationError } = require('./services/employee-service/employee.validation.js');
 
 const repository = new EmployeeRepository({ tenantId: 'tenant-default' });
-const service = new EmployeeService(repository, undefined, undefined, undefined, 'tenant-default');
+const service = new EmployeeService(repository, undefined, undefined, 'tenant-default');
 
 const manager = service.createEmployee({
   tenant_id: 'tenant-default',
@@ -81,7 +81,7 @@ assert.throws(
 );
 
 const isolatedRepository = new EmployeeRepository({ tenantId: 'tenant-other' });
-const isolatedService = new EmployeeService(isolatedRepository, undefined, undefined, undefined, 'tenant-other');
+const isolatedService = new EmployeeService(isolatedRepository, undefined, undefined, 'tenant-other');
 assert.throws(() => isolatedService.getEmployeeById(employee.employee_id), /employee not found/);
 assert.equal(isolatedService.listEmployees({ tenant_id: 'tenant-other', limit: 10 }).data.length, 0);
 

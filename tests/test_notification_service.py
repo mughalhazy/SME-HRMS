@@ -171,6 +171,39 @@ class NotificationServiceTests(unittest.TestCase):
         self.assertEqual(message["data"]["subject_id"], "cand-001")
         self.assertEqual(message["data"]["event_name"], "InterviewScheduled")
 
+
+    def test_compliance_events_create_expiry_and_task_notifications(self) -> None:
+        status, response = post_notification_event(
+            self.service,
+            {
+                "event_name": "ComplianceTaskAssigned",
+                "tenant_id": "tenant-acme",
+                "employee_id": "emp-009",
+                "employee_email": "casey@example.com",
+                "title": "Renew forklift certificate",
+                "due_date": "2026-04-15",
+            },
+            trace_id="trace-compliance-task",
+        )
+        self.assertEqual(status, 202)
+        self.assertEqual(response["data"]["count"], 2)
+
+        status, response = post_notification_event(
+            self.service,
+            {
+                "event_name": "DocumentExpiryTracked",
+                "tenant_id": "tenant-acme",
+                "employee_id": "emp-009",
+                "employee_email": "casey@example.com",
+                "document_title": "Forklift License",
+                "expiry_date": "2026-05-01",
+            },
+            trace_id="trace-document-expiry",
+        )
+        self.assertEqual(status, 202)
+        titles = {item["subject_text"] for item in response["data"]["notifications"]}
+        self.assertIn("Document expiry approaching", titles)
+
     def test_invalid_preference_payloads_and_subject_filters_return_validation_errors(self) -> None:
         status, payload = patch_notification_preferences(
             self.service,

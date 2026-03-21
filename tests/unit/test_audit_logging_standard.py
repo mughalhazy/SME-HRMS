@@ -285,7 +285,7 @@ def test_audit_logging_source_coverage_for_mutations() -> None:
     employee_controller = (ROOT / 'services/employee-service/employee.controller.ts').read_text()
     department_controller = (ROOT / 'services/employee-service/department.controller.ts').read_text()
     role_controller = (ROOT / 'services/employee-service/role.controller.ts').read_text()
-    performance_controller = (ROOT / 'services/employee-service/performance.controller.ts').read_text()
+    performance_service = (ROOT / 'performance_service.py').read_text()
     settings_controller = (ROOT / 'services/settings-service/settings.controller.ts').read_text()
     logger = (ROOT / 'middleware/logger.ts').read_text()
     audit_helper = (ROOT / 'middleware/audit.ts').read_text()
@@ -308,9 +308,9 @@ def test_audit_logging_source_coverage_for_mutations() -> None:
         assert token in role_controller
         assert 'logAuditMutation({' in role_controller
 
-    for token in ['performance_review_created', 'performance_review_updated', 'performance_review_submitted', 'performance_review_finalized']:
-        assert token in performance_controller
-        assert 'logAuditMutation({' in performance_controller
+    for token in ['performance_goal_created', 'performance_feedback_recorded', 'performance_calibration_created', 'performance_pip_created']:
+        assert token in performance_service
+        assert 'emit_audit_record(' in performance_service
 
     for token in ['attendance_rule_created', 'attendance_rule_updated', 'leave_policy_created', 'leave_policy_updated', 'payroll_settings_upserted']:
         assert token in settings_controller

@@ -9,7 +9,8 @@ WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql
 PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_normalization.sql').read_text()
 TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
 NOTIFICATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_notification_service.sql').read_text()
-FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{NOTIFICATION_SCHEMA}"
+EVENT_OUTBOX_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_event_outbox.sql').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{NOTIFICATION_SCHEMA}\n{EVENT_OUTBOX_SCHEMA}"
 
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
@@ -51,8 +52,12 @@ def test_workflow_schema_matches_canonical_operational_tables() -> None:
         'carry_forward_limit_days NUMERIC(5,2) NOT NULL',
         'CREATE TABLE IF NOT EXISTS payroll_settings',
         'approval_chain TEXT[] NOT NULL',
-        'CREATE TABLE IF NOT EXISTS performance_reviews',
-        'reviewer_employee_id UUID NOT NULL',
+        'CREATE TABLE IF NOT EXISTS performance_review_cycles',
+        'CREATE TABLE IF NOT EXISTS performance_goals',
+        'CREATE TABLE IF NOT EXISTS performance_feedback',
+        'CREATE TABLE IF NOT EXISTS performance_calibrations',
+        'CREATE TABLE IF NOT EXISTS performance_pip_plans',
+        'CREATE TABLE IF NOT EXISTS performance_pip_milestones',
         "record_state VARCHAR(20) NOT NULL DEFAULT 'Captured'",
         'CREATE TABLE IF NOT EXISTS user_accounts',
         'CREATE TABLE IF NOT EXISTS sessions',

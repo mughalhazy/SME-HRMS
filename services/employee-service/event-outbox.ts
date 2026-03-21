@@ -29,14 +29,14 @@ const EVENT_TYPES: Record<string, string> = {
   GradeBandUpdated: 'organization.grade_band.updated',
   JobPositionCreated: 'organization.job_position.created',
   JobPositionUpdated: 'organization.job_position.updated',
-  CompensationBandCreated: 'compensation.band.created',
-  CompensationBandUpdated: 'compensation.band.updated',
-  SalaryRevisionCreated: 'compensation.salary_revision.created',
-  BenefitsPlanCreated: 'benefits.plan.created',
-  BenefitsPlanUpdated: 'benefits.plan.updated',
-  BenefitsEnrollmentCreated: 'benefits.enrollment.created',
-  AllowanceCreated: 'compensation.allowance.created',
-  AllowanceUpdated: 'compensation.allowance.updated',
+  DocumentStored: 'employee.document.stored',
+  DocumentUpdated: 'employee.document.updated',
+  ContractActivated: 'employee.contract.activated',
+  PolicyAcknowledged: 'employee.policy.acknowledged',
+  DocumentExpiryTracked: 'employee.document.expiry.tracked',
+  ComplianceTaskCreated: 'employee.compliance.task.created',
+  ComplianceTaskAssigned: 'employee.compliance.task.assigned',
+  ComplianceTaskCompleted: 'employee.compliance.task.completed',
 };
 
 export class EmployeeEventOutbox {

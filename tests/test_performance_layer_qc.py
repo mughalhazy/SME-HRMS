@@ -9,63 +9,56 @@ def read(path: str) -> str:
     return (ROOT / path).read_text()
 
 
-def test_performance_routes_expose_crud_and_workflow_endpoints() -> None:
+def test_performance_service_is_isolated_from_employee_service_routes() -> None:
     routes = read('services/employee-service/employee.routes.ts')
+    assert '/api/v1/performance-reviews' not in routes
+    assert 'PerformanceReview' not in routes
+
+
+def test_performance_service_covers_goals_feedback_calibration_pips_and_workflows() -> None:
+    service = read('performance_service.py')
     for token in [
-        '/api/v1/performance-reviews',
-        '/api/v1/performance-reviews/:performanceReviewId',
-        '/api/v1/performance-reviews/:performanceReviewId/submit',
-        '/api/v1/performance-reviews/:performanceReviewId/finalize',
-        'createPerformanceReviewRateLimit',
-        'listPerformanceReviewRateLimit',
-        'updatePerformanceReviewRateLimit',
-    ]:
-        assert token in routes
-
-
-def test_performance_repository_uses_indexes_cache_and_pagination() -> None:
-    repository = read('services/employee-service/performance.repository.ts')
-    for token in [
-        'CacheService',
-        'ConnectionPool',
-        'applyCursorPagination',
-        'cycleIndex',
-        'employeeIndex',
-        'reviewerIndex',
-        'statusIndex',
-        'findByCycle',
-    ]:
-        assert token in repository
-
-
-def test_performance_service_enforces_draft_submit_finalize_workflow() -> None:
-    service = read('services/employee-service/performance.service.ts')
-    for token in [
-        "Draft: ['Submitted']",
-        "Submitted: ['Finalized']",
-        "Finalized: []",
-        'performance reviews must be created in Draft status',
-        'only Draft performance reviews can be updated',
-        'submitReview',
-        'finalizeReview',
+        'class ReviewCycle',
+        'class GoalRecord',
+        'class FeedbackRecord',
+        'class CalibrationSession',
+        'class PipPlan',
+        'performance_goal_approval',
+        'performance_calibration_signoff',
+        'performance_pip_approval',
+        'emit_audit_record',
+        'emit_canonical_event',
     ]:
         assert token in service
 
 
-def test_performance_validation_and_schema_cover_required_fields() -> None:
-    validation = read('services/employee-service/performance.validation.ts')
-    schema = read('deployment/migrations/002_workflow_schema.sql')
+def test_performance_api_exposes_enterprise_performance_endpoints() -> None:
+    api = read('performance_api.py')
     for token in [
-        'review_period_start',
-        'review_period_end',
-        'overall_rating',
-        'must be a number between 1 and 5',
+        'post_review_cycles',
+        'post_goals',
+        'post_feedback',
+        'post_calibrations',
+        'post_pips',
+        'patch_pip_progress',
     ]:
-        assert token in validation
+        assert token in api
+
+
+def test_performance_schema_and_docs_capture_new_service_boundary() -> None:
+    schema = read('deployment/migrations/002_workflow_schema.sql')
+    service_map = read('docs/canon/service-map.md')
+    workflow = read('docs/canon/workflow-catalog.md')
     for token in [
-        'CREATE TABLE IF NOT EXISTS performance_reviews',
-        "status IN ('Draft', 'Submitted', 'Finalized')",
-        'submitted_at TIMESTAMPTZ',
-        'finalized_at TIMESTAMPTZ',
+        'CREATE TABLE IF NOT EXISTS performance_review_cycles',
+        'CREATE TABLE IF NOT EXISTS performance_goals',
+        'CREATE TABLE IF NOT EXISTS performance_feedback',
+        'CREATE TABLE IF NOT EXISTS performance_calibrations',
+        'CREATE TABLE IF NOT EXISTS performance_pip_plans',
+        'CREATE TABLE IF NOT EXISTS performance_pip_milestones',
     ]:
         assert token in schema
+    for token in ['performance-service', '/api/v1/performance/goals', '/api/v1/performance/pips']:
+        assert token in service_map
+    for token in ['performance_management', 'Goal: none -> Draft -> Submitted -> Approved/Rejected', 'PipPlan: none -> Draft -> Submitted -> Active/Rejected -> Completed/Cancelled']:
+        assert token in workflow

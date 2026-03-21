@@ -29,6 +29,20 @@ export type StructuredLogRecord = {
   context: Record<string, unknown>;
 };
 
+
+function deepFreeze<T>(value: T): T {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) {
+    return value;
+  }
+
+  const entries = Array.isArray(value) ? value : Object.values(value as Record<string, unknown>);
+  for (const entry of entries) {
+    deepFreeze(entry);
+  }
+
+  return Object.freeze(value);
+}
+
 export interface AuditLogInput {
   traceId: string;
   tenantId: string;
@@ -96,12 +110,12 @@ export class StructuredLogger {
     const record: AuditRecord = Object.freeze({
       audit_id: randomUUID(),
       tenant_id: input.tenantId,
-      actor: Object.freeze({ ...input.actor }),
+      actor: deepFreeze({ ...input.actor }),
       action: input.action,
       entity: input.entity,
       entity_id: input.entityId,
-      before: sanitizeLogContext(input.before),
-      after: sanitizeLogContext(input.after),
+      before: deepFreeze(sanitizeLogContext(input.before)),
+      after: deepFreeze(sanitizeLogContext(input.after)),
       timestamp: new Date().toISOString(),
       trace_id: input.traceId,
     });
