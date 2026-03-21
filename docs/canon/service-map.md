@@ -13,6 +13,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 | `hiring-service` | Job postings, candidates, interviews, and hire handoff | `/api/v1/hiring` |
 | `auth-service` | Identity, sessions, tokens, role bindings, and policy | `/api/v1/auth` |
 | `notification-service` | Notification templates, queueing, delivery, and preferences | `/api/v1/notifications` |
+| `integration-service` | Outbound webhooks, connector dispatch, delivery attempts, and replay operations | `/api/v1/integrations` |
 | `settings-service` | Administrative HR policy configuration and defaults | `/api/v1/settings` |
 
 ## employee-service
@@ -429,3 +430,39 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - Every published and subscribed event is defined in `docs/canon/event-catalog.md`.
 - Every supported workflow is defined in `docs/canon/workflow-catalog.md`.
 
+
+## integration-service
+
+### Responsibilities
+- Centralize outbound webhook registration and delivery for tenant-scoped external integrations.
+- Consume canonical D2-aligned events and fan them out to subscribed endpoints.
+- Sign outbound payloads, track delivery attempts, and expose replay/failure visibility.
+- Keep domain services free of partner-specific dispatch logic.
+
+### Owned entities
+- `WebhookEndpoint`
+- `WebhookDelivery`
+- `WebhookDeliveryAttempt`
+
+### Canonical APIs
+- `POST /api/v1/integrations/webhooks`
+- `PATCH /api/v1/integrations/webhooks/{webhook_id}`
+- `DELETE /api/v1/integrations/webhooks/{webhook_id}`
+- `GET /api/v1/integrations/webhooks?status=&limit=&cursor=`
+- `GET /api/v1/integrations/deliveries?webhook_id=&delivery_status=&event_type=&limit=&cursor=`
+- `POST /api/v1/integrations/deliveries/{delivery_id}/replay`
+
+### Dependencies
+- `auth-service` for privileged registration and replay authorization.
+- `audit-service` for immutable management-operation audit records.
+- P6 event/outbox pipeline as the upstream event source.
+- P7 background jobs for queued delivery execution and scheduling.
+
+### Publishes
+- None required for the initial centralized webhook dispatch implementation.
+
+### Subscribes
+- Canonical outbound business events listed in `docs/canon/event-catalog.md`.
+
+### Read models produced or enriched
+- `integration_delivery_view`
