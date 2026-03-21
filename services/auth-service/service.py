@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
+from persistent_store import PersistentKVStore
 from resilience import Observability
 
 
@@ -105,7 +106,7 @@ class AuthService:
         'Service': set(),
     }
 
-    def __init__(self, token_secret: str, issuer: str = 'sme-hrms.auth-service', audience: str = 'sme-hrms.api'):
+    def __init__(self, token_secret: str, issuer: str = 'sme-hrms.auth-service', audience: str = 'sme-hrms.api', db_path: str | None = None):
         if not token_secret:
             raise ValueError('token_secret is required')
         if len(token_secret) < 32:
@@ -113,9 +114,9 @@ class AuthService:
         self._token_secret = token_secret.encode('utf-8')
         self._issuer = issuer
         self._audience = audience
-        self._users_by_name: dict[str, UserAccount] = {}
-        self._users_by_id: dict[UUID, UserAccount] = {}
-        self._sessions_by_id: dict[str, SessionRecord] = {}
+        self._users_by_name = PersistentKVStore[str, UserAccount](service='auth-service', namespace='users_by_name', db_path=db_path)
+        self._users_by_id = PersistentKVStore[UUID, UserAccount](service='auth-service', namespace='users_by_id', db_path=db_path)
+        self._sessions_by_id = PersistentKVStore[str, SessionRecord](service='auth-service', namespace='sessions_by_id', db_path=db_path)
         self.observability = Observability('auth-service')
 
     def register_user(

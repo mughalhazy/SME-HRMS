@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
 import { ConnectionPool, QueryOptimizer } from '../../db/optimization';
+import { PersistentMap } from '../../db/persistent-map';
 import { CreateRoleInput, EmploymentCategory, Role, RoleFilters, RoleStatus, UpdateRoleInput, resolveRolePermissions } from './role.model';
 import { DEFAULT_TENANT_ID, seedRoles } from './domain-seed';
 
 const ROLE_CACHE_PREFIX = 'roles';
 
 export class RoleRepository {
-  private readonly roles = new Map<string, Role>();
+  private readonly roles: PersistentMap<Role>;
   private readonly titleIndex = new Map<string, string>();
   private readonly statusIndex = new Map<RoleStatus, Set<string>>();
   private readonly categoryIndex = new Map<EmploymentCategory, Set<string>>();
@@ -20,6 +21,11 @@ export class RoleRepository {
     private readonly tenantId: string = DEFAULT_TENANT_ID,
     seedData: Role[] = seedRoles(tenantId),
   ) {
+    this.roles = new PersistentMap<Role>(`employee-service:roles:${this.tenantId}`);
+    if (this.roles.keys().length > 0) {
+      this.rebuildIndexes();
+      return;
+    }
     for (const role of seedData) {
       if (role.tenant_id !== this.tenantId) {
         continue;
@@ -29,6 +35,7 @@ export class RoleRepository {
       this.addToIndex(this.statusIndex, role.status, role.role_id);
       this.addToIndex(this.categoryIndex, role.employment_category, role.role_id);
     }
+    this.rebuildIndexes();
   }
 
   create(input: CreateRoleInput): Role {
@@ -188,6 +195,18 @@ export class RoleRepository {
     }));
   }
 
+
+  private rebuildIndexes(): void {
+    this.titleIndex.clear();
+    this.statusIndex.clear();
+    this.categoryIndex.clear();
+    for (const role of this.roles.values()) {
+      this.titleIndex.set(this.normalizeTitle(role.title), role.role_id);
+      this.addToIndex(this.statusIndex, role.status, role.role_id);
+      this.addToIndex(this.categoryIndex, role.employment_category, role.role_id);
+    }
+  }
+
   private collectCandidateIds(filters: RoleFilters): string[] {
     if (filters.status && filters.employment_category) {
       const statuses = this.statusIndex.get(filters.status) ?? new Set<string>();
@@ -223,6 +242,7 @@ export class RoleRepository {
     if (tenantId && tenantId !== this.tenantId) {
       throw new Error('cross_tenant_filter_blocked');
     }
+    this.rebuildIndexes();
   }
 
   private normalizeTitle(title: string): string {
@@ -244,6 +264,7 @@ export class RoleRepository {
     if (set.size === 0) {
       index.delete(key);
     }
+    this.rebuildIndexes();
   }
 
   private reindexRole(previous: Role, next: Role): void {
@@ -261,6 +282,7 @@ export class RoleRepository {
       this.removeFromIndex(this.categoryIndex, previous.employment_category, previous.role_id);
       this.addToIndex(this.categoryIndex, next.employment_category, next.role_id);
     }
+    this.rebuildIndexes();
   }
 
   private invalidateRoleCache(roleId: string): void {

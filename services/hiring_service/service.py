@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from event_contract import EventRegistry, emit_canonical_event
 
+from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, Observability, run_with_retry
 
 
@@ -128,13 +129,13 @@ class HiringService:
         "Withdrawn": set(),
     }
 
-    def __init__(self) -> None:
-        self.job_postings: dict[str, JobPosting] = {}
-        self.candidates: dict[str, Candidate] = {}
-        self.candidate_stage_transitions: dict[str, CandidateStageTransition] = {}
-        self.interviews: dict[str, Interview] = {}
-        self.employee_profiles: dict[str, EmployeeProfile] = {}
-        self.hired_candidate_index: dict[str, str] = {}
+    def __init__(self, db_path: str | None = None) -> None:
+        self.job_postings = PersistentKVStore[str, JobPosting](service='hiring-service', namespace='job_postings', db_path=db_path)
+        self.candidates = PersistentKVStore[str, Candidate](service='hiring-service', namespace='candidates', db_path=db_path)
+        self.candidate_stage_transitions = PersistentKVStore[str, CandidateStageTransition](service='hiring-service', namespace='candidate_stage_transitions', db_path=db_path)
+        self.interviews = PersistentKVStore[str, Interview](service='hiring-service', namespace='interviews', db_path=db_path)
+        self.employee_profiles = PersistentKVStore[str, EmployeeProfile](service='hiring-service', namespace='employee_profiles', db_path=db_path)
+        self.hired_candidate_index = PersistentKVStore[str, str](service='hiring-service', namespace='hired_candidate_index', db_path=db_path)
         self.events: list[dict[str, Any]] = []
         self.tenant_id = "tenant-default"
         self.event_registry = EventRegistry()

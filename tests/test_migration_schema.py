@@ -6,7 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_text()
 WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
-FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}"
+PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_normalization.sql').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}"
 
 
 def test_core_schema_matches_canonical_employee_tables() -> None:
@@ -50,10 +51,14 @@ def test_workflow_schema_matches_canonical_operational_tables() -> None:
         'approval_chain TEXT[] NOT NULL',
         'CREATE TABLE IF NOT EXISTS performance_reviews',
         'reviewer_employee_id UUID NOT NULL',
+        "record_state VARCHAR(20) NOT NULL DEFAULT 'Captured'",
+        'CREATE TABLE IF NOT EXISTS user_accounts',
+        'CREATE TABLE IF NOT EXISTS sessions',
+        'CREATE TABLE IF NOT EXISTS refresh_tokens',
     ]
 
     for fragment in expected_fragments:
-        assert fragment in WORKFLOW_SCHEMA
+        assert fragment in FULL_SCHEMA
 
 
 def test_workflow_schema_enforces_referential_integrity() -> None:
@@ -75,3 +80,21 @@ def test_all_tables_include_tenant_id() -> None:
     assert create_table_blocks
     for block in create_table_blocks:
         assert 'tenant_id VARCHAR(80) NOT NULL' in block
+
+
+def test_persistence_normalization_schema_adds_auth_and_attendance_persistence() -> None:
+    expected_fragments = [
+        'ALTER TABLE attendance_records',
+        "ADD COLUMN IF NOT EXISTS record_state VARCHAR(20) NOT NULL DEFAULT 'Captured'",
+        'ADD COLUMN IF NOT EXISTS correction_note TEXT',
+        'CREATE TABLE IF NOT EXISTS user_accounts',
+        'CREATE TABLE IF NOT EXISTS role_bindings',
+        'CREATE TABLE IF NOT EXISTS permission_policies',
+        'CREATE TABLE IF NOT EXISTS sessions',
+        'CREATE TABLE IF NOT EXISTS refresh_tokens',
+        'REFERENCES user_accounts (tenant_id, user_id)',
+        'REFERENCES sessions (tenant_id, session_id)',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in PERSISTENCE_SCHEMA

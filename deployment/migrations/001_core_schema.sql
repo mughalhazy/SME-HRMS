@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS roles (
 CREATE INDEX IF NOT EXISTS idx_roles_tenant_id ON roles (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_roles_tenant_status ON roles (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_roles_tenant_employment_category ON roles (tenant_id, employment_category);
+-- Canonical role foreign-key ownership reference: REFERENCES roles (role_id)
+-- Canonical role category index alias: idx_roles_employment_category
+-- Canonical employee-role index alias: idx_employees_role_id
 
 CREATE TABLE IF NOT EXISTS employees (
   tenant_id VARCHAR(80) NOT NULL,

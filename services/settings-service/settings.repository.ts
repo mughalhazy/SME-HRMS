@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { CacheService } from '../../cache/cache.service';
+import { PersistentMap } from '../../db/persistent-map';
 import { ConnectionPool, QueryOptimizer } from '../../db/optimization';
 import {
   AttendanceRule,
@@ -22,8 +23,8 @@ import {
 const SETTINGS_CACHE_PREFIX = 'settings';
 
 export class SettingsRepository {
-  private readonly attendanceRules = new Map<string, AttendanceRule>();
-  private readonly leavePolicies = new Map<string, LeavePolicy>();
+  private readonly attendanceRules = new PersistentMap<AttendanceRule>('settings-service:attendance_rules');
+  private readonly leavePolicies = new PersistentMap<LeavePolicy>('settings-service:leave_policies');
   private payrollSettings: PayrollSettings | null = null;
 
   private readonly attendanceRuleCodeIndex = new Map<string, string>();
@@ -34,6 +35,10 @@ export class SettingsRepository {
   private readonly cache = new CacheService({ ttlMs: 15_000, maxEntries: 1_000 });
   private readonly pool = new ConnectionPool(8);
   private readonly optimizer = new QueryOptimizer(10);
+
+  constructor() {
+    this.rebuildIndexes();
+  }
 
   createAttendanceRule(input: CreateAttendanceRuleInput): AttendanceRule {
     return this.pool.runWithConnection(() => this.optimizer.execute({ operation: 'settings.attendanceRules.create', expectedIndex: 'uq_attendance_rules_code' }, () => {
@@ -307,6 +312,24 @@ export class SettingsRepository {
       return 'idx_leave_policies_status';
     }
     return 'idx_leave_policies_status';
+  }
+
+
+  private rebuildIndexes(): void {
+    this.attendanceRuleCodeIndex.clear();
+    this.attendanceRuleStatusIndex.clear();
+    this.leavePolicyCodeIndex.clear();
+    this.leavePolicyTypeIndex.clear();
+    this.leavePolicyStatusIndex.clear();
+    for (const rule of this.attendanceRules.values()) {
+      this.attendanceRuleCodeIndex.set(rule.code, rule.attendance_rule_id);
+      this.addToIndex(this.attendanceRuleStatusIndex, rule.status, rule.attendance_rule_id);
+    }
+    for (const policy of this.leavePolicies.values()) {
+      this.leavePolicyCodeIndex.set(policy.code, policy.leave_policy_id);
+      this.addToIndex(this.leavePolicyTypeIndex, policy.leave_type, policy.leave_policy_id);
+      this.addToIndex(this.leavePolicyStatusIndex, policy.status, policy.leave_policy_id);
+    }
   }
 
   private addToIndex(index: Map<string, Set<string>>, key: string, id: string): void {
