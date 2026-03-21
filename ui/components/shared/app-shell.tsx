@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { getNavigationItem, isNavigationItemActive, navigationSections, primaryNavigationItems, utilityNavigationItems } from '@/lib/navigation'
+import { getNavigationItem, isNavigationItemActive, navigationSections, partitionPrimaryNavigationItems, primaryNavigationItems, utilityNavigationItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEM_GAP = 24
@@ -172,11 +172,12 @@ export function AppShell({
     }
   }, [recalculateNavigation])
 
-  const { visibleNavigationItems, overflowNavigationItems } = useMemo(() => ({
-    visibleNavigationItems: primaryNavigationItems.slice(0, visibleNavigationCount),
-    overflowNavigationItems: primaryNavigationItems.slice(visibleNavigationCount),
-  }), [visibleNavigationCount])
+  const { visibleNavigationItems, overflowNavigationItems } = useMemo(
+    () => partitionPrimaryNavigationItems(visibleNavigationCount),
+    [visibleNavigationCount],
+  )
   const hasOverflowNavigation = overflowNavigationItems.length > 0
+  const visibleNavigationCountLabel = `${visibleNavigationItems.length} visible, ${overflowNavigationItems.length} in More`
   const overflowActive = overflowNavigationItems.some((item) => isNavigationItemActive(activePath, item))
 
   const handleOverflowNavigation = (href: string) => {
@@ -206,7 +207,12 @@ export function AppShell({
 
           <div className="col-span-12 min-w-0 lg:col-span-9 xl:col-span-10">
             <div ref={navigationRootRef} className="flex w-full flex-wrap items-center justify-between gap-4">
-              <nav aria-label="Primary navigation" className="flex min-w-0 flex-1 items-center gap-6 overflow-hidden">
+              <nav
+                aria-label="Primary navigation"
+                data-nav-count={primaryNavigationItems.length}
+                data-nav-visibility={visibleNavigationCountLabel}
+                className="flex min-w-0 flex-1 items-center gap-6 overflow-hidden"
+              >
                 {visibleNavigationItems.map((item) => {
                   const active = isNavigationItemActive(activePath, item)
                   const isPending = pendingHref === item.href
@@ -245,7 +251,7 @@ export function AppShell({
                         <ChevronDown className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56 p-1">
+                    <DropdownMenuContent align="start" className="w-56 p-1" aria-label="More navigation">
                       {overflowNavigationItems.map((item) => {
                         const active = isNavigationItemActive(activePath, item)
                         const isPending = pendingHref === item.href
