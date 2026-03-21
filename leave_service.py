@@ -12,6 +12,7 @@ from time import perf_counter
 from event_contract import EventRegistry, emit_canonical_event
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
+from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
 
 
 class Role(str, Enum):
@@ -55,6 +56,7 @@ BALANCE_CAPS: dict[LeaveType, float | None] = {
 
 @dataclass
 class EmployeeRecord:
+    tenant_id: str
     employee_id: str
     department_id: str
     manager_employee_id: str | None
@@ -63,6 +65,7 @@ class EmployeeRecord:
 
 @dataclass
 class LeaveBalance:
+    tenant_id: str
     employee_id: str
     leave_type: LeaveType
     entitlement_days: float | None
@@ -77,6 +80,7 @@ class LeaveBalance:
 
     def to_dict(self) -> dict:
         return {
+            "tenant_id": self.tenant_id,
             "employee_id": self.employee_id,
             "leave_type": self.leave_type.value,
             "entitlement_days": self.entitlement_days,
@@ -88,6 +92,7 @@ class LeaveBalance:
 
 @dataclass
 class LeaveRequest:
+    tenant_id: str
     leave_request_id: str
     employee_id: str
     leave_type: LeaveType
@@ -104,6 +109,7 @@ class LeaveRequest:
 
     def to_dict(self) -> dict:
         payload = asdict(self)
+        payload["tenant_id"] = self.tenant_id
         payload["leave_type"] = self.leave_type.value
         payload["status"] = self.status.value
         for f in ["start_date", "end_date"]:
@@ -135,14 +141,14 @@ class LeaveService:
         self.dead_letters = DeadLetterQueue()
         self.idempotency = IdempotencyStore()
         self.observability = Observability("leave-service")
-        self.tenant_id = "tenant-default"
+        self.tenant_id = DEFAULT_TENANT_ID
         self.event_registry = EventRegistry()
         self.employees = PersistentKVStore[str, EmployeeRecord](service='leave-service', namespace='employees', db_path=db_path)
         seeded_employees = {
-            "emp-admin": EmployeeRecord("emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
-            "emp-manager": EmployeeRecord("emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE),
-            "emp-001": EmployeeRecord("emp-001", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
-            "emp-002": EmployeeRecord("emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
+            "emp-admin": EmployeeRecord(self.tenant_id, "emp-admin", "dept-admin", None, EmployeeStatus.ACTIVE),
+            "emp-manager": EmployeeRecord(self.tenant_id, "emp-manager", "dept-eng", None, EmployeeStatus.ACTIVE),
+            "emp-001": EmployeeRecord(self.tenant_id, "emp-001", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
+            "emp-002": EmployeeRecord(self.tenant_id, "emp-002", "dept-eng", "emp-manager", EmployeeStatus.ACTIVE),
         }
         for employee_id, employee in seeded_employees.items():
             if employee_id not in self.employees:
@@ -156,12 +162,23 @@ class LeaveService:
         for employee_id in self.employees:
             for leave_type, entitlement_days in BALANCE_CAPS.items():
                 self.leave_balances[(employee_id, leave_type)] = LeaveBalance(
+                    tenant_id=self.tenant_id,
                     employee_id=employee_id,
                     leave_type=leave_type,
                     entitlement_days=entitlement_days,
                     reserved_days=0.0,
                     approved_days=0.0,
                 )
+
+
+    def _resolve_tenant(self, tenant_id: str | None = None) -> str:
+        return normalize_tenant_id(tenant_id or self.tenant_id)
+
+    def _assert_resource_tenant(self, tenant_id: str, trace_id: str | None = None) -> None:
+        try:
+            assert_tenant_access(tenant_id, self.tenant_id)
+        except PermissionError:
+            self._fail(403, "TENANT_SCOPE_VIOLATION", "Tenant scope does not permit this operation", trace_id)
 
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
@@ -182,6 +199,8 @@ class LeaveService:
         return float((end - start).days + 1)
 
     def _can_access(self, role: Role, actor_employee_id: str, leave: LeaveRequest) -> bool:
+        if leave.tenant_id != self.tenant_id:
+            return False
         if role == Role.ADMIN:
             return True
         if role == Role.EMPLOYEE:
@@ -192,6 +211,10 @@ class LeaveService:
 
     def _ensure_employee_eligible(self, employee_id: str, trace_id: str | None):
         employee = self.employees.get(employee_id)
+        if employee and employee.tenant_id != self.tenant_id:
+            employee = None
+        if employee and employee.tenant_id != self.tenant_id:
+            employee = None
         if not employee:
             self._fail(404, "EMPLOYEE_NOT_FOUND", "Employee not found", trace_id)
         if employee.status not in {EmployeeStatus.ACTIVE, EmployeeStatus.ON_LEAVE}:
@@ -266,9 +289,11 @@ class LeaveService:
 
     def _sync_employee_leave_status(self, employee_id: str) -> None:
         employee = self.employees[employee_id]
+        self._assert_resource_tenant(employee.tenant_id)
         today = self._today()
         has_active_approved_leave = any(
-            leave.employee_id == employee_id
+            leave.tenant_id == self.tenant_id
+            and leave.employee_id == employee_id
             and leave.status == LeaveStatus.APPROVED
             and leave.start_date <= today <= leave.end_date
             for leave in self.requests.values()
@@ -281,7 +306,7 @@ class LeaveService:
     def _overlap_exists(self, employee_id: str, start: date, end: date, exclude_id: str | None = None) -> bool:
         tracked = {LeaveStatus.SUBMITTED, LeaveStatus.APPROVED}
         for item in self.requests.values():
-            if item.employee_id != employee_id or item.status not in tracked:
+            if item.tenant_id != self.tenant_id or item.employee_id != employee_id or item.status not in tracked:
                 continue
             if exclude_id and item.leave_request_id == exclude_id:
                 continue
@@ -293,7 +318,7 @@ class LeaveService:
         try:
             if simulate_failure:
                 raise RuntimeError(f"simulated failure while emitting {event}")
-            emit_canonical_event(self.events, legacy_event_name=event, data=payload, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=self._trace(trace_id), idempotency_key=payload.get("leave_request_id"))
+            emit_canonical_event(self.events, legacy_event_name=event, data={**payload, "tenant_id": self.tenant_id}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=self._trace(trace_id), idempotency_key=payload.get("leave_request_id"))
             self.observability.logger.info(
                 "leave.event_emitted",
                 trace_id=self._trace(trace_id),
@@ -324,6 +349,7 @@ class LeaveService:
                     "leave_request_id": leave.leave_request_id,
                     "leave_type": leave.leave_type.value,
                     "source": "leave_approval",
+                    "tenant_id": leave.tenant_id,
                 }
             )
             cursor = date.fromordinal(cursor.toordinal() + 1)
@@ -331,9 +357,11 @@ class LeaveService:
 
     def get_employee_detail(self, employee_id: str) -> dict:
         employee = self.employees.get(employee_id)
+        if employee and employee.tenant_id != self.tenant_id:
+            employee = None
         if not employee:
             self._fail(404, "EMPLOYEE_NOT_FOUND", "Employee not found", None)
-        leaves = [self._response_payload(leave) for leave in self.requests.values() if leave.employee_id == employee_id]
+        leaves = [self._response_payload(leave) for leave in self.requests.values() if leave.tenant_id == self.tenant_id and leave.employee_id == employee_id]
         leaves.sort(key=lambda item: (item["start_date"], item["leave_request_id"]))
         active_leave = next((leave for leave in leaves if leave["status"] == LeaveStatus.APPROVED.value and leave["start_date"] <= self._today().isoformat() <= leave["end_date"]), None)
         return {
@@ -345,7 +373,7 @@ class LeaveService:
             },
             "leave_balances": self._balances_for_employee(employee_id),
             "leave_requests": leaves,
-            "attendance_impacts": [impact for leave_id, items in self.attendance_impacts.items() for impact in items if impact["employee_id"] == employee_id],
+            "attendance_impacts": [impact for leave_id, items in self.attendance_impacts.items() for impact in items if impact.get("tenant_id") == self.tenant_id and impact["employee_id"] == employee_id],
             "active_leave": active_leave,
         }
 
@@ -354,6 +382,7 @@ class LeaveService:
         payload["leave_balance"] = self._balance_snapshot(leave.employee_id, leave.leave_type)
         payload["attendance_impacts"] = list(self.attendance_impacts.get(leave.leave_request_id, []))
         payload["employee_status"] = self.employees[leave.employee_id].status.value
+        payload["tenant_id"] = leave.tenant_id
         return payload
 
     def replay_dead_letters(self) -> list[dict]:
@@ -364,7 +393,7 @@ class LeaveService:
         for entry in recovered:
             payload = dict(entry.payload)
             payload.pop("simulate_failure", None)
-            emit_canonical_event(self.events, legacy_event_name=entry.operation, data={**payload, "recovered_from_dead_letter": True}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=entry.trace_id, idempotency_key=payload.get("leave_request_id"))
+            emit_canonical_event(self.events, legacy_event_name=entry.operation, data={**payload, "tenant_id": self.tenant_id, "recovered_from_dead_letter": True}, source="leave-service", tenant_id=self.tenant_id, registry=self.event_registry, correlation_id=entry.trace_id, idempotency_key=payload.get("leave_request_id"))
         return [entry.__dict__ for entry in recovered]
 
     def create_request(
@@ -378,7 +407,9 @@ class LeaveService:
         reason: str | None = None,
         approver_employee_id: str | None = None,
         trace_id: str | None = None,
+        tenant_id: str | None = None,
     ) -> tuple[int, dict]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
         trace = self._trace(trace_id)
         started = perf_counter()
         role = Role(actor_role)
@@ -395,6 +426,7 @@ class LeaveService:
                 self._ensure_balance_capacity(employee_id, leave_type_enum, self._total_days(start_date, end_date), trace)
                 now = self._now()
                 leave = LeaveRequest(
+                    tenant_id=self.tenant_id,
                     leave_request_id=str(uuid.uuid4()),
                     employee_id=employee_id,
                     leave_type=leave_type_enum,
@@ -421,7 +453,8 @@ class LeaveService:
             self._finalize_observation("create_request", trace, started, False)
             raise
 
-    def submit_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None, idempotency_key: str | None = None, simulate_event_failure: bool = False) -> tuple[int, dict]:
+    def submit_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None, idempotency_key: str | None = None, simulate_event_failure: bool = False, tenant_id: str | None = None) -> tuple[int, dict]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
         trace = self._trace(trace_id)
         started = perf_counter()
         role = Role(actor_role)
@@ -429,6 +462,7 @@ class LeaveService:
             leave = self.requests.get(leave_request_id)
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
+            self._assert_resource_tenant(leave.tenant_id, trace)
             self._ensure_lifecycle_scope(role, actor_employee_id, leave.employee_id, trace)
 
             key = idempotency_key or f"leave-submit:{leave_request_id}:{actor_employee_id}"
@@ -482,7 +516,8 @@ class LeaveService:
         self._finalize_observation("submit_request", trace, started, True, {"status": 200})
         return 200, payload
 
-    def decide_request(self, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, reason: str | None = None, trace_id: str | None = None, idempotency_key: str | None = None, simulate_event_failure: bool = False) -> tuple[int, dict]:
+    def decide_request(self, action: str, actor_role: str, actor_employee_id: str, leave_request_id: str, reason: str | None = None, trace_id: str | None = None, idempotency_key: str | None = None, simulate_event_failure: bool = False, tenant_id: str | None = None) -> tuple[int, dict]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
         trace = self._trace(trace_id)
         started = perf_counter()
         role = Role(actor_role)
@@ -490,6 +525,7 @@ class LeaveService:
             leave = self.requests.get(leave_request_id)
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
+            self._assert_resource_tenant(leave.tenant_id, trace)
             self._ensure_decision_scope(role, actor_employee_id, leave, trace)
 
             key = idempotency_key or f"leave-decision:{leave_request_id}:{action}:{actor_employee_id}"
@@ -554,7 +590,8 @@ class LeaveService:
         self._finalize_observation("decide_request", trace, started, True, {"status": 200, "action": action})
         return 200, payload
 
-    def patch_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, patch: dict, trace_id: str | None = None) -> tuple[int, dict]:
+    def patch_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, patch: dict, trace_id: str | None = None, tenant_id: str | None = None) -> tuple[int, dict]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
         trace = self._trace(trace_id)
         started = perf_counter()
         role = Role(actor_role)
@@ -562,6 +599,7 @@ class LeaveService:
             leave = self.requests.get(leave_request_id)
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace)
+            self._assert_resource_tenant(leave.tenant_id, trace)
             if not self._can_access(role, actor_employee_id, leave):
                 self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace)
             if leave.status in {LeaveStatus.REJECTED, LeaveStatus.CANCELLED}:
@@ -633,21 +671,26 @@ class LeaveService:
         self._finalize_observation("patch_request", trace, started, True, {"status": 200, "cancelled": False})
         return 200, self._response_payload(leave)
 
-    def get_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None) -> tuple[int, dict]:
+    def get_request(self, actor_role: str, actor_employee_id: str, leave_request_id: str, trace_id: str | None = None, tenant_id: str | None = None) -> tuple[int, dict]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
         role = Role(actor_role)
         with self._lock:
             leave = self.requests.get(leave_request_id)
             if not leave:
                 self._fail(404, "LEAVE_NOT_FOUND", "Leave request not found", trace_id)
+            self._assert_resource_tenant(leave.tenant_id, trace_id)
             if not self._can_access(role, actor_employee_id, leave):
                 self._fail(403, "FORBIDDEN", "Insufficient permissions for CAP-LEV-001", trace_id)
             return 200, self._response_payload(leave)
 
-    def list_requests(self, actor_role: str, actor_employee_id: str, employee_id: str | None = None, approver_employee_id: str | None = None, status: str | None = None) -> tuple[int, dict]:
+    def list_requests(self, actor_role: str, actor_employee_id: str, employee_id: str | None = None, approver_employee_id: str | None = None, status: str | None = None, tenant_id: str | None = None) -> tuple[int, dict]:
+        self.tenant_id = self._resolve_tenant(tenant_id)
         role = Role(actor_role)
         rows = []
         with self._lock:
             for leave in self.requests.values():
+                if leave.tenant_id != self.tenant_id:
+                    continue
                 if employee_id and leave.employee_id != employee_id:
                     continue
                 if approver_employee_id and leave.approver_employee_id != approver_employee_id:

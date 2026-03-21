@@ -38,7 +38,7 @@ def post_auth_login(service: AuthService, payload: dict, trace_id: str | None = 
         )
 
     try:
-        token_payload = service.login(username=username, password=password)
+        token_payload = service.login(username=username, password=password, tenant_id=payload.get('tenant_id', 'tenant-default'))
         service.observability.track('post_auth_login', trace_id=trace_id, started_at=started, success=True, context={'status': 200})
         return success_response(200, token_payload, request_id=trace_id)
     except AuthServiceError as exc:
@@ -119,6 +119,7 @@ def get_auth_me(service: AuthService, authorization_header: str | None, trace_id
                 'user_id': str(principal.user_id),
                 'employee_id': str(principal.employee_id) if principal.employee_id else None,
                 'role': principal.role,
+                'tenant_id': principal.tenant_id,
                 'department_id': str(principal.department_id) if principal.department_id else None,
                 'session_id': session['session_id'],
                 'session_status': session['status'],
@@ -176,7 +177,7 @@ def get_auth_sessions(service: AuthService, query: dict | None = None, trace_id:
         return _error_response('VALIDATION_ERROR', 'status must be a non-empty string', details=[{'field': 'status', 'reason': 'must be a non-empty string'}], trace_id=trace_id)
 
     try:
-        data = service.list_sessions(user_id=parsed_user_id, status=status)
+        data = service.list_sessions(user_id=parsed_user_id, status=status, tenant_id=params.get('tenant_id'))
         service.observability.track('get_auth_sessions', trace_id=trace_id, started_at=started, success=True, context={'status': 200, 'count': len(data)})
         return success_response(200, data, request_id=trace_id)
     except AuthServiceError as exc:

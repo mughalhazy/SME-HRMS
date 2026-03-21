@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 
 from persistent_store import PersistentKVStore
 from resilience import Observability
+from tenant_support import DEFAULT_TENANT_ID, normalize_tenant_id
 
 
 class AuthServiceError(Exception):
@@ -28,11 +29,13 @@ class AuthenticatedPrincipal:
     employee_id: UUID | None
     role: str
     department_id: UUID | None
+    tenant_id: str
 
 
 @dataclass
 class UserAccount:
     user_id: UUID
+    tenant_id: str
     username: str
     password_hash: str
     role: str
@@ -127,7 +130,9 @@ class AuthService:
         role: str,
         employee_id: UUID | None = None,
         department_id: UUID | None = None,
+        tenant_id: str = DEFAULT_TENANT_ID,
     ) -> UserAccount:
+        tenant_id = normalize_tenant_id(tenant_id)
         normalized_username = username.strip().lower()
         if role not in self._ROLE_CAPABILITY_MAP:
             raise AuthServiceError('ROLE_INVALID', 'Role is not supported')
@@ -137,12 +142,14 @@ class AuthService:
             raise AuthServiceError('VALIDATION_ERROR', 'username exceeds maximum length')
         if len(password) > 1024:
             raise AuthServiceError('VALIDATION_ERROR', 'password exceeds maximum length')
-        if normalized_username in self._users_by_name:
+        user_lookup_key = self._user_lookup_key(tenant_id, normalized_username)
+        if user_lookup_key in self._users_by_name:
             raise AuthServiceError('USER_EXISTS', 'User already exists')
 
         now = datetime.now(timezone.utc)
         user = UserAccount(
             user_id=uuid4(),
+            tenant_id=tenant_id,
             username=normalized_username,
             password_hash=self._hash_password(password),
             role=role,
@@ -151,21 +158,22 @@ class AuthService:
             created_at=now,
             updated_at=now,
         )
-        self._users_by_name[normalized_username] = user
+        self._users_by_name[user_lookup_key] = user
         self._users_by_id[user.user_id] = user
         self.observability.logger.audit(
             'auth_user_registered',
             actor=str(user.user_id),
             entity='UserAccount',
             entity_id=str(user.user_id),
-            context={'username': normalized_username, 'role': role},
+            context={'username': normalized_username, 'role': role, 'tenant_id': tenant_id},
         )
         return user
 
-    def login(self, username: str, password: str, *, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800) -> dict[str, Any]:
+    def login(self, username: str, password: str, *, tenant_id: str = DEFAULT_TENANT_ID, ttl_seconds: int = 900, refresh_ttl_seconds: int = 604800) -> dict[str, Any]:
         self._validate_ttls(ttl_seconds, refresh_ttl_seconds)
+        tenant_id = normalize_tenant_id(tenant_id)
         normalized_username = username.strip().lower()
-        user = self._users_by_name.get(normalized_username)
+        user = self._users_by_name.get(self._user_lookup_key(tenant_id, normalized_username))
         if not user or not self._verify_password(password, user.password_hash):
             raise AuthServiceError('INVALID_CREDENTIALS', 'Invalid username or password')
         if not user.active:
@@ -176,7 +184,7 @@ class AuthService:
         token_payload = self._issue_session_tokens(user=user, ttl_seconds=ttl_seconds, refresh_ttl_seconds=refresh_ttl_seconds)
         self.observability.logger.info(
             'auth.login_succeeded',
-            context={'username': normalized_username, 'role': user.role, 'session_id': token_payload['session_id']},
+            context={'username': normalized_username, 'role': user.role, 'session_id': token_payload['session_id'], 'tenant_id': user.tenant_id},
         )
         return token_payload
 
@@ -241,6 +249,7 @@ class AuthService:
             employee_id=employee_id,
             role=claims['role'],
             department_id=department_id,
+            tenant_id=normalize_tenant_id(str(claims.get('tenant_id') or user.tenant_id)),
         )
 
     def logout(self, token: str) -> None:
@@ -263,22 +272,25 @@ class AuthService:
             raise AuthServiceError('TOKEN_REVOKED', 'Session has been revoked')
 
         principal = self.authenticate_token(token)
-        return self._serialize_session(session, principal.role)
+        return self._serialize_session(session, principal.role, principal.tenant_id)
 
-    def list_sessions(self, *, user_id: UUID | None = None, status: str | None = None) -> list[dict[str, Any]]:
+    def list_sessions(self, *, user_id: UUID | None = None, status: str | None = None, tenant_id: str | None = None) -> list[dict[str, Any]]:
         if status is not None and status not in {'Active', 'Revoked', 'Expired'}:
             raise AuthServiceError('VALIDATION_ERROR', 'status filter is invalid', details=[{'field': 'status', 'reason': 'must be Active, Revoked, or Expired'}])
 
         rows = []
         now = datetime.now(timezone.utc)
+        normalized_tenant_id = normalize_tenant_id(tenant_id) if tenant_id is not None else None
         for session in self._sessions_by_id.values():
             if user_id is not None and session.user_id != user_id:
+                continue
+            user = self._users_by_id.get(session.user_id)
+            if normalized_tenant_id is not None and (not user or user.tenant_id != normalized_tenant_id):
                 continue
             session_status = self._session_status(session, now=now)
             if status is not None and session_status != status:
                 continue
-            user = self._users_by_id.get(session.user_id)
-            rows.append(self._serialize_session(session, user.role if user else None, now=now))
+            rows.append(self._serialize_session(session, user.role if user else None, user.tenant_id if user else None, now=now))
         rows.sort(key=lambda row: row['started_at'], reverse=True)
         return rows
 
@@ -288,7 +300,7 @@ class AuthService:
             raise AuthServiceError('TOKEN_INVALID', 'Session is invalid')
         user = self._users_by_id.get(session.user_id)
         self._revoke_session(session_id, actor=actor or str(session.user_id), role=user.role if user else None)
-        return self._serialize_session(session, user.role if user else None)
+        return self._serialize_session(session, user.role if user else None, user.tenant_id if user else None)
 
     def validate_role(self, principal: AuthenticatedPrincipal, capability_id: str) -> bool:
         allowed = self._ROLE_CAPABILITY_MAP.get(principal.role, set())
@@ -297,6 +309,11 @@ class AuthService:
     def require_capability(self, principal: AuthenticatedPrincipal, capability_id: str) -> None:
         if not self.validate_role(principal, capability_id):
             raise AuthServiceError('FORBIDDEN', 'Insufficient permissions for requested capability')
+
+
+    @staticmethod
+    def _user_lookup_key(tenant_id: str, username: str) -> str:
+        return f"{normalize_tenant_id(tenant_id)}::{username.strip().lower()}"
 
     def health_snapshot(self) -> dict[str, Any]:
         revoked_sessions = sum(1 for session in self._sessions_by_id.values() if session.revoked)
@@ -341,6 +358,7 @@ class AuthService:
         claims = {
             'sub': str(user.user_id),
             'sid': session_id,
+            'tenant_id': user.tenant_id,
             'role': user.role,
             'employee_id': str(user.employee_id) if user.employee_id else None,
             'department_id': str(user.department_id) if user.department_id else None,
@@ -368,12 +386,13 @@ class AuthService:
             return
         session.revoked = True
         session.revoked_at = datetime.now(timezone.utc)
+        user = self._users_by_id.get(session.user_id)
         self.observability.logger.audit(
             'auth_logout',
             actor=actor,
             entity='Session',
             entity_id=session_id,
-            context={'role': role},
+            context={'role': role, 'tenant_id': user.tenant_id if user else None},
         )
 
     def _get_session_by_refresh_token(self, refresh_token: str) -> SessionRecord:
@@ -386,11 +405,12 @@ class AuthService:
         raise AuthServiceError('TOKEN_INVALID', 'Refresh token is invalid')
 
 
-    def _serialize_session(self, session: SessionRecord, role: str | None, *, now: datetime | None = None) -> dict[str, Any]:
+    def _serialize_session(self, session: SessionRecord, role: str | None, tenant_id: str | None = None, *, now: datetime | None = None) -> dict[str, Any]:
         current_time = now or datetime.now(timezone.utc)
         return {
             'session_id': session.session_id,
             'user_id': str(session.user_id),
+            'tenant_id': normalize_tenant_id(tenant_id),
             'role': role,
             'status': self._session_status(session, now=current_time),
             'started_at': session.started_at.isoformat(),

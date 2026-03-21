@@ -13,8 +13,10 @@ const { SettingsService } = require('./services/settings-service/settings.servic
 const { ConflictError, NotFoundError } = require('./services/employee-service/service.errors.js');
 const { ValidationError } = require('./services/employee-service/employee.validation.js');
 
-const repository = new SettingsRepository();
-const service = new SettingsService(repository);
+const repository = new SettingsRepository('tenant-default');
+const service = new SettingsService(repository, 'tenant-default');
+const otherTenantRepository = new SettingsRepository('tenant-beta');
+const otherTenantService = new SettingsService(otherTenantRepository, 'tenant-beta');
 
 const attendanceRule = service.createAttendanceRule({
   code: 'HQ-GENERAL',
@@ -149,10 +151,34 @@ assert.throws(
   ConflictError,
 );
 
+
+
+const tenantConfig = service.upsertTenantConfig({
+  feature_flags: { self_service_leave: true, payroll_preview: false },
+  leave_policy_refs: ['ANNUAL-STD'],
+  payroll_rule_refs: ['monthly-core'],
+  locale: 'en-US',
+  legal_entity: 'Acme HR LLC',
+  enabled_locations: ['US-NY', 'US-CA'],
+});
+assert.equal(tenantConfig.tenant_id, 'tenant-default');
+assert.equal(service.isFeatureEnabled('self_service_leave'), true);
+assert.equal(service.getTenantConfig().legal_entity, 'Acme HR LLC');
+
+otherTenantService.upsertTenantConfig({
+  feature_flags: { self_service_leave: false },
+  legal_entity: 'Beta HR Ltd',
+});
+assert.equal(otherTenantService.isFeatureEnabled('self_service_leave'), false);
+assert.equal(otherTenantService.getTenantConfig().legal_entity, 'Beta HR Ltd');
+assert.equal(service.getTenantConfig().legal_entity, 'Acme HR LLC');
+
 const readModels = service.getSettingsReadModels();
 assert.equal(readModels.settings_configuration_view.attendance_rules.length, 1);
 assert.equal(readModels.settings_configuration_view.leave_policies.length, 2);
 assert.equal(readModels.settings_configuration_view.payroll_settings.pay_schedule, 'Monthly');
+assert.equal(readModels.settings_configuration_view.tenant_id, 'tenant-default');
+assert.equal(readModels.settings_configuration_view.tenant_configuration.feature_flags.self_service_leave, true);
 assert.match(readModels.settings_configuration_view.leave_policies[0].entitlement_summary, /days\/year/);
 
 const settingsConfiguration = service.getSettingsConfiguration();

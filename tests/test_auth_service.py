@@ -59,6 +59,46 @@ class AuthServiceTests(unittest.TestCase):
         self.assertEqual(principal.role, 'Manager')
         self.assertEqual(principal.employee_id, self.employee_id)
 
+
+    def test_same_username_can_exist_in_different_tenants_and_tokens_preserve_tenant_context(self) -> None:
+        other_employee = uuid4()
+        self.service.register_user(
+            username='ava.manager',
+            password='Password123!',
+            role='Manager',
+            employee_id=other_employee,
+            department_id=self.department_id,
+            tenant_id='tenant-beta',
+        )
+
+        default_login = self.service.login('ava.manager', 'Password123!', tenant_id='tenant-default')
+        beta_login = self.service.login('ava.manager', 'Password123!', tenant_id='tenant-beta')
+
+        default_principal = self.service.authenticate_token(default_login['access_token'])
+        beta_principal = self.service.authenticate_token(beta_login['access_token'])
+
+        self.assertEqual(default_principal.tenant_id, 'tenant-default')
+        self.assertEqual(beta_principal.tenant_id, 'tenant-beta')
+        self.assertNotEqual(default_principal.employee_id, beta_principal.employee_id)
+
+    def test_login_api_accepts_tenant_id_and_me_returns_it(self) -> None:
+        self.service.register_user(
+            username='tenant.user',
+            password='Password123!',
+            role='Employee',
+            tenant_id='tenant-gamma',
+        )
+
+        login_status, login_payload = post_auth_login(
+            self.service,
+            {'username': 'tenant.user', 'password': 'Password123!', 'tenant_id': 'tenant-gamma'},
+            trace_id='trace-login-tenant',
+        )
+        self.assertEqual(login_status, 200)
+        me_status, me_payload = get_auth_me(self.service, f"Bearer {login_payload['data']['access_token']}", trace_id='trace-me-tenant')
+        self.assertEqual(me_status, 200)
+        self.assertEqual(me_payload['data']['tenant_id'], 'tenant-gamma')
+
     def test_refresh_rotates_token_and_preserves_session(self) -> None:
         login_payload = self.service.login('ava.manager', 'Password123!')
         refreshed = self.service.refresh_session(login_payload['refresh_token'])
