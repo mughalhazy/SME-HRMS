@@ -19,7 +19,16 @@ checks: list[tuple[str, bool]] = [
     ('seeded roles available to repositories', 'seedRoles' in SEEDS and 'role-frontend-engineer' in SEEDS),
     ('employee repository resolves department references dynamically', 'referenceRepository' in EMPLOYEE_REPOSITORY and 'findDepartmentById' in EMPLOYEE_REPOSITORY),
     ('employee repository resolves role references dynamically', 'referenceRepository' in EMPLOYEE_REPOSITORY and 'findRoleById' in EMPLOYEE_REPOSITORY),
-    ('employee deletion blocks orphaned reports', 'cannot delete employee with direct reports' in EMPLOYEE_SERVICE),
+    (
+        'employee deletion blocks orphaned reports',
+        any(
+            marker in EMPLOYEE_SERVICE
+            for marker in [
+                'cannot delete employee with direct reports',
+                'cannot delete employee with direct or matrix reports',
+            ]
+        ),
+    ),
     ('employee deletion blocks orphaned department heads', 'cannot delete employee assigned as department head' in EMPLOYEE_SERVICE),
     ('department status changes protect assigned employees', 'cannot deactivate or archive a department with assigned employees' in DEPARTMENT_SERVICE),
     ('department repository supports head and parent integrity indexes', 'headEmployeeIndex' in DEPARTMENT_REPOSITORY and 'parentDepartmentIndex' in DEPARTMENT_REPOSITORY),
