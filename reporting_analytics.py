@@ -105,9 +105,13 @@ class ScheduledReport:
 class ReportingAnalyticsService:
     REPORT_TYPES = {
         'hiring.pipeline.summary',
+        'hiring.funnel.summary',
         'hiring.source.effectiveness',
         'hiring.time_to_hire',
         'organization.manager.span',
+        'workforce.attrition.summary',
+        'workforce.attendance.trend',
+        'workforce.dashboard.summary',
     }
     EXPORT_FORMATS = {'json', 'csv'}
     CADENCES = {'daily', 'weekly', 'monthly'}
@@ -182,6 +186,25 @@ class ReportingAnalyticsService:
             'processed_event_count': new_events,
         }
 
+    def sync_workforce_read_models(
+        self,
+        *,
+        employee_directory_rows: Iterable[dict[str, Any]] | None = None,
+        attendance_rows: Iterable[dict[str, Any]] | None = None,
+        employee_reporting_rows: Iterable[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        if employee_directory_rows is not None:
+            self.ingest_read_model('employee_directory_view', employee_directory_rows)
+        if attendance_rows is not None:
+            self.ingest_read_model('attendance_dashboard_view', attendance_rows)
+        if employee_reporting_rows is not None:
+            self.ingest_read_model('employee_reporting_view', employee_reporting_rows)
+        return {
+            'employee_count': len(self._read_rows('employee_directory_view')),
+            'attendance_record_count': len(self._read_rows('attendance_dashboard_view')),
+            'reporting_line_count': len(self._read_rows('employee_reporting_view')),
+        }
+
     def ingest_event(self, event: dict[str, Any]) -> None:
         try:
             payload, _ = ensure_event_contract(event, source=str(event.get('source') or 'reporting-analytics'), registry=self.event_registry)
@@ -215,9 +238,13 @@ class ReportingAnalyticsService:
             event_rows.sort(key=lambda row: (str(row.get('timestamp') or row.get('occurred_at') or ''), str(row.get('event_id') or '')))
 
             snapshots = self._build_hiring_pipeline_snapshots(candidate_rows)
+            snapshots.extend(self._build_hiring_funnel_snapshots(candidate_rows))
             snapshots.extend(self._build_source_effectiveness_snapshots(candidate_rows))
             snapshots.extend(self._build_time_to_hire_snapshots(event_rows, candidate_rows, employee_profile_rows))
             snapshots.extend(self._build_manager_span_snapshots(employee_reporting_rows))
+            snapshots.extend(self._build_attrition_snapshots(self._read_rows('employee_directory_view'), employee_profile_rows, event_rows))
+            snapshots.extend(self._build_attendance_trend_snapshots(self._read_rows('attendance_dashboard_view')))
+            snapshots.extend(self._build_workforce_dashboard_snapshots(candidate_rows, self._read_rows('employee_directory_view'), self._read_rows('attendance_dashboard_view'), event_rows))
 
             current_ids = {snapshot.aggregate_id for snapshot in snapshots}
             for aggregate_id in list(self.aggregate_snapshots.keys()):
@@ -269,6 +296,61 @@ class ReportingAnalyticsService:
             )
             for (dimension_key, dimension_value), metrics in grouped.items()
         ]
+
+    def _build_hiring_funnel_snapshots(self, candidate_rows: list[dict[str, Any]]) -> list[AggregateSnapshot]:
+        grouped: dict[tuple[str, str], dict[str, Any]] = {}
+        stage_aliases = {
+            'Applied': 'application_count',
+            'Screening': 'screening_count',
+            'Interview': 'interview_count',
+            'Interviewing': 'interview_count',
+            'Offer': 'offer_count',
+            'Offered': 'offer_count',
+            'Hired': 'hired_count',
+        }
+        for row in candidate_rows:
+            normalized_stage = str(row.get('pipeline_stage_normalized') or row.get('pipeline_stage') or 'Applied')
+            for dimension_key, dimension_value in (
+                ('tenant', self.tenant_id),
+                ('department_id', str(row.get('department_id') or 'unknown')),
+                ('job_posting_id', str(row.get('job_posting_id') or 'unknown')),
+            ):
+                metrics = grouped.setdefault(
+                    (dimension_key, dimension_value),
+                    {
+                        'application_count': 0,
+                        'screening_count': 0,
+                        'interview_count': 0,
+                        'offer_count': 0,
+                        'hired_count': 0,
+                    },
+                )
+                metrics['application_count'] += 1
+                bucket = stage_aliases.get(normalized_stage)
+                if bucket and bucket != 'application_count':
+                    metrics[bucket] += 1
+        updated_at = self._now()
+        snapshots: list[AggregateSnapshot] = []
+        for (dimension_key, dimension_value), metrics in grouped.items():
+            applications = metrics['application_count'] or 1
+            metrics['screening_conversion_rate'] = round(metrics['screening_count'] / applications, 4)
+            metrics['interview_conversion_rate'] = round(metrics['interview_count'] / applications, 4)
+            metrics['offer_conversion_rate'] = round(metrics['offer_count'] / applications, 4)
+            metrics['hire_conversion_rate'] = round(metrics['hired_count'] / applications, 4)
+            snapshots.append(
+                AggregateSnapshot(
+                    aggregate_id=f'hiring.funnel.summary:{dimension_key}:{dimension_value}',
+                    tenant_id=self.tenant_id,
+                    aggregate_type='hiring.funnel.summary',
+                    dimension_key=dimension_key,
+                    dimension_value=dimension_value,
+                    window_start=None,
+                    window_end=None,
+                    metrics=metrics,
+                    updated_at=updated_at,
+                )
+            )
+        return snapshots
 
     def _build_source_effectiveness_snapshots(self, candidate_rows: list[dict[str, Any]]) -> list[AggregateSnapshot]:
         grouped: dict[str, dict[str, Any]] = {}
@@ -379,6 +461,249 @@ class ReportingAnalyticsService:
                 updated_at=updated_at,
             )
             for manager_id, metrics in grouped.items()
+        ]
+
+    def _build_attrition_snapshots(
+        self,
+        employee_directory_rows: list[dict[str, Any]],
+        employee_profile_rows: list[dict[str, Any]],
+        event_rows: list[dict[str, Any]],
+    ) -> list[AggregateSnapshot]:
+        grouped: dict[tuple[str, str], dict[str, Any]] = {}
+        department_lookup = {
+            str(row.get('employee_id') or ''): str(row.get('department_id') or 'unknown')
+            for row in employee_directory_rows
+            if row.get('employee_id')
+        }
+        for row in employee_directory_rows:
+            status = str(row.get('employee_status') or 'Unknown')
+            department_id = str(row.get('department_id') or 'unknown')
+            for dimension_key, dimension_value in (('tenant', self.tenant_id), ('department_id', department_id)):
+                metrics = grouped.setdefault(
+                    (dimension_key, dimension_value),
+                    {
+                        'current_headcount': 0,
+                        'active_headcount': 0,
+                        'inactive_headcount': 0,
+                        'terminated_employee_count': 0,
+                        'hire_count': 0,
+                        'termination_event_count': 0,
+                    },
+                )
+                if status != 'Terminated':
+                    metrics['current_headcount'] += 1
+                if status == 'Active':
+                    metrics['active_headcount'] += 1
+                elif status in {'OnLeave', 'Suspended'}:
+                    metrics['inactive_headcount'] += 1
+                elif status == 'Terminated':
+                    metrics['terminated_employee_count'] += 1
+
+        for row in employee_profile_rows:
+            department_id = str(row.get('department_id') or 'unknown')
+            for dimension_key, dimension_value in (('tenant', self.tenant_id), ('department_id', department_id)):
+                metrics = grouped.setdefault(
+                    (dimension_key, dimension_value),
+                    {
+                        'current_headcount': 0,
+                        'active_headcount': 0,
+                        'inactive_headcount': 0,
+                        'terminated_employee_count': 0,
+                        'hire_count': 0,
+                        'termination_event_count': 0,
+                    },
+                )
+                metrics['hire_count'] += 1
+
+        for event in event_rows:
+            event_type = str(event.get('event_type') or event.get('legacy_event_type') or event.get('event_name') or '')
+            if event_type not in {'employee.status.changed', 'EmployeeStatusChanged'}:
+                continue
+            data = dict(event.get('data') or event.get('payload') or {})
+            status = str(data.get('to_status') or data.get('status') or '')
+            if status != 'Terminated':
+                continue
+            employee_id = str(data.get('employee_id') or '')
+            department_id = str(data.get('department_id') or department_lookup.get(employee_id) or 'unknown')
+            for dimension_key, dimension_value in (('tenant', self.tenant_id), ('department_id', department_id)):
+                metrics = grouped.setdefault(
+                    (dimension_key, dimension_value),
+                    {
+                        'current_headcount': 0,
+                        'active_headcount': 0,
+                        'inactive_headcount': 0,
+                        'terminated_employee_count': 0,
+                        'hire_count': 0,
+                        'termination_event_count': 0,
+                    },
+                )
+                metrics['termination_event_count'] += 1
+
+        updated_at = self._now()
+        snapshots: list[AggregateSnapshot] = []
+        for (dimension_key, dimension_value), metrics in grouped.items():
+            population = metrics['current_headcount'] + metrics['terminated_employee_count']
+            metrics['attrition_rate'] = round(metrics['terminated_employee_count'] / (population or 1), 4)
+            metrics['net_hiring_change'] = metrics['hire_count'] - metrics['terminated_employee_count']
+            snapshots.append(
+                AggregateSnapshot(
+                    aggregate_id=f'workforce.attrition.summary:{dimension_key}:{dimension_value}',
+                    tenant_id=self.tenant_id,
+                    aggregate_type='workforce.attrition.summary',
+                    dimension_key=dimension_key,
+                    dimension_value=dimension_value,
+                    window_start=None,
+                    window_end=None,
+                    metrics=metrics,
+                    updated_at=updated_at,
+                )
+            )
+        return snapshots
+
+    def _build_attendance_trend_snapshots(self, attendance_rows: list[dict[str, Any]]) -> list[AggregateSnapshot]:
+        grouped: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in attendance_rows:
+            attendance_date = str(row.get('attendance_date') or 'unknown')
+            department_id = str(row.get('department_id') or 'unknown')
+            status = str(row.get('attendance_status') or 'Unknown')
+            total_hours = float(row.get('total_hours') or 0)
+            for dimension_key, dimension_value in (('attendance_date', attendance_date), ('department_id', department_id)):
+                metrics = grouped.setdefault(
+                    (dimension_key, dimension_value),
+                    {
+                        'record_count': 0,
+                        'present_count': 0,
+                        'late_count': 0,
+                        'absent_count': 0,
+                        'half_day_count': 0,
+                        'total_hours': 0.0,
+                    },
+                )
+                metrics['record_count'] += 1
+                metrics['total_hours'] += total_hours
+                if status == 'Present':
+                    metrics['present_count'] += 1
+                elif status == 'Late':
+                    metrics['late_count'] += 1
+                elif status == 'Absent':
+                    metrics['absent_count'] += 1
+                elif status == 'HalfDay':
+                    metrics['half_day_count'] += 1
+        updated_at = self._now()
+        snapshots: list[AggregateSnapshot] = []
+        for (dimension_key, dimension_value), metrics in grouped.items():
+            record_count = metrics['record_count'] or 1
+            productive = metrics['present_count'] + metrics['late_count'] + metrics['half_day_count']
+            metrics['attendance_rate'] = round(productive / record_count, 4)
+            metrics['average_hours'] = round(metrics['total_hours'] / record_count, 2)
+            metrics['total_hours'] = round(metrics['total_hours'], 2)
+            snapshots.append(
+                AggregateSnapshot(
+                    aggregate_id=f'workforce.attendance.trend:{dimension_key}:{dimension_value}',
+                    tenant_id=self.tenant_id,
+                    aggregate_type='workforce.attendance.trend',
+                    dimension_key=dimension_key,
+                    dimension_value=dimension_value,
+                    window_start=dimension_value if dimension_key == 'attendance_date' else None,
+                    window_end=dimension_value if dimension_key == 'attendance_date' else None,
+                    metrics=metrics,
+                    updated_at=updated_at,
+                )
+            )
+        return snapshots
+
+    def _build_workforce_dashboard_snapshots(
+        self,
+        candidate_rows: list[dict[str, Any]],
+        employee_directory_rows: list[dict[str, Any]],
+        attendance_rows: list[dict[str, Any]],
+        event_rows: list[dict[str, Any]],
+    ) -> list[AggregateSnapshot]:
+        attrition_metrics = next(
+            (
+                snapshot.metrics
+                for snapshot in self._build_attrition_snapshots(employee_directory_rows, self._read_rows('employee_profile_view'), event_rows)
+                if snapshot.dimension_key == 'tenant'
+            ),
+            {
+                'current_headcount': 0,
+                'active_headcount': 0,
+                'inactive_headcount': 0,
+                'terminated_employee_count': 0,
+                'hire_count': 0,
+                'termination_event_count': 0,
+                'attrition_rate': 0.0,
+                'net_hiring_change': 0,
+            },
+        )
+        attendance_snapshots = [
+            snapshot
+            for snapshot in self._build_attendance_trend_snapshots(attendance_rows)
+            if snapshot.dimension_key == 'attendance_date'
+        ]
+        attendance_snapshots.sort(key=lambda snapshot: snapshot.dimension_value, reverse=True)
+        attendance_metrics = attendance_snapshots[0].metrics if attendance_snapshots else None
+        latest_attendance = attendance_metrics or {
+            'record_count': len(attendance_rows),
+            'present_count': 0,
+            'late_count': 0,
+            'absent_count': 0,
+            'half_day_count': 0,
+            'total_hours': 0.0,
+            'attendance_rate': 0.0,
+            'average_hours': 0.0,
+        }
+        funnel_metrics = next(
+            (
+                snapshot.metrics
+                for snapshot in self._build_hiring_funnel_snapshots(candidate_rows)
+                if snapshot.dimension_key == 'tenant'
+            ),
+            {
+                'application_count': len(candidate_rows),
+                'screening_count': 0,
+                'interview_count': 0,
+                'offer_count': 0,
+                'hired_count': 0,
+                'screening_conversion_rate': 0.0,
+                'interview_conversion_rate': 0.0,
+                'offer_conversion_rate': 0.0,
+                'hire_conversion_rate': 0.0,
+            },
+        )
+        metrics = {
+            'headcount': {
+                'current': attrition_metrics['current_headcount'],
+                'active': attrition_metrics['active_headcount'],
+                'inactive': attrition_metrics['inactive_headcount'],
+            },
+            'attrition': {
+                'terminated_employee_count': attrition_metrics['terminated_employee_count'],
+                'termination_event_count': attrition_metrics['termination_event_count'],
+                'attrition_rate': attrition_metrics['attrition_rate'],
+                'net_hiring_change': attrition_metrics['net_hiring_change'],
+            },
+            'hiring_funnel': dict(funnel_metrics),
+            'attendance': {
+                'record_count': latest_attendance['record_count'],
+                'attendance_rate': latest_attendance['attendance_rate'],
+                'average_hours': latest_attendance['average_hours'],
+                'late_count': latest_attendance['late_count'],
+                'absent_count': latest_attendance['absent_count'],
+            },
+        }
+        return [
+            AggregateSnapshot(
+                aggregate_id=f'workforce.dashboard.summary:tenant:{self.tenant_id}',
+                tenant_id=self.tenant_id,
+                aggregate_type='workforce.dashboard.summary',
+                dimension_key='tenant',
+                dimension_value=self.tenant_id,
+                window_start=None,
+                window_end=None,
+                metrics=metrics,
+                updated_at=self._now(),
+            )
         ]
 
     def list_aggregates(
