@@ -18,10 +18,13 @@ import { DepartmentController } from './department.controller';
 import { DepartmentRepository } from './department.repository';
 import { DepartmentService } from './department.service';
 import { EmployeeController } from './employee.controller';
+import { LearningController } from './learning.controller';
 import { DocumentComplianceController } from './document-compliance.controller';
 import { DocumentComplianceRepository } from './document-compliance.repository';
 import { DocumentComplianceService } from './document-compliance.service';
 import { EmployeeRepository } from './employee.repository';
+import { LearningRepository } from './learning.repository';
+import { LearningService } from './learning.service';
 import { EmployeeService } from './employee.service';
 import { OrgStructureController } from './org.controller';
 import { OrgStructureRepository } from './org.repository';
@@ -69,6 +72,11 @@ const readCompensationRateLimit = createRateLimitMiddleware({ keyPrefix: 'compen
 const listCompensationRateLimit = createRateLimitMiddleware({ keyPrefix: 'compensation:list', windowMs: 60_000, maxRequests: 120 });
 const updateCompensationRateLimit = createRateLimitMiddleware({ keyPrefix: 'compensation:update', windowMs: 60_000, maxRequests: 60 });
 
+const createLearningRateLimit = createRateLimitMiddleware({ keyPrefix: 'learning:create', windowMs: 60_000, maxRequests: 30 });
+const readLearningRateLimit = createRateLimitMiddleware({ keyPrefix: 'learning:read', windowMs: 60_000, maxRequests: 180 });
+const listLearningRateLimit = createRateLimitMiddleware({ keyPrefix: 'learning:list', windowMs: 60_000, maxRequests: 120 });
+const updateLearningRateLimit = createRateLimitMiddleware({ keyPrefix: 'learning:update', windowMs: 60_000, maxRequests: 60 });
+
 export function createEmployeeRouter(): Router {
   const departmentRepository = new DepartmentRepository();
   const roleRepository = new RoleRepository();
@@ -97,7 +105,11 @@ export function createEmployeeRouter(): Router {
   const documentComplianceRepository = new DocumentComplianceRepository();
   const documentComplianceService = new DocumentComplianceService(documentComplianceRepository, repository);
   const compensationService = new CompensationService(compensationRepository, repository);
+  const learningRepository = new LearningRepository();
+  const learningService = new LearningService(learningRepository, repository);
   const controller = new EmployeeController(service);
+  const assetManagementController = new AssetManagementController(assetManagementService, service);
+  const learningController = new LearningController(learningService, service);
   const contractorController = new ContractorController(service);
   const documentComplianceController = new DocumentComplianceController(documentComplianceService, service);
   const compensationController = new CompensationController(compensationService);
@@ -137,6 +149,9 @@ export function createEmployeeRouter(): Router {
   router.post('/api/v1/benefits/plans', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createBenefitsPlan);
   router.post('/api/v1/benefits/enrollments', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createBenefitsEnrollment);
   router.post('/api/v1/compensation/allowances', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createAllowance);
+  router.post('/api/v1/learning/courses', createLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.createCourse);
+  router.post('/api/v1/learning/enrollments', createLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.createEnrollment);
+  router.post('/api/v1/learning/enrollments/:enrollmentId/completions', updateLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.recordCompletion);
 
   router.get('/api/v1/employees/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), controller.getEmployee);
   router.get('/api/v1/employees', listEmployeeRateLimit, authorizeEmployeeAction('list'), controller.listEmployees);
@@ -166,6 +181,12 @@ export function createEmployeeRouter(): Router {
   router.get('/api/v1/compensation/allowances/:allowanceId', readCompensationRateLimit, authorizeEmployeeAction('readCompensation'), compensationController.getAllowance);
   router.get('/api/v1/compensation/allowances', listCompensationRateLimit, authorizeEmployeeAction('listCompensation'), compensationController.listAllowances);
   router.get('/api/v1/compensation/employees/:employeeId/payroll-context', readCompensationRateLimit, authorizeEmployeeAction('readCompensation'), compensationController.getEmployeePayrollContext);
+  router.get('/api/v1/learning/courses/:courseId', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getCourse);
+  router.get('/api/v1/learning/courses', listLearningRateLimit, authorizeEmployeeAction('listLearning'), learningController.listCourses);
+  router.get('/api/v1/learning/enrollments/:enrollmentId', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getEnrollment);
+  router.get('/api/v1/learning/enrollments', listLearningRateLimit, authorizeEmployeeAction('listLearning'), learningController.listEnrollments);
+  router.get('/api/v1/learning/completions', listLearningRateLimit, authorizeEmployeeAction('listLearning'), learningController.listCompletions);
+  router.get('/api/v1/learning/employees/:employeeId/summary', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getEmployeeSummary);
   router.get('/api/v1/org/:kind', readOrgRateLimit, authorizeEmployeeAction('listOrgStructure'), orgController.listEntities);
 
   router.patch('/api/v1/employees/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), controller.updateEmployee);
@@ -184,6 +205,8 @@ export function createEmployeeRouter(): Router {
   router.patch('/api/v1/benefits/plans/:benefitsPlanId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateBenefitsPlan);
   router.patch('/api/v1/benefits/enrollments/:benefitsEnrollmentId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateBenefitsEnrollment);
   router.patch('/api/v1/compensation/allowances/:allowanceId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateAllowance);
+  router.patch('/api/v1/learning/courses/:courseId', updateLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.updateCourse);
+  router.patch('/api/v1/learning/enrollments/:enrollmentId/progress', updateLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.updateEnrollmentProgress);
 
 
   router.delete('/api/v1/employees/:employeeId', deleteEmployeeRateLimit, authorizeEmployeeAction('delete'), controller.deleteEmployee);
