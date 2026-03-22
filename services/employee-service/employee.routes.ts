@@ -7,9 +7,13 @@ import { createThrottleMiddleware } from '../../middleware/throttle';
 import { createPayloadLimitMiddleware } from '../../middleware/validation';
 import { createMetricsMiddleware } from '../../metrics/metrics';
 import { tenantContextMiddleware } from '../../middleware/tenant-context';
+import { AssetManagementController } from './asset-management.controller';
+import { AssetManagementRepository } from './asset-management.repository';
+import { AssetManagementService } from './asset-management.service';
 import { CompensationController } from './compensation.controller';
 import { CompensationRepository } from './compensation.repository';
 import { CompensationService } from './compensation.service';
+import { ContractorController } from './contractor.controller';
 import { DepartmentController } from './department.controller';
 import { DepartmentRepository } from './department.repository';
 import { DepartmentService } from './department.service';
@@ -55,6 +59,11 @@ const createOrgRateLimit = createRateLimitMiddleware({ keyPrefix: 'org:create', 
 const readOrgRateLimit = createRateLimitMiddleware({ keyPrefix: 'org:read', windowMs: 60_000, maxRequests: 180 });
 const updateOrgRateLimit = createRateLimitMiddleware({ keyPrefix: 'org:update', windowMs: 60_000, maxRequests: 60 });
 
+const createAssetRateLimit = createRateLimitMiddleware({ keyPrefix: 'assets:create', windowMs: 60_000, maxRequests: 30 });
+const readAssetRateLimit = createRateLimitMiddleware({ keyPrefix: 'assets:read', windowMs: 60_000, maxRequests: 180 });
+const listAssetRateLimit = createRateLimitMiddleware({ keyPrefix: 'assets:list', windowMs: 60_000, maxRequests: 120 });
+const updateAssetRateLimit = createRateLimitMiddleware({ keyPrefix: 'assets:update', windowMs: 60_000, maxRequests: 60 });
+
 const createCompensationRateLimit = createRateLimitMiddleware({ keyPrefix: 'compensation:create', windowMs: 60_000, maxRequests: 30 });
 const readCompensationRateLimit = createRateLimitMiddleware({ keyPrefix: 'compensation:read', windowMs: 60_000, maxRequests: 180 });
 const listCompensationRateLimit = createRateLimitMiddleware({ keyPrefix: 'compensation:list', windowMs: 60_000, maxRequests: 120 });
@@ -83,10 +92,13 @@ export function createEmployeeRouter(): Router {
     findGradeBandById: (gradeBandId) => repository.findGradeBandById(gradeBandId),
   });
   const service = new EmployeeService(repository, roleService, departmentRepository);
+  const assetManagementRepository = new AssetManagementRepository();
+  const assetManagementService = new AssetManagementService(assetManagementRepository, repository);
   const documentComplianceRepository = new DocumentComplianceRepository();
   const documentComplianceService = new DocumentComplianceService(documentComplianceRepository, repository);
   const compensationService = new CompensationService(compensationRepository, repository);
   const controller = new EmployeeController(service);
+  const contractorController = new ContractorController(service);
   const documentComplianceController = new DocumentComplianceController(documentComplianceService, service);
   const compensationController = new CompensationController(compensationService);
   const departmentController = new DepartmentController(departmentService);
@@ -110,12 +122,16 @@ export function createEmployeeRouter(): Router {
   router.use('/api/v1', authenticate);
 
   router.post('/api/v1/employees', createEmployeeRateLimit, authorizeEmployeeAction('create'), controller.createEmployee);
+  router.post('/api/v1/contractors', createEmployeeRateLimit, authorizeEmployeeAction('create'), contractorController.createContractor);
   router.post('/api/v1/departments', createDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.createDepartment);
   router.post('/api/v1/roles', createRoleRateLimit, authorizeEmployeeAction('createRole'), roleController.createRole);
   router.post('/api/v1/documents', createEmployeeRateLimit, authorizeEmployeeAction('createDocument'), documentComplianceController.createDocument);
   router.post('/api/v1/documents/:documentId/acknowledgements', updateEmployeeRateLimit, authorizeEmployeeAction('acknowledgePolicy'), documentComplianceController.acknowledgePolicy);
   router.post('/api/v1/compliance-tasks', createEmployeeRateLimit, authorizeEmployeeAction('createComplianceTask'), documentComplianceController.createComplianceTask);
   router.post('/api/v1/org/:kind', createOrgRateLimit, authorizeEmployeeAction('manageOrgStructure'), orgController.createEntity);
+  router.post('/api/v1/assets', createAssetRateLimit, authorizeEmployeeAction('createAsset'), assetManagementController.createAsset);
+  router.post('/api/v1/assets/:assetId/allocations', updateAssetRateLimit, authorizeEmployeeAction('allocateAsset'), assetManagementController.allocateAsset);
+  router.post('/api/v1/assets/:assetId/returns', updateAssetRateLimit, authorizeEmployeeAction('returnAsset'), assetManagementController.returnAsset);
   router.post('/api/v1/compensation/bands', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createCompensationBand);
   router.post('/api/v1/compensation/salary-revisions', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createSalaryRevision);
   router.post('/api/v1/benefits/plans', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createBenefitsPlan);
@@ -124,6 +140,8 @@ export function createEmployeeRouter(): Router {
 
   router.get('/api/v1/employees/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), controller.getEmployee);
   router.get('/api/v1/employees', listEmployeeRateLimit, authorizeEmployeeAction('list'), controller.listEmployees);
+  router.get('/api/v1/contractors/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), contractorController.getContractor);
+  router.get('/api/v1/contractors', listEmployeeRateLimit, authorizeEmployeeAction('list'), contractorController.listContractors);
   router.get('/api/v1/documents/expiring', readEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listExpiringDocuments);
   router.get('/api/v1/documents/:documentId', readEmployeeRateLimit, authorizeEmployeeAction('readDocument'), documentComplianceController.getDocument);
   router.get('/api/v1/documents', listEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listDocuments);
@@ -134,6 +152,9 @@ export function createEmployeeRouter(): Router {
   router.get('/api/v1/roles/:roleId', readRoleRateLimit, authorizeEmployeeAction('readRole'), roleController.getRole);
   router.get('/api/v1/roles', readRoleRateLimit, authorizeEmployeeAction('listRoles'), roleController.listRoles);
   router.get('/api/v1/org/:kind/:entityId', readOrgRateLimit, authorizeEmployeeAction('readOrgStructure'), orgController.getEntity);
+  router.get('/api/v1/assets/:assetId', readAssetRateLimit, authorizeEmployeeAction('readAsset'), assetManagementController.getAsset);
+  router.get('/api/v1/assets', listAssetRateLimit, authorizeEmployeeAction('listAssets'), assetManagementController.listAssets);
+  router.get('/api/v1/assets/:assetId/lifecycle', readAssetRateLimit, authorizeEmployeeAction('readAssetLifecycle'), assetManagementController.listAssetLifecycle);
   router.get('/api/v1/compensation/bands/:compensationBandId', readCompensationRateLimit, authorizeEmployeeAction('readCompensation'), compensationController.getCompensationBand);
   router.get('/api/v1/compensation/bands', listCompensationRateLimit, authorizeEmployeeAction('listCompensation'), compensationController.listCompensationBands);
   router.get('/api/v1/compensation/salary-revisions/:salaryRevisionId', readCompensationRateLimit, authorizeEmployeeAction('readCompensation'), compensationController.getSalaryRevision);
@@ -148,13 +169,16 @@ export function createEmployeeRouter(): Router {
   router.get('/api/v1/org/:kind', readOrgRateLimit, authorizeEmployeeAction('listOrgStructure'), orgController.listEntities);
 
   router.patch('/api/v1/employees/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), controller.updateEmployee);
+  router.patch('/api/v1/contractors/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), contractorController.updateContractor);
   router.patch('/api/v1/documents/:documentId', updateEmployeeRateLimit, authorizeEmployeeAction('updateDocument'), documentComplianceController.updateDocument);
   router.patch('/api/v1/compliance-tasks/:taskId', updateEmployeeRateLimit, authorizeEmployeeAction('updateComplianceTask'), documentComplianceController.updateComplianceTask);
   router.patch('/api/v1/departments/:departmentId', updateDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.updateDepartment);
   router.patch('/api/v1/roles/:roleId', updateRoleRateLimit, authorizeEmployeeAction('updateRole'), roleController.updateRole);
   router.patch('/api/v1/employees/:employeeId/department', updateEmployeeRateLimit, authorizeEmployeeAction('manageDepartment'), controller.assignDepartment);
   router.patch('/api/v1/employees/:employeeId/status', updateEmployeeRateLimit, authorizeEmployeeAction('manageStatus'), controller.updateStatus);
+  router.patch('/api/v1/contractors/:employeeId/status', updateEmployeeRateLimit, authorizeEmployeeAction('manageStatus'), contractorController.updateContractorStatus);
   router.patch('/api/v1/org/:kind/:entityId', updateOrgRateLimit, authorizeEmployeeAction('manageOrgStructure'), orgController.updateEntity);
+  router.patch('/api/v1/assets/:assetId/status', updateAssetRateLimit, authorizeEmployeeAction('updateAssetStatus'), assetManagementController.updateAssetStatus);
   router.patch('/api/v1/compensation/bands/:compensationBandId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateCompensationBand);
   router.patch('/api/v1/compensation/salary-revisions/:salaryRevisionId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateSalaryRevision);
   router.patch('/api/v1/benefits/plans/:benefitsPlanId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateBenefitsPlan);

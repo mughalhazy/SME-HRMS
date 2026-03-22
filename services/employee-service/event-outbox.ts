@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export type CanonicalEvent = {
   event_id: string;
   event_type: string;
@@ -37,6 +39,10 @@ const EVENT_TYPES: Record<string, string> = {
   ComplianceTaskCreated: 'employee.compliance.task.created',
   ComplianceTaskAssigned: 'employee.compliance.task.assigned',
   ComplianceTaskCompleted: 'employee.compliance.task.completed',
+  AssetRegistered: 'asset.registered',
+  AssetAllocated: 'asset.allocated',
+  AssetReturned: 'asset.returned',
+  AssetStatusChanged: 'asset.status.changed',
 };
 
 export class EmployeeEventOutbox {
@@ -68,4 +74,3 @@ export class EmployeeEventOutbox {
     return pending;
   }
 }
-import { randomUUID } from 'node:crypto';
