@@ -2,6 +2,7 @@ import {
   CreateEmployeeInput,
   Employee,
   EmployeeFilters,
+  EmploymentType,
   EmployeeReadModelBundle,
   EmployeeStatus,
   UpdateEmployeeInput,
@@ -37,6 +38,8 @@ export class EmployeeService {
     this.assertActorTenant(input.tenant_id);
     this.ensureUniqueEmployee(input.employee_number, input.email);
     this.ensureDepartmentAndRoleAreAssignable(input.department_id, input.role_id);
+    this.ensureEmploymentRoleAlignment(input.role_id, input.employment_type);
+    this.ensureContractMetadataAlignment(input.employment_type, input.contract_metadata, input.manager_employee_id);
     this.ensureOrgAssignments({
       department_id: input.department_id,
       role_id: input.role_id,
@@ -47,6 +50,7 @@ export class EmployeeService {
       cost_center_id: input.cost_center_id,
       job_position_id: input.job_position_id,
       grade_band_id: input.grade_band_id,
+      contract_metadata: input.contract_metadata,
       matrix_manager_employee_ids: input.matrix_manager_employee_ids,
       cost_allocations: input.cost_allocations,
     });
@@ -72,13 +76,19 @@ export class EmployeeService {
       cost_center_id: employee.cost_center_id,
       job_position_id: employee.job_position_id,
       grade_band_id: employee.grade_band_id,
+      contract_metadata: employee.contract_metadata,
       matrix_manager_employee_ids: employee.matrix_manager_employee_ids,
       cost_allocations: employee.cost_allocations,
       status: employee.status,
       created_at: employee.created_at,
     }, employee.employee_id);
+    this.emitContractActivatedEventIfNeeded(employee);
     this.eventOutbox.dispatchPending();
     return employee;
+  }
+
+  createContractor(input: Omit<CreateEmployeeInput, 'employment_type'> & { employment_type?: 'Contract' }): Employee {
+    return this.createEmployee({ ...input, employment_type: 'Contract' });
   }
 
   getEmployeeById(employeeId: string): Employee {
@@ -98,9 +108,20 @@ export class EmployeeService {
     return this.repository.list({ ...filters, tenant_id: this.tenantId });
   }
 
+  listContractors(filters: EmployeeFilters) {
+    this.assertActorTenant(filters.tenant_id);
+    return this.repository.list({ ...filters, tenant_id: this.tenantId, employment_type: 'Contract' });
+  }
+
   listEmployeeReadModels(filters: EmployeeFilters) {
     this.assertActorTenant(filters.tenant_id);
     const page = this.repository.list({ ...filters, tenant_id: this.tenantId });
+    return this.repository.toReadModelListBundle(page.data);
+  }
+
+  listContractorReadModels(filters: EmployeeFilters) {
+    this.assertActorTenant(filters.tenant_id);
+    const page = this.repository.list({ ...filters, tenant_id: this.tenantId, employment_type: 'Contract' });
     return this.repository.toReadModelListBundle(page.data);
   }
 
@@ -121,11 +142,14 @@ export class EmployeeService {
 
     const nextDepartmentId = input.department_id ?? existing.department_id;
     const nextRoleId = input.role_id ?? existing.role_id;
+    const nextEmploymentType = input.employment_type ?? existing.employment_type;
     const nextManagerEmployeeId = input.manager_employee_id ?? existing.manager_employee_id;
     const nextMatrixManagers = input.matrix_manager_employee_ids ?? existing.matrix_manager_employee_ids;
     const nextJobPositionId = input.job_position_id ?? existing.job_position_id;
     const nextCostCenterId = input.cost_center_id ?? existing.cost_center_id;
     this.ensureDepartmentAndRoleAreAssignable(nextDepartmentId, nextRoleId);
+    this.ensureEmploymentRoleAlignment(nextRoleId, nextEmploymentType);
+    this.ensureContractMetadataAlignment(nextEmploymentType, input.contract_metadata ?? existing.contract_metadata, nextManagerEmployeeId, employeeId);
     this.ensureOrgAssignments({
       department_id: nextDepartmentId,
       role_id: nextRoleId,
@@ -136,6 +160,7 @@ export class EmployeeService {
       cost_center_id: nextCostCenterId,
       job_position_id: nextJobPositionId,
       grade_band_id: input.grade_band_id ?? existing.grade_band_id,
+      contract_metadata: input.contract_metadata ?? existing.contract_metadata,
       matrix_manager_employee_ids: nextMatrixManagers,
       cost_allocations: input.cost_allocations ?? existing.cost_allocations,
     }, employeeId);
@@ -175,9 +200,18 @@ export class EmployeeService {
       status: updated.status,
       updated_at: updated.updated_at,
     }, updated.employee_id);
+    this.emitContractActivatedEventIfNeeded(updated);
     this.eventOutbox.dispatchPending();
 
     return updated;
+  }
+
+  updateContractor(employeeId: string, input: UpdateEmployeeInput): Employee {
+    if (input.employment_type && input.employment_type !== 'Contract') {
+      throw new ValidationError([{ field: 'employment_type', reason: 'contractors must retain employment_type Contract' }]);
+    }
+    this.ensureContractorEmployee(employeeId);
+    return this.updateEmployee(employeeId, { ...input, employment_type: 'Contract' });
   }
 
   assignDepartment(employeeId: string, departmentId: string): Employee {
@@ -241,9 +275,19 @@ export class EmployeeService {
       matrix_manager_employee_ids: updated.matrix_manager_employee_ids,
       updated_at: updated.updated_at,
     }, `${updated.employee_id}:${updated.status}`);
+    this.emitContractActivatedEventIfNeeded(updated);
     this.eventOutbox.dispatchPending();
 
     return updated;
+  }
+
+  getContractorById(employeeId: string): Employee {
+    return this.ensureContractorEmployee(employeeId);
+  }
+
+  getContractorReadModels(employeeId: string): EmployeeReadModelBundle {
+    const contractor = this.ensureContractorEmployee(employeeId);
+    return this.repository.toReadModelBundle(contractor);
   }
 
   deleteEmployee(employeeId: string): void {
@@ -311,6 +355,21 @@ export class EmployeeService {
     }
     if (role.status !== 'Active') {
       throw new ValidationError([{ field: 'role_id', reason: `role must be Active, got ${role.status}` }]);
+    }
+  }
+
+  private ensureEmploymentRoleAlignment(roleId: string, employmentType: EmploymentType): void {
+    const role = this.repository.findRoleById(roleId);
+    if (!role) {
+      throw new ValidationError([{ field: 'role_id', reason: 'role was not found' }]);
+    }
+
+    if (employmentType === 'Contract' && role.employment_category !== 'Contractor') {
+      throw new ValidationError([{ field: 'role_id', reason: 'contractors must use a role with employment_category Contractor' }]);
+    }
+
+    if (employmentType !== 'Contract' && role.employment_category === 'Contractor') {
+      throw new ValidationError([{ field: 'role_id', reason: 'contractor roles can only be assigned when employment_type is Contract' }]);
     }
   }
 
@@ -395,6 +454,7 @@ export class EmployeeService {
       | 'cost_center_id'
       | 'job_position_id'
       | 'grade_band_id'
+      | 'contract_metadata'
       | 'matrix_manager_employee_ids'
       | 'cost_allocations'
     >,
@@ -512,6 +572,10 @@ export class EmployeeService {
       }
     }
 
+    if (input.contract_metadata?.sponsor_employee_id) {
+      this.ensureManagerRelationship(input.contract_metadata.sponsor_employee_id, employeeId);
+    }
+
     if (input.manager_employee_id) {
       this.ensureManagerRelationship(input.manager_employee_id, employeeId);
     }
@@ -540,5 +604,56 @@ export class EmployeeService {
     if (actorTenantId && actorTenantId !== this.tenantId) {
       throw new ValidationError([{ field: 'tenant_id', reason: 'actor tenant does not match requested tenant scope' }]);
     }
+  }
+
+  private ensureContractMetadataAlignment(
+    employmentType: EmploymentType,
+    contractMetadata: CreateEmployeeInput['contract_metadata'] | UpdateEmployeeInput['contract_metadata'],
+    managerEmployeeId?: string,
+    employeeId?: string,
+  ): void {
+    if (employmentType === 'Contract' && !contractMetadata) {
+      throw new ValidationError([{ field: 'contract_metadata', reason: 'is required when employment_type is Contract' }]);
+    }
+
+    if (employmentType !== 'Contract' && contractMetadata) {
+      throw new ValidationError([{ field: 'contract_metadata', reason: 'is only allowed when employment_type is Contract' }]);
+    }
+
+    if (!contractMetadata) {
+      return;
+    }
+
+    if (managerEmployeeId && contractMetadata.sponsor_employee_id && contractMetadata.sponsor_employee_id === managerEmployeeId) {
+      return;
+    }
+
+    if (contractMetadata.sponsor_employee_id) {
+      this.ensureManagerRelationship(contractMetadata.sponsor_employee_id, employeeId);
+    }
+  }
+
+  private ensureContractorEmployee(employeeId: string): Employee {
+    const employee = this.getEmployeeById(employeeId);
+    if (employee.employment_type !== 'Contract') {
+      throw new NotFoundError('contractor not found');
+    }
+    return employee;
+  }
+
+  private emitContractActivatedEventIfNeeded(employee: Employee): void {
+    if (employee.employment_type !== 'Contract' || employee.status !== 'Active' || !employee.contract_metadata) {
+      return;
+    }
+
+    this.eventOutbox.enqueue('ContractActivated', this.tenantId, {
+      employee_id: employee.employee_id,
+      role_id: employee.role_id,
+      department_id: employee.department_id,
+      contract_metadata: employee.contract_metadata,
+      manager_employee_id: employee.manager_employee_id,
+      access_expires_at: employee.contract_metadata.access_expires_at,
+      activated_at: employee.updated_at,
+    }, `${employee.employee_id}:contract:${employee.updated_at}`);
   }
 }
