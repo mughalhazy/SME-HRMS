@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 
 import { EmployeeForm, getDefaultEmployeeFormValues, toApiPayload } from '@/components/employees/employee-form'
-import { ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
+import { ErrorState, SurfaceSkeleton } from '@/components/base/feedback'
 import { getEmployee, updateEmployee } from '@/lib/employees/api'
 
 export function EmployeeEditPage({ employeeId }: { employeeId: string }) {

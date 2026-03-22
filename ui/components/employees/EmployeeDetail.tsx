@@ -17,12 +17,12 @@ import {
 } from 'lucide-react'
 
 import { employees, getEmployeeById, getEmployeeInitials } from '@/components/employees/employee-data'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Avatar, AvatarFallback } from '@/components/base/avatar'
+import { Badge } from '@/components/base/badge'
+import { Button } from '@/components/base/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/base/card'
+import { Separator } from '@/components/base/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/base/tabs'
 
 function statusBadgeClass(status: string) {
   switch (status) {

@@ -4,10 +4,10 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, CheckCircle2, Clock3, RefreshCw, ShieldCheck } from 'lucide-react'
 
-import { EmptyState, ErrorState, StatSkeletonGrid, TableSkeleton } from '@/components/ui/feedback'
-import { KpiGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
-import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState, ErrorState, StatSkeletonGrid, TableSkeleton } from '@/components/base/feedback'
+import { KpiGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/base/page'
+import { Button } from '@/components/base/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 import { apiRequest } from '@/lib/api/client'
 
 type LeaveRow = {

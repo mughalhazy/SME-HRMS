@@ -4,9 +4,9 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Building2, RefreshCw, ShieldCheck, Users } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { EmptyState, ErrorState, InlineLoading, TableSkeleton } from '@/components/ui/feedback'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Button } from '@/components/base/button'
+import { EmptyState, ErrorState, InlineLoading, TableSkeleton } from '@/components/base/feedback'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 import { getEmployeeFullName, listEmployees } from '@/lib/employees/api'
 
 const PAGE_SIZE = 100

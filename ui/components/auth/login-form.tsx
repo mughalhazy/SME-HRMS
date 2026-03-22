@@ -4,10 +4,10 @@ import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { useAuth } from '@/components/auth/auth-provider'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { pageIconChipClassName, pagePanelClassName } from '@/components/ui/page'
+import { Button } from '@/components/base/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/base/card'
+import { Input } from '@/components/base/input'
+import { pageIconChipClassName, pagePanelClassName } from '@/components/base/page'
 import { ApiError } from '@/lib/api/client'
 
 const DEMO_USERS = [

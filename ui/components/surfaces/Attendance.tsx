@@ -10,12 +10,12 @@ import {
   UserRoundX,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input, Select } from "@/components/ui/input";
-import { KpiGrid, PageStack, StatCard } from "@/components/ui/page";
+import { Avatar, AvatarFallback } from "@/components/base/avatar";
+import { Badge } from "@/components/base/badge";
+import { Button } from "@/components/base/button";
+import { Card, CardContent } from "@/components/base/card";
+import { Input, Select } from "@/components/base/input";
+import { KpiGrid, PageStack, StatCard } from "@/components/base/page";
 import {
   Table,
   TableBody,
@@ -23,7 +23,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/base/table";
 import { cn } from "@/lib/utils";
 
 type AttendanceStatus = "Present" | "Late" | "Absent" | "Leave";

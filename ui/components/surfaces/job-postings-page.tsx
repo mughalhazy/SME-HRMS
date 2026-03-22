@@ -5,10 +5,10 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, BriefcaseBusiness, CircleGauge, Users } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { EmptyState, ErrorState, StatSkeletonGrid, SurfaceSkeleton } from '@/components/ui/feedback'
-import { KpiGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/ui/page'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Button } from '@/components/base/button'
+import { EmptyState, ErrorState, StatSkeletonGrid, SurfaceSkeleton } from '@/components/base/feedback'
+import { KpiGrid, PageHero, PageStack, SectionHeading, StatCard } from '@/components/base/page'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 import { apiRequest } from '@/lib/api/client'
 
 type JobRow = {

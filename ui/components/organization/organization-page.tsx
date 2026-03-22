@@ -2,10 +2,10 @@
 
 import { Building2, ChevronRight, GitBranch, Plus, Users2 } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { pagePanelClassName } from '@/components/ui/page'
+import { Badge } from '@/components/base/badge'
+import { Button } from '@/components/base/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/base/card'
+import { pagePanelClassName } from '@/components/base/page'
 
 type OrganizationMember = {
   name: string
