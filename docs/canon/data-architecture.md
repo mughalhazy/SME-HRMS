@@ -232,6 +232,26 @@ Performance improvement plans with approval workflow linkage, lifecycle timestam
 
 Milestones attached to a `performance_pip_plans` record, including due dates, completion state, and success metrics.
 
+### Table: `engagement_surveys`
+
+Tenant-scoped survey master records with owner linkage, lifecycle timestamps, and optional department targeting.
+
+### Table: `engagement_survey_questions`
+
+Survey prompts aligned to D1-D5 dimensions and constrained to the supported Likert scale.
+
+### Table: `engagement_survey_responses`
+
+Employee response submissions scoped by tenant, survey, and employee uniqueness.
+
+### Table: `engagement_survey_answers`
+
+Per-question response facts with score and optional narrative comment.
+
+### Table: `engagement_survey_aggregates`
+
+Materialized aggregate snapshots containing participation metrics, question rollups, D1-D5 rollups, and score distributions.
+
 ## Time, leave, and payroll tables
 
 ### Table: `attendance_records`

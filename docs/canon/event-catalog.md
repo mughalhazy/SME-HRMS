@@ -50,6 +50,11 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `PerformancePipActive` | `performance-service` | `PipPlan` | PIP approved and activated. |
 | `PerformancePipRejected` | `performance-service` | `PipPlan` | PIP rejected. |
 | `PerformancePipProgressUpdated` | `performance-service` | `PipPlan` | PIP milestone progress updated. |
+| `EngagementSurveyCreated` | `engagement-service` | `Survey` | Engagement survey created in draft. |
+| `EngagementSurveyPublished` | `engagement-service` | `Survey` | Engagement survey opened for responses. |
+| `EngagementSurveyClosed` | `engagement-service` | `Survey` | Engagement survey closed for response intake. |
+| `EngagementSurveyResponseSubmitted` | `engagement-service` | `SurveyResponse` | Employee response submitted to a survey. |
+| `EngagementSurveyResultsAggregated` | `engagement-service` | `AggregatedSurveyResult` | Survey rollups recomputed for analytics consumers. |
 | `AttendanceCaptured` | `attendance-service` | `AttendanceRecord` | Attendance record captured. |
 | `AttendanceValidated` | `attendance-service` | `AttendanceRecord` | Attendance validated. |
 | `AttendanceApproved` | `attendance-service` | `AttendanceRecord` | Attendance approved for payroll/reporting. |
