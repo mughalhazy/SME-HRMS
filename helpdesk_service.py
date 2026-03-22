@@ -13,6 +13,7 @@ from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -320,15 +321,8 @@ class HelpdeskService:
                 raise self._error(409, 'INVALID_TRANSITION', 'ticket is not awaiting workflow action', trace)
             if not ticket.workflow_id:
                 raise self._error(409, 'WORKFLOW_MISSING', 'helpdesk ticket is missing centralized workflow', trace)
-            try:
-                workflow = (
-                    self.workflow_service.approve_step(ticket.workflow_id, tenant_id=tenant, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
-                    if action == 'approve'
-                    else self.workflow_service.reject_step(ticket.workflow_id, tenant_id=tenant, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
-                )
-            except WorkflowServiceError as exc:
-                raise self._error(exc.status_code, exc.code, exc.message, trace, exc.details) from exc
-            terminal_result = workflow.get('metadata', {}).get('terminal_result')
+            workflow = self._resolve_workflow(ticket.workflow_id, tenant, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
+            terminal_result = self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
             now = self._now()
             active_steps = [step for step in workflow['steps'] if step['status'] == 'pending' and step.get('metadata', {}).get('active')]
             if action == 'approve' and terminal_result == 'approved':
@@ -594,6 +588,29 @@ class HelpdeskService:
         if employee.status == 'Terminated':
             raise self._error(409, 'INVALID_REFERENCE', f'{field} references a terminated employee', trace_id, [{'field': field, 'reason': 'employee is terminated'}])
         return employee
+
+    def _resolve_workflow(self, workflow_id: str, tenant_id: str, *, action: str, actor_id: str, actor_type: str, actor_role: str | None, comment: str | None, trace_id: str) -> dict[str, Any]:
+        return resolve_workflow_action(
+            workflow_service=self.workflow_service,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            action=action,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            actor_role=actor_role,
+            comment=comment,
+            trace_id=trace_id,
+            map_error=lambda exc: self._error(exc.status_code, exc.code, exc.message, trace_id, exc.details),
+            invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
+        )
+
+    def _require_terminal_workflow_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
+        return require_terminal_workflow_result(
+            workflow,
+            action=action,
+            on_mismatch=lambda _actual, expected: self._error(409, 'WORKFLOW_BYPASS_DETECTED', f'workflow did not reach expected terminal result: {expected}', trace_id),
+            invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
+        )
 
     def _require_ticket(self, ticket_id: str, *, tenant_id: str, trace_id: str) -> HelpdeskTicket:
         ticket = self.tickets.get(ticket_id)

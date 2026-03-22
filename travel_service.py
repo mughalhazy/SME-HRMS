@@ -15,6 +15,7 @@ from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -244,7 +245,7 @@ class TravelService:
             raise self._error(409, 'CONFLICT', 'travel request is not awaiting approval', trace)
         before = request.to_dict()
         workflow = self._resolve_workflow(request.workflow_id, request.tenant_id, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
-        terminal_result = workflow.get('metadata', {}).get('terminal_result')
+        terminal_result = self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
         if terminal_result == 'approved':
             request.status = 'Approved'
             request.decision_at = self._now()
@@ -432,14 +433,27 @@ class TravelService:
             self.observability.logger.info('travel.notification_skipped', trace_id=correlation_id, message=legacy_event_name, context={'travel_request_id': identity})
 
     def _resolve_workflow(self, workflow_id: str, tenant_id: str, *, action: str, actor_id: str, actor_type: str, actor_role: str | None, comment: str | None, trace_id: str) -> dict[str, Any]:
-        try:
-            if action == 'approve':
-                return self.workflow_service.approve_step(workflow_id, tenant_id=tenant_id, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace_id)
-            if action == 'reject':
-                return self.workflow_service.reject_step(workflow_id, tenant_id=tenant_id, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace_id)
-        except WorkflowServiceError as exc:
-            raise self._error(exc.status_code, exc.code, exc.message, trace_id, exc.details) from exc
-        raise self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}])
+        return resolve_workflow_action(
+            workflow_service=self.workflow_service,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            action=action,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            actor_role=actor_role,
+            comment=comment,
+            trace_id=trace_id,
+            map_error=lambda exc: self._error(exc.status_code, exc.code, exc.message, trace_id, exc.details),
+            invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
+        )
+
+    def _require_terminal_workflow_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
+        return require_terminal_workflow_result(
+            workflow,
+            action=action,
+            on_mismatch=lambda _actual, expected: self._error(409, 'WORKFLOW_BYPASS_DETECTED', f'workflow decision did not produce a valid terminal result: {expected}', trace_id),
+            invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
+        )
 
     def _require_employee(self, employee_id: str | None, *, tenant_id: str, field: str) -> EmployeeSnapshot:
         if not employee_id:

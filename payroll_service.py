@@ -17,6 +17,7 @@ from notification_service import NotificationService
 from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -1901,20 +1902,17 @@ class PayrollService:
                     trace_id=trace,
                 )
                 record.payment_workflow_id = workflow["workflow_id"]
-            try:
-                workflow = self.workflow_service.approve_step(
-                    record.payment_workflow_id,
-                    tenant_id=self.tenant_id,
-                    actor_id=ctx.employee_id or ctx.role.value,
-                    actor_type="user",
-                    actor_role=ctx.role.value,
-                    comment="Payroll disbursement approved",
-                    trace_id=trace,
-                )
-            except WorkflowServiceError as exc:
-                raise ServiceError(exc.code, exc.message, exc.status_code, exc.details) from exc
-            if workflow.get("metadata", {}).get("terminal_result") != "approved":
-                raise ServiceError("CONFLICT", "Workflow approval did not complete payroll disbursement", 409)
+            workflow = self._resolve_workflow(
+                record.payment_workflow_id,
+                self.tenant_id,
+                action="approve",
+                actor_id=ctx.employee_id or ctx.role.value,
+                actor_type="user",
+                actor_role=ctx.role.value,
+                comment="Payroll disbursement approved",
+                trace_id=trace,
+            )
+            self._require_terminal_workflow_result(workflow, action="approve")
 
             record.payment_date = date.fromisoformat(payment_date) if payment_date else date.today()
             record.status = PayrollStatus.PAID
@@ -2000,6 +1998,30 @@ class PayrollService:
             if batch_id and batch_id in self.batches:
                 payload["batch"] = self.batches[batch_id].to_dict()
             return 200, {"data": payload}
+
+    def _resolve_workflow(self, workflow_id: str, tenant_id: str, *, action: str, actor_id: str, actor_type: str, actor_role: str | None, comment: str | None, trace_id: str | None = None) -> dict[str, Any]:
+        return resolve_workflow_action(
+            workflow_service=self.workflow_service,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            action=action,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            actor_role=actor_role,
+            comment=comment,
+            trace_id=trace_id,
+            map_error=lambda exc: ServiceError(exc.code, exc.message, exc.status_code, exc.details),
+            invalid_action=lambda _action: ServiceError("VALIDATION_ERROR", "action must be approve or reject", 422, [{"field": "action", "reason": "must be approve or reject"}]),
+        )
+
+    @staticmethod
+    def _require_terminal_workflow_result(workflow: dict[str, Any], *, action: str) -> str:
+        return require_terminal_workflow_result(
+            workflow,
+            action=action,
+            on_mismatch=lambda _actual, _expected: ServiceError("CONFLICT", "Workflow approval did not complete payroll disbursement", 409),
+            invalid_action=lambda _action: ServiceError("VALIDATION_ERROR", "action must be approve or reject", 422, [{"field": "action", "reason": "must be approve or reject"}]),
+        )
 
     def list_payroll_records(
         self,

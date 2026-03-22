@@ -26,6 +26,7 @@ from event_contract import EventRegistry
 from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import Observability
+from workflow_support import resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -633,28 +634,15 @@ class AttendanceService:
         before = self._correction_payload(correction)
         self._authorize_validate_and_lock(actor, correction.employee_id)
         actor_id = str(actor.employee_id or actor.role)
-        try:
-            workflow = (
-                self.workflow_service.approve_step(
-                    correction.workflow_id or '',
-                    tenant_id=self.tenant_id,
-                    actor_id=actor_id,
-                    actor_type='user',
-                    actor_role=actor.role,
-                    comment=decision_note,
-                )
-                if approve
-                else self.workflow_service.reject_step(
-                    correction.workflow_id or '',
-                    tenant_id=self.tenant_id,
-                    actor_id=actor_id,
-                    actor_type='user',
-                    actor_role=actor.role,
-                    comment=decision_note,
-                )
-            )
-        except WorkflowServiceError as exc:
-            raise AttendanceServiceError('WORKFLOW_ERROR', exc.message) from exc
+        workflow = self._resolve_workflow(
+            correction.workflow_id or '',
+            self.tenant_id,
+            action='approve' if approve else 'reject',
+            actor_id=actor_id,
+            actor_type='user',
+            actor_role=actor.role,
+            comment=decision_note,
+        )
 
         correction.status = CorrectionStatus.APPROVED if approve else CorrectionStatus.REJECTED
         correction.decision_note = decision_note
@@ -676,6 +664,20 @@ class AttendanceService:
         self._dispatch_outbox()
         self._audit('attendance_correction_reviewed', actor, 'AttendanceCorrection', str(correction.correction_id), before, self._correction_payload(correction))
         return correction
+
+    def _resolve_workflow(self, workflow_id: str, tenant_id: str, *, action: str, actor_id: str, actor_type: str, actor_role: str | None, comment: str | None) -> dict[str, Any]:
+        return resolve_workflow_action(
+            workflow_service=self.workflow_service,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            action=action,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            actor_role=actor_role,
+            comment=comment,
+            map_error=lambda exc: AttendanceServiceError('WORKFLOW_ERROR', exc.message),
+            invalid_action=lambda _action: AttendanceServiceError('VALIDATION_ERROR', 'action must be approve or reject'),
+        )
 
     def approve_record(self, actor: Actor, attendance_id: UUID) -> AttendanceRecord:
         record = self._get_record(attendance_id)
