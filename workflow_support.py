@@ -48,6 +48,37 @@ def require_terminal_workflow_result(
     return expected
 
 
+def resolve_workflow_decision_result(
+    workflow: dict[str, Any],
+    *,
+    action: str,
+    on_mismatch: Callable[[str | None, str], Exception],
+    invalid_action: Callable[[str], Exception],
+) -> str:
+    terminal_result = workflow.get("metadata", {}).get("terminal_result")
+    if action == "reject":
+        return require_terminal_workflow_result(
+            workflow,
+            action=action,
+            on_mismatch=on_mismatch,
+            invalid_action=invalid_action,
+        )
+    if action != "approve":
+        raise invalid_action(action)
+    if terminal_result == "approved":
+        return "approved"
+    if terminal_result is None and workflow_has_active_steps(workflow):
+        return "pending"
+    raise on_mismatch(terminal_result, "approved")
+
+
+def workflow_has_active_steps(workflow: dict[str, Any]) -> bool:
+    return any(
+        step.get("status") == "pending" and step.get("metadata", {}).get("active")
+        for step in workflow.get("steps", [])
+    )
+
+
 def _resolve_action_handler(
     workflow_service: WorkflowService,
     action: str,

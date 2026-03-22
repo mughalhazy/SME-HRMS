@@ -13,7 +13,7 @@ from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
-from workflow_support import require_terminal_workflow_result, resolve_workflow_action
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action, resolve_workflow_decision_result, workflow_has_active_steps
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -322,22 +322,21 @@ class HelpdeskService:
             if not ticket.workflow_id:
                 raise self._error(409, 'WORKFLOW_MISSING', 'helpdesk ticket is missing centralized workflow', trace)
             workflow = self._resolve_workflow(ticket.workflow_id, tenant, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
-            terminal_result = self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
+            workflow_result = self._resolve_workflow_decision_result(workflow, action=action, trace_id=trace)
             now = self._now()
-            active_steps = [step for step in workflow['steps'] if step['status'] == 'pending' and step.get('metadata', {}).get('active')]
-            if action == 'approve' and terminal_result == 'approved':
+            if action == 'approve' and workflow_result == 'approved':
                 ticket.status = 'Resolved'
                 ticket.resolved_at = now
                 ticket.resolution_summary = str(resolution_summary or comment or ticket.resolution_summary or 'Resolved by HR helpdesk').strip()
                 audit_action = 'helpdesk_ticket_resolved'
                 event_name = 'HelpdeskTicketResolved'
-            elif action == 'reject' and terminal_result == 'rejected':
+            elif action == 'reject' and workflow_result == 'rejected':
                 ticket.status = 'Closed'
                 ticket.closed_at = now
                 ticket.resolution_summary = str(resolution_summary or comment or 'Ticket closed during triage').strip()
                 audit_action = 'helpdesk_ticket_closed'
                 event_name = 'HelpdeskTicketClosed'
-            elif action == 'approve' and active_steps:
+            elif action == 'approve' and workflow_result == 'pending' and workflow_has_active_steps(workflow):
                 ticket.status = 'InProgress'
                 audit_action = 'helpdesk_ticket_in_progress'
                 event_name = 'HelpdeskTicketInProgress'
@@ -604,8 +603,8 @@ class HelpdeskService:
             invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
         )
 
-    def _require_terminal_workflow_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
-        return require_terminal_workflow_result(
+    def _resolve_workflow_decision_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
+        return resolve_workflow_decision_result(
             workflow,
             action=action,
             on_mismatch=lambda _actual, expected: self._error(409, 'WORKFLOW_BYPASS_DETECTED', f'workflow did not reach expected terminal result: {expected}', trace_id),
