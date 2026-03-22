@@ -55,15 +55,18 @@ type ResourceAction =
   | 'readAssetLifecycle'
   | 'manageCompensation'
   | 'readCompensation'
-  | 'listCompensation';
+  | 'listCompensation'
+  | 'manageLearning'
+  | 'readLearning'
+  | 'listLearning';
 
 const ROLE_ACTIONS: Record<AuthRole, ResourceAction[]> = {
-  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'createAsset', 'readAsset', 'listAssets', 'allocateAsset', 'returnAsset', 'updateAssetStatus', 'readAssetLifecycle', 'manageCompensation', 'readCompensation', 'listCompensation'],
-  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'createAsset', 'readAsset', 'listAssets', 'allocateAsset', 'returnAsset', 'updateAssetStatus', 'readAssetLifecycle', 'manageCompensation', 'readCompensation', 'listCompensation'],
-  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews', 'readOrgStructure', 'listOrgStructure', 'readDocument', 'listDocuments', 'acknowledgePolicy', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'readAsset', 'listAssets', 'readAssetLifecycle'],
-  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles', 'readOrgStructure', 'listOrgStructure', 'readDocument', 'listDocuments', 'readComplianceTask', 'listComplianceTasks', 'readAsset', 'listAssets', 'readAssetLifecycle', 'readCompensation', 'listCompensation'],
+  Admin: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'delete', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'createAsset', 'readAsset', 'listAssets', 'allocateAsset', 'returnAsset', 'updateAssetStatus', 'readAssetLifecycle', 'manageCompensation', 'readCompensation', 'listCompensation', 'manageLearning', 'readLearning', 'listLearning'],
+  Manager: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'readRole', 'listRoles', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'createAsset', 'readAsset', 'listAssets', 'allocateAsset', 'returnAsset', 'updateAssetStatus', 'readAssetLifecycle', 'manageCompensation', 'readCompensation', 'listCompensation', 'manageLearning', 'readLearning', 'listLearning'],
+  Employee: ['read', 'list', 'updateProfile', 'readReview', 'listReviews', 'readOrgStructure', 'listOrgStructure', 'readDocument', 'listDocuments', 'acknowledgePolicy', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'readAsset', 'listAssets', 'readAssetLifecycle', 'readLearning', 'listLearning'],
+  PayrollAdmin: ['read', 'list', 'readRole', 'listRoles', 'readOrgStructure', 'listOrgStructure', 'readDocument', 'listDocuments', 'readComplianceTask', 'listComplianceTasks', 'readAsset', 'listAssets', 'readAssetLifecycle', 'readCompensation', 'listCompensation', 'readLearning', 'listLearning'],
   Recruiter: [],
-  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'createAsset', 'readAsset', 'listAssets', 'allocateAsset', 'returnAsset', 'updateAssetStatus', 'readAssetLifecycle', 'manageCompensation', 'readCompensation', 'listCompensation'],
+  Service: ['create', 'read', 'list', 'updateProfile', 'manageDepartment', 'manageStatus', 'createRole', 'readRole', 'listRoles', 'updateRole', 'deleteRole', 'createReview', 'readReview', 'listReviews', 'updateReview', 'submitReview', 'finalizeReview', 'readOrgStructure', 'listOrgStructure', 'manageOrgStructure', 'createDocument', 'readDocument', 'listDocuments', 'updateDocument', 'acknowledgePolicy', 'createComplianceTask', 'readComplianceTask', 'listComplianceTasks', 'updateComplianceTask', 'createAsset', 'readAsset', 'listAssets', 'allocateAsset', 'returnAsset', 'updateAssetStatus', 'readAssetLifecycle', 'manageCompensation', 'readCompensation', 'listCompensation', 'manageLearning', 'readLearning', 'listLearning'],
 };
 
 const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
@@ -107,6 +110,9 @@ const ACTION_CAPABILITIES: Record<ResourceAction, string> = {
   manageCompensation: 'CAP-PAY-002',
   readCompensation: 'CAP-PAY-001',
   listCompensation: 'CAP-PAY-001',
+  manageLearning: 'CAP-EMP-002',
+  readLearning: 'CAP-EMP-001',
+  listLearning: 'CAP-EMP-001',
 };
 
 const TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET;
@@ -278,7 +284,7 @@ export function authorizeEmployeeAction(action: ResourceAction): RequestHandler 
       return;
     }
 
-    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles' && action !== 'readOrgStructure' && action !== 'listOrgStructure' && action !== 'readCompensation' && action !== 'listCompensation' && action !== 'manageCompensation' && action !== 'readAsset' && action !== 'listAssets' && action !== 'readAssetLifecycle') {
+    if (auth.role === 'PayrollAdmin' && action !== 'read' && action !== 'list' && action !== 'readRole' && action !== 'listRoles' && action !== 'readOrgStructure' && action !== 'listOrgStructure' && action !== 'readCompensation' && action !== 'listCompensation' && action !== 'manageCompensation' && action !== 'readAsset' && action !== 'listAssets' && action !== 'readAssetLifecycle' && action !== 'readLearning' && action !== 'listLearning') {
       sendError(req, res, 403, 'FORBIDDEN', 'Insufficient permissions');
       return;
     }

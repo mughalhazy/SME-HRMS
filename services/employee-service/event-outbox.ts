@@ -43,6 +43,11 @@ const EVENT_TYPES: Record<string, string> = {
   AssetAllocated: 'asset.allocated',
   AssetReturned: 'asset.returned',
   AssetStatusChanged: 'asset.status.changed',
+  LearningCourseCreated: 'learning.course.created',
+  LearningCourseUpdated: 'learning.course.updated',
+  LearningEnrollmentCreated: 'learning.enrollment.created',
+  LearningEnrollmentProgressUpdated: 'learning.enrollment.progress.updated',
+  LearningCompletionRecorded: 'learning.completion.recorded',
 };
 
 export class EmployeeEventOutbox {
