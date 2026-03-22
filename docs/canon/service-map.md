@@ -10,6 +10,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 | `performance-service` | Performance cycles, goals/OKRs, feedback, calibration, and PIP tracking | `/api/v1/performance/*` |
 | `attendance-service` | Attendance capture, validation, and period closure | `/api/v1/attendance` |
 | `leave-service` | Leave lifecycle and approval workflow | `/api/v1/leave` |
+| `travel-service` | Travel requests, itineraries, and approval-driven travel coordination | `/api/v1/travel` |
 | `payroll-service` | Payroll processing and payout lifecycle | `/api/v1/payroll` |
 | `hiring-service` | Job postings, candidates, interviews, and hire handoff | `/api/v1/hiring` |
 | `auth-service` | Identity, sessions, tokens, role bindings, and policy | `/api/v1/auth` |
@@ -611,3 +612,54 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 
 ### Read models produced or enriched
 - `integration_delivery_view`
+
+## travel-service
+
+### Responsibilities
+- Manage employee travel requests from draft through approval, booking, cancellation, and completion.
+- Store itinerary segments and booking details for approved travel.
+- Reuse `employee-service` read models for traveler and manager references.
+- Route approvals through the centralized workflow engine and emit tenant-scoped audit records.
+
+### Owned entities
+- `TravelRequest`
+- `TravelItinerarySegment`
+
+### Canonical APIs
+- `POST /api/v1/travel/requests`
+- `POST /api/v1/travel/requests/{travel_request_id}/submit`
+- `POST /api/v1/travel/requests/{travel_request_id}/approve`
+- `POST /api/v1/travel/requests/{travel_request_id}/reject`
+- `PUT /api/v1/travel/requests/{travel_request_id}/itinerary`
+- `POST /api/v1/travel/requests/{travel_request_id}/cancel`
+- `POST /api/v1/travel/requests/{travel_request_id}/complete`
+- `GET /api/v1/travel/requests/{travel_request_id}`
+- `GET /api/v1/travel/requests?employee_id=&status=&limit=&cursor=`
+
+### Dependencies
+- `employee-service` for employee existence, department context, and reporting-line lookup.
+- `auth-service` for access control.
+- `workflow-service` for request approvals.
+- `audit-service` for mutation logging.
+- `notification-service` for traveler, manager, and travel-desk notifications.
+
+### Supported workflows
+- `travel_request`
+
+### Publishes
+- `TravelRequestCreated`
+- `TravelRequestSubmitted`
+- `TravelRequestApproved`
+- `TravelRequestRejected`
+- `TravelItineraryUpdated`
+- `TravelRequestCancelled`
+- `TravelRequestCompleted`
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeUpdated`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `travel_requests_view`
+- enriches travel operations inboxes and employee travel history projections

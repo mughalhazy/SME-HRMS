@@ -89,6 +89,13 @@ CANONICAL_EVENT_TYPES: dict[str, str] = {
     "RefreshTokenRotated": "auth.refresh_token.rotated",
     "RoleBindingChanged": "auth.role_binding.changed",
     "AuthorizationPolicyUpdated": "auth.authorization.policy.updated",
+    "TravelRequestCreated": "travel.request.created",
+    "TravelRequestSubmitted": "travel.request.submitted",
+    "TravelRequestApproved": "travel.request.approved",
+    "TravelRequestRejected": "travel.request.rejected",
+    "TravelItineraryUpdated": "travel.itinerary.updated",
+    "TravelRequestCancelled": "travel.request.cancelled",
+    "TravelRequestCompleted": "travel.request.completed",
 }
 
 LEGACY_EVENT_NAMES = {value: key for key, value in CANONICAL_EVENT_TYPES.items()}
