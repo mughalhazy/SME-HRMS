@@ -149,6 +149,7 @@ export function createEmployeeRouter(): Router {
   router.post('/api/v1/benefits/plans', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createBenefitsPlan);
   router.post('/api/v1/benefits/enrollments', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createBenefitsEnrollment);
   router.post('/api/v1/compensation/allowances', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createAllowance);
+  router.post('/api/v1/compensation/workforce-plans/forecast', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.forecastWorkforcePlan);
   router.post('/api/v1/learning/courses', createLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.createCourse);
   router.post('/api/v1/learning/enrollments', createLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.createEnrollment);
   router.post('/api/v1/learning/enrollments/:enrollmentId/completions', updateLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.recordCompletion);

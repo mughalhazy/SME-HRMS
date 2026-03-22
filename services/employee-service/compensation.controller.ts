@@ -267,6 +267,17 @@ export class CompensationController {
     }
   };
 
+
+  forecastWorkforcePlan = (req: Request, res: Response): void => {
+    try {
+      getAuth(req);
+      const forecast = this.compensationService.forecastWorkforcePlan(req.body);
+      res.status(200).json({ data: forecast });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
   getEmployeePayrollContext = (req: Request, res: Response): void => {
     try {
       getAuth(req);

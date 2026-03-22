@@ -141,6 +141,60 @@ export interface PayrollCompensationContext {
   updated_at: string;
 }
 
+
+export interface WorkforcePlanDepartmentInput {
+  department_id: string;
+  planned_headcount: number;
+  compensation_band_id?: string;
+  average_base_salary?: string;
+  average_allowances?: string;
+  average_deductions?: string;
+  average_employer_contributions?: string;
+}
+
+export interface WorkforcePlanScenarioInput {
+  effective_date: string;
+  forecast_months?: number;
+  departments: WorkforcePlanDepartmentInput[];
+}
+
+export interface WorkforcePlanDepartmentForecast {
+  department_id: string;
+  department_name: string;
+  current_headcount: number;
+  planned_headcount: number;
+  required_hires: number;
+  overstaffed_headcount: number;
+  monthly_base_salary: string;
+  monthly_allowances: string;
+  monthly_employee_deductions: string;
+  monthly_employer_contributions: string;
+  monthly_payroll_cost: string;
+  forecast_payroll_cost: string;
+}
+
+export interface WorkforcePlanForecast {
+  tenant_id: string;
+  effective_date: string;
+  forecast_months: number;
+  headcount_plan: {
+    current_headcount: number;
+    planned_headcount: number;
+    required_hires: number;
+    overstaffed_headcount: number;
+  };
+  salary_forecast: {
+    monthly_base_salary: string;
+    monthly_allowances: string;
+    monthly_employee_deductions: string;
+    monthly_employer_contributions: string;
+    monthly_payroll_cost: string;
+    forecast_payroll_cost: string;
+  };
+  department_budgets: WorkforcePlanDepartmentForecast[];
+  generated_at: string;
+}
+
 export interface CreateCompensationBandInput {
   tenant_id?: string;
   grade_band_id: string;

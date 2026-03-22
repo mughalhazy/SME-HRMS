@@ -15,6 +15,9 @@ import {
   PayrollCompensationContext,
   SalaryRevision,
   SalaryRevisionFilters,
+  WorkforcePlanDepartmentForecast,
+  WorkforcePlanForecast,
+  WorkforcePlanScenarioInput,
   UpdateAllowanceInput,
   UpdateBenefitsEnrollmentInput,
   UpdateBenefitsPlanInput,
@@ -33,6 +36,7 @@ import {
   validateCreateCompensationBand,
   validateCreateSalaryRevision,
   validateSalaryRevisionFilters,
+  validateWorkforcePlanScenario,
   validateUpdateAllowance,
   validateUpdateBenefitsEnrollment,
   validateUpdateBenefitsPlan,
@@ -282,6 +286,143 @@ export class CompensationService {
   getEmployeeCompensationReadModel(employeeId: string, effectiveDate?: string) {
     this.requireEmployee(employeeId, 'employee_id');
     return this.repository.getEmployeeCompensationReadModel(employeeId, effectiveDate);
+  }
+
+  forecastWorkforcePlan(input: WorkforcePlanScenarioInput): WorkforcePlanForecast {
+    validateWorkforcePlanScenario(input);
+    const forecastMonths = input.forecast_months ?? 12;
+    const departmentBudgets = input.departments.map((departmentInput) => this.buildDepartmentForecast(departmentInput, input.effective_date, forecastMonths));
+
+    return {
+      tenant_id: departmentBudgets[0]?.tenant_id ?? 'tenant-default',
+      effective_date: input.effective_date,
+      forecast_months: forecastMonths,
+      headcount_plan: {
+        current_headcount: departmentBudgets.reduce((sum, department) => sum + department.current_headcount, 0),
+        planned_headcount: departmentBudgets.reduce((sum, department) => sum + department.planned_headcount, 0),
+        required_hires: departmentBudgets.reduce((sum, department) => sum + department.required_hires, 0),
+        overstaffed_headcount: departmentBudgets.reduce((sum, department) => sum + department.overstaffed_headcount, 0),
+      },
+      salary_forecast: {
+        monthly_base_salary: this.sumMoney(departmentBudgets.map((department) => department.monthly_base_salary)),
+        monthly_allowances: this.sumMoney(departmentBudgets.map((department) => department.monthly_allowances)),
+        monthly_employee_deductions: this.sumMoney(departmentBudgets.map((department) => department.monthly_employee_deductions)),
+        monthly_employer_contributions: this.sumMoney(departmentBudgets.map((department) => department.monthly_employer_contributions)),
+        monthly_payroll_cost: this.sumMoney(departmentBudgets.map((department) => department.monthly_payroll_cost)),
+        forecast_payroll_cost: this.sumMoney(departmentBudgets.map((department) => department.forecast_payroll_cost)),
+      },
+      department_budgets: departmentBudgets.map(({ tenant_id: _tenantId, ...department }) => department),
+      generated_at: new Date().toISOString(),
+    };
+  }
+
+
+  private buildDepartmentForecast(
+    departmentInput: WorkforcePlanScenarioInput['departments'][number],
+    effectiveDate: string,
+    forecastMonths: number,
+  ): WorkforcePlanDepartmentForecast & { tenant_id: string } {
+    const department = this.employeeRepository.findDepartmentById(departmentInput.department_id);
+    if (!department) {
+      throw new ValidationError([{ field: 'department_id', reason: `department ${departmentInput.department_id} was not found` }]);
+    }
+
+    const employees = this.employeeRepository.list({ department_id: departmentInput.department_id, status: 'Active', limit: 100 }).data;
+    const contexts = employees.map((employee) => this.repository.getPayrollCompensationContext(employee.employee_id, effectiveDate));
+    const currentHeadcount = employees.length;
+    const requiredHires = Math.max(0, departmentInput.planned_headcount - currentHeadcount);
+    const overstaffedHeadcount = Math.max(0, currentHeadcount - departmentInput.planned_headcount);
+    const plannedHireContext = requiredHires > 0 ? this.resolvePlannedHireContext(departmentInput, effectiveDate, employees[0]?.tenant_id ?? contexts[0]?.tenant_id) : null;
+    const hireContexts = plannedHireContext ? Array.from({ length: requiredHires }, () => plannedHireContext) : [];
+    const allContexts = [...contexts, ...hireContexts];
+    const monthlyBaseSalary = this.sumMoney(allContexts.map((context) => context.base_salary));
+    const monthlyAllowances = this.sumMoney(allContexts.map((context) => context.allowances));
+    const monthlyEmployeeDeductions = this.sumMoney(allContexts.map((context) => context.deductions));
+    const monthlyEmployerContributions = this.sumMoney(allContexts.map((context) => this.sumMoney(context.benefits_deductions.map((item) => item.employer_contribution))));
+    const monthlyPayrollCost = this.sumMoney([monthlyBaseSalary, monthlyAllowances, monthlyEmployerContributions]);
+
+    return {
+      tenant_id: employees[0]?.tenant_id ?? contexts[0]?.tenant_id ?? plannedHireContext?.tenant_id ?? 'tenant-default',
+      department_id: department.department_id,
+      department_name: department.name,
+      current_headcount: currentHeadcount,
+      planned_headcount: departmentInput.planned_headcount,
+      required_hires: requiredHires,
+      overstaffed_headcount: overstaffedHeadcount,
+      monthly_base_salary: monthlyBaseSalary,
+      monthly_allowances: monthlyAllowances,
+      monthly_employee_deductions: monthlyEmployeeDeductions,
+      monthly_employer_contributions: monthlyEmployerContributions,
+      monthly_payroll_cost: monthlyPayrollCost,
+      forecast_payroll_cost: this.multiplyMoney(monthlyPayrollCost, forecastMonths),
+    };
+  }
+
+  private resolvePlannedHireContext(departmentInput: WorkforcePlanScenarioInput['departments'][number], effectiveDate: string, tenantId: string = 'tenant-default'): PayrollCompensationContext {
+    if (departmentInput.compensation_band_id) {
+      const band = this.getCompensationBandById(departmentInput.compensation_band_id);
+      if (band.status !== 'Active') {
+        throw new ValidationError([{ field: 'compensation_band_id', reason: 'compensation band must be Active' }]);
+      }
+      const baseSalary = band.target_salary ?? this.averageMoney([band.min_salary, band.max_salary]);
+      return {
+        tenant_id: band.tenant_id,
+        employee_id: `planned:${departmentInput.department_id}`,
+        effective_from: effectiveDate,
+        base_salary: baseSalary,
+        allowances: departmentInput.average_allowances ?? '0.00',
+        deductions: departmentInput.average_deductions ?? '0.00',
+        currency: band.currency,
+        compensation_band_id: band.compensation_band_id,
+        allowance_items: [],
+        benefits_deductions: departmentInput.average_employer_contributions ? [{
+          benefits_enrollment_id: `planned:${departmentInput.department_id}:employer`,
+          benefits_plan_id: 'planned-employer-contribution',
+          benefits_plan_code: 'PLANNED-EMPLOYER',
+          benefits_plan_name: 'Planned Employer Contribution',
+          employee_contribution: '0.00',
+          employer_contribution: departmentInput.average_employer_contributions,
+        }] : [],
+        updated_at: new Date().toISOString(),
+      };
+    }
+
+    return {
+      tenant_id: tenantId,
+      employee_id: `planned:${departmentInput.department_id}`,
+      effective_from: effectiveDate,
+      base_salary: departmentInput.average_base_salary ?? '0.00',
+      allowances: departmentInput.average_allowances ?? '0.00',
+      deductions: departmentInput.average_deductions ?? '0.00',
+      currency: 'USD',
+      allowance_items: [],
+      benefits_deductions: departmentInput.average_employer_contributions ? [{
+        benefits_enrollment_id: `planned:${departmentInput.department_id}:employer`,
+        benefits_plan_id: 'planned-employer-contribution',
+        benefits_plan_code: 'PLANNED-EMPLOYER',
+        benefits_plan_name: 'Planned Employer Contribution',
+        employee_contribution: '0.00',
+        employer_contribution: departmentInput.average_employer_contributions,
+      }] : [],
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  private sumMoney(values: string[]): string {
+    const total = values.reduce((sum, value) => sum + Number(value || '0'), 0);
+    return total.toFixed(2);
+  }
+
+  private multiplyMoney(value: string, multiplier: number): string {
+    return (Number(value || '0') * multiplier).toFixed(2);
+  }
+
+  private averageMoney(values: string[]): string {
+    if (values.length === 0) {
+      return '0.00';
+    }
+    const total = values.reduce((sum, value) => sum + Number(value || '0'), 0);
+    return (total / values.length).toFixed(2);
   }
 
   private ensureUniqueCompensationBand(name?: string, code?: string, compensationBandId?: string): void {
