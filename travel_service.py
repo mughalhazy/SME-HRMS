@@ -15,7 +15,7 @@ from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
-from workflow_support import require_terminal_workflow_result, resolve_workflow_action
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action, resolve_workflow_decision_result
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -245,14 +245,14 @@ class TravelService:
             raise self._error(409, 'CONFLICT', 'travel request is not awaiting approval', trace)
         before = request.to_dict()
         workflow = self._resolve_workflow(request.workflow_id, request.tenant_id, action=action, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace)
-        terminal_result = self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
-        if terminal_result == 'approved':
+        workflow_result = self._resolve_workflow_decision_result(workflow, action=action, trace_id=trace)
+        if workflow_result == 'approved':
             request.status = 'Approved'
             request.decision_at = self._now()
             request.approved_at = request.decision_at
             audit_action = 'travel_request_approved'
             event_name = 'TravelRequestApproved'
-        elif terminal_result == 'rejected':
+        elif workflow_result == 'rejected':
             request.status = 'Rejected'
             request.decision_at = self._now()
             audit_action = 'travel_request_rejected'
@@ -447,8 +447,8 @@ class TravelService:
             invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
         )
 
-    def _require_terminal_workflow_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
-        return require_terminal_workflow_result(
+    def _resolve_workflow_decision_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
+        return resolve_workflow_decision_result(
             workflow,
             action=action,
             on_mismatch=lambda _actual, expected: self._error(409, 'WORKFLOW_BYPASS_DETECTED', f'workflow decision did not produce a valid terminal result: {expected}', trace_id),
