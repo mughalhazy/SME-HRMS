@@ -115,6 +115,93 @@ def _seed_reporting_service() -> tuple[ReportingAnalyticsService, HiringService]
     hiring = _seed_hiring_data()
     reporting = ReportingAnalyticsService()
     reporting.sync_hiring_service(hiring)
+    reporting.sync_workforce_read_models(
+        employee_directory_rows=[
+            {
+                'employee_id': 'emp-1',
+                'employee_number': 'E-001',
+                'full_name': 'Priya Lead',
+                'hire_date': '2024-01-10',
+                'employment_type': 'FullTime',
+                'employee_status': 'Active',
+                'department_id': 'dep-eng',
+                'department_name': 'Engineering',
+                'role_id': 'role-eng-lead',
+                'role_title': 'Engineering Manager',
+            },
+            {
+                'employee_id': 'emp-2',
+                'employee_number': 'E-002',
+                'full_name': 'Theo Matrix',
+                'hire_date': '2024-04-15',
+                'employment_type': 'FullTime',
+                'employee_status': 'OnLeave',
+                'department_id': 'dep-eng',
+                'department_name': 'Engineering',
+                'role_id': 'role-eng',
+                'role_title': 'Senior Engineer',
+            },
+            {
+                'employee_id': 'emp-legacy-1',
+                'employee_number': 'E-099',
+                'full_name': 'Former Designer',
+                'hire_date': '2023-02-01',
+                'employment_type': 'FullTime',
+                'employee_status': 'Terminated',
+                'department_id': 'dep-design',
+                'department_name': 'Design',
+                'role_id': 'role-design',
+                'role_title': 'Designer',
+            },
+        ],
+        attendance_rows=[
+            {
+                'employee_id': 'emp-1',
+                'employee_number': 'E-001',
+                'employee_name': 'Priya Lead',
+                'department_id': 'dep-eng',
+                'department_name': 'Engineering',
+                'attendance_date': '2026-03-10',
+                'attendance_status': 'Present',
+                'check_in_time': '2026-03-10T09:00:00+00:00',
+                'check_out_time': '2026-03-10T17:30:00+00:00',
+                'total_hours': '8.50',
+                'source': 'Manual',
+                'record_state': 'Approved',
+                'updated_at': '2026-03-10T17:30:00+00:00',
+            },
+            {
+                'employee_id': 'emp-2',
+                'employee_number': 'E-002',
+                'employee_name': 'Theo Matrix',
+                'department_id': 'dep-eng',
+                'department_name': 'Engineering',
+                'attendance_date': '2026-03-10',
+                'attendance_status': 'Late',
+                'check_in_time': '2026-03-10T09:30:00+00:00',
+                'check_out_time': '2026-03-10T17:00:00+00:00',
+                'total_hours': '7.50',
+                'source': 'Manual',
+                'record_state': 'Approved',
+                'updated_at': '2026-03-10T17:00:00+00:00',
+            },
+            {
+                'employee_id': 'emp-legacy-1',
+                'employee_number': 'E-099',
+                'employee_name': 'Former Designer',
+                'department_id': 'dep-design',
+                'department_name': 'Design',
+                'attendance_date': '2026-03-10',
+                'attendance_status': 'Absent',
+                'check_in_time': None,
+                'check_out_time': None,
+                'total_hours': '0.00',
+                'source': 'Manual',
+                'record_state': 'Approved',
+                'updated_at': '2026-03-10T17:00:00+00:00',
+            },
+        ],
+    )
     reporting.ingest_read_model(
         'employee_reporting_view',
         [
@@ -135,6 +222,20 @@ def _seed_reporting_service() -> tuple[ReportingAnalyticsService, HiringService]
                 'updated_at': '2026-03-10T00:00:00+00:00',
             },
         ],
+    )
+    reporting.ingest_event(
+        {
+            'event_name': 'EmployeeStatusChanged',
+            'tenant_id': 'tenant-default',
+            'source': 'employee-service',
+            'data': {
+                'employee_id': 'emp-legacy-1',
+                'department_id': 'dep-design',
+                'from_status': 'Active',
+                'to_status': 'Terminated',
+                'effective_at': '2026-03-09T00:00:00+00:00',
+            },
+        }
     )
     return reporting, hiring
 
@@ -161,6 +262,27 @@ def test_reporting_service_builds_projection_backed_aggregates() -> None:
     manager_span = reporting.list_aggregates(aggregate_type='organization.manager.span', dimension_key='manager_employee_id', dimension_value='mgr-1')
     assert manager_span[0]['metrics']['direct_report_count'] == 2
     assert manager_span[0]['metrics']['matrix_report_count'] == 1
+
+    hiring_funnel = reporting.list_aggregates(aggregate_type='hiring.funnel.summary', dimension_key='department_id', dimension_value='dep-eng')
+    assert hiring_funnel[0]['metrics']['application_count'] == 2
+    assert hiring_funnel[0]['metrics']['interview_count'] == 1
+    assert hiring_funnel[0]['metrics']['hire_conversion_rate'] == 0.5
+
+    attrition = reporting.list_aggregates(aggregate_type='workforce.attrition.summary', dimension_key='department_id', dimension_value='dep-design')
+    assert attrition[0]['metrics']['terminated_employee_count'] == 1
+    assert attrition[0]['metrics']['termination_event_count'] == 1
+    assert attrition[0]['metrics']['attrition_rate'] == 1.0
+
+    attendance = reporting.list_aggregates(aggregate_type='workforce.attendance.trend', dimension_key='attendance_date', dimension_value='2026-03-10')
+    assert attendance[0]['metrics']['record_count'] == 3
+    assert attendance[0]['metrics']['attendance_rate'] == 0.6667
+    assert attendance[0]['metrics']['average_hours'] == 5.33
+
+    dashboard = reporting.list_aggregates(aggregate_type='workforce.dashboard.summary', dimension_key='tenant', dimension_value='tenant-default')
+    assert dashboard[0]['metrics']['headcount']['current'] == 2
+    assert dashboard[0]['metrics']['attrition']['terminated_employee_count'] == 1
+    assert dashboard[0]['metrics']['hiring_funnel']['hire_conversion_rate'] == 0.3333
+    assert dashboard[0]['metrics']['attendance']['attendance_rate'] == 0.6667
 
 
 def test_reporting_api_uses_d1_envelopes_for_reports_runs_exports_and_schedules() -> None:
@@ -221,6 +343,20 @@ def test_reporting_api_uses_d1_envelopes_for_reports_runs_exports_and_schedules(
     assert aggregate_status == 200
     assert aggregates['status'] == 'success'
     assert aggregates['meta']['pagination']['count'] >= 1
+
+    dashboard_report_status, dashboard_report = post_reporting_report(
+        reporting,
+        {
+            'name': 'Workforce intelligence dashboard',
+            'report_type': 'workforce.dashboard.summary',
+            'filters': {'dimension_key': 'tenant', 'dimension_value': 'tenant-default'},
+        },
+    )
+    assert dashboard_report_status == 201
+
+    dashboard_run_status, dashboard_run = post_reporting_run(reporting, dashboard_report['data']['report_id'], {'filters': {}})
+    assert dashboard_run_status == 202
+    assert dashboard_run['data']['rows'][0]['metrics']['attendance']['attendance_rate'] == 0.6667
 
 
 def test_reporting_background_jobs_generate_exports_and_dispatch_scheduled_reports() -> None:
