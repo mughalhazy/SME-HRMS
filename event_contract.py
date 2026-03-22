@@ -97,6 +97,13 @@ CANONICAL_EVENT_TYPES: dict[str, str] = {
     "ExpenseClaimApproved": "expense.claim.approved",
     "ExpenseClaimRejected": "expense.claim.rejected",
     "ExpenseClaimReimbursed": "expense.claim.reimbursed",
+    "ProjectCreated": "project.created",
+    "ProjectStatusChanged": "project.status.changed",
+    "ProjectAssignmentRequested": "project.assignment.requested",
+    "ProjectAssignmentAllocated": "project.assignment.allocated",
+    "ProjectAssignmentRejected": "project.assignment.rejected",
+    "ProjectAssignmentReleased": "project.assignment.released",
+    "ProjectAllocationUpdated": "project.allocation.updated",
 }
 
 LEGACY_EVENT_NAMES = {value: key for key, value in CANONICAL_EVENT_TYPES.items()}

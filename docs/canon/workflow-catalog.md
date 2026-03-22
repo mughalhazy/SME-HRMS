@@ -12,6 +12,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `auth-service`
 - `notification-service`
 - `settings-service`
+- `project-service`
 
 ## employee_onboarding
 
@@ -187,6 +188,52 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 5. Transition valid records to `Processed`.
 6. Mark paid records on successful disbursement.
 7. Cancel records only for reversal or invalidation scenarios.
+
+
+## project_resource_allocation
+
+### Owning service
+- `project-service`
+
+### Participating services
+- `employee-service`
+- `workflow-service`
+- `notification-service`
+- `auth-service`
+
+### Entities referenced
+- `Project`
+- `ProjectAssignment`
+- `Employee`
+
+### Trigger
+- PMO, delivery, or operations creates a project assignment or adjusts an allocation.
+
+### State transitions
+- `Project: none -> Draft -> Planned/Active -> OnHold/Completed/Cancelled`
+- `ProjectAssignment: none -> PendingApproval/Allocated -> Rejected/Released`
+
+### Events
+- Consumes:
+  - `EmployeeCreated`
+  - `EmployeeUpdated`
+  - `EmployeeStatusChanged`
+- Publishes:
+  - `ProjectCreated`
+  - `ProjectStatusChanged`
+  - `ProjectAssignmentRequested`
+  - `ProjectAssignmentAllocated`
+  - `ProjectAssignmentRejected`
+  - `ProjectAssignmentReleased`
+  - `ProjectAllocationUpdated`
+
+### Steps
+1. Create `Project` with staffing-governance settings and planned dates.
+2. Resolve employee/manager references through `employee-service` read models only.
+3. Validate overlapping allocations so an employee cannot exceed 100 percent across active assignments.
+4. Create an immediate assignment or route it through centralized approval when sign-off is required.
+5. Record every allocation request, approval, rejection, update, and release in the allocation ledger.
+6. Publish audit-ready events for downstream reporting, notifications, and projection refresh.
 
 
 ## settings_administration
