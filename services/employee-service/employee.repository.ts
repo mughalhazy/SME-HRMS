@@ -135,6 +135,7 @@ export class EmployeeRepository {
         cost_center_id: input.cost_center_id,
         job_position_id: input.job_position_id,
         grade_band_id: input.grade_band_id,
+        contract_metadata: input.contract_metadata ? { ...input.contract_metadata } : undefined,
         matrix_manager_employee_ids: [...(input.matrix_manager_employee_ids ?? [])],
         cost_allocations: normalizedAllocations,
         created_at: timestamp,
@@ -252,6 +253,9 @@ export class EmployeeRepository {
           if (filters.grade_band_id && employee.grade_band_id !== filters.grade_band_id) {
             return false;
           }
+          if (filters.employment_type && employee.employment_type !== filters.employment_type) {
+            return false;
+          }
           if (filters.status && employee.status !== filters.status) {
             return false;
           }
@@ -284,6 +288,11 @@ export class EmployeeRepository {
         ...employee,
         ...input,
         tenant_id: this.tenantId,
+        contract_metadata: input.contract_metadata !== undefined
+          ? { ...input.contract_metadata }
+          : employee.contract_metadata
+            ? { ...employee.contract_metadata }
+            : undefined,
         matrix_manager_employee_ids: input.matrix_manager_employee_ids ? [...input.matrix_manager_employee_ids] : employee.matrix_manager_employee_ids,
         cost_allocations: input.cost_allocations !== undefined
           ? this.normalizeCostAllocations(input.cost_allocations, input.cost_center_id ?? employee.cost_center_id)
@@ -427,6 +436,7 @@ export class EmployeeRepository {
       job_position_title: jobPosition?.title,
       grade_band_id: employee.grade_band_id,
       grade_band_name: gradeBand?.name,
+      contract_metadata: employee.contract_metadata ? { ...employee.contract_metadata } : undefined,
       matrix_manager_employee_ids: [...employee.matrix_manager_employee_ids],
       matrix_manager_names: matrixManagers.map((row) => `${row.first_name} ${row.last_name}`.trim()),
       cost_allocations: employee.cost_allocations.map((allocation) => ({ ...allocation })),
@@ -477,6 +487,7 @@ export class EmployeeRepository {
       job_position_title: jobPosition?.title,
       grade_band_id: employee.grade_band_id,
       grade_band_name: gradeBand?.name,
+      contract_metadata: employee.contract_metadata ? { ...employee.contract_metadata } : undefined,
       matrix_manager_names: matrixManagerNames,
       updated_at: employee.updated_at,
     };

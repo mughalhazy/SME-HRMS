@@ -117,6 +117,18 @@ export function seedRoles(tenantId: string = DEFAULT_TENANT_ID): Role[] {
     },
     {
       tenant_id: tenantId,
+      role_id: 'role-contractor-consultant',
+      title: 'Contractor Consultant',
+      level: 'Contract',
+      description: 'Active contractor role for external workforce assignments.',
+      employment_category: 'Contractor',
+      permissions: DEFAULT_ROLE_PERMISSIONS.Contractor,
+      status: 'Active',
+      created_at: createdAt,
+      updated_at: createdAt,
+    },
+    {
+      tenant_id: tenantId,
       role_id: 'role-legacy-contractor',
       title: 'Legacy Contractor',
       level: 'Contract',

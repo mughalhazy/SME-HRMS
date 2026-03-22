@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { EMPLOYEE_STATUSES, EMPLOYMENT_TYPES } from './employee.model';
+import { EMPLOYEE_STATUSES } from './employee.model';
 import { EmployeeService } from './employee.service';
 import { ConflictError, NotFoundError } from './service.errors';
 import { ValidationError } from './employee.validation';
@@ -26,13 +26,10 @@ function getAuth(req: Request): AuthContext {
   return req.auth;
 }
 
-export class EmployeeController {
+export class ContractorController {
   private readonly logger = getStructuredLogger('employee-service');
-  private readonly employeeService: EmployeeService;
 
-  constructor(employeeService: EmployeeService) {
-    this.employeeService = employeeService;
-  }
+  constructor(private readonly employeeService: EmployeeService) {}
 
   private ensureManagerScope(req: Request, res: Response, auth: AuthContext, employeeId: string): boolean {
     if (auth.role !== 'Manager') {
@@ -47,7 +44,7 @@ export class EmployeeController {
     return false;
   }
 
-  createEmployee = (req: Request, res: Response): void => {
+  createContractor = (req: Request, res: Response): void => {
     try {
       const auth = getAuth(req);
       if (auth.role === 'Manager' && auth.department_id && req.body.department_id !== auth.department_id) {
@@ -55,54 +52,47 @@ export class EmployeeController {
         return;
       }
 
-      const employee = this.employeeService.createEmployee({ ...req.body, tenant_id: req.tenantId });
-      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
+      const contractor = this.employeeService.createContractor({ ...req.body, tenant_id: req.tenantId, employment_type: 'Contract' });
+      const readModels = this.employeeService.getContractorReadModels(contractor.employee_id);
       logAuditMutation({
         logger: this.logger,
         req,
-        tenantId: employee.tenant_id,
-        action: 'employee_created',
-        entity: 'Employee',
-        entityId: employee.employee_id,
+        tenantId: contractor.tenant_id,
+        action: 'contractor_created',
+        entity: 'ContractorProfile',
+        entityId: contractor.employee_id,
         before: {},
-        after: employee,
+        after: contractor,
       });
-      res.status(201).json({ data: employee, read_models: readModels });
+      res.status(201).json({ data: contractor, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
   };
 
-  getEmployee = (req: Request, res: Response): void => {
+  getContractor = (req: Request, res: Response): void => {
     try {
       const auth = getAuth(req);
       if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
         return;
       }
-      const employee = this.employeeService.getEmployeeById(req.params.employeeId);
-      const readModels = this.employeeService.getEmployeeReadModels(req.params.employeeId);
-      res.status(200).json({ data: employee, read_models: readModels });
+
+      const contractor = this.employeeService.getContractorById(req.params.employeeId);
+      const readModels = this.employeeService.getContractorReadModels(contractor.employee_id);
+      res.status(200).json({ data: contractor, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
   };
 
-  listEmployees = (req: Request, res: Response): void => {
+  listContractors = (req: Request, res: Response): void => {
     try {
       const auth = getAuth(req);
       const status = req.query.status;
-      const employmentType = req.query.employment_type;
 
       if (status && typeof status === 'string' && !EMPLOYEE_STATUSES.includes(status as never)) {
         sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
           { field: 'status', reason: `must be one of: ${EMPLOYEE_STATUSES.join(', ')}` },
-        ]);
-        return;
-      }
-
-      if (employmentType && typeof employmentType === 'string' && !EMPLOYMENT_TYPES.includes(employmentType as never)) {
-        sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', [
-          { field: 'employment_type', reason: `must be one of: ${EMPLOYMENT_TYPES.join(', ')}` },
         ]);
         return;
       }
@@ -118,8 +108,8 @@ export class EmployeeController {
       const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
       let departmentFilter = typeof req.query.department_id === 'string' ? req.query.department_id : undefined;
       let managerFilter = typeof req.query.manager_employee_id === 'string' ? req.query.manager_employee_id : undefined;
-      const roleFilter = typeof req.query.role_id === 'string' ? req.query.role_id : undefined;
       let employeeFilter: string | undefined;
+      const roleFilter = typeof req.query.role_id === 'string' ? req.query.role_id : undefined;
       const businessUnitFilter = typeof req.query.business_unit_id === 'string' ? req.query.business_unit_id : undefined;
       const legalEntityFilter = typeof req.query.legal_entity_id === 'string' ? req.query.legal_entity_id : undefined;
       const locationFilter = typeof req.query.location_id === 'string' ? req.query.location_id : undefined;
@@ -153,15 +143,13 @@ export class EmployeeController {
         cost_center_id: costCenterFilter,
         job_position_id: jobPositionFilter,
         grade_band_id: gradeBandFilter,
-        employment_type: typeof employmentType === 'string' ? (employmentType as never) : undefined,
         status: typeof status === 'string' ? (status as never) : undefined,
         limit: rawLimit,
         cursor,
       };
 
-      const page = this.employeeService.listEmployees(filters);
-      const readModels = this.employeeService.listEmployeeReadModels(filters);
-
+      const page = this.employeeService.listContractors(filters);
+      const readModels = this.employeeService.listContractorReadModels(filters);
       res.status(200).json({
         data: page.data,
         page: {
@@ -176,7 +164,7 @@ export class EmployeeController {
     }
   };
 
-  updateEmployee = (req: Request, res: Response): void => {
+  updateContractor = (req: Request, res: Response): void => {
     try {
       const auth = getAuth(req);
       if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
@@ -188,98 +176,47 @@ export class EmployeeController {
         ]);
         return;
       }
-      const before = this.employeeService.getEmployeeById(req.params.employeeId);
-      const employee = this.employeeService.updateEmployee(req.params.employeeId, req.body);
-      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
+
+      const before = this.employeeService.getContractorById(req.params.employeeId);
+      const contractor = this.employeeService.updateContractor(req.params.employeeId, req.body);
+      const readModels = this.employeeService.getContractorReadModels(contractor.employee_id);
       logAuditMutation({
         logger: this.logger,
         req,
-        tenantId: employee.tenant_id,
-        action: 'employee_updated',
-        entity: 'Employee',
-        entityId: employee.employee_id,
+        tenantId: contractor.tenant_id,
+        action: 'contractor_updated',
+        entity: 'ContractorProfile',
+        entityId: contractor.employee_id,
         before,
-        after: employee,
+        after: contractor,
       });
-      res.status(200).json({ data: employee, read_models: readModels });
+      res.status(200).json({ data: contractor, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }
   };
 
-  assignDepartment = (req: Request, res: Response): void => {
+  updateContractorStatus = (req: Request, res: Response): void => {
     try {
       const auth = getAuth(req);
       if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
         return;
       }
-      if (auth.role === 'Manager' && auth.department_id && req.body.department_id !== auth.department_id) {
-        sendError(req, res, 403, 'FORBIDDEN', 'Insufficient team scope');
-        return;
-      }
-      const before = this.employeeService.getEmployeeById(req.params.employeeId);
-      const employee = this.employeeService.assignDepartment(req.params.employeeId, req.body.department_id);
-      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
-      logAuditMutation({
-        logger: this.logger,
-        req,
-        tenantId: employee.tenant_id,
-        action: 'employee_department_assigned',
-        entity: 'Employee',
-        entityId: employee.employee_id,
-        before,
-        after: employee,
-      });
-      res.status(200).json({ data: employee, read_models: readModels });
-    } catch (error) {
-      this.handleError(req, res, error);
-    }
-  };
 
-  updateStatus = (req: Request, res: Response): void => {
-    try {
-      const auth = getAuth(req);
-      if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
-        return;
-      }
-      const before = this.employeeService.getEmployeeById(req.params.employeeId);
-      const employee = this.employeeService.updateStatus(req.params.employeeId, req.body.status);
-      const readModels = this.employeeService.getEmployeeReadModels(employee.employee_id);
+      const before = this.employeeService.getContractorById(req.params.employeeId);
+      const contractor = this.employeeService.updateStatus(req.params.employeeId, req.body.status);
+      const readModels = this.employeeService.getContractorReadModels(contractor.employee_id);
       logAuditMutation({
         logger: this.logger,
         req,
-        tenantId: employee.tenant_id,
-        action: 'employee_status_updated',
-        entity: 'Employee',
-        entityId: employee.employee_id,
+        tenantId: contractor.tenant_id,
+        action: 'contractor_status_updated',
+        entity: 'ContractorProfile',
+        entityId: contractor.employee_id,
         before,
-        after: employee,
+        after: contractor,
       });
-      res.status(200).json({ data: employee, read_models: readModels });
-    } catch (error) {
-      this.handleError(req, res, error);
-    }
-  };
-
-  deleteEmployee = (req: Request, res: Response): void => {
-    try {
-      const auth = getAuth(req);
-      if (!this.ensureManagerScope(req, res, auth, req.params.employeeId)) {
-        return;
-      }
-      const before = this.employeeService.getEmployeeById(req.params.employeeId);
-      this.employeeService.deleteEmployee(req.params.employeeId);
-      logAuditMutation({
-        logger: this.logger,
-        req,
-        tenantId: before.tenant_id,
-        action: 'employee_deleted',
-        entity: 'Employee',
-        entityId: req.params.employeeId,
-        before,
-        after: {},
-      });
-      res.status(204).send();
+      res.status(200).json({ data: contractor, read_models: readModels });
     } catch (error) {
       this.handleError(req, res, error);
     }

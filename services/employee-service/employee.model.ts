@@ -3,6 +3,9 @@ import { EmployeeCostAllocation, ReportingLine } from './org.model';
 export const EMPLOYMENT_TYPES = ['FullTime', 'PartTime', 'Contract', 'Intern'] as const;
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
 
+export const CONTRACT_TYPES = ['IndependentContractor', 'Agency', 'StatementOfWork'] as const;
+export type ContractType = (typeof CONTRACT_TYPES)[number];
+
 export const EMPLOYEE_STATUSES = ['Draft', 'Active', 'OnLeave', 'Suspended', 'Terminated'] as const;
 export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
 
@@ -59,10 +62,25 @@ export interface Employee {
   cost_center_id?: string;
   job_position_id?: string;
   grade_band_id?: string;
+  contract_metadata?: ContractMetadata;
   matrix_manager_employee_ids: string[];
   cost_allocations: EmployeeCostAllocation[];
   created_at: string;
   updated_at: string;
+}
+
+export interface ContractMetadata {
+  contract_type: ContractType;
+  contract_start_date: string;
+  contract_end_date?: string;
+  vendor_name?: string;
+  vendor_contact_email?: string;
+  purchase_order_number?: string;
+  billing_currency?: string;
+  billing_rate?: number;
+  access_expires_at: string;
+  sponsor_employee_id?: string;
+  external_worker_id?: string;
 }
 
 export interface EmployeeDirectoryReadModel {
@@ -93,6 +111,7 @@ export interface EmployeeDirectoryReadModel {
   job_position_title?: string;
   grade_band_id?: string;
   grade_band_name?: string;
+  contract_metadata?: ContractMetadata;
   matrix_manager_employee_ids: string[];
   matrix_manager_names: string[];
   cost_allocations: EmployeeCostAllocation[];
@@ -126,6 +145,7 @@ export interface OrganizationStructureReadModel {
   job_position_title?: string;
   grade_band_id?: string;
   grade_band_name?: string;
+  contract_metadata?: ContractMetadata;
   matrix_manager_names: string[];
   updated_at: string;
 }
@@ -171,6 +191,7 @@ export interface CreateEmployeeInput {
   cost_center_id?: string;
   job_position_id?: string;
   grade_band_id?: string;
+  contract_metadata?: ContractMetadata;
   matrix_manager_employee_ids?: string[];
   cost_allocations?: EmployeeCostAllocation[];
 }
@@ -191,6 +212,7 @@ export interface UpdateEmployeeInput {
   cost_center_id?: string;
   job_position_id?: string;
   grade_band_id?: string;
+  contract_metadata?: ContractMetadata;
   matrix_manager_employee_ids?: string[];
   cost_allocations?: EmployeeCostAllocation[];
 }
@@ -207,6 +229,7 @@ export interface EmployeeFilters {
   cost_center_id?: string;
   job_position_id?: string;
   grade_band_id?: string;
+  employment_type?: EmploymentType;
   status?: EmployeeStatus;
   limit?: number;
   cursor?: string;
