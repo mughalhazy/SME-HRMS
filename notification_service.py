@@ -240,6 +240,66 @@ EVENT_NOTIFICATION_PLANS: dict[str, tuple[EventNotificationPlan, ...]] = {
             channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
         ),
     ),
+    "TravelRequestSubmitted": (
+        EventNotificationPlan(
+            template_code="travel.submitted.manager",
+            subject_type="Employee",
+            subject_id_field="manager_employee_id",
+            destination_field="manager_email",
+            topic_code="travel.submission",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
+    "TravelRequestApproved": (
+        EventNotificationPlan(
+            template_code="travel.approved.employee",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="employee_email",
+            topic_code="travel.approval",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
+    "TravelRequestRejected": (
+        EventNotificationPlan(
+            template_code="travel.rejected.employee",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="employee_email",
+            topic_code="travel.rejection",
+            channels=(NotificationChannel.IN_APP, NotificationChannel.EMAIL),
+        ),
+    ),
+    "TravelItineraryUpdated": (
+        EventNotificationPlan(
+            template_code="travel.itinerary.updated",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="employee_email",
+            topic_code="travel.itinerary",
+            channels=(NotificationChannel.IN_APP,),
+        ),
+    ),
+    "TravelRequestCompleted": (
+        EventNotificationPlan(
+            template_code="travel.completed.employee",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="employee_email",
+            topic_code="travel.completion",
+            channels=(NotificationChannel.IN_APP,),
+        ),
+    ),
+    "TravelRequestCancelled": (
+        EventNotificationPlan(
+            template_code="travel.cancelled.employee",
+            subject_type="Employee",
+            subject_id_field="employee_id",
+            destination_field="employee_email",
+            topic_code="travel.cancellation",
+            channels=(NotificationChannel.IN_APP,),
+        ),
+    ),
     "LeaveRequestCancelled": (
         EventNotificationPlan(
             template_code="leave.cancelled.employee",

@@ -6,6 +6,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `employee-service`
 - `attendance-service`
 - `leave-service`
+- `travel-service`
 - `payroll-service`
 - `hiring-service`
 - `auth-service`
@@ -102,6 +103,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 
 ### Owning service
 - `leave-service`
+- `travel-service`
 
 ### Participating services
 - `employee-service`
@@ -148,6 +150,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `employee-service`
 - `attendance-service`
 - `leave-service`
+- `travel-service`
 - `auth-service`
 - `notification-service`
 - `settings-service`
@@ -195,6 +198,7 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 - `auth-service`
 - `attendance-service`
 - `leave-service`
+- `travel-service`
 - `payroll-service`
 - `notification-service`
 
@@ -344,3 +348,51 @@ This catalog defines deterministic HR workflows and maps each workflow to servic
 7. Emit audit records and canonical events for every privileged state transition.
 
 
+
+
+## travel_request
+
+### Owning service
+- `travel-service`
+
+### Participating services
+- `employee-service`
+- `auth-service`
+- `notification-service`
+- `settings-service`
+
+### Entities referenced
+- `TravelRequest`
+- `TravelItinerarySegment`
+- `Employee`
+
+### Trigger
+- Employee or manager creates and submits a travel request for approval.
+
+### State transitions
+- `TravelRequest: none -> Draft -> Submitted -> Approved/Rejected`
+- `TravelRequest: Approved -> Booked -> Completed`
+- `TravelRequest: Draft/Submitted/Approved/Booked -> Cancelled`
+
+### Events
+- Consumes:
+  - `EmployeeCreated`
+  - `EmployeeUpdated`
+  - `EmployeeStatusChanged`
+- Publishes:
+  - `TravelRequestCreated`
+  - `TravelRequestSubmitted`
+  - `TravelRequestApproved`
+  - `TravelRequestRejected`
+  - `TravelItineraryUpdated`
+  - `TravelRequestCancelled`
+  - `TravelRequestCompleted`
+
+### Steps
+1. Create `TravelRequest` in `Draft` and validate traveler/manager references against the `employee-service` read model.
+2. Submit the request through the centralized workflow engine using manager approval followed by travel-desk approval.
+3. Emit tenant-scoped audit records for submission and every workflow-backed decision.
+4. Notify the approver(s) and traveler as the workflow progresses.
+5. Capture itinerary segments and booking references after approval.
+6. Allow cancellation prior to completion and preserve the full mutation trail.
+7. Mark the request `Completed` after the booked trip concludes.

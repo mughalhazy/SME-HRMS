@@ -643,3 +643,50 @@ Milestones attached to a `performance_pip_plans` record, including due dates, co
 - Prefer `ON DELETE RESTRICT` for master entities and `ON DELETE CASCADE` only for strictly dependent operational records where retention policy allows it.
 - Maintain all `updated_at` fields through application logic or update triggers.
 - Use service-owned schemas or databases in deployment; the model above is canonical logical architecture, not a mandate for a single physical database.
+
+
+### Table: `travel_requests`
+
+| Column | Type | Nullable | Key | Notes |
+|---|---|---|---|---|
+| tenant_id | UUID | No | PK/FK | Tenant partition key. |
+| travel_request_id | UUID | No | PK | Travel request identifier. |
+| employee_id | UUID | No | FK | References `employees.employee_id`. |
+| manager_employee_id | UUID | No | FK | References `employees.employee_id`. |
+| purpose | Text | No |  | Business purpose of travel. |
+| trip_type | String | No |  | `OneWay`, `RoundTrip`, or `MultiCity`. |
+| origin_city | String | No |  | Travel origin. |
+| destination_city | String | No |  | Primary destination. |
+| start_date | Date | No |  | Requested start date. |
+| end_date | Date | No |  | Requested end date. |
+| estimated_cost | Decimal(12,2) | No |  | Estimated trip cost. |
+| currency | String | No |  | ISO currency code. |
+| status | String | No |  | `Draft`, `Submitted`, `Approved`, `Booked`, `Completed`, `Rejected`, `Cancelled`. |
+| workflow_id | UUID | Yes | FK | References centralized workflow instance. |
+| submitted_at | Timestamp | Yes |  | Submit timestamp. |
+| decision_at | Timestamp | Yes |  | Final decision timestamp. |
+| approved_at | Timestamp | Yes |  | Approval timestamp. |
+| booked_at | Timestamp | Yes |  | Booking completion timestamp. |
+| completed_at | Timestamp | Yes |  | Travel completion timestamp. |
+| cancelled_at | Timestamp | Yes |  | Cancellation timestamp. |
+| notes | Text | Yes |  | Freeform supporting notes. |
+| created_at | Timestamp | No |  | Creation timestamp. |
+| updated_at | Timestamp | No |  | Last mutation timestamp. |
+
+### Table: `travel_itinerary_segments`
+
+| Column | Type | Nullable | Key | Notes |
+|---|---|---|---|---|
+| tenant_id | UUID | No | PK/FK | Tenant partition key. |
+| segment_id | UUID | No | PK | Itinerary segment identifier. |
+| travel_request_id | UUID | No | FK | References `travel_requests.travel_request_id`. |
+| segment_type | String | No |  | `Flight`, `Rail`, `Hotel`, `Car`, or `Other`. |
+| departure_city | String | No |  | Segment origin. |
+| arrival_city | String | No |  | Segment destination. |
+| departure_at | Timestamp | No |  | Scheduled departure. |
+| arrival_at | Timestamp | No |  | Scheduled arrival. |
+| provider_name | String | Yes |  | Airline, hotel, rail, or vendor name. |
+| booking_reference | String | Yes |  | Booking or ticket reference. |
+| lodging_name | String | Yes |  | Hotel or lodging name when applicable. |
+| lodging_address | String | Yes |  | Lodging address when applicable. |
+| notes | Text | Yes |  | Segment-specific notes. |

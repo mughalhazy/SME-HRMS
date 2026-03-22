@@ -87,6 +87,13 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 | `NotificationSent` | `notification-service` | `NotificationMessage` | Notification delivered successfully. |
 | `NotificationFailed` | `notification-service` | `NotificationMessage` | Notification failed after attempt(s). |
 | `NotificationSuppressed` | `notification-service` | `NotificationMessage` | Notification intentionally suppressed by preference or policy. |
+| `TravelRequestCreated` | `travel-service` | `TravelRequest` | Travel request drafted. |
+| `TravelRequestSubmitted` | `travel-service` | `TravelRequest` | Travel request submitted for approval. |
+| `TravelRequestApproved` | `travel-service` | `TravelRequest` | Travel request fully approved through workflow. |
+| `TravelRequestRejected` | `travel-service` | `TravelRequest` | Travel request rejected through workflow. |
+| `TravelItineraryUpdated` | `travel-service` | `TravelRequest` | Itinerary details or booking references updated. |
+| `TravelRequestCancelled` | `travel-service` | `TravelRequest` | Travel request cancelled before completion. |
+| `TravelRequestCompleted` | `travel-service` | `TravelRequest` | Travel request completed after travel concludes. |
 
 ## employee-service events
 
@@ -455,3 +462,48 @@ This catalog defines the canonical domain events emitted across SME-HRMS service
 - Every event published or subscribed to in `docs/canon/service-map.md` is defined here.
 - Every state transition in `docs/canon/workflow-catalog.md` maps to at least one event in this document.
 - No workflow relies on an undefined event name.
+
+
+## travel-service events
+
+### `TravelRequestCreated`
+- **Aggregate:** `TravelRequest`
+- **Transition:** request created in `Draft`.
+- **Minimum payload:** `travel_request_id`, `employee_id`, `manager_employee_id`, `status`, `start_date`, `end_date`.
+- **Consumers:** travel operations inboxes, notifications, analytics.
+
+### `TravelRequestSubmitted`
+- **Aggregate:** `TravelRequest`
+- **Transition:** `Draft -> Submitted`.
+- **Minimum payload:** `travel_request_id`, `employee_id`, `manager_employee_id`, `status`, `workflow_id`.
+- **Consumers:** `workflow-service`, `notification-service`, travel operations dashboards.
+
+### `TravelRequestApproved`
+- **Aggregate:** `TravelRequest`
+- **Transition:** `Submitted -> Approved`.
+- **Minimum payload:** `travel_request_id`, `employee_id`, `status`, `approved_at`.
+- **Consumers:** travel booking tools, notification pipelines, analytics.
+
+### `TravelRequestRejected`
+- **Aggregate:** `TravelRequest`
+- **Transition:** `Submitted -> Rejected`.
+- **Minimum payload:** `travel_request_id`, `employee_id`, `status`, `decision_at`.
+- **Consumers:** notification pipelines, audit, analytics.
+
+### `TravelItineraryUpdated`
+- **Aggregate:** `TravelRequest`
+- **Transition:** itinerary or booking metadata updated while approved/booked.
+- **Minimum payload:** `travel_request_id`, `employee_id`, `status`, `segment_count`.
+- **Consumers:** traveler inboxes, operations dashboards, audit.
+
+### `TravelRequestCancelled`
+- **Aggregate:** `TravelRequest`
+- **Transition:** active request cancelled before completion.
+- **Minimum payload:** `travel_request_id`, `employee_id`, `status`, `cancelled_at`.
+- **Consumers:** notification pipelines, finance reconciliation, audit.
+
+### `TravelRequestCompleted`
+- **Aggregate:** `TravelRequest`
+- **Transition:** `Booked -> Completed`.
+- **Minimum payload:** `travel_request_id`, `employee_id`, `status`, `completed_at`.
+- **Consumers:** analytics, travel history projections, audit.
