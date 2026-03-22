@@ -13,6 +13,7 @@ import { AssetManagementService } from './asset-management.service';
 import { CompensationController } from './compensation.controller';
 import { CompensationRepository } from './compensation.repository';
 import { CompensationService } from './compensation.service';
+import { ContractorController } from './contractor.controller';
 import { DepartmentController } from './department.controller';
 import { DepartmentRepository } from './department.repository';
 import { DepartmentService } from './department.service';
@@ -97,7 +98,7 @@ export function createEmployeeRouter(): Router {
   const documentComplianceService = new DocumentComplianceService(documentComplianceRepository, repository);
   const compensationService = new CompensationService(compensationRepository, repository);
   const controller = new EmployeeController(service);
-  const assetManagementController = new AssetManagementController(assetManagementService, service);
+  const contractorController = new ContractorController(service);
   const documentComplianceController = new DocumentComplianceController(documentComplianceService, service);
   const compensationController = new CompensationController(compensationService);
   const departmentController = new DepartmentController(departmentService);
@@ -121,6 +122,7 @@ export function createEmployeeRouter(): Router {
   router.use('/api/v1', authenticate);
 
   router.post('/api/v1/employees', createEmployeeRateLimit, authorizeEmployeeAction('create'), controller.createEmployee);
+  router.post('/api/v1/contractors', createEmployeeRateLimit, authorizeEmployeeAction('create'), contractorController.createContractor);
   router.post('/api/v1/departments', createDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.createDepartment);
   router.post('/api/v1/roles', createRoleRateLimit, authorizeEmployeeAction('createRole'), roleController.createRole);
   router.post('/api/v1/documents', createEmployeeRateLimit, authorizeEmployeeAction('createDocument'), documentComplianceController.createDocument);
@@ -138,6 +140,8 @@ export function createEmployeeRouter(): Router {
 
   router.get('/api/v1/employees/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), controller.getEmployee);
   router.get('/api/v1/employees', listEmployeeRateLimit, authorizeEmployeeAction('list'), controller.listEmployees);
+  router.get('/api/v1/contractors/:employeeId', readEmployeeRateLimit, authorizeEmployeeAction('read'), contractorController.getContractor);
+  router.get('/api/v1/contractors', listEmployeeRateLimit, authorizeEmployeeAction('list'), contractorController.listContractors);
   router.get('/api/v1/documents/expiring', readEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listExpiringDocuments);
   router.get('/api/v1/documents/:documentId', readEmployeeRateLimit, authorizeEmployeeAction('readDocument'), documentComplianceController.getDocument);
   router.get('/api/v1/documents', listEmployeeRateLimit, authorizeEmployeeAction('listDocuments'), documentComplianceController.listDocuments);
@@ -165,12 +169,14 @@ export function createEmployeeRouter(): Router {
   router.get('/api/v1/org/:kind', readOrgRateLimit, authorizeEmployeeAction('listOrgStructure'), orgController.listEntities);
 
   router.patch('/api/v1/employees/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), controller.updateEmployee);
+  router.patch('/api/v1/contractors/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), contractorController.updateContractor);
   router.patch('/api/v1/documents/:documentId', updateEmployeeRateLimit, authorizeEmployeeAction('updateDocument'), documentComplianceController.updateDocument);
   router.patch('/api/v1/compliance-tasks/:taskId', updateEmployeeRateLimit, authorizeEmployeeAction('updateComplianceTask'), documentComplianceController.updateComplianceTask);
   router.patch('/api/v1/departments/:departmentId', updateDepartmentRateLimit, authorizeEmployeeAction('manageDepartment'), departmentController.updateDepartment);
   router.patch('/api/v1/roles/:roleId', updateRoleRateLimit, authorizeEmployeeAction('updateRole'), roleController.updateRole);
   router.patch('/api/v1/employees/:employeeId/department', updateEmployeeRateLimit, authorizeEmployeeAction('manageDepartment'), controller.assignDepartment);
   router.patch('/api/v1/employees/:employeeId/status', updateEmployeeRateLimit, authorizeEmployeeAction('manageStatus'), controller.updateStatus);
+  router.patch('/api/v1/contractors/:employeeId/status', updateEmployeeRateLimit, authorizeEmployeeAction('manageStatus'), contractorController.updateContractorStatus);
   router.patch('/api/v1/org/:kind/:entityId', updateOrgRateLimit, authorizeEmployeeAction('manageOrgStructure'), orgController.updateEntity);
   router.patch('/api/v1/assets/:assetId/status', updateAssetRateLimit, authorizeEmployeeAction('updateAssetStatus'), assetManagementController.updateAssetStatus);
   router.patch('/api/v1/compensation/bands/:compensationBandId', updateCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.updateCompensationBand);
