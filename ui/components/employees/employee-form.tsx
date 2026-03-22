@@ -4,8 +4,8 @@ import type { FormEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { AlertTriangle, LoaderCircle } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Input, Select, inputClassName } from '@/components/ui/input'
+import { Button } from '@/components/base/button'
+import { Input, Select, inputClassName } from '@/components/base/input'
 import { ApiError } from '@/lib/api/client'
 import {
   EMPLOYEE_STATUSES,

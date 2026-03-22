@@ -1,5 +1,5 @@
 import AppShell from '@/components/hrms/shell/app-shell'
-import { StatSkeletonGrid, SurfaceSkeleton, TableSkeleton } from '@/components/ui/feedback'
+import { StatSkeletonGrid, SurfaceSkeleton, TableSkeleton } from '@/components/base/feedback'
 
 export default function Loading() {
   return (

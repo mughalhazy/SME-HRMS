@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react'
 import { BadgeDollarSign, CalendarRange, Filter, RefreshCw, Wallet } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { EmptyState } from '@/components/ui/feedback'
-import { Select } from '@/components/ui/input'
+import { Badge } from '@/components/base/badge'
+import { Button } from '@/components/base/button'
+import { EmptyState } from '@/components/base/feedback'
+import { Select } from '@/components/base/input'
 import {
   KpiGrid,
   PageSection,
@@ -15,8 +15,8 @@ import {
   StatCard,
   pageIconChipClassName,
   pageSurfaceClassName,
-} from '@/components/ui/page'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+} from '@/components/base/page'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 import { cn } from '@/lib/utils'
 
 type PayrollStatus = 'Pending' | 'Processed' | 'Flagged'

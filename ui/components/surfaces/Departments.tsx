@@ -1,12 +1,12 @@
 import { ArrowRight, Building2, GitBranch, Plus, SearchCheck, Users } from 'lucide-react'
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { KpiGrid, StatCard } from '@/components/ui/page'
-import { Separator } from '@/components/ui/separator'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Avatar, AvatarFallback } from '@/components/base/avatar'
+import { Badge } from '@/components/base/badge'
+import { Button } from '@/components/base/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/base/card'
+import { KpiGrid, StatCard } from '@/components/base/page'
+import { Separator } from '@/components/base/separator'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 
 type KpiCard = {
   title: string

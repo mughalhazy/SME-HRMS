@@ -14,9 +14,9 @@ import {
   Users,
 } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/base/badge'
+import { Button } from '@/components/base/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/base/card'
 import {
   KpiGrid,
   PageSection,
@@ -27,8 +27,8 @@ import {
   pageMetaTextClassName,
   pageSectionTitleClassName,
   StatCard,
-} from '@/components/ui/page'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+} from '@/components/base/page'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 
 type MetricCard = {
   title: string

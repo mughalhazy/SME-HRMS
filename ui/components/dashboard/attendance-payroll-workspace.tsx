@@ -15,11 +15,11 @@ import {
   Wallet,
 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/feedback'
-import { Input, Select } from '@/components/ui/input'
-import { PageGrid, PageStack } from '@/components/ui/page'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Button } from '@/components/base/button'
+import { EmptyState, ErrorState, TableSkeleton } from '@/components/base/feedback'
+import { Input, Select } from '@/components/base/input'
+import { PageGrid, PageStack } from '@/components/base/page'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 import {
   type AttendanceRecord,
   type PayrollRecord,

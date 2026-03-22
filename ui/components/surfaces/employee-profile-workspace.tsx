@@ -6,10 +6,10 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Mail, Phone, UserRoundSearch } from 'lucide-react'
 
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Select } from '@/components/ui/input'
-import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
-import { PageGrid } from '@/components/ui/page'
+import { Button, buttonVariants } from '@/components/base/button'
+import { Select } from '@/components/base/input'
+import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/base/feedback'
+import { PageGrid } from '@/components/base/page'
 import { getEmployeeFullName, listEmployees } from '@/lib/employees/api'
 
 function formatDate(value: string) {

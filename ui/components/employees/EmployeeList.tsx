@@ -18,12 +18,12 @@ import {
   Users,
 } from 'lucide-react'
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Input, Select } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Avatar, AvatarFallback } from '@/components/base/avatar'
+import { Badge } from '@/components/base/badge'
+import { Button } from '@/components/base/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/base/dropdown-menu'
+import { Input, Select } from '@/components/base/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/base/table'
 import { employees, getEmployeeInitials, type EmployeeRecord, type EmployeeStatus } from '@/components/employees/employee-data'
 import { cn } from '@/lib/utils'
 

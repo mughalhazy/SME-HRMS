@@ -3,10 +3,10 @@
 import type { ReactNode } from 'react'
 import { Save, Settings2 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Input, Select } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/base/button'
+import { Input, Select } from '@/components/base/input'
+import { Separator } from '@/components/base/separator'
+import { Switch } from '@/components/base/switch'
 
 type SectionProps = {
   id: string

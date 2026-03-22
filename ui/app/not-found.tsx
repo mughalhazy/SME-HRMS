@@ -2,9 +2,9 @@ import Link from 'next/link'
 import { Compass, Home, SearchX } from 'lucide-react'
 
 import AppShell from '@/components/hrms/shell/app-shell'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { pageIconChipClassName } from '@/components/ui/page'
+import { Button } from '@/components/base/button'
+import { Card, CardContent } from '@/components/base/card'
+import { pageIconChipClassName } from '@/components/base/page'
 
 export default function NotFound() {
   return (

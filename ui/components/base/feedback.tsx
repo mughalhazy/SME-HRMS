@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { AlertTriangle, LoaderCircle } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/base/button";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className }: { className?: string }) {

@@ -1,5 +1,5 @@
 import AppShell from '@/components/hrms/shell/app-shell'
-import { SurfaceSkeleton, StatSkeletonGrid } from '@/components/ui/feedback'
+import { SurfaceSkeleton, StatSkeletonGrid } from '@/components/base/feedback'
 
 export default function EmployeeDetailLoading() {
   return (

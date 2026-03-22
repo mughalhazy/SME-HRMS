@@ -6,9 +6,9 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Mail, Phone, ShieldCheck, UserRound } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
-import { PageGrid, PageStack } from '@/components/ui/page'
+import { Button } from '@/components/base/button'
+import { ErrorState, SurfaceSkeleton } from '@/components/base/feedback'
+import { PageGrid, PageStack } from '@/components/base/page'
 import { getEmployee, getEmployeeFullName } from '@/lib/employees/api'
 
 function formatDate(value: string) {

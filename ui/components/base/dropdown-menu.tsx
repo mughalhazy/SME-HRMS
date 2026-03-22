@@ -1,8 +1,8 @@
 'use client'
 
 import * as React from 'react'
-import { Slot } from '@radix-ui/react-slot'
 
+import { Slot } from '@/components/base/slot'
 import { cn } from '@/lib/utils'
 
 type DropdownMenuContextValue = {
@@ -75,34 +75,39 @@ function DropdownMenuTrigger({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }) {
   const { open, setOpen, contentId, triggerRef } = useDropdownMenuContext()
-  const Comp = asChild ? Slot : 'button'
 
-  return (
-    <Comp
-      aria-controls={contentId}
-      aria-expanded={open}
-      aria-haspopup="menu"
-      className={className}
-      onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-        props.onClick?.(event)
-        if (!event.defaultPrevented) {
-          setOpen((current) => !current)
-        }
-      }}
-      onKeyDown={(event: React.KeyboardEvent<HTMLButtonElement>) => {
-        props.onKeyDown?.(event)
-        if (!event.defaultPrevented && (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ')) {
-          event.preventDefault()
-          setOpen(true)
-        }
-      }}
-      ref={triggerRef as React.Ref<HTMLButtonElement>}
-      type="button"
-      {...props}
-    >
-      {children}
-    </Comp>
-  )
+  const triggerProps = {
+    'aria-controls': contentId,
+    'aria-expanded': open,
+    'aria-haspopup': 'menu' as const,
+    className,
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      props.onClick?.(event)
+      if (!event.defaultPrevented) {
+        setOpen((current) => !current)
+      }
+    },
+    onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      props.onKeyDown?.(event)
+      if (!event.defaultPrevented && (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault()
+        setOpen(true)
+      }
+    },
+    ref: triggerRef as React.Ref<HTMLButtonElement>,
+    type: 'button' as const,
+    ...props,
+  }
+
+  if (asChild) {
+    if (!React.isValidElement(children)) {
+      return null
+    }
+
+    return <Slot {...triggerProps}>{children}</Slot>
+  }
+
+  return <button {...triggerProps}>{children}</button>
 }
 
 function DropdownMenuContent({

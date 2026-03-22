@@ -9,10 +9,10 @@ import {
   TrendingUp,
 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { KpiGrid, PageStack, StatCard } from '@/components/ui/page'
+import { Button } from '@/components/base/button'
+import { Card, CardContent } from '@/components/base/card'
+import { Badge } from '@/components/base/badge'
+import { KpiGrid, PageStack, StatCard } from '@/components/base/page'
 
 const metrics = [
   {

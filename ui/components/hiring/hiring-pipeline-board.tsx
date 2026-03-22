@@ -13,11 +13,11 @@ import {
   Users,
 } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/ui/feedback'
-import { Input, Select } from '@/components/ui/input'
-import { PageStack, pageIconChipClassName, pageSurfaceClassName } from '@/components/ui/page'
+import { Badge } from '@/components/base/badge'
+import { Button } from '@/components/base/button'
+import { EmptyState, ErrorState, SurfaceSkeleton } from '@/components/base/feedback'
+import { Input, Select } from '@/components/base/input'
+import { PageStack, pageIconChipClassName, pageSurfaceClassName } from '@/components/base/page'
 import { apiRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
