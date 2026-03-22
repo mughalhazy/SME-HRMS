@@ -15,6 +15,7 @@ from notification_service import NotificationService
 from persistent_store import PersistentKVStore
 from resilience import Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -406,7 +407,7 @@ class ProjectService:
                 comment=comment,
                 trace_id=trace,
             )
-            terminal_result = workflow.get('metadata', {}).get('terminal_result')
+            terminal_result = self._require_terminal_workflow_result(workflow, action=action, trace_id=trace)
             previous_allocation = assignment.allocation_percentage
             pending_allocation = assignment.metadata.pop('pending_allocation_percentage', None)
             change_type = assignment.metadata.pop('change_type', 'initial_assignment')
@@ -426,8 +427,6 @@ class ProjectService:
                 assignment.rejected_at = self._now()
                 event_name = 'ProjectAssignmentRejected'
                 ledger_action = 'assignment_rejected'
-            else:
-                raise self._error(409, 'WORKFLOW_BYPASS_DETECTED', 'workflow decision did not produce a valid assignment terminal result', trace)
             assignment.updated_at = self._now()
             self.assignments[assignment.assignment_id] = assignment
             self._record_allocation_ledger(
@@ -708,14 +707,27 @@ class ProjectService:
         return employee
 
     def _resolve_workflow(self, workflow_id: str, tenant_id: str, *, action: str, actor_id: str, actor_type: str, actor_role: str | None, comment: str | None, trace_id: str) -> dict[str, Any]:
-        try:
-            if action == 'approve':
-                return self.workflow_service.approve_step(workflow_id, tenant_id=tenant_id, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace_id)
-            if action == 'reject':
-                return self.workflow_service.reject_step(workflow_id, tenant_id=tenant_id, actor_id=actor_id, actor_type=actor_type, actor_role=actor_role, comment=comment, trace_id=trace_id)
-        except WorkflowServiceError as exc:
-            raise self._error(exc.status_code, exc.payload['error']['code'], exc.payload['error']['message'], trace_id, exc.payload['error'].get('details')) from exc
-        raise self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}])
+        return resolve_workflow_action(
+            workflow_service=self.workflow_service,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            action=action,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            actor_role=actor_role,
+            comment=comment,
+            trace_id=trace_id,
+            map_error=lambda exc: self._error(exc.status_code, exc.payload['error']['code'], exc.payload['error']['message'], trace_id, exc.payload['error'].get('details')),
+            invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
+        )
+
+    def _require_terminal_workflow_result(self, workflow: dict[str, Any], *, action: str, trace_id: str) -> str:
+        return require_terminal_workflow_result(
+            workflow,
+            action=action,
+            on_mismatch=lambda _actual, _expected: self._error(409, 'WORKFLOW_BYPASS_DETECTED', 'workflow decision did not produce a valid assignment terminal result', trace_id),
+            invalid_action=lambda _action: self._error(422, 'VALIDATION_ERROR', 'action must be approve or reject', trace_id, [{'field': 'action', 'reason': 'must be approve or reject'}]),
+        )
 
     def _paginate(self, items: list[dict[str, Any]], *, limit: int, cursor: str | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         page_limit = min(max(limit, 1), 100)

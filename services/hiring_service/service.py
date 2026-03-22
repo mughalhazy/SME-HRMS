@@ -14,6 +14,7 @@ from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, CircuitBreaker, CircuitBreakerOpenError, DeadLetterQueue, Observability, run_with_retry
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -1287,8 +1288,7 @@ class HiringService:
         if not offer.approval_workflow_id:
             self.submit_offer_for_approval(offer_id, patch)
         workflow = self._approve_workflow(offer.approval_workflow_id, tenant_id=offer.tenant_id, payload=patch, comment="Offer approved")
-        if workflow.get("metadata", {}).get("terminal_result") != "approved":
-            raise HiringValidationError("offer approval workflow did not complete")
+        self._require_terminal_workflow_result(workflow, action="approve", message="offer approval workflow did not complete")
         offer.status = "Approved"
         offer.approved_at = self._now()
         offer.updated_at = self._now()
@@ -1582,12 +1582,29 @@ class HiringService:
     def _approve_workflow(self, workflow_id: str | None, *, tenant_id: str, payload: dict[str, Any], comment: str) -> dict[str, Any]:
         if workflow_id is None:
             raise HiringValidationError("approval workflow is required")
-        try:
-            actor_role = payload.get("actor_role") or payload.get("approver_role") or "Admin"
-            actor_id = str(payload.get("changed_by") or payload.get("actor_id") or payload.get("approver_assignee") or f"role:{actor_role}")
-            return self.workflow_service.approve_step(workflow_id, tenant_id=tenant_id, actor_id=actor_id, actor_type=str(payload.get("actor_type") or "user"), actor_role=actor_role, comment=comment)
-        except WorkflowServiceError as exc:
-            raise HiringValidationError(exc.message) from exc
+        actor_role = payload.get("actor_role") or payload.get("approver_role") or "Admin"
+        actor_id = str(payload.get("changed_by") or payload.get("actor_id") or payload.get("approver_assignee") or f"role:{actor_role}")
+        return resolve_workflow_action(
+            workflow_service=self.workflow_service,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            action="approve",
+            actor_id=actor_id,
+            actor_type=str(payload.get("actor_type") or "user"),
+            actor_role=actor_role,
+            comment=comment,
+            map_error=lambda exc: HiringValidationError(exc.message),
+            invalid_action=lambda _action: HiringValidationError("action must be approve or reject"),
+        )
+
+    @staticmethod
+    def _require_terminal_workflow_result(workflow: dict[str, Any], *, action: str, message: str) -> str:
+        return require_terminal_workflow_result(
+            workflow,
+            action=action,
+            on_mismatch=lambda _actual, _expected: HiringValidationError(message),
+            invalid_action=lambda _action: HiringValidationError("action must be approve or reject"),
+        )
 
     def _normalize_hiring_plan(self, value: Any) -> dict[str, Any]:
         plan = dict(value or {})

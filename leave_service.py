@@ -17,6 +17,7 @@ from outbox_system import OutboxManager
 from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
+from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 
 
@@ -808,6 +809,29 @@ class LeaveService:
             "active_leave": active_leave,
         }
 
+    def _resolve_workflow(self, workflow_id: str, tenant_id: str, *, action: str, actor_id: str, actor_type: str, actor_role: str | None, comment: str | None, trace_id: str) -> dict[str, Any]:
+        return resolve_workflow_action(
+            workflow_service=self.workflow_service,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            action=action,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            actor_role=actor_role,
+            comment=comment,
+            trace_id=trace_id,
+            map_error=lambda exc: self._fail(exc.status_code, exc.code, exc.message, trace_id, exc.details),
+            invalid_action=lambda _action: self._fail(422, "VALIDATION_ERROR", "Action must be approve or reject", trace_id, [{"field": "action", "reason": "must be approve or reject"}]),
+        )
+
+    def _require_terminal_workflow_result(self, workflow: dict[str, Any], *, action: str, trace_id: str, mismatch_code: str, mismatch_message: str) -> str:
+        return require_terminal_workflow_result(
+            workflow,
+            action=action,
+            on_mismatch=lambda _actual, _expected: self._fail(409, mismatch_code, mismatch_message, trace_id),
+            invalid_action=lambda _action: self._fail(422, "VALIDATION_ERROR", "Action must be approve or reject", trace_id, [{"field": "action", "reason": "must be approve or reject"}]),
+        )
+
     def _response_payload(self, leave: LeaveRequest) -> dict:
         payload = leave.to_dict()
         payload["leave_balance"] = self._balance_snapshot(leave.employee_id, leave.leave_type)
@@ -1203,20 +1227,17 @@ class LeaveService:
             leave.updated_at = ts
 
             if not policy.requires_approval:
-                try:
-                    workflow = self.workflow_service.approve_step(
-                        leave.workflow_id,
-                        tenant_id=self.tenant_id,
-                        actor_id="system-auto-approver",
-                        actor_type="system",
-                        actor_role=None,
-                        comment="Auto-approved by leave policy engine",
-                        trace_id=trace,
-                    )
-                except WorkflowServiceError as exc:
-                    self._fail(exc.status_code, exc.code, exc.message, trace, exc.details)
-                if workflow.get('metadata', {}).get('terminal_result') != 'approved':
-                    self._fail(409, 'WORKFLOW_BYPASS_DETECTED', 'Leave workflow did not auto-complete as expected', trace)
+                workflow = self._resolve_workflow(
+                    leave.workflow_id,
+                    self.tenant_id,
+                    action="approve",
+                    actor_id="system-auto-approver",
+                    actor_type="system",
+                    actor_role=None,
+                    comment="Auto-approved by leave policy engine",
+                    trace_id=trace,
+                )
+                self._require_terminal_workflow_result(workflow, action="approve", trace_id=trace, mismatch_code='WORKFLOW_BYPASS_DETECTED', mismatch_message='Leave workflow did not auto-complete as expected')
                 self._consume_reserved_balance(leave, trace)
                 leave.status = LeaveStatus.APPROVED
                 leave.decision_at = ts
@@ -1283,33 +1304,19 @@ class LeaveService:
             if not leave.workflow_id:
                 self._fail(409, "WORKFLOW_MISSING", "Leave request is missing its centralized workflow", trace)
 
-            try:
-                workflow = (
-                    self.workflow_service.approve_step(
-                        leave.workflow_id,
-                        tenant_id=self.tenant_id,
-                        actor_id=actor_employee_id,
-                        actor_type="user",
-                        actor_role=actor_role,
-                        comment=reason,
-                        trace_id=trace,
-                    )
-                    if action == "approve"
-                    else self.workflow_service.reject_step(
-                        leave.workflow_id,
-                        tenant_id=self.tenant_id,
-                        actor_id=actor_employee_id,
-                        actor_type="user",
-                        actor_role=actor_role,
-                        comment=reason,
-                        trace_id=trace,
-                    )
-                )
-            except WorkflowServiceError as exc:
-                self._fail(exc.status_code, exc.code, exc.message, trace, exc.details)
+            workflow = self._resolve_workflow(
+                leave.workflow_id,
+                self.tenant_id,
+                action=action,
+                actor_id=actor_employee_id,
+                actor_type="user",
+                actor_role=actor_role,
+                comment=reason,
+                trace_id=trace,
+            )
 
             ts = self._now()
-            terminal_result = workflow.get("metadata", {}).get("terminal_result")
+            terminal_result = self._require_terminal_workflow_result(workflow, action=action, trace_id=trace, mismatch_code="WORKFLOW_BYPASS_DETECTED", mismatch_message="Leave workflow did not reach the expected decision")
             if action == "approve" and terminal_result == "approved":
                 self._consume_reserved_balance(leave, trace)
                 leave.status = LeaveStatus.APPROVED
