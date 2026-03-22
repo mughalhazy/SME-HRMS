@@ -8,6 +8,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 |---|---|---|
 | `employee-service` | Workforce master data and organizational structure | `/api/v1/employees`, `/api/v1/departments`, `/api/v1/roles`, `/api/v1/org/*` |
 | `performance-service` | Performance cycles, goals/OKRs, feedback, calibration, and PIP tracking | `/api/v1/performance/*` |
+| `engagement-service` | Employee engagement surveys, response capture, and aggregated sentiment results | `/api/v1/engagement/*` |
 | `attendance-service` | Attendance capture, validation, and period closure | `/api/v1/attendance` |
 | `leave-service` | Leave lifecycle and approval workflow | `/api/v1/leave` |
 | `travel-service` | Travel requests, itineraries, and approval-driven travel coordination | `/api/v1/travel` |
@@ -199,6 +200,53 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 ### Read models produced or enriched
 - consumes `employee_directory_view`, `organization_structure_view`, `candidate_pipeline_view`, `document_library_view`, and `payroll_summary_view`
 - produces `global_search_view`
+
+## engagement-service
+
+### Responsibilities
+- Manage employee engagement surveys and pulse campaigns without duplicating workforce master data.
+- Reuse `employee-service` read models for employee, manager, and department references plus target-population scoping.
+- Capture survey responses and publish aggregated results for people analytics consumers.
+
+### Owned entities
+- `Survey`
+- `SurveyQuestion`
+- `SurveyResponse`
+- `AggregatedSurveyResult`
+
+### Canonical APIs
+- `POST /api/v1/engagement/surveys`
+- `POST /api/v1/engagement/surveys/{survey_id}/publish`
+- `POST /api/v1/engagement/surveys/{survey_id}/close`
+- `GET /api/v1/engagement/surveys?status=`
+- `GET /api/v1/engagement/surveys/{survey_id}`
+- `POST /api/v1/engagement/responses`
+- `GET /api/v1/engagement/surveys/{survey_id}/responses`
+- `GET /api/v1/engagement/surveys/{survey_id}/aggregates`
+
+### Dependencies
+- `employee-service` for employee existence, department context, and target-population lookup.
+- `notification-service` for optional pulse reminders and survey launch communication.
+
+### Supported workflows
+- `engagement_feedback_collection`
+
+### Publishes
+- `EngagementSurveyCreated`
+- `EngagementSurveyPublished`
+- `EngagementSurveyClosed`
+- `EngagementSurveyResponseSubmitted`
+- `EngagementSurveyResultsAggregated`
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeUpdated`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `engagement_survey_view`
+- enriches people analytics and executive sentiment dashboards
+
 
 ## performance-service
 

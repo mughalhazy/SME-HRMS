@@ -8,6 +8,7 @@ This document defines the canonical backend domain for SME-HRMS and aligns entit
 |---|---|
 | `employee-service` | `Employee`, `Department`, `BusinessUnit`, `LegalEntity`, `Location`, `CostCenter`, `GradeBand`, `JobPosition`, `Role` |
 | `performance-service` | `ReviewCycle`, `Goal`, `Feedback`, `CalibrationSession`, `PipPlan` |
+| `engagement-service` | `Survey`, `SurveyQuestion`, `SurveyResponse`, `AggregatedSurveyResult` |
 | `attendance-service` | `AttendanceRecord` |
 | `leave-service` | `LeaveRequest` |
 | `payroll-service` | `PayrollRecord` |
@@ -365,6 +366,53 @@ Represents a performance improvement plan with explicit milestones, approval wor
 - `Completed`
 - `Cancelled`
 - `Rejected`
+
+## Survey
+
+### Owning service
+- `engagement-service`
+
+### Description
+Represents a tenant-scoped engagement survey or pulse campaign that targets all active employees or a specific department.
+
+### Attributes
+| Attribute | Type | Required | Notes |
+|---|---|---|---|
+| survey_id | UUID | Yes | Primary identifier. |
+| code | String | Yes | Unique survey code. |
+| title | String | Yes | Human-readable survey title. |
+| description | Text | No | Optional survey context. |
+| status | Enum | Yes | `Draft`, `Open`, `Closed`. |
+| owner_employee_id | UUID | Yes | Survey owner from `employee-service`. |
+| target_department_id | UUID | No | Optional department scoping boundary. |
+| published_at | DateTime | No | Survey launch timestamp. |
+| closed_at | DateTime | No | Survey close timestamp. |
+| created_at | DateTime | Yes | Creation timestamp. |
+| updated_at | DateTime | Yes | Last update timestamp. |
+
+## SurveyQuestion
+
+### Owning service
+- `engagement-service`
+
+### Description
+Represents an individual survey prompt mapped to one of the D1-D5 engagement dimensions and scored on a five-point Likert scale.
+
+## SurveyResponse
+
+### Owning service
+- `engagement-service`
+
+### Description
+Represents an employee response submission for a survey, including per-question scores and optional qualitative commentary.
+
+## AggregatedSurveyResult
+
+### Owning service
+- `engagement-service`
+
+### Description
+Represents the tenant-scoped aggregated outcome for a survey, including participation rate, score distributions, and D1-D5 rollups.
 
 ## AttendanceRecord
 

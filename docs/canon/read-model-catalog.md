@@ -75,7 +75,15 @@ This catalog defines query-optimized projections and validates each read model a
 - **Fields:** `review_cycle_id`, `goal_id`, `employee_id`, `employee_name`, `manager_employee_id`, `manager_name`, `department_id`, `department_name`, `goal_title`, `goal_status`, `progress_percent`, `feedback_count`, `calibration_status`, `final_rating`, `pip_id`, `pip_status`, `pip_completion_percent`, `updated_at`
 - **Primary consumers:** performance workspace, employee profile, executive dashboard
 
-## 9) `settings_configuration_view`
+## 9) `engagement_survey_view`
+- **Source services:** `engagement-service`, `employee-service`
+- **Source workflows:** `engagement_feedback_collection`
+- **Source entities:** `Survey`, `SurveyQuestion`, `SurveyResponse`, `AggregatedSurveyResult`, `Employee`, `Department`
+- **Key/grain:** one row per survey (`survey_id`)
+- **Fields:** `survey_id`, `code`, `title`, `status`, `owner_employee_id`, `owner_name`, `target_department_id`, `target_department_name`, `response_count`, `participant_count`, `target_population`, `participation_rate`, `overall_average_score`, `favorable_ratio`, `dimension_scores`, `generated_at`, `updated_at`
+- **Primary consumers:** engagement workspace, people analytics, executive dashboards
+
+## 10) `settings_configuration_view`
 - **Source services:** `settings-service`
 - **Source workflows:** `settings_administration`
 - **Source entities:** `AttendanceRule`, `LeavePolicy`, `PayrollSettings`
@@ -83,7 +91,7 @@ This catalog defines query-optimized projections and validates each read model a
 - **Fields:** `attendance_rules`, `leave_policies`, `payroll_settings`, `updated_at`
 - **Primary consumers:** settings workspace, administrative dashboards
 
-## 10) `access_control_view`
+## 11) `access_control_view`
 - **Source services:** `auth-service`, `employee-service`
 - **Source workflows:** `access_provisioning`
 - **Source entities:** `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Employee`, `Session`, `RefreshToken`
@@ -91,7 +99,7 @@ This catalog defines query-optimized projections and validates each read model a
 - **Fields:** `user_id`, `employee_id`, `employee_name`, `username`, `email`, `identity_provider`, `user_status`, `assigned_roles`, `effective_scopes`, `active_session_count`, `active_refresh_token_count`, `last_login_at`, `updated_at`
 - **Primary consumers:** settings, security administration
 
-## 11) `notification_delivery_view`
+## 12) `notification_delivery_view`
 - **Source services:** `notification-service`
 - **Source workflows:** `notification_dispatch`
 - **Source entities:** `NotificationMessage`, `DeliveryAttempt`, `NotificationTemplate`, `NotificationPreference`
@@ -106,7 +114,7 @@ This catalog defines query-optimized projections and validates each read model a
 - Every source entity listed above is defined in `docs/canon/domain-model.md`.
 
 
-## 12) `integration_delivery_view`
+## 13) `integration_delivery_view`
 - **Source services:** `integration-service`
 - **Source workflows:** outbound integration dispatch
 - **Source entities:** `WebhookEndpoint`, `WebhookDelivery`, `WebhookDeliveryAttempt`
