@@ -18,6 +18,7 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 | `integration-service` | Outbound webhooks, connector dispatch, delivery attempts, and replay operations | `/api/v1/integrations` |
 | `settings-service` | Administrative HR policy configuration and defaults | `/api/v1/settings` |
 | `search-service` | Cross-domain projection-backed search and indexing | `/api/v1/search` |
+| `project-service` | Project planning, staffing assignments, and resource allocation governance | `/api/v1/projects` |
 
 ## employee-service
 
@@ -90,6 +91,58 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 - `employee_reporting_view`
 - enriches `attendance_dashboard_view`, `leave_requests_view`, `payroll_summary_view`, `job_posting_directory_view`, and `candidate_pipeline_view`
 - produces `employee_compensation_view` and payroll-context projections consumed by `payroll-service`
+
+
+## project-service
+
+### Responsibilities
+- Manage project master data, staffing assignments, and allocation changes without duplicating payroll logic.
+- Reuse `employee-service` read models for employee, manager, and department references.
+- Route optional assignment/allocation approvals through the centralized workflow engine and publish audit-ready resource-allocation events.
+
+### Owned entities
+- `Project`
+- `ProjectAssignment`
+- `AllocationLedgerEntry`
+
+### Canonical APIs
+- `POST /api/v1/projects`
+- `PATCH /api/v1/projects/{project_id}/status`
+- `GET /api/v1/projects/{project_id}`
+- `GET /api/v1/projects?status=&manager_employee_id=&limit=&cursor=`
+- `POST /api/v1/projects/assignments`
+- `PATCH /api/v1/projects/assignments/{assignment_id}/allocation`
+- `POST /api/v1/projects/assignments/{assignment_id}/approve`
+- `POST /api/v1/projects/assignments/{assignment_id}/reject`
+- `POST /api/v1/projects/assignments/{assignment_id}/release`
+- `GET /api/v1/projects/assignments?project_id=&employee_id=&allocation_status=&limit=&cursor=`
+
+### Dependencies
+- `employee-service` for employee existence, department context, and reporting-line lookup.
+- `workflow-service` for optional assignment and allocation approvals.
+- `audit-service` for mutation logging.
+- `notification-service` for approval assignment and escalation notifications.
+
+### Supported workflows
+- `project_resource_allocation`
+
+### Publishes
+- `ProjectCreated`
+- `ProjectStatusChanged`
+- `ProjectAssignmentRequested`
+- `ProjectAssignmentAllocated`
+- `ProjectAssignmentRejected`
+- `ProjectAssignmentReleased`
+- `ProjectAllocationUpdated`
+
+### Subscribes
+- `EmployeeCreated`
+- `EmployeeUpdated`
+- `EmployeeStatusChanged`
+
+### Read models produced or enriched
+- `project_staffing_view`
+- `resource_allocation_view`
 
 
 ## search-service
