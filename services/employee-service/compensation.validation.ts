@@ -16,6 +16,7 @@ import {
   SALARY_REVISION_STATUSES,
   SalaryRevisionFilters,
   UpdateAllowanceInput,
+  WorkforcePlanScenarioInput,
   UpdateBenefitsEnrollmentInput,
   UpdateBenefitsPlanInput,
   UpdateCompensationBandInput,
@@ -91,6 +92,39 @@ function validateDateRange(details: Array<{ field: string; reason: string }>, fr
 function validateCurrency(details: Array<{ field: string; reason: string }>, field: string, value: unknown): void {
   if (value !== undefined && (typeof value !== 'string' || !/^[A-Z]{3}$/.test(value))) {
     details.push({ field, reason: 'must be a 3-letter ISO currency code' });
+  }
+}
+
+
+export function validateWorkforcePlanScenario(input: WorkforcePlanScenarioInput): void {
+  const details: Array<{ field: string; reason: string }> = [];
+  if (typeof input.effective_date !== 'string' || !isIsoDate(input.effective_date)) {
+    details.push({ field: 'effective_date', reason: 'must be an ISO date (YYYY-MM-DD)' });
+  }
+  if (input.forecast_months !== undefined && (!Number.isInteger(input.forecast_months) || input.forecast_months < 1 || input.forecast_months > 36)) {
+    details.push({ field: 'forecast_months', reason: 'must be an integer between 1 and 36 when provided' });
+  }
+  if (!Array.isArray(input.departments) || input.departments.length === 0) {
+    details.push({ field: 'departments', reason: 'must include at least one department plan' });
+  }
+
+  input.departments?.forEach((department, index) => {
+    requireString(details, `departments.${index}.department_id`, department?.department_id);
+    if (!Number.isInteger(department?.planned_headcount) || Number(department?.planned_headcount) < 0) {
+      details.push({ field: `departments.${index}.planned_headcount`, reason: 'must be an integer greater than or equal to 0' });
+    }
+    optionalString(details, `departments.${index}.compensation_band_id`, department?.compensation_band_id);
+    validateOptionalMoney(details, `departments.${index}.average_base_salary`, department?.average_base_salary);
+    validateOptionalMoney(details, `departments.${index}.average_allowances`, department?.average_allowances);
+    validateOptionalMoney(details, `departments.${index}.average_deductions`, department?.average_deductions);
+    validateOptionalMoney(details, `departments.${index}.average_employer_contributions`, department?.average_employer_contributions);
+    if (!department?.compensation_band_id && department?.average_base_salary === undefined) {
+      details.push({ field: `departments.${index}.average_base_salary`, reason: 'must be provided when compensation_band_id is omitted' });
+    }
+  });
+
+  if (details.length > 0) {
+    throw new ValidationError(details);
   }
 }
 

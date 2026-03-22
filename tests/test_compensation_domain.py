@@ -110,6 +110,31 @@ assert.equal(readModel.employee_name, 'Ava Cole');
 assert.equal(readModel.allowances_total, '250.00');
 assert.equal(readModel.benefit_deductions_total, '150.00');
 
+const forecast = service.forecastWorkforcePlan({
+  effective_date: '2026-02-01',
+  forecast_months: 6,
+  departments: [
+    {
+      department_id: 'dep-eng',
+      planned_headcount: 3,
+      compensation_band_id: band.compensation_band_id,
+      average_allowances: '100.00',
+      average_deductions: '50.00',
+      average_employer_contributions: '200.00',
+    },
+  ],
+});
+assert.equal(forecast.headcount_plan.current_headcount, 1);
+assert.equal(forecast.headcount_plan.planned_headcount, 3);
+assert.equal(forecast.headcount_plan.required_hires, 2);
+assert.equal(forecast.salary_forecast.monthly_base_salary, '21200.00');
+assert.equal(forecast.salary_forecast.monthly_allowances, '450.00');
+assert.equal(forecast.salary_forecast.monthly_employee_deductions, '250.00');
+assert.equal(forecast.salary_forecast.monthly_employer_contributions, '750.00');
+assert.equal(forecast.salary_forecast.monthly_payroll_cost, '22400.00');
+assert.equal(forecast.salary_forecast.forecast_payroll_cost, '134400.00');
+assert.equal(forecast.department_budgets[0].department_name, 'Engineering');
+
 assert.throws(() => service.createSalaryRevision({
   employee_id: employee.employee_id,
   compensation_band_id: band.compensation_band_id,
