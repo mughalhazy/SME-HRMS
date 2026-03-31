@@ -181,6 +181,9 @@ class HelpdeskApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(analytics['data']['prioritization']['High'], 1)
         self.assertEqual(analytics['data']['status_breakdown']['InProgress'], 1)
+        self.assertEqual(analytics['data']['sla_tracking']['first_response_tracked_tickets'], 1)
+        self.assertEqual(analytics['data']['escalation']['currently_breached_tickets'], 0)
+        self.assertEqual(analytics['data']['automation']['active_hooks'], 0)
 
     def test_helpdesk_automation_hooks_trigger_and_are_reportable(self) -> None:
         status, hook = post_helpdesk_automation_hook(

@@ -258,6 +258,58 @@ export class LearningController {
     }
   };
 
+  createLearningPath = (req: Request, res: Response): void => {
+    try {
+      const path = this.learningService.createLearningPath({ ...req.body, tenant_id: req.tenantId });
+      logAuditMutation({
+        logger: this.logger,
+        req,
+        tenantId: path.tenant_id,
+        action: 'learning_path_created',
+        entity: 'LearningPath',
+        entityId: path.learning_path_id,
+        before: {},
+        after: path,
+      });
+      res.status(201).json({ data: path });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
+  listLearningPaths = (req: Request, res: Response): void => {
+    try {
+      const items = this.learningService.listLearningPaths({
+        tenant_id: req.tenantId,
+        status: typeof req.query.status === 'string' ? req.query.status as never : undefined,
+      });
+      res.status(200).json({ data: items });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
+  getEmployeeCertifications = (req: Request, res: Response): void => {
+    try {
+      const auth = getAuth(req);
+      if (!this.ensureEmployeeScope(req, res, auth, req.params.employeeId)) {
+        return;
+      }
+      res.status(200).json({ data: this.learningService.listEmployeeCertifications(req.params.employeeId) });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
+  getLearningAnalytics = (req: Request, res: Response): void => {
+    try {
+      getAuth(req);
+      res.status(200).json({ data: this.learningService.getLearningAnalytics() });
+    } catch (error) {
+      this.handleError(req, res, error);
+    }
+  };
+
   private handleError(req: Request, res: Response, error: unknown): void {
     if (error instanceof ValidationError) {
       sendError(req, res, 422, 'VALIDATION_ERROR', 'One or more fields are invalid.', error.details);
