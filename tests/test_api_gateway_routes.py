@@ -55,6 +55,20 @@ class ApiGatewayRouteTests(unittest.TestCase):
         with self.assertRaises(api_gateway_routes.RouteNotFoundError):
             api_gateway_routes.resolve_route("/api/v1/unknown")
 
+    def test_translate_public_paths_to_internal_upstream_paths(self) -> None:
+        cases = {
+            "/api/v1/settings": "/settings",
+            "/api/v1/attendance/records": "/attendance/records",
+            "/api/v1/helpdesk/tickets": "/helpdesk/tickets",
+            "/api/v1/project": "/projects",
+            "/api/v1/workflow/inbox": "/workflows/inbox",
+        }
+        for public_path, expected_upstream in cases.items():
+            with self.subTest(path=public_path):
+                route = api_gateway_routes.resolve_route(public_path)
+                translated = api_gateway_routes.translate_to_upstream_path(route, public_path)
+                self.assertEqual(translated, expected_upstream)
+
 
 if __name__ == "__main__":
     unittest.main()
