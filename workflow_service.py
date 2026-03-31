@@ -7,7 +7,7 @@ from threading import RLock
 from typing import Any
 from uuid import uuid4
 
-from event_contract import EventRegistry, emit_canonical_event
+from event_contract import EventContractError, EventRegistry, emit_canonical_event, ensure_event_contract
 from notification_service import NotificationService, NotificationServiceError
 from resilience import Observability
 from tenant_support import DEFAULT_TENANT_ID, assert_tenant_access, normalize_tenant_id
@@ -133,6 +133,58 @@ class WorkflowService:
         self.observability = Observability("workflow-service")
         self.event_registry = EventRegistry()
         self._lock = RLock()
+        self._event_workflow_bindings: dict[str, dict[str, Any]] = {
+            "helpdesk.ticket.submitted": {
+                "definition_code": "helpdesk_event_triage",
+                "source_service": "helpdesk-service",
+                "subject_type": "HelpdeskTicket",
+                "subject_id_field": "ticket_id",
+                "context_fields": ("requester_employee_id", "priority", "category_code"),
+                "default_steps": [
+                    {"name": "triage", "type": "approval", "assignee_template": "{requester_employee_id}", "sla": "PT8H"},
+                ],
+            },
+            "engagement.survey.published": {
+                "definition_code": "engagement_feedback_review",
+                "source_service": "engagement-service",
+                "subject_type": "Survey",
+                "subject_id_field": "survey_id",
+                "context_fields": ("owner_employee_id", "target_department_id"),
+                "default_steps": [
+                    {"name": "review", "type": "approval", "assignee_template": "{owner_employee_id}", "sla": "PT168H"},
+                ],
+            },
+            "learning.enrollment.created": {
+                "definition_code": "learning_enrollment_governance",
+                "source_service": "employee-service",
+                "subject_type": "LearningEnrollment",
+                "subject_id_field": "enrollment_id",
+                "context_fields": ("employee_id", "course_id"),
+                "default_steps": [
+                    {"name": "monitor", "type": "approval", "assignee_template": "{employee_id}", "sla": "PT336H"},
+                ],
+            },
+            "workforce_intelligence.report_run.generated": {
+                "definition_code": "workforce_intelligence_publication",
+                "source_service": "reporting-analytics",
+                "subject_type": "WorkforceReportRun",
+                "subject_id_field": "report_run_id",
+                "context_fields": ("report_id", "report_type"),
+                "default_steps": [
+                    {"name": "publish", "type": "approval", "assignee": "role:HRAdmin", "sla": "PT24H"},
+                ],
+            },
+            "cost_planning.plan.submitted": {
+                "definition_code": "cost_planning_change_control",
+                "source_service": "cost-planning-service",
+                "subject_type": "CostPlan",
+                "subject_id_field": "plan_id",
+                "context_fields": ("owner_employee_id", "fiscal_period"),
+                "default_steps": [
+                    {"name": "finance_approval", "type": "approval", "assignee": "role:Finance", "sla": "PT72H"},
+                ],
+            },
+        }
 
     @staticmethod
     def _now() -> datetime:
@@ -279,6 +331,40 @@ class WorkflowService:
                         )
         rows.sort(key=lambda item: (item["step"]["metadata"].get("deadline_at"), item["created_at"], item["workflow_id"]))
         return {"data": rows}
+
+    def consume_event(self, event: dict[str, Any], *, trace_id: str | None = None) -> dict[str, Any]:
+        trace = self._trace(trace_id)
+        try:
+            payload, duplicate = ensure_event_contract(event, source=str(event.get("source") or "workflow-service"), registry=self.event_registry)
+        except EventContractError as exc:
+            if str(exc) == "missing_tenant_context":
+                raise WorkflowServiceError(422, "VALIDATION_ERROR", "tenant_id is required")
+            raise WorkflowServiceError(422, "VALIDATION_ERROR", f"event contract validation failed: {exc}")
+
+        event_type = str(payload["event_type"])
+        binding = self._event_workflow_bindings.get(event_type)
+        if duplicate or binding is None:
+            return {"duplicate": duplicate, "triggered": False, "event_type": event_type}
+
+        tenant = normalize_tenant_id(payload["tenant_id"])
+        data = dict(payload.get("data") or {})
+        subject_id_field = str(binding["subject_id_field"])
+        subject_id = str(data.get(subject_id_field) or payload["event_id"])
+        context = {field: data.get(field) for field in binding.get("context_fields", ())}
+        self._ensure_event_definition(tenant_id=tenant, binding=binding)
+        workflow = self.start_workflow(
+            tenant_id=tenant,
+            definition_code=str(binding["definition_code"]),
+            source_service=str(binding["source_service"]),
+            subject_type=str(binding["subject_type"]),
+            subject_id=subject_id,
+            actor_id="event-bus",
+            actor_type="service",
+            context=context,
+            trace_id=trace,
+        )
+        self._emit_workflow_event("WorkflowEventConsumed", self._require_instance(workflow["workflow_id"]), trace, {"event_type": event_type, "source_event_id": payload["event_id"]})
+        return {"duplicate": False, "triggered": True, "event_type": event_type, "workflow_id": workflow["workflow_id"]}
 
     def approve_step(
         self,
@@ -676,6 +762,19 @@ class WorkflowService:
             registry=self.event_registry,
             correlation_id=trace_id,
             idempotency_key=f"{instance.workflow_id}:{event_name}:{payload.get('step_id', 'workflow')}",
+        )
+
+    def _ensure_event_definition(self, *, tenant_id: str, binding: dict[str, Any]) -> None:
+        code = str(binding["definition_code"])
+        if (tenant_id, code) in self.definitions or (DEFAULT_TENANT_ID, code) in self.definitions:
+            return
+        self.register_definition(
+            tenant_id=tenant_id,
+            code=code,
+            source_service=str(binding["source_service"]),
+            subject_type=str(binding["subject_type"]),
+            description=f"Auto-registered workflow for {code} event-driven orchestration.",
+            steps=list(binding.get("default_steps") or [{"type": "approval", "assignee": "role:admin", "sla": "PT24H"}]),
         )
 
     def _notify_assignment(self, instance: WorkflowInstance, trace_id: str, *, target_steps: list[dict[str, Any]] | None = None, event_name: str = "WorkflowTaskAssigned") -> None:

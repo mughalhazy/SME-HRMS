@@ -9,7 +9,7 @@ from threading import RLock
 from typing import Any, Iterable
 from uuid import uuid4
 
-from event_contract import EventContractError, EventRegistry, ensure_event_contract
+from event_contract import EventContractError, EventRegistry, emit_canonical_event, ensure_event_contract
 from persistent_store import PersistentKVStore
 from tenant_support import normalize_tenant_id
 
@@ -127,6 +127,7 @@ class ReportingAnalyticsService:
         self.read_models = PersistentKVStore[str, dict[str, Any]](service='reporting-analytics', namespace='read_models', db_path=db_path)
         self.projection_state = PersistentKVStore[str, dict[str, Any]](service='reporting-analytics', namespace='projection_state', db_path=db_path)
         self.event_registry = EventRegistry()
+        self.events: list[dict[str, Any]] = []
         self._lock = RLock()
 
     @staticmethod
@@ -252,6 +253,14 @@ class ReportingAnalyticsService:
                     del self.aggregate_snapshots[aggregate_id]
             for snapshot in snapshots:
                 self.aggregate_snapshots[snapshot.aggregate_id] = snapshot
+            self._emit(
+                "WorkforceIntelligenceProjectionRebuilt",
+                {
+                    "aggregate_count": len(snapshots),
+                    "processed_event_count": len(self.processed_events),
+                },
+                aggregate_id=self.tenant_id,
+            )
             return {'aggregate_count': len(snapshots), 'updated_at': self._now()}
 
     def _build_hiring_pipeline_snapshots(self, candidate_rows: list[dict[str, Any]]) -> list[AggregateSnapshot]:
@@ -743,6 +752,7 @@ class ReportingAnalyticsService:
             updated_at=self._now(),
         )
         self.report_definitions[report.report_id] = report
+        self._emit("WorkforceIntelligenceReportDefined", {"report_id": report.report_id, "report_type": report.report_type, "name": report.name}, aggregate_id=report.report_id)
         return report.to_dict()
 
     def get_report_definition(self, report_id: str) -> dict[str, Any]:
@@ -780,6 +790,17 @@ class ReportingAnalyticsService:
             trace_id=trace_id or uuid4().hex,
         )
         self.report_runs[run.report_run_id] = run
+        self._emit(
+            "WorkforceIntelligenceReportRunGenerated",
+            {
+                "report_run_id": run.report_run_id,
+                "report_id": run.report_id,
+                "report_type": run.report_type,
+                "row_count": len(run.rows),
+                "trace_id": run.trace_id,
+            },
+            aggregate_id=run.report_run_id,
+        )
         return run.to_dict()
 
     def list_report_runs(self, *, report_id: str | None = None) -> list[dict[str, Any]]:
@@ -883,7 +904,29 @@ class ReportingAnalyticsService:
             updated_at=self._now(),
         )
         self.schedules[schedule.schedule_id] = schedule
+        self._emit(
+            "WorkforceIntelligenceScheduleCreated",
+            {
+                "schedule_id": schedule.schedule_id,
+                "report_id": schedule.report_id,
+                "cadence": schedule.cadence,
+                "export_format": schedule.export_format,
+                "next_run_at": schedule.next_run_at,
+            },
+            aggregate_id=schedule.schedule_id,
+        )
         return schedule.to_dict()
+
+    def _emit(self, legacy_event_name: str, data: dict[str, Any], *, aggregate_id: str) -> None:
+        emit_canonical_event(
+            self.events,
+            legacy_event_name=legacy_event_name,
+            data=data,
+            source="reporting-analytics",
+            tenant_id=self.tenant_id,
+            registry=self.event_registry,
+            idempotency_key=f"{legacy_event_name}:{aggregate_id}:{self._now()}",
+        )
 
     def list_schedules(self, *, active_only: bool = False) -> list[dict[str, Any]]:
         rows = [schedule.to_dict() for schedule in self.schedules.values() if schedule.tenant_id == self.tenant_id]
