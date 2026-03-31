@@ -481,6 +481,31 @@ class HelpdeskService:
         rows.sort(key=lambda item: (item['created_at'], item['ticket_id']))
         return 200, {'items': rows, 'data': rows, '_pagination': {'count': len(rows)}}
 
+    def get_analytics(self, *, tenant_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        tenant = normalize_tenant_id(tenant_id)
+        rows = [ticket for ticket in self.tickets.values() if ticket.tenant_id == tenant]
+        by_priority = {priority: 0 for priority in sorted(self.PRIORITIES)}
+        by_status = {status: 0 for status in sorted(self.TICKET_STATUSES)}
+        open_sla_breaches = 0
+        for ticket in rows:
+            by_priority[ticket.priority] = by_priority.get(ticket.priority, 0) + 1
+            by_status[ticket.status] = by_status.get(ticket.status, 0) + 1
+            if ticket.status in {'Open', 'InProgress'} and ticket.metadata.get('last_sla_status') == 'escalated':
+                open_sla_breaches += 1
+        return 200, {
+            'tenant_id': tenant,
+            'generated_at': self._now().isoformat(),
+            'metrics': {
+                'total_tickets': len(rows),
+                'open_tickets': by_status.get('Open', 0) + by_status.get('InProgress', 0),
+                'resolved_tickets': by_status.get('Resolved', 0),
+                'closed_tickets': by_status.get('Closed', 0),
+                'open_sla_breaches': open_sla_breaches,
+            },
+            'prioritization': by_priority,
+            'status_breakdown': by_status,
+        }
+
     def _seed_defaults(self) -> None:
         if self.employee_snapshots.values():
             return

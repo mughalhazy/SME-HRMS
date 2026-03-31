@@ -101,3 +101,9 @@ def get_helpdesk_tickets(service: HelpdeskService, actor_role: str, actor_id: st
     )
     payload['_pagination'] = pagination_payload(count=len(payload['items']))
     return status, payload
+
+
+@with_error_handling
+def get_helpdesk_analytics(service: HelpdeskService, actor_role: str, actor_id: str, query: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    return service.get_analytics(tenant_id=params.get('tenant_id'))

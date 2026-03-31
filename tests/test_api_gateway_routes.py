@@ -15,7 +15,7 @@ SPEC.loader.exec_module(api_gateway_routes)
 class ApiGatewayRouteTests(unittest.TestCase):
     def test_gateway_exposes_expected_route_groups(self) -> None:
         names = [route.name for route in api_gateway_routes.iter_routes()]
-        self.assertEqual(names, ["employees", "departments", "performance", "attendance", "leave", "travel", "payroll", "hiring", "auth", "workflows", "audit", "notifications", "integrations", "automations", "jobs"])
+        self.assertEqual(names, ["employees", "departments", "performance", "attendance", "leave", "travel", "payroll", "hiring", "auth", "workflows", "audit", "notifications", "engagement", "helpdesk", "reporting", "search", "expense", "integrations", "automations", "jobs"])
 
     def test_resolve_each_route_prefix(self) -> None:
         cases = {
@@ -28,6 +28,11 @@ class ApiGatewayRouteTests(unittest.TestCase):
             "/api/v1/payroll/run": "payroll-service",
             "/api/v1/hiring/candidates": "hiring-service",
             "/api/v1/audit/records": "audit-service",
+            "/api/v1/engagement/surveys": "engagement-service",
+            "/api/v1/helpdesk/tickets": "helpdesk-service",
+            "/api/v1/reporting/aggregates": "reporting-analytics-service",
+            "/api/v1/search/query": "search-service",
+            "/api/v1/expense/claims": "expense-service",
             "/api/v1/automations/rules": "automation-service",
         }
         for path, expected in cases.items():

@@ -182,6 +182,132 @@ services:
       timeout: 5s
       retries: 5
 
+  audit-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: audit-service
+      PORT: 8008
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  workflow-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: workflow-service
+      PORT: 8009
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  engagement-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: engagement-service
+      PORT: 8011
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  helpdesk-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: helpdesk-service
+      PORT: 8012
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  reporting-analytics-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: reporting-analytics-service
+      PORT: 8013
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  search-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: search-service
+      PORT: 8014
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  expense-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: expense-service
+      PORT: 8015
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  integration-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: integration-service
+      PORT: 8016
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  automation-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.services
+    environment:
+      SERVICE_NAME: automation-service
+      PORT: 8017
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
   api-gateway:
     build:
       context: .
@@ -197,6 +323,15 @@ services:
       HIRING_SERVICE_URL: http://hiring-service:8005
       AUTH_SERVICE_URL: http://auth-service:8006
       NOTIFICATION_SERVICE_URL: http://notification-service:8007
+      AUDIT_SERVICE_URL: http://audit-service:8008
+      WORKFLOW_SERVICE_URL: http://workflow-service:8009
+      ENGAGEMENT_SERVICE_URL: http://engagement-service:8011
+      HELPDESK_SERVICE_URL: http://helpdesk-service:8012
+      REPORTING_ANALYTICS_SERVICE_URL: http://reporting-analytics-service:8013
+      SEARCH_SERVICE_URL: http://search-service:8014
+      EXPENSE_SERVICE_URL: http://expense-service:8015
+      INTEGRATION_SERVICE_URL: http://integration-service:8016
+      AUTOMATION_SERVICE_URL: http://automation-service:8017
     depends_on:
       employee-service:
         condition: service_healthy
@@ -212,6 +347,24 @@ services:
         condition: service_healthy
       notification-service:
         condition: service_healthy
+      audit-service:
+        condition: service_started
+      workflow-service:
+        condition: service_started
+      engagement-service:
+        condition: service_started
+      helpdesk-service:
+        condition: service_started
+      reporting-analytics-service:
+        condition: service_started
+      search-service:
+        condition: service_started
+      expense-service:
+        condition: service_started
+      integration-service:
+        condition: service_started
+      automation-service:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 15s

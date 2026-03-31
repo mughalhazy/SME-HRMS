@@ -1,6 +1,7 @@
 import unittest
 
 from helpdesk_api import (
+    get_helpdesk_analytics,
     get_helpdesk_ticket,
     get_helpdesk_tickets,
     post_helpdesk_ticket_close,
@@ -146,6 +147,37 @@ class HelpdeskApiTests(unittest.TestCase):
         self.assertEqual(len(listing['data']['items']), 1)
         self.assertEqual(listing['meta']['pagination']['count'], 1)
         self.assertEqual(listing['meta']['service'], 'helpdesk-service')
+
+    def test_helpdesk_analytics_returns_priority_and_status_breakdown(self) -> None:
+        status, created = post_helpdesk_tickets(
+            self.service,
+            'Employee',
+            'emp-001',
+            {
+                'tenant_id': 'tenant-default',
+                'requester_employee_id': 'emp-001',
+                'subject': 'Badge access issue',
+                'category_code': 'ACCESS',
+                'description': 'Access stopped after office move.',
+                'priority': 'High',
+            },
+            trace_id='trace-helpdesk-api-analytics-create',
+        )
+        self.assertEqual(status, 201)
+        ticket_id = created['data']['ticket_id']
+        post_helpdesk_ticket_submit(self.service, 'Employee', 'emp-001', ticket_id, {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-analytics-submit')
+        post_helpdesk_ticket_decision(self.service, 'approve', 'Helpdesk', 'helpdesk-agent', ticket_id, {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-analytics-progress')
+
+        status, analytics = get_helpdesk_analytics(
+            self.service,
+            'Helpdesk',
+            'helpdesk-agent',
+            {'tenant_id': 'tenant-default'},
+            trace_id='trace-helpdesk-api-analytics-read',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(analytics['data']['prioritization']['High'], 1)
+        self.assertEqual(analytics['data']['status_breakdown']['InProgress'], 1)
 
 
 if __name__ == '__main__':
