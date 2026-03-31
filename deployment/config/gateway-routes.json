@@ -6,18 +6,21 @@
     "performance": "http://performance-service:8010",
     "attendance": "http://attendance-service:8002",
     "leave": "http://leave-service:8003",
+    "travel": "http://travel-service:8018",
+    "project": "http://project-service:8019",
     "payroll": "http://payroll-service:8004",
     "hiring": "http://hiring-service:8005",
     "auth": "http://auth-service:8006",
     "workflows": "http://workflow-service:8009",
-    "notifications": "http://notification-service:8007"
-    ,"engagement": "http://engagement-service:8011"
-    ,"helpdesk": "http://helpdesk-service:8012"
-    ,"reporting": "http://reporting-analytics-service:8013"
-    ,"search": "http://search-service:8014"
-    ,"expense": "http://expense-service:8015"
-    ,"integrations": "http://integration-service:8016"
-    ,"automations": "http://automation-service:8017"
-    ,"audit": "http://audit-service:8008"
+    "audit": "http://audit-service:8008",
+    "notifications": "http://notification-service:8007",
+    "engagement": "http://engagement-service:8011",
+    "helpdesk": "http://helpdesk-service:8012",
+    "reporting": "http://reporting-analytics-service:8013",
+    "search": "http://search-service:8014",
+    "expense": "http://expense-service:8015",
+    "integrations": "http://integration-service:8016",
+    "automations": "http://automation-service:8017",
+    "jobs": "http://api-gateway:8000"
   }
 }

@@ -28,6 +28,7 @@ ROUTES: tuple[Route, ...] = (
     Route(name="attendance", path_prefix="/attendance", upstream_service="attendance-service"),
     Route(name="leave", path_prefix="/leave", upstream_service="leave-service"),
     Route(name="travel", path_prefix="/travel", upstream_service="travel-service"),
+    Route(name="project", path_prefix="/projects", upstream_service="project-service"),
     Route(name="payroll", path_prefix="/payroll", upstream_service="payroll-service"),
     Route(name="hiring", path_prefix="/hiring", upstream_service="hiring-service"),
     Route(name="auth", path_prefix="/auth", upstream_service="auth-service"),
