@@ -195,6 +195,25 @@ def build_service_runtime(service_name: str) -> tuple[list[Route], dict[str, Any
         service = AutomationService()
         register("POST", "/automations/rules", lambda p, q, b, h: post_rule(service, b))
         register("GET", "/automations/rules", lambda p, q, b, h: get_rules(service, q))
+    elif service_name == "settings-service":
+        settings_state: dict[str, Any] = {
+            "tenant_id": os.getenv("DEFAULT_TENANT_ID", "tenant-default"),
+            "attendance_policy": {"workdays": ["MON", "TUE", "WED", "THU", "FRI"], "timezone": "UTC"},
+            "leave_policy": {"annual_days": 20, "carry_forward_limit_days": 5},
+            "payroll": {"currency": "USD", "pay_schedule": "monthly", "pay_day": 30},
+        }
+
+        def get_settings(_: dict[str, str], __: dict[str, Any], ___: dict[str, Any], ____: dict[str, str]) -> tuple[int, dict[str, Any]]:
+            return 200, success_payload({"settings": settings_state}, OBSERVABILITY.trace_id(None))
+
+        def put_settings(_: dict[str, str], __: dict[str, Any], body: dict[str, Any], ___: dict[str, str]) -> tuple[int, dict[str, Any]]:
+            if not isinstance(body, dict):
+                return 400, error_payload("INVALID_PAYLOAD", "Expected JSON object body", OBSERVABILITY.trace_id(None))
+            settings_state.update(body)
+            return 200, success_payload({"settings": settings_state}, OBSERVABILITY.trace_id(None))
+
+        register("GET", "/settings", get_settings)
+        register("PUT", "/settings", put_settings)
     elif service_name == "project-service":
         from project_service import ProjectService
 

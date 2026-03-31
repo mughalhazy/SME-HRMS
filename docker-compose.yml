@@ -287,6 +287,19 @@ services:
       timeout: 5s
       retries: 5
 
+  settings-service:
+    <<: *service-base
+    environment:
+      SERVICE_NAME: settings-service
+      PORT: 8020
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+      DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID:-tenant-default}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8020/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   api-gateway:
     build:
       context: .
@@ -315,6 +328,7 @@ services:
       AUTOMATION_SERVICE_URL: http://automation-service:8017
       TRAVEL_SERVICE_URL: http://travel-service:8018
       PROJECT_SERVICE_URL: http://project-service:8019
+      SETTINGS_SERVICE_URL: http://settings-service:8020
     depends_on:
       employee-service:
         condition: service_healthy
@@ -353,6 +367,8 @@ services:
       travel-service:
         condition: service_healthy
       project-service:
+        condition: service_healthy
+      settings-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]

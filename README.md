@@ -26,6 +26,7 @@ This repository includes a deterministic deployment layer aligned to canonical s
 - automation-service (8017)
 - travel-service (8018)
 - project-service (8019)
+- settings-service (8020)
 - api-gateway (8000)
 - frontend-ui (3000)
 
@@ -54,6 +55,7 @@ docker compose up -d --build
 ```bash
 curl http://localhost:8000/ready
 curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/settings
 curl http://localhost:3000/
 ```
 
