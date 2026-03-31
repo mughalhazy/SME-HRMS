@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AUDIT_SERVICE = (ROOT / 'audit_service' / 'service.py').read_text()
-MIGRATION = (ROOT / 'deployment' / 'migrations' / '005_audit_service.sql').read_text()
+MIGRATION = (ROOT / 'deployment' / 'migrations' / '009_audit_service.sql').read_text()
 ATTENDANCE = (ROOT / 'attendance_service' / 'service.py').read_text()
 LEAVE = (ROOT / 'leave_service.py').read_text()
 PAYROLL = (ROOT / 'payroll_service.py').read_text()

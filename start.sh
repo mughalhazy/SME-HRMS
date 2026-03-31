@@ -3,9 +3,21 @@ set -eu
 
 if [ -n "${DATABASE_URL:-}" ]; then
   echo "Running database migrations..."
-  psql "$DATABASE_URL" -f /app/migrations/postgres-init.sql
-  psql "$DATABASE_URL" -f /app/migrations/001_core_schema.sql
-  psql "$DATABASE_URL" -f /app/migrations/002_workflow_schema.sql
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /app/migrations/postgres-init.sql
+
+  migration_files=$(find /app/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.sql' | sort -V)
+  migration_prefixes=$(printf '%s\n' "$migration_files" | sed -E 's|^.*/([0-9]{3})_.*$|\1|' | sort)
+  duplicate_prefixes=$(printf '%s\n' "$migration_prefixes" | uniq -d)
+  if [ -n "$duplicate_prefixes" ]; then
+    echo "Duplicate migration prefixes detected: $duplicate_prefixes"
+    exit 1
+  fi
+
+  printf '%s\n' "$migration_files" | while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+  done
+
   echo "Migrations complete."
 else
   echo "DATABASE_URL not set, skipping migrations."

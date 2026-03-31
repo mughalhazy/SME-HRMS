@@ -4,8 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-TENANT_MIGRATION = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
-AUDIT_MIGRATION = (ROOT / 'deployment' / 'migrations' / '005_audit_service.sql').read_text()
+TENANT_MIGRATION = (ROOT / 'deployment' / 'migrations' / '005_tenant_foundation.sql').read_text()
+AUDIT_MIGRATION = (ROOT / 'deployment' / 'migrations' / '009_audit_service.sql').read_text()
 SECURITY_MODEL = (ROOT / 'docs' / 'canon' / 'security-model.md').read_text()
 TENANT_SUPPORT = (ROOT / 'tenant_support.py').read_text()
 AUDIT_SERVICE = (ROOT / 'audit_service' / 'service.py').read_text()

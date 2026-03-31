@@ -6,11 +6,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_text()
 WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
-PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_normalization.sql').read_text()
-TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
-NOTIFICATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_notification_service.sql').read_text()
-EVENT_OUTBOX_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_event_outbox.sql').read_text()
-ADDON_DOMAIN_SCHEMA = (ROOT / 'deployment' / 'migrations' / '007_addon_domains.sql').read_text()
+PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_persistence_normalization.sql').read_text()
+TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_tenant_foundation.sql').read_text()
+NOTIFICATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '006_notification_service.sql').read_text()
+EVENT_OUTBOX_SCHEMA = (ROOT / 'deployment' / 'migrations' / '007_event_outbox.sql').read_text()
+ADDON_DOMAIN_SCHEMA = (ROOT / 'deployment' / 'migrations' / '011_addon_domains.sql').read_text()
 RUN_MIGRATIONS_SCRIPT = (ROOT / 'deployment' / 'scripts' / 'run-migrations.sh').read_text()
 FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{NOTIFICATION_SCHEMA}\n{EVENT_OUTBOX_SCHEMA}"
 
@@ -179,4 +179,5 @@ def test_addon_domain_schema_covers_helpdesk_workforce_intelligence_learning_and
 
 
 def test_run_migrations_script_applies_deterministic_sorted_order() -> None:
-    assert 'ls -1 /migrations/*.sql | sort' in RUN_MIGRATIONS_SCRIPT
+    assert "find \"$MIGRATIONS_DIR\" -maxdepth 1 -type f -name '*.sql' | sort -V" in RUN_MIGRATIONS_SCRIPT
+    assert 'Duplicate migration prefixes detected' in RUN_MIGRATIONS_SCRIPT

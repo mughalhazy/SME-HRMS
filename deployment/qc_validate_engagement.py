@@ -12,7 +12,7 @@ DOMAIN = (ROOT / 'docs/canon/domain-model.md').read_text()
 DATA = (ROOT / 'docs/canon/data-architecture.md').read_text()
 READ_MODELS = (ROOT / 'docs/canon/read-model-catalog.md').read_text()
 EVENT_CATALOG = (ROOT / 'docs/canon/event-catalog.md').read_text()
-MIGRATION = (ROOT / 'deployment/migrations/006_engagement_service.sql').read_text()
+MIGRATION = (ROOT / 'deployment/migrations/010_engagement_service.sql').read_text()
 TESTS = (ROOT / 'tests/test_engagement_service.py').read_text()
 
 checks: list[tuple[str, bool]] = [
