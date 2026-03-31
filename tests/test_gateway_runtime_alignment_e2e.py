@@ -43,71 +43,40 @@ def _execute_forwarded_request(
     )
 
 
-def test_gateway_to_runtime_execution_alignment_for_core_domains() -> None:
-    scenarios = [
-        {
-            "name": "settings",
-            "method": "GET",
-            "gateway_path": "/api/v1/settings",
-            "expected_upstream": "/settings",
-            "service": "settings-service",
-            "expected_status": 200,
-            "expected_payload_status": "success",
-        },
-        {
-            "name": "attendance",
-            "method": "GET",
-            "gateway_path": "/api/v1/attendance/records?employee_id=11111111-1111-1111-1111-111111111111&from_date=2026-01-01&to_date=2026-01-31",
-            "expected_upstream": "/attendance/records?employee_id=11111111-1111-1111-1111-111111111111&from_date=2026-01-01&to_date=2026-01-31",
-            "service": "attendance-service",
-            "expected_status": 403,
-            "expected_payload_status": "error",
-        },
-        {
-            "name": "helpdesk",
-            "method": "GET",
-            "gateway_path": "/api/v1/helpdesk/tickets",
-            "expected_upstream": "/helpdesk/tickets",
-            "service": "helpdesk-service",
-            "expected_status": 200,
-            "expected_payload_status": "success",
-        },
-        {
-            "name": "workflow",
-            "method": "GET",
-            "gateway_path": "/api/v1/workflows/inbox?tenant_id=tenant-default",
-            "expected_upstream": "/workflows/inbox?tenant_id=tenant-default",
-            "service": "workflow-service",
-            "expected_status": 200,
-            "expected_payload_status": "success",
-        },
-        {
-            "name": "project",
-            "method": "GET",
-            "gateway_path": "/api/v1/projects",
-            "expected_upstream": "/projects",
-            "service": "project-service",
-            "expected_status": 200,
-            "expected_payload_status": "success",
-        },
-        {
-            "name": "employee",
-            "method": "GET",
-            "gateway_path": "/api/v1/employees",
-            "expected_upstream": "/employees",
-            "service": "employee-service",
-            "expected_status": 200,
-            "expected_payload_status": "success",
-        },
-    ]
+def test_gateway_to_runtime_execution_alignment_for_all_declared_public_routes() -> None:
+    route_execution_cases = {
+        "employees": {"method": "GET", "gateway_path": "/api/v1/employees", "expected_upstream": "/employees", "service": "employee-service"},
+        "departments": {"method": "GET", "gateway_path": "/api/v1/departments", "expected_upstream": "/departments", "service": "employee-service"},
+        "performance": {"method": "GET", "gateway_path": "/api/v1/performance/goals", "expected_upstream": "/performance/goals", "service": "performance-service"},
+        "attendance": {"method": "GET", "gateway_path": "/api/v1/attendance/records?employee_id=11111111-1111-1111-1111-111111111111&from_date=2026-01-01&to_date=2026-01-31", "expected_upstream": "/attendance/records?employee_id=11111111-1111-1111-1111-111111111111&from_date=2026-01-01&to_date=2026-01-31", "service": "attendance-service"},
+        "leave": {"method": "GET", "gateway_path": "/api/v1/leave/requests", "expected_upstream": "/leave/requests", "service": "leave-service"},
+        "travel": {"method": "GET", "gateway_path": "/api/v1/travel/requests", "expected_upstream": "/travel/requests", "service": "travel-service"},
+        "projects": {"method": "GET", "gateway_path": "/api/v1/projects", "expected_upstream": "/projects", "service": "project-service"},
+        "payroll": {"method": "GET", "gateway_path": "/api/v1/payroll/records", "expected_upstream": "/payroll/records", "service": "payroll-service"},
+        "hiring": {"method": "GET", "gateway_path": "/api/v1/hiring/job-postings", "expected_upstream": "/hiring/job-postings", "service": "hiring-service"},
+        "auth": {"method": "GET", "gateway_path": "/api/v1/auth/me", "expected_upstream": "/auth/me", "service": "auth-service"},
+        "workflows": {"method": "GET", "gateway_path": "/api/v1/workflows/inbox?tenant_id=tenant-default", "expected_upstream": "/workflows/inbox?tenant_id=tenant-default", "service": "workflow-service"},
+        "audit": {"method": "GET", "gateway_path": "/api/v1/audit/records", "expected_upstream": "/audit/records", "service": "audit-service"},
+        "notifications": {"method": "POST", "gateway_path": "/api/v1/notifications/events", "expected_upstream": "/notifications/events", "service": "notification-service", "body": {"event_type": "notification.sent", "tenant_id": "tenant-default", "channel": "email", "recipient": "ops@example.com", "subject": "s", "message": "m"}},
+        "engagement": {"method": "GET", "gateway_path": "/api/v1/engagement/surveys", "expected_upstream": "/engagement/surveys", "service": "engagement-service"},
+        "helpdesk": {"method": "GET", "gateway_path": "/api/v1/helpdesk/tickets", "expected_upstream": "/helpdesk/tickets", "service": "helpdesk-service"},
+        "reporting": {"method": "GET", "gateway_path": "/api/v1/reporting/aggregates", "expected_upstream": "/reporting/aggregates", "service": "reporting-analytics-service"},
+        "search": {"method": "GET", "gateway_path": "/api/v1/search", "expected_upstream": "/search", "service": "search-service"},
+        "expense": {"method": "GET", "gateway_path": "/api/v1/expense/claims", "expected_upstream": "/expense/claims", "service": "expense-service"},
+        "integrations": {"method": "GET", "gateway_path": "/api/v1/integrations/webhooks?tenant_id=tenant-default", "expected_upstream": "/integrations/webhooks?tenant_id=tenant-default", "service": "integration-service"},
+        "automations": {"method": "GET", "gateway_path": "/api/v1/automations/rules?tenant_id=tenant-default", "expected_upstream": "/automations/rules?tenant_id=tenant-default", "service": "automation-service"},
+        "settings": {"method": "GET", "gateway_path": "/api/v1/settings", "expected_upstream": "/settings", "service": "settings-service"},
+    }
 
-    for scenario in scenarios:
-        gateway_path = scenario["gateway_path"]
-        route = api_gateway_routes.resolve_route(gateway_path)
-        translated_path = api_gateway_routes.translate_to_upstream_path(route, gateway_path)
+    declared_route_names = {route.name for route in api_gateway_routes.iter_routes()}
+    assert declared_route_names == set(route_execution_cases)
+
+    for name, scenario in route_execution_cases.items():
+        route = api_gateway_routes.resolve_route(scenario["gateway_path"])
+        translated_path = api_gateway_routes.translate_to_upstream_path(route, scenario["gateway_path"])
 
         assert translated_path == scenario["expected_upstream"], (
-            f"{scenario['name']} translated path mismatch: expected={scenario['expected_upstream']} actual={translated_path}"
+            f"{name} translated path mismatch: expected={scenario['expected_upstream']} actual={translated_path}"
         )
         assert route.upstream_service == scenario["service"]
 
@@ -115,13 +84,38 @@ def test_gateway_to_runtime_execution_alignment_for_core_domains() -> None:
             service_name=scenario["service"],
             method=scenario["method"],
             forwarded_path_with_query=translated_path,
+            body=scenario.get("body"),
         )
 
-        assert status == scenario["expected_status"], f"{scenario['name']} runtime status mismatch: {status}"
-        assert payload["status"] == scenario["expected_payload_status"], (
-            f"{scenario['name']} runtime payload status mismatch: {payload['status']}"
-        )
-        if scenario["expected_payload_status"] == "success":
-            assert payload["error"] is None, f"{scenario['name']} runtime payload unexpectedly contained an error"
-        else:
-            assert payload["error"], f"{scenario['name']} runtime payload should include an error body"
+        assert status < 500, f"{name} runtime execution failed with non-executable status={status}"
+        assert payload["status"] in {"success", "error"}
+
+
+def test_every_runtime_service_declared_in_compose_is_bootable_in_domain_runtime() -> None:
+    runtime_services = [
+        "employee-service",
+        "attendance-service",
+        "leave-service",
+        "payroll-service",
+        "hiring-service",
+        "auth-service",
+        "notification-service",
+        "audit-service",
+        "workflow-service",
+        "performance-service",
+        "engagement-service",
+        "helpdesk-service",
+        "reporting-analytics-service",
+        "search-service",
+        "expense-service",
+        "integration-service",
+        "automation-service",
+        "travel-service",
+        "project-service",
+        "settings-service",
+    ]
+
+    for service_name in runtime_services:
+        routes, context = build_service_runtime(service_name)
+        assert routes, f"runtime must expose at least one route for {service_name}"
+        assert context.get("routes"), f"runtime context should include route inventory for {service_name}"

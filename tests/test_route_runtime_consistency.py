@@ -34,19 +34,20 @@ def test_gateway_canonical_routes_translate_to_runtime_plural_paths() -> None:
         assert translated == expected_upstream
 
 
-def test_gateway_legacy_aliases_translate_to_plural_runtime_paths() -> None:
-    legacy_cases = {
-        "/api/v1/project": "/projects",
-        "/api/v1/integration/webhooks": "/integrations/webhooks",
-        "/api/v1/automation/rules": "/automations/rules",
-        "/api/v1/workflow/inbox": "/workflows/inbox",
-    }
+def test_gateway_rejects_removed_singular_aliases() -> None:
+    removed_aliases = [
+        "/api/v1/project",
+        "/api/v1/integration/webhooks",
+        "/api/v1/automation/rules",
+        "/api/v1/workflow/inbox",
+    ]
 
-    for legacy_path, expected_upstream in legacy_cases.items():
-        route = api_gateway_routes.resolve_route(legacy_path)
-        translated = api_gateway_routes.translate_to_upstream_path(route, legacy_path)
-        assert translated == expected_upstream
-        assert api_gateway_routes.is_legacy_route(legacy_path) is True
+    for legacy_path in removed_aliases:
+        try:
+            api_gateway_routes.resolve_route(legacy_path)
+        except api_gateway_routes.RouteNotFoundError:
+            continue
+        raise AssertionError(f"Expected removed alias to be unresolved: {legacy_path}")
 
 
 def test_runtime_handlers_expose_plural_route_prefixes_only() -> None:

@@ -39,8 +39,12 @@ def test_gateway_preserves_legacy_unversioned_route_aliases() -> None:
     assert workflow_route.upstream_service == "workflow-service"
     assert api_gateway_routes.is_legacy_route("/api/v1/workflows/123") is False
 
-    assert api_gateway_routes.resolve_route("/api/v1/workflow/123").upstream_service == "workflow-service"
-    assert api_gateway_routes.is_legacy_route("/api/v1/workflow/123") is True
+    try:
+        api_gateway_routes.resolve_route("/api/v1/workflow/123")
+    except api_gateway_routes.RouteNotFoundError:
+        pass
+    else:
+        raise AssertionError("Removed singular workflow alias unexpectedly resolved")
 
 
 def test_leave_list_preserves_legacy_data_alias_alongside_d1_items() -> None:

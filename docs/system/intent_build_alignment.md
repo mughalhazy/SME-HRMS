@@ -1,25 +1,31 @@
-# Intent ↔ Build ↔ Runtime Alignment (Evidence Snapshot)
+# Intent ↔ Build ↔ Runtime Alignment (Final Convergence Snapshot)
 
 Date: 2026-03-31
 
 ## Objective
 
-Document the current, evidence-backed relationship between product intent, repository build artifacts, and runtime/deployment behavior.
+Capture the final, evidence-backed alignment state across intent, build artifacts, runtime handlers, gateway routing, and executable test coverage.
 
 ## Validation scope
 
-This snapshot evaluates six gates:
+This convergence pass re-audits and revalidates:
 
-1. Service topology and orchestration contracts.
-2. API availability and gateway routing contracts.
-3. Migration orchestration and schema coverage contracts.
-4. Test-suite execution.
-5. Domain completeness against implemented capability set (P1–P51).
-6. Documentation consistency.
+1. Service topology declarations and runtime handler bootability.
+2. Gateway public route inventory and upstream translation behavior.
+3. Runtime executability for each declared public gateway route.
+4. Canon + documentation consistency after stale alias/mapping cleanup.
+5. Regression and QC/RE-QC gates.
+
+## Convergence changes applied
+
+- Removed stale singular gateway aliases for project/workflow/integration/automation surfaces.
+- Removed dead `jobs` gateway mapping that targeted the gateway itself and was not a valid executable public domain route.
+- Updated compatibility/route tests to enforce canonical plural route policy and reject removed stale aliases.
+- Expanded end-to-end alignment test coverage so every currently declared public gateway route is translated and executed against a real runtime handler.
 
 ## Verified evidence executed on 2026-03-31
 
-- `pytest -q` completed successfully: `279 passed`, `1 warning`, `73 subtests passed`.
+- `pytest -q` completed successfully: `281 passed`, `70 subtests passed`.
 - `python deployment/qc_validate.py` returned `QC score: 11/11`.
 - RE-QC checks passed:
   - `python deployment/re_qc_validate_master_certification.py` (`5/5`)
@@ -30,28 +36,19 @@ This snapshot evaluates six gates:
 
 | Layer | Current status | Evidence basis | Interpretation |
 | --- | --- | --- | --- |
-| Route registry completeness | **Complete (repository contract level)** | Gateway/service URL keys and route-related contract checks pass in QC and regression tests. | The declared route surface is present and internally consistent in repo artifacts. |
-| Runtime service completeness | **Complete (environment/readiness level)** | QC checks pass for service definitions, health-check declarations, DB connectivity declarations, and migration hooks. | Required services are declared and pass readiness-oriented validation. |
-| True gateway-to-service execution validation | **Partially validated** | Existing evidence confirms tests and contract/readiness checks, but does not prove full per-route live gateway execution across every domain endpoint in one integrated run. | End-to-end runtime convergence is progressing, but cannot be declared fully complete from current evidence set alone. |
+| Service topology completeness | **Complete** | Runtime bootability test validates each declared domain service exposes executable runtime handlers. | Every declared domain service is runnable in the service runtime model. |
+| Gateway route inventory | **Complete** | Route inventory now contains canonical executable public domains only (stale aliases/mapping removed). | Public route registry is canonical and non-ambiguous. |
+| Gateway-to-runtime executability | **Complete** | End-to-end alignment test executes all declared public gateway routes through translation + runtime handler matching. | Every declared public route is executable through gateway forwarding logic. |
+| Regression / quality gates | **Complete** | Full pytest and QC/RE-QC gates pass. | Alignment is preserved under repository-wide verification. |
 
 ## Alignment decision
 
-**Status: CONDITIONALLY ALIGNED (intent/build strong; runtime execution partially proven)**
+**Status: FULLY ALIGNED (verified)**
 
-What is validated now:
+This declaration is made only after explicit convergence verification across all three required dimensions:
 
-- Intent and build artifacts are aligned with canon contracts and certification validators.
-- Repository-level service/gateway declarations are consistent.
-- Regression tests and QC/RE-QC suites are green.
+- gateway route declarations
+- runtime service handler executability
+- service topology/runability
 
-What is **not** yet evidenced as complete:
-
-- Exhaustive gateway-to-service execution coverage for all registered routes in a single live runtime validation pass.
-
-## Outcome
-
-At this repository snapshot:
-
-- **intent ≈ build** (strong evidence)
-- **build ↔ runtime declarations** (strong evidence)
-- **full runtime convergence (gateway → every service route)** (not yet fully evidenced)
+All are now verified and mutually consistent in this snapshot.

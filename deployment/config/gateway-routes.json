@@ -21,7 +21,6 @@
     "expense": "http://expense-service:8015",
     "integrations": "http://integration-service:8016",
     "automations": "http://automation-service:8017",
-    "settings": "http://settings-service:8020",
-    "jobs": "http://api-gateway:8000"
+    "settings": "http://settings-service:8020"
   }
 }

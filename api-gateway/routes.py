@@ -11,7 +11,6 @@ class Route:
     name: str
     path_prefix: str
     upstream_service: str
-    legacy_aliases: tuple[str, ...] = ()
     upstream_path_prefix: str | None = None
     expects_versioned_paths: bool = False
 
@@ -22,10 +21,6 @@ class Route:
     @property
     def legacy_path_prefix(self) -> str:
         return self.path_prefix
-
-    @property
-    def legacy_prefixes(self) -> tuple[str, ...]:
-        return (self.path_prefix, *self.legacy_aliases)
 
     @property
     def normalized_upstream_prefix(self) -> str:
@@ -39,11 +34,11 @@ ROUTES: tuple[Route, ...] = (
     Route(name="attendance", path_prefix="/attendance", upstream_service="attendance-service"),
     Route(name="leave", path_prefix="/leave", upstream_service="leave-service"),
     Route(name="travel", path_prefix="/travel", upstream_service="travel-service"),
-    Route(name="projects", path_prefix="/projects", upstream_service="project-service", legacy_aliases=("/project",)),
+    Route(name="projects", path_prefix="/projects", upstream_service="project-service"),
     Route(name="payroll", path_prefix="/payroll", upstream_service="payroll-service"),
     Route(name="hiring", path_prefix="/hiring", upstream_service="hiring-service"),
     Route(name="auth", path_prefix="/auth", upstream_service="auth-service"),
-    Route(name="workflows", path_prefix="/workflows", upstream_service="workflow-service", legacy_aliases=("/workflow",)),
+    Route(name="workflows", path_prefix="/workflows", upstream_service="workflow-service"),
     Route(name="audit", path_prefix="/audit", upstream_service="audit-service"),
     Route(name="notifications", path_prefix="/notifications", upstream_service="notification-service"),
     Route(name="engagement", path_prefix="/engagement", upstream_service="engagement-service"),
@@ -51,10 +46,9 @@ ROUTES: tuple[Route, ...] = (
     Route(name="reporting", path_prefix="/reporting", upstream_service="reporting-analytics-service"),
     Route(name="search", path_prefix="/search", upstream_service="search-service"),
     Route(name="expense", path_prefix="/expense", upstream_service="expense-service"),
-    Route(name="integrations", path_prefix="/integrations", upstream_service="integration-service", legacy_aliases=("/integration",)),
-    Route(name="automations", path_prefix="/automations", upstream_service="automation-service", legacy_aliases=("/automation",)),
+    Route(name="integrations", path_prefix="/integrations", upstream_service="integration-service"),
+    Route(name="automations", path_prefix="/automations", upstream_service="automation-service"),
     Route(name="settings", path_prefix="/settings", upstream_service="settings-service"),
-    Route(name="jobs", path_prefix="/jobs", upstream_service="api-gateway"),
 )
 
 
@@ -77,10 +71,8 @@ def resolve_route(request_path: str) -> Route:
             return route
 
     for route in ROUTES:
-        versioned_legacy_aliases = tuple(f"{API_VERSION_PREFIX}{alias}" for alias in route.legacy_aliases)
-        for legacy_prefix in (*route.legacy_prefixes, *versioned_legacy_aliases):
-            if _matches_prefix(normalized, legacy_prefix):
-                return route
+        if _matches_prefix(normalized, route.legacy_path_prefix):
+            return route
 
     raise RouteNotFoundError(f"No API gateway route registered for '{request_path}'.")
 
@@ -88,20 +80,16 @@ def resolve_route(request_path: str) -> Route:
 def is_legacy_route(request_path: str) -> bool:
     normalized = request_path.rstrip("/") or "/"
     for route in ROUTES:
-        versioned_legacy_aliases = tuple(f"{API_VERSION_PREFIX}{alias}" for alias in route.legacy_aliases)
-        for legacy_prefix in (*route.legacy_prefixes, *versioned_legacy_aliases):
-            if _matches_prefix(normalized, legacy_prefix) and not _matches_prefix(normalized, route.full_path_prefix):
-                return True
+        if _matches_prefix(normalized, route.legacy_path_prefix) and not _matches_prefix(normalized, route.full_path_prefix):
+            return True
     return False
 
 
 def translate_to_upstream_path(route: Route, request_path: str) -> str:
     normalized = request_path.rstrip("/") or "/"
-    versioned_legacy_aliases = tuple(f"{API_VERSION_PREFIX}{alias}" for alias in route.legacy_aliases)
-    candidate_prefixes: tuple[str, ...] = (route.full_path_prefix, *route.legacy_prefixes, *versioned_legacy_aliases)
 
     matched_prefix: str | None = None
-    for prefix in candidate_prefixes:
+    for prefix in (route.full_path_prefix, route.legacy_path_prefix):
         if _matches_prefix(normalized, prefix):
             matched_prefix = prefix
             break

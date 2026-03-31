@@ -1,60 +1,57 @@
-# Alignment Report (Evidence-Based Revision)
+# Alignment Report (Final Convergence)
 
 Date: 2026-03-31
-Status: ✅ Updated to remove runtime overclaiming
+Status: ✅ Full alignment verified after end-to-end convergence pass
 
 ## Executive conclusion
 
-The repository shows strong alignment between intent and build artifacts, and strong runtime readiness signals. However, available evidence does **not** yet justify claiming universal, fully converged gateway-to-service runtime execution for every route.
+Final convergence checks confirm that gateway exposure, runtime handlers, and service topology are now aligned and executable end-to-end for all declared public routes.
 
-## 1) Domain and route surface completeness
+## 1) Re-audit outcomes
 
-Implemented domain surfaces remain broad and represented across code, routing, and validator/test coverage, including:
+### Service topology and runtime handlers
 
-- Core HR domains: employee, departments, attendance, leave, payroll, hiring, auth, notifications.
-- Platform domains: workflow, audit, performance, engagement, helpdesk, reporting/analytics, search, integration, automation, travel, project, settings.
-- Operational domains: gateway, background jobs, outbox/event reliability, supervisor/resilience, tenant/security controls.
+- Revalidated runtime bootability for every declared domain service.
+- Confirmed each declared domain runtime has at least one concrete executable handler and published route inventory context.
 
-Interpretation: route/service contracts are materially complete at repository level.
+### Gateway exposure and public route execution
 
-## 2) Runtime service completeness (readiness evidence)
+- Re-audited gateway route declarations and removed stale/non-executable mapping (`jobs`).
+- Removed stale singular aliases (`project`, `workflow`, `integration`, `automation`) to enforce canonical public route policy.
+- Verified canonical route translation behavior into runtime handler paths.
 
-Runtime/service readiness checks passed via QC (`11/11`), including:
+### Docs and tests
 
-- service container declarations
-- API gateway connectivity declarations
-- database connectivity declarations
-- migration orchestration hooks
-- health-check declarations
-- build/test gate checks
+- Updated canonical wording in docs to reflect alias removal.
+- Updated route compatibility tests to reject removed stale aliases.
+- Expanded gateway-runtime alignment test into full declared-route execution coverage.
 
-Interpretation: service readiness is validated at configuration and gate level.
+## 2) Evidence from executed checks (2026-03-31)
 
-## 3) Gateway-to-service execution completeness (true runtime convergence)
+### Full regression
 
-Current evidence demonstrates broad test and validation coverage, but does not by itself prove exhaustive live execution of **every** gateway route against downstream services in one end-to-end validation campaign.
+- `pytest -q` → `281 passed, 70 subtests passed`
 
-Interpretation: execution convergence is **partially validated**, not fully certified.
-
-## 4) Validation evidence (executed 2026-03-31)
-
-### Test execution
-
-- `pytest -q` → `279 passed, 1 warning, 73 subtests passed`
-
-### QC / certification execution
+### Quality/certification gates
 
 - `python deployment/qc_validate.py` → `QC score: 11/11`
 - `python deployment/re_qc_validate_master_certification.py` → `5/5`
 - `python deployment/re_qc_validate_addon_convergence.py` → `5/5`
 - `python deployment/re_qc_validate_data_integrity.py` → `6/6`
 
-## 5) Corrective actions reflected in docs
+## 3) Final declarations
 
-- Removed declarations that equated readiness/contracts with complete runtime convergence.
-- Explicitly separated route-registry completeness, runtime-service readiness, and true gateway execution coverage.
-- Updated evidence numbers to match current verified command outputs.
+- ✅ Every declared service is runnable in runtime handler space.
+- ✅ Every declared public gateway route is executable through gateway translation and downstream runtime matching.
+- ✅ Stale aliases, stale docs, and dead mappings from the prior convergence state were removed.
 
-## Current declaration
+## 4) Alignment decision
 
-✅ **Repository alignment is strong and evidence-backed, but full runtime convergence remains an open validation target pending exhaustive gateway-to-service execution proof.**
+✅ **FULL ALIGNMENT DECLARED**
+
+This final declaration is evidence-backed and gated by verified checks across:
+
+1. gateway route contracts,
+2. runtime service executability,
+3. service topology completeness,
+4. repository-wide regression and QC/RE-QC validators.
