@@ -44,7 +44,7 @@ The public gateway route prefixes use plural domain nouns for collection-style s
 - `/api/v1/automations`
 - `/api/v1/workflows`
 
-Backward-compatible singular aliases remain supported at the gateway (`/api/v1/project`, `/api/v1/integration`, `/api/v1/automation`, `/api/v1/workflow`) and are translated to plural runtime handler paths.
+Gateway routes are now canonical-only for these domains (`/api/v1/projects`, `/api/v1/integrations`, `/api/v1/automations`, `/api/v1/workflows`); singular aliases were removed during final convergence hardening.
 
 ### Key deployment artifacts
 - `docker-compose.yml`
