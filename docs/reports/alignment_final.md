@@ -1,40 +1,46 @@
-# Final Alignment Report
+# Alignment Report (Evidence-Based Revision)
 
 Date: 2026-03-31
-Status: ✅ Final alignment validated
+Status: ✅ Updated to remove runtime overclaiming
 
 ## Executive conclusion
 
-The system is fully aligned at this revision: **intent = build = runtime**.
+The repository shows strong alignment between intent and build artifacts, and strong runtime readiness signals. However, available evidence does **not** yet justify claiming universal, fully converged gateway-to-service runtime execution for every route.
 
-## 1) All domains implemented
+## 1) Domain and route surface completeness
 
-All planned domain surfaces in the current system scope are implemented and represented in code, routing, and certification/QC validation paths, including:
+Implemented domain surfaces remain broad and represented across code, routing, and validator/test coverage, including:
 
 - Core HR domains: employee, departments, attendance, leave, payroll, hiring, auth, notifications.
 - Platform domains: workflow, audit, performance, engagement, helpdesk, reporting/analytics, search, integration, automation, travel, project, settings.
 - Operational domains: gateway, background jobs, outbox/event reliability, supervisor/resilience, tenant/security controls.
 
-## 2) All services running
+Interpretation: route/service contracts are materially complete at repository level.
 
-Runtime/service readiness is validated by the repository QC gate (`deployment/qc_validate.py`) which passed all checks (`11/11`), including:
+## 2) Runtime service completeness (readiness evidence)
 
-- service containers
-- api gateway connectivity
-- database connectivity
-- migrations
-- health checks
-- build checks
+Runtime/service readiness checks passed via QC (`11/11`), including:
 
-## 3) No partial or missing areas
+- service container declarations
+- API gateway connectivity declarations
+- database connectivity declarations
+- migration orchestration hooks
+- health-check declarations
+- build/test gate checks
 
-Final alignment checks report no residual partial/missing classification in active system scope after final cleanup and compatibility fixes.
+Interpretation: service readiness is validated at configuration and gate level.
 
-## 4) Validation evidence
+## 3) Gateway-to-service execution completeness (true runtime convergence)
+
+Current evidence demonstrates broad test and validation coverage, but does not by itself prove exhaustive live execution of **every** gateway route against downstream services in one end-to-end validation campaign.
+
+Interpretation: execution convergence is **partially validated**, not fully certified.
+
+## 4) Validation evidence (executed 2026-03-31)
 
 ### Test execution
 
-- `pytest -q` → `271 passed, 68 subtests passed`
+- `pytest -q` → `279 passed, 1 warning, 73 subtests passed`
 
 ### QC / certification execution
 
@@ -43,12 +49,12 @@ Final alignment checks report no residual partial/missing classification in acti
 - `python deployment/re_qc_validate_addon_convergence.py` → `5/5`
 - `python deployment/re_qc_validate_data_integrity.py` → `6/6`
 
-## 5) Final corrective actions completed
+## 5) Corrective actions reflected in docs
 
-- Gateway legacy alias normalization completed for workflow plural compatibility (`/workflows/*`).
-- Placeholder validation literals removed in learning-service patch validation.
-- Inconsistent legacy standalone docs removed to prevent doc/runtime drift.
+- Removed declarations that equated readiness/contracts with complete runtime convergence.
+- Explicitly separated route-registry completeness, runtime-service readiness, and true gateway execution coverage.
+- Updated evidence numbers to match current verified command outputs.
 
-## Final declaration
+## Current declaration
 
-✅ **System alignment complete.**
+✅ **Repository alignment is strong and evidence-backed, but full runtime convergence remains an open validation target pending exhaustive gateway-to-service execution proof.**
