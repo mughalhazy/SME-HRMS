@@ -11,5 +11,13 @@
     "auth": "http://auth-service:8006",
     "workflows": "http://workflow-service:8009",
     "notifications": "http://notification-service:8007"
+    ,"engagement": "http://engagement-service:8011"
+    ,"helpdesk": "http://helpdesk-service:8012"
+    ,"reporting": "http://reporting-analytics-service:8013"
+    ,"search": "http://search-service:8014"
+    ,"expense": "http://expense-service:8015"
+    ,"integrations": "http://integration-service:8016"
+    ,"automations": "http://automation-service:8017"
+    ,"audit": "http://audit-service:8008"
   }
 }

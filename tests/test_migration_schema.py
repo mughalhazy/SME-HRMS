@@ -10,6 +10,8 @@ PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '003_persistence_norm
 TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_tenant_foundation.sql').read_text()
 NOTIFICATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_notification_service.sql').read_text()
 EVENT_OUTBOX_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_event_outbox.sql').read_text()
+ADDON_DOMAIN_SCHEMA = (ROOT / 'deployment' / 'migrations' / '007_addon_domains.sql').read_text()
+RUN_MIGRATIONS_SCRIPT = (ROOT / 'deployment' / 'scripts' / 'run-migrations.sh').read_text()
 FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{NOTIFICATION_SCHEMA}\n{EVENT_OUTBOX_SCHEMA}"
 
 
@@ -160,3 +162,21 @@ def test_event_outbox_schema_adds_dispatch_and_consumer_dedupe_tables() -> None:
 
     for fragment in expected_fragments:
         assert fragment in EVENT_OUTBOX_SCHEMA
+
+
+def test_addon_domain_schema_covers_helpdesk_workforce_intelligence_learning_and_cost_planning() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS helpdesk_tickets',
+        'CREATE TABLE IF NOT EXISTS helpdesk_ticket_sla_events',
+        'CREATE TABLE IF NOT EXISTS workforce_intelligence_snapshots',
+        'CREATE TABLE IF NOT EXISTS learning_paths',
+        'CREATE TABLE IF NOT EXISTS workforce_cost_plans',
+        'headcount_target INTEGER NOT NULL CHECK (headcount_target >= 0)',
+        'salary_forecast NUMERIC(14,2) NOT NULL DEFAULT 0',
+    ]
+    for fragment in expected_fragments:
+        assert fragment in ADDON_DOMAIN_SCHEMA
+
+
+def test_run_migrations_script_applies_deterministic_sorted_order() -> None:
+    assert 'ls -1 /migrations/*.sql | sort' in RUN_MIGRATIONS_SCRIPT

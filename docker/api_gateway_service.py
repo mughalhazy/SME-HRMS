@@ -26,6 +26,15 @@ ROUTES = {
     "hiring-service": os.getenv("HIRING_SERVICE_URL", "http://hiring-service:8005"),
     "auth-service": os.getenv("AUTH_SERVICE_URL", "http://auth-service:8006"),
     "notification-service": os.getenv("NOTIFICATION_SERVICE_URL", "http://notification-service:8007"),
+    "audit-service": os.getenv("AUDIT_SERVICE_URL", "http://audit-service:8008"),
+    "workflow-service": os.getenv("WORKFLOW_SERVICE_URL", "http://workflow-service:8009"),
+    "engagement-service": os.getenv("ENGAGEMENT_SERVICE_URL", "http://engagement-service:8011"),
+    "helpdesk-service": os.getenv("HELPDESK_SERVICE_URL", "http://helpdesk-service:8012"),
+    "reporting-analytics-service": os.getenv("REPORTING_ANALYTICS_SERVICE_URL", "http://reporting-analytics-service:8013"),
+    "search-service": os.getenv("SEARCH_SERVICE_URL", "http://search-service:8014"),
+    "expense-service": os.getenv("EXPENSE_SERVICE_URL", "http://expense-service:8015"),
+    "integration-service": os.getenv("INTEGRATION_SERVICE_URL", "http://integration-service:8016"),
+    "automation-service": os.getenv("AUTOMATION_SERVICE_URL", "http://automation-service:8017"),
 }
 BREAKERS = {service: CircuitBreaker(failure_threshold=2, recovery_timeout=1.0) for service in ROUTES}
 
