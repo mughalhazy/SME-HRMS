@@ -19,8 +19,7 @@ COPY docker/common_service.py ./
 
 # Copy migration files
 COPY deployment/config/postgres-init.sql ./migrations/postgres-init.sql
-COPY deployment/migrations/001_core_schema.sql ./migrations/001_core_schema.sql
-COPY deployment/migrations/002_workflow_schema.sql ./migrations/002_workflow_schema.sql
+COPY deployment/migrations/ ./migrations/
 
 COPY start.sh ./
 RUN chmod +x /app/start.sh

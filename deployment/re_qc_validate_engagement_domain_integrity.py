@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE = (ROOT / 'engagement_service.py').read_text()
 TESTS = (ROOT / 'tests/test_engagement_service.py').read_text()
-MIGRATION = (ROOT / 'deployment/migrations/006_engagement_service.sql').read_text()
+MIGRATION = (ROOT / 'deployment/migrations/010_engagement_service.sql').read_text()
 
 checks: list[tuple[str, bool]] = [
     ('service retains employee-service read model reuse', all(token in SERVICE for token in ['register_employee_profile', 'employee_snapshots', '_require_employee'])),
