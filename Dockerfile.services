@@ -9,4 +9,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["python", "/app/docker/common_service.py"]
+CMD ["python", "/app/docker/service_runtime.py"]
