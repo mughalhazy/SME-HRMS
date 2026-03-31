@@ -52,6 +52,18 @@ curl http://localhost:8000/api/v1/settings
 curl http://localhost:3000/
 ```
 
+
+## Canonical API route mapping
+
+Gateway and runtime handlers are aligned to plural canonical route families for these domains:
+
+- Projects: `/api/v1/projects` → runtime `/projects`
+- Integrations: `/api/v1/integrations` → runtime `/integrations`
+- Automations: `/api/v1/automations` → runtime `/automations`
+- Workflows: `/api/v1/workflows` → runtime `/workflows`
+
+Legacy singular aliases are still accepted by the gateway for compatibility and translated to the canonical plural runtime prefixes.
+
 ## Migration support
 
 Compose runs a `migrations` service after PostgreSQL is healthy and before app services become healthy.

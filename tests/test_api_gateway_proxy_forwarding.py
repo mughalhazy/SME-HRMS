@@ -82,8 +82,8 @@ def test_gateway_translates_public_paths_before_proxying(monkeypatch) -> None:
         ("GET", "/api/v1/settings", "http://settings.internal/settings"),
         ("GET", "/api/v1/attendance/records?from=2026-01-01", "http://attendance.internal/attendance/records?from=2026-01-01"),
         ("POST", "/api/v1/helpdesk/tickets", "http://helpdesk.internal/helpdesk/tickets"),
-        ("PATCH", "/api/v1/project", "http://project.internal/projects"),
-        ("GET", "/api/v1/workflow/inbox", "http://workflow.internal/workflows/inbox"),
+        ("PATCH", "/api/v1/projects", "http://project.internal/projects"),
+        ("GET", "/api/v1/workflows/inbox", "http://workflow.internal/workflows/inbox"),
     ]
 
     for method, path_with_query, expected_url in scenarios:

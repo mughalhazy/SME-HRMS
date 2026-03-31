@@ -15,7 +15,7 @@ SPEC.loader.exec_module(api_gateway_routes)
 class ApiGatewayRouteTests(unittest.TestCase):
     def test_gateway_exposes_expected_route_groups(self) -> None:
         names = [route.name for route in api_gateway_routes.iter_routes()]
-        self.assertEqual(names, ["employees", "departments", "performance", "attendance", "leave", "travel", "project", "payroll", "hiring", "auth", "workflow", "audit", "notifications", "engagement", "helpdesk", "reporting", "search", "expense", "integration", "automation", "settings", "jobs"])
+        self.assertEqual(names, ["employees", "departments", "performance", "attendance", "leave", "travel", "projects", "payroll", "hiring", "auth", "workflows", "audit", "notifications", "engagement", "helpdesk", "reporting", "search", "expense", "integrations", "automations", "settings", "jobs"])
 
     def test_resolve_each_route_prefix(self) -> None:
         cases = {
@@ -25,7 +25,7 @@ class ApiGatewayRouteTests(unittest.TestCase):
             "/api/v1/attendance/records": "attendance-service",
             "/api/v1/leave/requests": "leave-service",
             "/api/v1/travel/requests": "travel-service",
-            "/api/v1/project/roadmap": "project-service",
+            "/api/v1/projects/roadmap": "project-service",
             "/api/v1/payroll/run": "payroll-service",
             "/api/v1/hiring/candidates": "hiring-service",
             "/api/v1/audit/records": "audit-service",
@@ -34,7 +34,7 @@ class ApiGatewayRouteTests(unittest.TestCase):
             "/api/v1/reporting/aggregates": "reporting-analytics-service",
             "/api/v1/search/query": "search-service",
             "/api/v1/expense/claims": "expense-service",
-            "/api/v1/automation/rules": "automation-service",
+            "/api/v1/automations/rules": "automation-service",
             "/api/v1/settings": "settings-service",
         }
         for path, expected in cases.items():
@@ -46,7 +46,7 @@ class ApiGatewayRouteTests(unittest.TestCase):
         route = api_gateway_routes.resolve_route("/api/v1/auth/login")
         self.assertEqual(route.upstream_service, "auth-service")
 
-        workflow_route = api_gateway_routes.resolve_route("/api/v1/workflow/123")
+        workflow_route = api_gateway_routes.resolve_route("/api/v1/workflows/123")
         self.assertEqual(workflow_route.upstream_service, "workflow-service")
 
         notification_route = api_gateway_routes.resolve_route("/api/v1/notifications/send")
@@ -60,8 +60,8 @@ class ApiGatewayRouteTests(unittest.TestCase):
             "/api/v1/settings": "/settings",
             "/api/v1/attendance/records": "/attendance/records",
             "/api/v1/helpdesk/tickets": "/helpdesk/tickets",
-            "/api/v1/project": "/projects",
-            "/api/v1/workflow/inbox": "/workflows/inbox",
+            "/api/v1/projects": "/projects",
+            "/api/v1/workflows/inbox": "/workflows/inbox",
         }
         for public_path, expected_upstream in cases.items():
             with self.subTest(path=public_path):
