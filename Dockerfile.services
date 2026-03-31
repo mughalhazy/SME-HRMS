@@ -1,6 +1,12 @@
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
-COPY docker/common_service.py /app/common_service.py
+
+COPY . /app
+
 EXPOSE 8000
-CMD ["python", "/app/common_service.py"]
+
+CMD ["python", "/app/docker/common_service.py"]
