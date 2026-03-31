@@ -140,3 +140,38 @@ export interface EmployeeLearningSummary {
   latest_completion_at?: string;
   required_refresh_count: number;
 }
+
+export interface LearningPath {
+  tenant_id: string;
+  learning_path_id: string;
+  code: string;
+  title: string;
+  description?: string;
+  status: 'Active' | 'Inactive';
+  course_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateLearningPathInput {
+  tenant_id?: string;
+  code: string;
+  title: string;
+  description?: string;
+  status?: 'Active' | 'Inactive';
+  course_ids: string[];
+}
+
+export interface LearningPathFilters {
+  tenant_id?: string;
+  status?: 'Active' | 'Inactive';
+}
+
+export interface LearningCertification {
+  employee_id: string;
+  course_id: string;
+  completion_id: string;
+  certificate_id: string;
+  completed_at: string;
+  status: CompletionStatus;
+}

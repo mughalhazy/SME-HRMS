@@ -113,6 +113,19 @@ assert.equal(service.eventOutbox.events.some((event) => event.event_type === 'le
 
 const completions = service.listCompletions({ tenant_id: 'tenant-default', employee_id: employee.employee_id });
 assert.equal(completions.length, 1);
+const learningPath = service.createLearningPath({
+  tenant_id: 'tenant-default',
+  code: 'ONB-ENG',
+  title: 'Engineering Onboarding',
+  course_ids: [course.course_id],
+});
+assert.equal(learningPath.course_ids.length, 1);
+const certifications = service.listEmployeeCertifications(employee.employee_id);
+assert.equal(certifications.length, 1);
+assert.equal(certifications[0].certificate_id, 'CERT-123');
+const analytics = service.getLearningAnalytics();
+assert.equal(analytics.totals.learning_paths, 1);
+assert.equal(analytics.totals.certifications, 1);
 const summary = service.getEmployeeLearningSummary(employee.employee_id);
 assert.equal(summary.completed_enrollments, 1);
 assert.equal(summary.active_enrollments, 0);
@@ -138,10 +151,30 @@ const res = createResponse();
 controller.createCourse(req, res);
 assert.equal(res.statusCode, 201);
 
+const pathReq = {
+  ...req,
+  body: {
+    code: 'PRIV-PATH',
+    title: 'Privacy Path',
+    course_ids: [course.course_id],
+  },
+};
+const pathRes = createResponse();
+controller.createLearningPath(pathReq, pathRes);
+assert.equal(pathRes.statusCode, 201);
+
+const certReq = { ...req, params: { employeeId: employee.employee_id }, query: {}, body: {} };
+const certRes = createResponse();
+controller.getEmployeeCertifications(certReq, certRes);
+assert.equal(certRes.statusCode, 200);
+assert.equal(certRes.payload.data.length, 1);
+
 const records = fs.readFileSync(process.env.HRMS_AUDIT_LOG_PATH, 'utf8').trim().split('\\n').map((line) => JSON.parse(line));
 const auditRecord = records.find((record) => record.action === 'learning_course_created');
 assert.ok(auditRecord, 'expected learning_course_created audit record');
 assert.equal(auditRecord.entity, 'LearningCourse');
+const pathAuditRecord = records.find((record) => record.action === 'learning_path_created');
+assert.ok(pathAuditRecord, 'expected learning_path_created audit record');
 """
 
 

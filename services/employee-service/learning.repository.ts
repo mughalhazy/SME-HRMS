@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  CreateLearningPathInput,
   CompletionFilters,
   CourseCompletionRecord,
   CourseEnrollment,
@@ -8,6 +9,8 @@ import {
   CreateEnrollmentInput,
   EnrollmentFilters,
   LearningCourse,
+  LearningPath,
+  LearningPathFilters,
   RecordCompletionInput,
   UpdateCourseInput,
 } from './learning.model';
@@ -16,7 +19,9 @@ export class LearningRepository {
   private readonly courses = new Map<string, LearningCourse>();
   private readonly enrollments = new Map<string, CourseEnrollment>();
   private readonly completions = new Map<string, CourseCompletionRecord>();
+  private readonly learningPaths = new Map<string, LearningPath>();
   private readonly courseCodeIndex = new Map<string, string>();
+  private readonly learningPathCodeIndex = new Map<string, string>();
 
   createCourse(input: CreateCourseInput & { tenant_id: string }): LearningCourse {
     const timestamp = new Date().toISOString();
@@ -170,6 +175,36 @@ export class LearningRepository {
 
   findLatestCompletionForEnrollment(enrollmentId: string, tenantId: string): CourseCompletionRecord | null {
     return this.listCompletions({ tenant_id: tenantId }).find((completion) => completion.enrollment_id === enrollmentId) ?? null;
+  }
+
+  createLearningPath(input: CreateLearningPathInput & { tenant_id: string }): LearningPath {
+    const timestamp = new Date().toISOString();
+    const path: LearningPath = {
+      tenant_id: input.tenant_id,
+      learning_path_id: randomUUID(),
+      code: input.code,
+      title: input.title,
+      description: input.description,
+      status: input.status ?? 'Active',
+      course_ids: [...input.course_ids],
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+    this.learningPaths.set(path.learning_path_id, path);
+    this.learningPathCodeIndex.set(this.courseCodeKey(path.tenant_id, path.code), path.learning_path_id);
+    return path;
+  }
+
+  findLearningPathByCode(pathCode: string, tenantId: string): LearningPath | null {
+    const pathId = this.learningPathCodeIndex.get(this.courseCodeKey(tenantId, pathCode));
+    return pathId ? this.learningPaths.get(pathId) ?? null : null;
+  }
+
+  listLearningPaths(filters: LearningPathFilters & { tenant_id: string }): LearningPath[] {
+    return [...this.learningPaths.values()]
+      .filter((path) => path.tenant_id === filters.tenant_id)
+      .filter((path) => !filters.status || path.status === filters.status)
+      .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
   }
 
   private courseCodeKey(tenantId: string, courseCode: string): string {

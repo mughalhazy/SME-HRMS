@@ -9,12 +9,16 @@ import {
   CourseCompletionRecord,
   CourseEnrollment,
   CourseFilters,
+  CreateLearningPathInput,
   CreateCourseInput,
   CreateEnrollmentInput,
   EmployeeLearningSummary,
   ENROLLMENT_STATUSES,
   EnrollmentFilters,
   LearningCourse,
+  LearningCertification,
+  LearningPath,
+  LearningPathFilters,
   RecordCompletionInput,
   UpdateCourseInput,
   UpdateEnrollmentProgressInput,
@@ -210,6 +214,80 @@ export class LearningService {
     return this.repository.listCompletions({ ...filters, tenant_id: this.tenantId });
   }
 
+  createLearningPath(input: CreateLearningPathInput): LearningPath {
+    this.assertActorTenant(input.tenant_id);
+    this.validateLearningPathInput(input);
+    if (this.repository.findLearningPathByCode(input.code, this.tenantId)) {
+      throw new ConflictError('learning path code already exists');
+    }
+    input.course_ids.forEach((courseId) => this.getCourseById(courseId));
+    return this.repository.createLearningPath({ ...input, tenant_id: this.tenantId });
+  }
+
+  listLearningPaths(filters: LearningPathFilters): LearningPath[] {
+    this.assertActorTenant(filters.tenant_id);
+    return this.repository.listLearningPaths({ ...filters, tenant_id: this.tenantId });
+  }
+
+  listEmployeeCertifications(employeeId: string): LearningCertification[] {
+    this.ensureEmployeeExists(employeeId);
+    return this.listCompletions({ tenant_id: this.tenantId, employee_id: employeeId })
+      .filter((completion) => completion.status !== 'Failed' && Boolean(completion.certificate_id))
+      .map((completion) => ({
+        employee_id: completion.employee_id,
+        course_id: completion.course_id,
+        completion_id: completion.completion_id,
+        certificate_id: String(completion.certificate_id),
+        completed_at: completion.completed_at,
+        status: completion.status,
+      }));
+  }
+
+  getLearningAnalytics(): {
+    totals: { courses: number; learning_paths: number; enrollments: number; completions: number; certifications: number };
+    completion_rate: number;
+    avg_progress_percent: number;
+    path_coverage_rate: number;
+  } {
+    const courses = this.listCourses({ tenant_id: this.tenantId });
+    const paths = this.listLearningPaths({ tenant_id: this.tenantId, status: 'Active' });
+    const enrollments = this.listEnrollments({ tenant_id: this.tenantId });
+    const completions = this.listCompletions({ tenant_id: this.tenantId });
+    const certifications = completions.filter((completion) => completion.status !== 'Failed' && Boolean(completion.certificate_id));
+    const completionRate = enrollments.length === 0 ? 0 : completions.length / enrollments.length;
+    const avgProgress = enrollments.length === 0 ? 0 : enrollments.reduce((sum, enrollment) => sum + enrollment.progress_percent, 0) / enrollments.length;
+    const coveredEmployees = new Set<string>();
+    const scopedEnrollments = this.listEnrollments({ tenant_id: this.tenantId, status: 'Completed' });
+    for (const path of paths) {
+      if (path.course_ids.length === 0) {
+        continue;
+      }
+      const byEmployee = new Map<string, Set<string>>();
+      scopedEnrollments.filter((enrollment) => path.course_ids.includes(enrollment.course_id)).forEach((enrollment) => {
+        const employeeCourses = byEmployee.get(enrollment.employee_id) ?? new Set<string>();
+        employeeCourses.add(enrollment.course_id);
+        byEmployee.set(enrollment.employee_id, employeeCourses);
+      });
+      byEmployee.forEach((courseIds, employeeId) => {
+        if (path.course_ids.every((courseId) => courseIds.has(courseId))) {
+          coveredEmployees.add(employeeId);
+        }
+      });
+    }
+    return {
+      totals: {
+        courses: courses.length,
+        learning_paths: paths.length,
+        enrollments: enrollments.length,
+        completions: completions.length,
+        certifications: certifications.length,
+      },
+      completion_rate: Number(completionRate.toFixed(4)),
+      avg_progress_percent: Number(avgProgress.toFixed(2)),
+      path_coverage_rate: Number((coveredEmployees.size / (paths.length || 1)).toFixed(4)),
+    };
+  }
+
   getEmployeeLearningSummary(employeeId: string): EmployeeLearningSummary {
     this.ensureEmployeeExists(employeeId);
     const enrollments = this.listEnrollments({ tenant_id: this.tenantId, employee_id: employeeId });
@@ -336,6 +414,25 @@ export class LearningService {
     }
     if (input.score_percent !== undefined && (!Number.isFinite(input.score_percent) || input.score_percent < 0 || input.score_percent > 100)) {
       details.push({ field: 'score_percent', reason: 'must be a number between 0 and 100 when provided' });
+    }
+    if (details.length > 0) {
+      throw new ValidationError(details);
+    }
+  }
+
+  private validateLearningPathInput(input: CreateLearningPathInput): void {
+    const details: Array<{ field: string; reason: string }> = [];
+    if (!input.code?.trim()) {
+      details.push({ field: 'code', reason: 'must be a non-empty string' });
+    }
+    if (!input.title?.trim()) {
+      details.push({ field: 'title', reason: 'must be a non-empty string' });
+    }
+    if (!Array.isArray(input.course_ids) || input.course_ids.length === 0) {
+      details.push({ field: 'course_ids', reason: 'must include at least one course id' });
+    }
+    if (input.status && !['Active', 'Inactive'].includes(input.status)) {
+      details.push({ field: 'status', reason: 'must be Active or Inactive when provided' });
     }
     if (details.length > 0) {
       throw new ValidationError(details);

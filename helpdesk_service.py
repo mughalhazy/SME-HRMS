@@ -526,11 +526,22 @@ class HelpdeskService:
         by_priority = {priority: 0 for priority in sorted(self.PRIORITIES)}
         by_status = {status: 0 for status in sorted(self.TICKET_STATUSES)}
         open_sla_breaches = 0
+        escalated_tickets = 0
+        first_response_due = 0
+        resolution_due = 0
         for ticket in rows:
             by_priority[ticket.priority] = by_priority.get(ticket.priority, 0) + 1
             by_status[ticket.status] = by_status.get(ticket.status, 0) + 1
+            if ticket.first_response_due_at:
+                first_response_due += 1
+            if ticket.resolution_due_at:
+                resolution_due += 1
             if ticket.status in {'Open', 'InProgress'} and ticket.metadata.get('last_sla_status') == 'escalated':
                 open_sla_breaches += 1
+            if ticket.metadata.get('last_sla_status') == 'escalated':
+                escalated_tickets += 1
+        automation_runs = [run for run in self.automation_runs if run['tenant_id'] == tenant]
+        automation_hooks = [hook for hook in self.automation_hooks if hook['tenant_id'] == tenant and hook['active']]
         return 200, {
             'tenant_id': tenant,
             'generated_at': self._now().isoformat(),
@@ -541,7 +552,21 @@ class HelpdeskService:
                 'closed_tickets': by_status.get('Closed', 0),
                 'open_sla_breaches': open_sla_breaches,
             },
+            'sla_tracking': {
+                'first_response_tracked_tickets': first_response_due,
+                'resolution_tracked_tickets': resolution_due,
+                'escalated_tickets': escalated_tickets,
+                'escalation_rate': round(escalated_tickets / (len(rows) or 1), 4),
+            },
             'prioritization': by_priority,
+            'escalation': {
+                'currently_breached_tickets': open_sla_breaches,
+                'historical_escalations': escalated_tickets,
+            },
+            'automation': {
+                'active_hooks': len(automation_hooks),
+                'triggered_runs': len(automation_runs),
+            },
             'status_breakdown': by_status,
         }
 

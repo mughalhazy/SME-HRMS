@@ -151,6 +151,7 @@ export function createEmployeeRouter(): Router {
   router.post('/api/v1/compensation/allowances', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.createAllowance);
   router.post('/api/v1/compensation/workforce-plans/forecast', createCompensationRateLimit, authorizeEmployeeAction('manageCompensation'), compensationController.forecastWorkforcePlan);
   router.post('/api/v1/learning/courses', createLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.createCourse);
+  router.post('/api/v1/learning/paths', createLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.createLearningPath);
   router.post('/api/v1/learning/enrollments', createLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.createEnrollment);
   router.post('/api/v1/learning/enrollments/:enrollmentId/completions', updateLearningRateLimit, authorizeEmployeeAction('manageLearning'), learningController.recordCompletion);
 
@@ -184,10 +185,13 @@ export function createEmployeeRouter(): Router {
   router.get('/api/v1/compensation/employees/:employeeId/payroll-context', readCompensationRateLimit, authorizeEmployeeAction('readCompensation'), compensationController.getEmployeePayrollContext);
   router.get('/api/v1/learning/courses/:courseId', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getCourse);
   router.get('/api/v1/learning/courses', listLearningRateLimit, authorizeEmployeeAction('listLearning'), learningController.listCourses);
+  router.get('/api/v1/learning/paths', listLearningRateLimit, authorizeEmployeeAction('listLearning'), learningController.listLearningPaths);
   router.get('/api/v1/learning/enrollments/:enrollmentId', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getEnrollment);
   router.get('/api/v1/learning/enrollments', listLearningRateLimit, authorizeEmployeeAction('listLearning'), learningController.listEnrollments);
   router.get('/api/v1/learning/completions', listLearningRateLimit, authorizeEmployeeAction('listLearning'), learningController.listCompletions);
   router.get('/api/v1/learning/employees/:employeeId/summary', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getEmployeeSummary);
+  router.get('/api/v1/learning/employees/:employeeId/certifications', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getEmployeeCertifications);
+  router.get('/api/v1/learning/analytics', readLearningRateLimit, authorizeEmployeeAction('readLearning'), learningController.getLearningAnalytics);
   router.get('/api/v1/org/:kind', readOrgRateLimit, authorizeEmployeeAction('listOrgStructure'), orgController.listEntities);
 
   router.patch('/api/v1/employees/:employeeId', updateEmployeeRateLimit, authorizeEmployeeAction('updateProfile'), controller.updateEmployee);
