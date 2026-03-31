@@ -4,25 +4,70 @@
 
 This repository includes a deterministic deployment layer aligned to canonical service and data architecture docs.
 
-### Included services
-- employee-service
-- attendance-service
-- leave-service
-- payroll-service
-- hiring-service
-- auth-service
-- api-gateway
-- frontend-ui
+### Runtime topology
+
+#### Standalone services (individual containers)
+- employee-service (8001)
+- attendance-service (8002)
+- leave-service (8003)
+- payroll-service (8004)
+- hiring-service (8005)
+- auth-service (8006)
+- notification-service (8007)
+- audit-service (8008)
+- workflow-service (8009)
+- performance-service (8010)
+- engagement-service (8011)
+- helpdesk-service (8012)
+- reporting-analytics-service (8013)
+- search-service (8014)
+- expense-service (8015)
+- integration-service (8016)
+- automation-service (8017)
+- travel-service (8018)
+- project-service (8019)
+- api-gateway (8000)
+- frontend-ui (3000)
+
+#### Internal modules (not separate compose services)
+- `background_jobs.py` and `background_jobs_api.py` stay internal and are represented through the gateway `/jobs` route.
+- Shared contracts/resilience/middleware/util modules remain in-process dependencies for service containers.
 
 ### Key deployment artifacts
 - `docker-compose.yml`
 - `Dockerfile.services`
 - `Dockerfile.api`
 - `Dockerfile.ui`
+- `start.sh`
 - `.env.example`
 - `deployment/`
-- `.github/workflows/test.yml`
-- `.github/workflows/build.yml`
-- `.github/workflows/deploy.yml`
 
-See `docs/deployment.md` for startup, migration, and QC validation instructions.
+## Run locally
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+### Verify startup
+
+```bash
+curl http://localhost:8000/ready
+curl http://localhost:8000/health
+curl http://localhost:3000/
+```
+
+### Useful commands
+
+```bash
+# Full status, including health
+docker compose ps
+
+# Follow logs
+docker compose logs -f api-gateway
+
+# Tear down
+docker compose down -v
+```
+
+See `docs/deployment.md` for migration and QC validation instructions.

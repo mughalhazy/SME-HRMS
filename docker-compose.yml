@@ -1,5 +1,15 @@
 version: "3.9"
 
+x-service-base: &service-base
+  build:
+    context: .
+    dockerfile: Dockerfile.services
+  depends_on:
+    postgres:
+      condition: service_healthy
+    migrations:
+      condition: service_completed_successfully
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -35,19 +45,12 @@ services:
     restart: "no"
 
   employee-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: employee-service
       PORT: 8001
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
       AUTH_SERVICE_URL: http://auth-service:8006
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 15s
@@ -55,20 +58,13 @@ services:
       retries: 5
 
   attendance-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: attendance-service
       PORT: 8002
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
       EMPLOYEE_SERVICE_URL: http://employee-service:8001
       AUTH_SERVICE_URL: http://auth-service:8006
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
       interval: 15s
@@ -76,9 +72,7 @@ services:
       retries: 5
 
   leave-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: leave-service
       PORT: 8003
@@ -86,11 +80,6 @@ services:
       EMPLOYEE_SERVICE_URL: http://employee-service:8001
       AUTH_SERVICE_URL: http://auth-service:8006
       PAYROLL_SERVICE_URL: http://payroll-service:8004
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
       interval: 15s
@@ -98,9 +87,7 @@ services:
       retries: 5
 
   payroll-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: payroll-service
       PORT: 8004
@@ -109,11 +96,6 @@ services:
       ATTENDANCE_SERVICE_URL: http://attendance-service:8002
       LEAVE_SERVICE_URL: http://leave-service:8003
       AUTH_SERVICE_URL: http://auth-service:8006
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
       interval: 15s
@@ -121,20 +103,13 @@ services:
       retries: 5
 
   hiring-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: hiring-service
       PORT: 8005
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
       EMPLOYEE_SERVICE_URL: http://employee-service:8001
       AUTH_SERVICE_URL: http://auth-service:8006
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"]
       interval: 15s
@@ -142,20 +117,13 @@ services:
       retries: 5
 
   auth-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: auth-service
       PORT: 8006
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
       JWT_ISSUER: ${JWT_ISSUER:-sme-hrms}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-sme-hrms-api}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')"]
       interval: 15s
@@ -163,19 +131,12 @@ services:
       retries: 5
 
   notification-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: notification-service
       PORT: 8007
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
       AUTH_SERVICE_URL: http://auth-service:8006
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"]
       interval: 15s
@@ -183,135 +144,154 @@ services:
       retries: 5
 
   audit-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: audit-service
       PORT: 8008
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   workflow-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: workflow-service
       PORT: 8009
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8009/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  performance-service:
+    <<: *service-base
+    environment:
+      SERVICE_NAME: performance-service
+      PORT: 8010
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   engagement-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: engagement-service
       PORT: 8011
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8011/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   helpdesk-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: helpdesk-service
       PORT: 8012
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8012/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   reporting-analytics-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: reporting-analytics-service
       PORT: 8013
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8013/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   search-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: search-service
       PORT: 8014
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8014/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   expense-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: expense-service
       PORT: 8015
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8015/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   integration-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: integration-service
       PORT: 8016
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8016/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   automation-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.services
+    <<: *service-base
     environment:
       SERVICE_NAME: automation-service
       PORT: 8017
       DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrations:
-        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8017/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  travel-service:
+    <<: *service-base
+    environment:
+      SERVICE_NAME: travel-service
+      PORT: 8018
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8018/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  project-service:
+    <<: *service-base
+    environment:
+      SERVICE_NAME: project-service
+      PORT: 8019
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrms}:${POSTGRES_PASSWORD:-hrms_dev_password}@postgres:5432/${POSTGRES_DB:-hrms}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8019/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   api-gateway:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile.services
+    command: ["python", "/app/docker/api_gateway_service.py"]
     ports:
       - "8000:8000"
     environment:
@@ -325,6 +305,7 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:8007
       AUDIT_SERVICE_URL: http://audit-service:8008
       WORKFLOW_SERVICE_URL: http://workflow-service:8009
+      PERFORMANCE_SERVICE_URL: http://performance-service:8010
       ENGAGEMENT_SERVICE_URL: http://engagement-service:8011
       HELPDESK_SERVICE_URL: http://helpdesk-service:8012
       REPORTING_ANALYTICS_SERVICE_URL: http://reporting-analytics-service:8013
@@ -332,6 +313,8 @@ services:
       EXPENSE_SERVICE_URL: http://expense-service:8015
       INTEGRATION_SERVICE_URL: http://integration-service:8016
       AUTOMATION_SERVICE_URL: http://automation-service:8017
+      TRAVEL_SERVICE_URL: http://travel-service:8018
+      PROJECT_SERVICE_URL: http://project-service:8019
     depends_on:
       employee-service:
         condition: service_healthy
@@ -348,23 +331,29 @@ services:
       notification-service:
         condition: service_healthy
       audit-service:
-        condition: service_started
+        condition: service_healthy
       workflow-service:
-        condition: service_started
+        condition: service_healthy
+      performance-service:
+        condition: service_healthy
       engagement-service:
-        condition: service_started
+        condition: service_healthy
       helpdesk-service:
-        condition: service_started
+        condition: service_healthy
       reporting-analytics-service:
-        condition: service_started
+        condition: service_healthy
       search-service:
-        condition: service_started
+        condition: service_healthy
       expense-service:
-        condition: service_started
+        condition: service_healthy
       integration-service:
-        condition: service_started
+        condition: service_healthy
       automation-service:
-        condition: service_started
+        condition: service_healthy
+      travel-service:
+        condition: service_healthy
+      project-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 15s
