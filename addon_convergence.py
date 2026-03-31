@@ -83,6 +83,10 @@ class AddonConvergenceService:
         'expense': 'expense-service',
         'project': 'project-service',
         'helpdesk': 'helpdesk-service',
+        'engagement': 'engagement-service',
+        'learning': 'employee-service',
+        'workforce-intelligence': 'reporting-analytics',
+        'cost-planning': 'cost-planning-service',
         'integration': 'integration-service',
         'performance': 'performance-service',
     }
@@ -178,8 +182,16 @@ class AddonConvergenceService:
             return []
         return [ConvergenceIssue('audit_event_coverage', 'missing_audit_or_event_hook', 'error', module.module_id, 'audit/event hook coverage is incomplete')]
 
+
+    def _expected_owner(self, module_id: str) -> str | None:
+        normalized = module_id.lower()
+        for prefix in sorted(self.OWNER_MAP, key=len, reverse=True):
+            if normalized.startswith(prefix):
+                return self.OWNER_MAP[prefix]
+        return None
+
     def _check_service_boundaries(self, module: AddonModule) -> list[ConvergenceIssue]:
-        expected = self.OWNER_MAP.get(module.module_id.split('-')[0])
+        expected = self._expected_owner(module.module_id)
         if expected is None or module.owner_service == expected:
             return []
         return [ConvergenceIssue('service_boundaries', 'boundary_drift', 'error', module.module_id, f'module owned by {module.owner_service}; expected {expected}')]
@@ -221,7 +233,7 @@ class AddonConvergenceService:
                 actions.append({'module_id': module.module_id, 'action': 'inject_missing_audit_event_hooks'})
 
             if key('boundary_drift'):
-                expected = self.OWNER_MAP.get(module.module_id.split('-')[0])
+                expected = self._expected_owner(module.module_id)
                 if expected:
                     module.owner_service = expected
                     actions.append({'module_id': module.module_id, 'action': 'restore_clean_service_boundary', 'owner_service': expected})

@@ -79,3 +79,24 @@ def test_convergence_raises_when_no_auto_fix_path_exists() -> None:
 
     with pytest.raises(AddonConvergenceError):
         service.converge(max_iterations=2)
+
+
+def test_convergence_restores_boundaries_for_integrated_event_workflow_domains() -> None:
+    modules = [
+        AddonModule(module_id='helpdesk-addon', tenant_id='tenant-default', owner_service='legacy-core', capabilities=['ticket'], workflow_triggers=['helpdesk.ticket.submitted'], automation_triggers=['helpdesk.ticket.submitted']),
+        AddonModule(module_id='engagement-addon', tenant_id='tenant-default', owner_service='legacy-core', capabilities=['survey'], workflow_triggers=['engagement.survey.published'], automation_triggers=['engagement.survey.published']),
+        AddonModule(module_id='learning-addon', tenant_id='tenant-default', owner_service='legacy-core', capabilities=['enrollment'], workflow_triggers=['learning.enrollment.created'], automation_triggers=['learning.enrollment.created']),
+        AddonModule(module_id='workforce-intelligence-addon', tenant_id='tenant-default', owner_service='legacy-core', capabilities=['reporting'], workflow_triggers=['workforce_intelligence.report_run.generated'], automation_triggers=['workforce_intelligence.report_run.generated']),
+        AddonModule(module_id='cost-planning-addon', tenant_id='tenant-default', owner_service='legacy-core', capabilities=['budget'], workflow_triggers=['cost_planning.plan.submitted'], automation_triggers=['cost_planning.plan.submitted']),
+    ]
+
+    report = AddonConvergenceService(modules).converge(max_iterations=5)
+
+    assert report.score == 10
+    assert {module.module_id: module.owner_service for module in modules} == {
+        'helpdesk-addon': 'helpdesk-service',
+        'engagement-addon': 'engagement-service',
+        'learning-addon': 'employee-service',
+        'workforce-intelligence-addon': 'reporting-analytics',
+        'cost-planning-addon': 'cost-planning-service',
+    }
