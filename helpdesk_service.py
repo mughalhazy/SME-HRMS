@@ -141,8 +141,44 @@ class HelpdeskService:
         self.tenant_id = DEFAULT_TENANT_ID
         self._lock = RLock()
         self._registered_workflow_tenants: set[str] = set()
+        self.automation_hooks: list[dict[str, Any]] = []
+        self.automation_runs: list[dict[str, Any]] = []
         self._seed_defaults()
         self._register_workflows_for_tenant(DEFAULT_TENANT_ID)
+
+    def register_automation_hook(self, payload: dict[str, Any], *, actor_id: str, tenant_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        tenant = normalize_tenant_id(tenant_id or payload.get('tenant_id'))
+        event_name = str(payload.get('event_name') or '').strip()
+        target = str(payload.get('target') or '').strip()
+        if not event_name or not target:
+            raise self._error(422, 'VALIDATION_ERROR', 'event_name and target are required', self._trace(), [{'field': 'event_name', 'reason': 'must be provided'}, {'field': 'target', 'reason': 'must be provided'}])
+        hook = {
+            'hook_id': str(uuid4()),
+            'tenant_id': tenant,
+            'event_name': event_name,
+            'target': target,
+            'active': bool(payload.get('active', True)),
+            'created_by': actor_id,
+            'created_at': self._now().isoformat(),
+        }
+        self.automation_hooks.append(hook)
+        return 201, hook
+
+    def list_automation_hooks(self, *, tenant_id: str | None = None, event_name: str | None = None) -> tuple[int, dict[str, Any]]:
+        tenant = normalize_tenant_id(tenant_id)
+        rows = [hook for hook in self.automation_hooks if hook['tenant_id'] == tenant]
+        if event_name:
+            rows = [hook for hook in rows if hook['event_name'] == event_name]
+        rows.sort(key=lambda item: (item['event_name'], item['hook_id']))
+        return 200, {'tenant_id': tenant, 'items': rows, '_pagination': {'count': len(rows)}}
+
+    def list_automation_runs(self, *, tenant_id: str | None = None, ticket_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        tenant = normalize_tenant_id(tenant_id)
+        rows = [run for run in self.automation_runs if run['tenant_id'] == tenant]
+        if ticket_id:
+            rows = [run for run in rows if run['ticket_id'] == ticket_id]
+        rows.sort(key=lambda item: (item['executed_at'], item['run_id']), reverse=True)
+        return 200, {'tenant_id': tenant, 'items': rows, '_pagination': {'count': len(rows)}}
 
     def register_employee_profile(self, payload: dict[str, Any]) -> dict[str, Any]:
         tenant_id = normalize_tenant_id(payload.get('tenant_id'))
@@ -307,6 +343,7 @@ class HelpdeskService:
             response = self._ticket_payload(ticket, actor_id=actor_id, actor_role=actor_role)
             self._audit('helpdesk_ticket_submitted', 'HelpdeskTicket', ticket.ticket_id, before, response, actor_id=actor_id, actor_type=actor_type, tenant_id=tenant, trace_id=trace)
             self._emit('HelpdeskTicketSubmitted', response, tenant_id=tenant, correlation_id=trace, aggregate_id=ticket.ticket_id)
+            self._trigger_automation_hooks('HelpdeskTicketSubmitted', ticket=ticket, trace_id=trace, payload=response)
         self.observability.track('helpdesk.submit_ticket', trace_id=trace, started_at=started, success=True, context={'tenant_id': tenant, 'status': 200})
         return 200, response
 
@@ -348,6 +385,7 @@ class HelpdeskService:
             response = self._ticket_payload(ticket, actor_id=actor_id, actor_role=actor_role)
             self._audit(audit_action, 'HelpdeskTicket', ticket.ticket_id, before, response, actor_id=actor_id, actor_type=actor_type, tenant_id=tenant, trace_id=trace)
             self._emit(event_name, response, tenant_id=tenant, correlation_id=trace, aggregate_id=ticket.ticket_id)
+            self._trigger_automation_hooks(event_name, ticket=ticket, trace_id=trace, payload=response)
         self.observability.track('helpdesk.decide_ticket', trace_id=trace, started_at=started, success=True, context={'tenant_id': tenant, 'status': 200, 'action': action})
         return 200, response
 
@@ -442,6 +480,7 @@ class HelpdeskService:
                 after = self._ticket_payload(ticket)
                 self._audit('helpdesk_ticket_sla_escalated', 'HelpdeskTicket', ticket.ticket_id, before, after, actor_id='workflow-engine', actor_type='service', tenant_id=ticket.tenant_id, trace_id=trace)
                 self._emit('HelpdeskTicketSlaEscalated', after, tenant_id=ticket.tenant_id, correlation_id=trace, aggregate_id=ticket.ticket_id)
+                self._trigger_automation_hooks('HelpdeskTicketSlaEscalated', ticket=ticket, trace_id=trace, payload=after)
                 affected.append(after)
         return 200, {'items': affected, 'data': affected}
 
@@ -671,6 +710,24 @@ class HelpdeskService:
             correlation_id=correlation_id,
             idempotency_key=f'{aggregate_id}:{legacy_event_name}:{data.get("status", "mutation")}',
         )
+
+    def _trigger_automation_hooks(self, event_name: str, *, ticket: HelpdeskTicket, trace_id: str, payload: dict[str, Any]) -> None:
+        matching_hooks = [hook for hook in self.automation_hooks if hook['tenant_id'] == ticket.tenant_id and hook['active'] and hook['event_name'] == event_name]
+        for hook in matching_hooks:
+            self.automation_runs.append(
+                {
+                    'run_id': str(uuid4()),
+                    'tenant_id': ticket.tenant_id,
+                    'ticket_id': ticket.ticket_id,
+                    'hook_id': hook['hook_id'],
+                    'event_name': event_name,
+                    'target': hook['target'],
+                    'status': 'triggered',
+                    'trace_id': trace_id,
+                    'executed_at': self._now().isoformat(),
+                    'payload': {'ticket_id': ticket.ticket_id, 'priority': payload.get('priority'), 'status': payload.get('status')},
+                }
+            )
 
     @staticmethod
     def _make_comment(body: str, *, actor_id: str, visibility: str, attachment_ids: list[str] | None = None) -> TicketComment:

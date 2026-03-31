@@ -1,6 +1,8 @@
 import unittest
 
 from helpdesk_api import (
+    get_helpdesk_automation_hooks,
+    get_helpdesk_automation_runs,
     get_helpdesk_analytics,
     get_helpdesk_ticket,
     get_helpdesk_tickets,
@@ -10,6 +12,7 @@ from helpdesk_api import (
     post_helpdesk_ticket_reopen,
     post_helpdesk_ticket_submit,
     post_helpdesk_tickets,
+    post_helpdesk_automation_hook,
 )
 from helpdesk_service import HelpdeskService
 
@@ -178,6 +181,46 @@ class HelpdeskApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(analytics['data']['prioritization']['High'], 1)
         self.assertEqual(analytics['data']['status_breakdown']['InProgress'], 1)
+
+    def test_helpdesk_automation_hooks_trigger_and_are_reportable(self) -> None:
+        status, hook = post_helpdesk_automation_hook(
+            self.service,
+            'Helpdesk',
+            'helpdesk-agent',
+            {
+                'tenant_id': 'tenant-default',
+                'event_name': 'HelpdeskTicketSubmitted',
+                'target': 'automation://notify-hr-queue',
+            },
+            trace_id='trace-helpdesk-api-hook-create',
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(hook['data']['event_name'], 'HelpdeskTicketSubmitted')
+
+        status, created = post_helpdesk_tickets(
+            self.service,
+            'Employee',
+            'emp-001',
+            {
+                'tenant_id': 'tenant-default',
+                'requester_employee_id': 'emp-001',
+                'subject': 'Laptop battery replacement',
+                'category_code': 'IT',
+                'description': 'Battery health is below 30%.',
+            },
+            trace_id='trace-helpdesk-api-hook-ticket',
+        )
+        self.assertEqual(status, 201)
+        ticket_id = created['data']['ticket_id']
+        post_helpdesk_ticket_submit(self.service, 'Employee', 'emp-001', ticket_id, {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-hook-submit')
+
+        status, hooks = get_helpdesk_automation_hooks(self.service, 'Helpdesk', 'helpdesk-agent', {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-hook-list')
+        self.assertEqual(status, 200)
+        self.assertEqual(hooks['data']['items'][0]['target'], 'automation://notify-hr-queue')
+
+        status, runs = get_helpdesk_automation_runs(self.service, 'Helpdesk', 'helpdesk-agent', {'tenant_id': 'tenant-default', 'ticket_id': ticket_id}, trace_id='trace-helpdesk-api-hook-runs')
+        self.assertEqual(status, 200)
+        self.assertEqual(runs['data']['items'][0]['event_name'], 'HelpdeskTicketSubmitted')
 
 
 if __name__ == '__main__':

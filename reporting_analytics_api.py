@@ -113,3 +113,31 @@ def get_reporting_schedules(service: ReportingAnalyticsService, query: dict[str,
         'items': rows,
         '_pagination': pagination_payload(count=len(rows), limit=len(rows), cursor=None, next_cursor=None),
     }
+
+
+@with_error_handling
+def get_workforce_attrition_metrics(service: ReportingAnalyticsService, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    items = service.list_aggregates(aggregate_type='workforce.attrition.summary', dimension_key=params.get('dimension_key'), dimension_value=params.get('dimension_value'))
+    return 200, {'items': items, '_pagination': pagination_payload(count=len(items), limit=len(items), cursor=None, next_cursor=None)}
+
+
+@with_error_handling
+def get_workforce_hiring_funnel(service: ReportingAnalyticsService, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    items = service.list_aggregates(aggregate_type='hiring.funnel.summary', dimension_key=params.get('dimension_key'), dimension_value=params.get('dimension_value'))
+    return 200, {'items': items, '_pagination': pagination_payload(count=len(items), limit=len(items), cursor=None, next_cursor=None)}
+
+
+@with_error_handling
+def get_workforce_attendance_trends(service: ReportingAnalyticsService, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    items = service.list_aggregates(aggregate_type='workforce.attendance.trend', dimension_key=params.get('dimension_key'), dimension_value=params.get('dimension_value'))
+    return 200, {'items': items, '_pagination': pagination_payload(count=len(items), limit=len(items), cursor=None, next_cursor=None)}
+
+
+@with_error_handling
+def get_workforce_dashboard(service: ReportingAnalyticsService, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    items = service.list_aggregates(aggregate_type='workforce.dashboard.summary', dimension_key=params.get('dimension_key') or 'tenant', dimension_value=params.get('dimension_value') or service.tenant_id)
+    return 200, {'items': items, '_pagination': pagination_payload(count=len(items), limit=len(items), cursor=None, next_cursor=None)}

@@ -9,6 +9,10 @@ from reporting_analytics_api import (
     get_reporting_exports,
     get_reporting_reports,
     get_reporting_schedules,
+    get_workforce_attendance_trends,
+    get_workforce_attrition_metrics,
+    get_workforce_dashboard,
+    get_workforce_hiring_funnel,
     post_reporting_export,
     post_reporting_report,
     post_reporting_run,
@@ -427,3 +431,23 @@ def test_reporting_event_ingestion_is_replay_safe_and_tenant_scoped() -> None:
         assert str(exc) == 'cross_tenant_event_blocked'
     else:
         raise AssertionError('expected reporting to reject cross-tenant events')
+
+
+def test_workforce_intelligence_api_shortcuts_expose_advanced_metrics() -> None:
+    reporting, _ = _seed_reporting_service()
+
+    status, attrition = get_workforce_attrition_metrics(reporting, {'dimension_key': 'tenant', 'dimension_value': 'tenant-default'})
+    assert status == 200
+    assert attrition['data']['items'][0]['aggregate_type'] == 'workforce.attrition.summary'
+
+    status, funnel = get_workforce_hiring_funnel(reporting, {'dimension_key': 'tenant', 'dimension_value': 'tenant-default'})
+    assert status == 200
+    assert funnel['data']['items'][0]['metrics']['hire_conversion_rate'] == 0.3333
+
+    status, attendance = get_workforce_attendance_trends(reporting, {'dimension_key': 'attendance_date', 'dimension_value': '2026-03-10'})
+    assert status == 200
+    assert attendance['data']['items'][0]['metrics']['attendance_rate'] == 0.6667
+
+    status, dashboard = get_workforce_dashboard(reporting, {'dimension_key': 'tenant', 'dimension_value': 'tenant-default'})
+    assert status == 200
+    assert dashboard['data']['items'][0]['aggregate_type'] == 'workforce.dashboard.summary'

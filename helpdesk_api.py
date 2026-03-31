@@ -107,3 +107,20 @@ def get_helpdesk_tickets(service: HelpdeskService, actor_role: str, actor_id: st
 def get_helpdesk_analytics(service: HelpdeskService, actor_role: str, actor_id: str, query: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
     params = query or {}
     return service.get_analytics(tenant_id=params.get('tenant_id'))
+
+
+@with_error_handling
+def post_helpdesk_automation_hook(service: HelpdeskService, actor_role: str, actor_id: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    return service.register_automation_hook(payload, actor_id=actor_id, tenant_id=payload.get('tenant_id'))
+
+
+@with_error_handling
+def get_helpdesk_automation_hooks(service: HelpdeskService, actor_role: str, actor_id: str, query: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    return service.list_automation_hooks(tenant_id=params.get('tenant_id'), event_name=params.get('event_name'))
+
+
+@with_error_handling
+def get_helpdesk_automation_runs(service: HelpdeskService, actor_role: str, actor_id: str, query: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    return service.list_automation_runs(tenant_id=params.get('tenant_id'), ticket_id=params.get('ticket_id'))

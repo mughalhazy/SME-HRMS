@@ -110,6 +110,8 @@ class SurveyResponse:
     employee_id: str
     answers: list[SurveyAnswer]
     overall_comment: str | None
+    sentiment_score: float
+    sentiment_label: str
     submitted_at: datetime
 
     def to_dict(self) -> dict[str, Any]:
@@ -120,6 +122,8 @@ class SurveyResponse:
             'employee_id': self.employee_id,
             'answers': [answer.to_dict() for answer in self.answers],
             'overall_comment': self.overall_comment,
+            'sentiment_score': self.sentiment_score,
+            'sentiment_label': self.sentiment_label,
             'submitted_at': self.submitted_at.isoformat(),
         }
 
@@ -150,6 +154,8 @@ class EngagementService:
     QUESTION_KINDS = {'Likert5'}
     DIMENSIONS = {'D1', 'D2', 'D3', 'D4', 'D5'}
     FAVORABLE_THRESHOLD = 4
+    POSITIVE_TERMS = {'great', 'strong', 'supportive', 'excellent', 'growth', 'happy', 'clear', 'confident'}
+    NEGATIVE_TERMS = {'burnout', 'stressed', 'blocked', 'poor', 'frustrated', 'unclear', 'overloaded', 'toxic'}
 
     def __init__(self, db_path: str | None = None) -> None:
         self.employee_snapshots = PersistentKVStore[str, EmployeeSnapshot](service='engagement-service', namespace='employee_snapshots', db_path=db_path)
@@ -282,8 +288,12 @@ class EngagementService:
             employee_id=employee.employee_id,
             answers=answers,
             overall_comment=str(payload.get('overall_comment')).strip() if payload.get('overall_comment') else None,
+            sentiment_score=0.0,
+            sentiment_label='neutral',
             submitted_at=now,
         )
+        response.sentiment_score = self._sentiment_score(response.overall_comment)
+        response.sentiment_label = self._sentiment_label(response.sentiment_score)
         self.responses[response.response_id] = response
         aggregate = self._rebuild_aggregate(survey, trace_id=trace)
         response_payload = self._response_payload(response)
@@ -319,6 +329,51 @@ class EngagementService:
         if aggregate is None:
             aggregate = self._rebuild_aggregate(survey, trace_id=self.observability.trace_id())
         return 200, {'tenant_id': survey.tenant_id, 'survey_id': survey.survey_id, 'survey': self._survey_payload(survey), 'aggregate': aggregate.to_dict()}
+
+    def get_sentiment_trends(self, *, tenant_id: str | None = None, department_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        tenant = normalize_tenant_id(tenant_id)
+        trends: dict[str, dict[str, Any]] = {}
+        for response in self.responses.values():
+            if response.tenant_id != tenant:
+                continue
+            employee = self.employee_snapshots.get(response.employee_id)
+            if employee is None or (department_id and employee.department_id != department_id):
+                continue
+            survey = self.surveys.get(response.survey_id)
+            period = (survey.published_at or response.submitted_at).date().isoformat()[:7] if survey else response.submitted_at.date().isoformat()[:7]
+            bucket = trends.setdefault(period, {'period': period, 'responses': 0, 'average_sentiment_score': 0.0, 'positive': 0, 'neutral': 0, 'negative': 0})
+            bucket['responses'] += 1
+            bucket['average_sentiment_score'] += response.sentiment_score
+            bucket[response.sentiment_label] += 1
+        items = []
+        for period, row in sorted(trends.items()):
+            responses = row['responses'] or 1
+            row['average_sentiment_score'] = round(row['average_sentiment_score'] / responses, 4)
+            row['sentiment_index'] = round((row['positive'] - row['negative']) / responses, 4)
+            items.append(row)
+        return 200, {'tenant_id': tenant, 'department_id': department_id, 'items': items}
+
+    def get_engagement_dashboard(self, *, tenant_id: str | None = None, department_id: str | None = None) -> tuple[int, dict[str, Any]]:
+        tenant = normalize_tenant_id(tenant_id)
+        surveys = [survey for survey in self.surveys.values() if survey.tenant_id == tenant and (department_id is None or survey.target_department_id in {None, department_id})]
+        latest_survey = max(surveys, key=lambda item: item.updated_at, default=None)
+        trend_status, trends = self.get_sentiment_trends(tenant_id=tenant, department_id=department_id)
+        assert trend_status == 200
+        latest_trend = trends['items'][-1] if trends['items'] else {'average_sentiment_score': 0.0, 'sentiment_index': 0.0, 'responses': 0}
+        return 200, {
+            'tenant_id': tenant,
+            'department_id': department_id,
+            'snapshot': {
+                'survey_count': len(surveys),
+                'open_surveys': len([survey for survey in surveys if survey.status == 'Open']),
+                'closed_surveys': len([survey for survey in surveys if survey.status == 'Closed']),
+                'latest_survey_id': latest_survey.survey_id if latest_survey else None,
+                'latest_sentiment_score': latest_trend['average_sentiment_score'],
+                'latest_sentiment_index': latest_trend['sentiment_index'],
+                'latest_response_count': latest_trend['responses'],
+            },
+            'sentiment_trends': trends['items'],
+        }
 
     def _parse_questions(self, raw_questions: Any, trace_id: str) -> list[SurveyQuestion]:
         if not isinstance(raw_questions, list) or not raw_questions:
@@ -536,3 +591,21 @@ class EngagementService:
     @staticmethod
     def _now() -> datetime:
         return datetime.now(timezone.utc)
+
+    def _sentiment_score(self, comment: str | None) -> float:
+        if not comment:
+            return 0.0
+        tokens = [token.strip('.,!?').lower() for token in comment.split() if token.strip()]
+        if not tokens:
+            return 0.0
+        positive = sum(1 for token in tokens if token in self.POSITIVE_TERMS)
+        negative = sum(1 for token in tokens if token in self.NEGATIVE_TERMS)
+        return round((positive - negative) / len(tokens), 4)
+
+    @staticmethod
+    def _sentiment_label(score: float) -> str:
+        if score > 0.05:
+            return 'positive'
+        if score < -0.05:
+            return 'negative'
+        return 'neutral'

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from engagement_api import get_aggregated_results, get_surveys, post_responses, post_survey_close, post_survey_publish, post_surveys
+from engagement_api import get_aggregated_results, get_engagement_dashboard, get_sentiment_trends, get_surveys, post_responses, post_survey_close, post_survey_publish, post_surveys
 from engagement_service import EngagementService
 
 
@@ -238,3 +238,63 @@ def test_engagement_api_wraps_d1_responses_and_aggregation_reads(tmp_path: Path)
     status, closed = post_survey_close(service, 'HRAdmin', 'emp-hr-1', survey_id, {'tenant_id': 'tenant-default'}, trace_id='trace-api-close')
     assert status == 200
     assert closed['data']['status'] == 'Closed'
+
+
+def test_engagement_sentiment_trends_and_dashboard(tmp_path: Path) -> None:
+    service = EngagementService(db_path=str(tmp_path / 'engagement-sentiment.sqlite3'))
+    _seed_employees(service)
+
+    _, survey_response = post_surveys(
+        service,
+        'HRAdmin',
+        'emp-hr-1',
+        {
+            'tenant_id': 'tenant-default',
+            'code': 'ENG-FY26-Q4',
+            'title': 'Q4 Pulse',
+            'owner_employee_id': 'emp-hr-1',
+            'target_department_id': 'dep-eng',
+            'questions': _questions(),
+        },
+        trace_id='trace-api-survey-sentiment',
+    )
+    survey_id = survey_response['data']['survey_id']
+    post_survey_publish(service, 'HRAdmin', 'emp-hr-1', survey_id, {'tenant_id': 'tenant-default'}, trace_id='trace-api-publish-sentiment')
+
+    post_responses(
+        service,
+        'Employee',
+        'emp-eng-1',
+        {
+            'tenant_id': 'tenant-default',
+            'survey_id': survey_id,
+            'employee_id': 'emp-eng-1',
+            'answers': [{'question_id': 'q-d1', 'score': 5}, {'question_id': 'q-d2', 'score': 5}, {'question_id': 'q-d3', 'score': 4}, {'question_id': 'q-d4', 'score': 5}, {'question_id': 'q-d5', 'score': 5}],
+            'overall_comment': 'Strong growth and excellent support from my manager.',
+        },
+        trace_id='trace-api-response-sentiment-1',
+    )
+    post_responses(
+        service,
+        'Employee',
+        'emp-eng-2',
+        {
+            'tenant_id': 'tenant-default',
+            'survey_id': survey_id,
+            'employee_id': 'emp-eng-2',
+            'answers': [{'question_id': 'q-d1', 'score': 3}, {'question_id': 'q-d2', 'score': 3}, {'question_id': 'q-d3', 'score': 3}, {'question_id': 'q-d4', 'score': 3}, {'question_id': 'q-d5', 'score': 3}],
+            'overall_comment': 'Feeling overloaded and stressed this month.',
+        },
+        trace_id='trace-api-response-sentiment-2',
+    )
+
+    status, trends = get_sentiment_trends(service, 'HRAdmin', 'emp-hr-1', {'tenant_id': 'tenant-default', 'department_id': 'dep-eng'}, trace_id='trace-api-trends')
+    assert status == 200
+    assert trends['data']['items'][0]['responses'] == 2
+    assert trends['data']['items'][0]['positive'] == 1
+    assert trends['data']['items'][0]['negative'] == 1
+
+    status, dashboard = get_engagement_dashboard(service, 'HRAdmin', 'emp-hr-1', {'tenant_id': 'tenant-default', 'department_id': 'dep-eng'}, trace_id='trace-api-dashboard')
+    assert status == 200
+    assert dashboard['data']['snapshot']['survey_count'] == 1
+    assert dashboard['data']['snapshot']['latest_response_count'] == 2
