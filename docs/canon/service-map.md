@@ -21,6 +21,8 @@ This document defines the canonical bounded-service decomposition for SME-HRMS, 
 | `search-service` | Cross-domain projection-backed search and indexing | `/api/v1/search` |
 | `project-service` | Project planning, staffing assignments, and resource allocation governance | `/api/v1/projects` |
 
+Canonical public prefixes for project/integration/automation/workflow domains are plural (`/api/v1/projects`, `/api/v1/integrations`, `/api/v1/automations`, `/api/v1/workflows`). Gateway-level singular aliases are compatibility shims and must translate to these canonical runtime paths.
+
 ## employee-service
 
 ### Responsibilities

@@ -34,6 +34,18 @@ This repository includes a deterministic deployment layer aligned to canonical s
 - `background_jobs.py` and `background_jobs_api.py` stay internal and are represented through the gateway `/jobs` route.
 - Shared contracts/resilience/middleware/util modules remain in-process dependencies for service containers.
 
+
+### Canonical route conventions
+
+The public gateway route prefixes use plural domain nouns for collection-style services:
+
+- `/api/v1/projects`
+- `/api/v1/integrations`
+- `/api/v1/automations`
+- `/api/v1/workflows`
+
+Backward-compatible singular aliases remain supported at the gateway (`/api/v1/project`, `/api/v1/integration`, `/api/v1/automation`, `/api/v1/workflow`) and are translated to plural runtime handler paths.
+
 ### Key deployment artifacts
 - `docker-compose.yml`
 - `Dockerfile.services`

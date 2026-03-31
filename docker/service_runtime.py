@@ -24,6 +24,13 @@ logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(levelname)s %(message
 LOGGER = logging.getLogger("service-runtime")
 OBSERVABILITY = Observability(SERVICE_NAME)
 
+CANONICAL_PLURAL_ROUTE_PREFIXES: dict[str, str] = {
+    "project-service": "/projects",
+    "integration-service": "/integrations",
+    "automation-service": "/automations",
+    "workflow-service": "/workflows",
+}
+
 
 @dataclass
 class Route:
@@ -377,6 +384,11 @@ def build_service_runtime(service_name: str) -> tuple[list[Route], dict[str, Any
         register("GET", "/departments", list_departments)
     else:
         LOGGER.warning("No explicit runtime routes for service=%s", service_name)
+
+    if service_name in CANONICAL_PLURAL_ROUTE_PREFIXES:
+        canonical_prefix = CANONICAL_PLURAL_ROUTE_PREFIXES[service_name]
+        if not any(route.pattern.startswith(canonical_prefix) for route in routes):
+            raise RuntimeError(f"Service '{service_name}' must expose canonical runtime prefix '{canonical_prefix}'.")
 
     ctx["routes"] = [f"{route.method} {route.pattern}" for route in routes]
     return routes, ctx
