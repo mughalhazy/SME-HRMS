@@ -89,3 +89,15 @@ def get_responses(service: EngagementService, actor_role: str, actor_employee_id
 def get_aggregated_results(service: EngagementService, actor_role: str, actor_employee_id: str, survey_id: str, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
     params = query or {}
     return service.get_aggregated_results(survey_id, tenant_id=params.get('tenant_id'))
+
+
+@with_error_handling
+def get_sentiment_trends(service: EngagementService, actor_role: str, actor_employee_id: str, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    return service.get_sentiment_trends(tenant_id=params.get('tenant_id'), department_id=params.get('department_id'))
+
+
+@with_error_handling
+def get_engagement_dashboard(service: EngagementService, actor_role: str, actor_employee_id: str, query: dict[str, Any] | None = None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    params = query or {}
+    return service.get_engagement_dashboard(tenant_id=params.get('tenant_id'), department_id=params.get('department_id'))
