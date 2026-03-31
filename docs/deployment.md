@@ -10,6 +10,20 @@ The deployment layer provisions these runtime services:
 - payroll-service
 - hiring-service
 - auth-service
+- notification-service
+- audit-service
+- workflow-service
+- performance-service
+- engagement-service
+- helpdesk-service
+- reporting-analytics-service
+- search-service
+- expense-service
+- integration-service
+- automation-service
+- travel-service
+- project-service
+- settings-service
 - api-gateway
 - frontend-ui
 - postgres (shared relational store)
@@ -34,6 +48,7 @@ The deployment layer provisions these runtime services:
 cp .env.example .env
 docker compose up -d --build
 curl http://localhost:8000/ready
+curl http://localhost:8000/api/v1/settings
 curl http://localhost:3000/
 ```
 

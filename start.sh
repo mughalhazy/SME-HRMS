@@ -3,9 +3,9 @@ set -eu
 
 if [ -n "${DATABASE_URL:-}" ]; then
   echo "Running database migrations..."
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /app/migrations/postgres-init.sql
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /app/deployment/config/postgres-init.sql
 
-  migration_files=$(find /app/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.sql' | sort -V)
+  migration_files=$(find /app/deployment/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.sql' | sort -V)
   migration_prefixes=$(printf '%s\n' "$migration_files" | sed -E 's|^.*/([0-9]{3})_.*$|\1|' | sort)
   duplicate_prefixes=$(printf '%s\n' "$migration_prefixes" | uniq -d)
   if [ -n "$duplicate_prefixes" ]; then
@@ -43,6 +43,7 @@ integration-service:8016
 automation-service:8017
 travel-service:8018
 project-service:8019
+settings-service:8020
 "
 
 PIDS=""
@@ -51,7 +52,7 @@ for spec in $SERVICE_SPECS; do
   service_name=${spec%:*}
   service_port=${spec#*:}
   echo "Starting ${service_name} on port ${service_port}"
-  PORT="$service_port" SERVICE_NAME="$service_name" python /app/docker/common_service.py &
+  PORT="$service_port" SERVICE_NAME="$service_name" python /app/docker/service_runtime.py &
   PIDS="$PIDS $!"
 done
 
