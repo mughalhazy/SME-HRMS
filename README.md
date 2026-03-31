@@ -31,7 +31,7 @@ This repository includes a deterministic deployment layer aligned to canonical s
 - frontend-ui (3000)
 
 #### Internal modules (not separate compose services)
-- `background_jobs.py` and `background_jobs_api.py` stay internal and are represented through the gateway `/jobs` route.
+- `background_jobs.py` and `background_jobs_api.py` stay internal service modules (asynchronous workers/service-level handlers) and are **not** exposed as a public API gateway route.
 - Shared contracts/resilience/middleware/util modules remain in-process dependencies for service containers.
 
 
