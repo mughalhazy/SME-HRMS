@@ -21,7 +21,7 @@ GATEWAY_PACKAGE_DIR = REPO_ROOT / "api-gateway"
 if str(GATEWAY_PACKAGE_DIR) not in sys.path:
     sys.path.insert(0, str(GATEWAY_PACKAGE_DIR))
 
-from routes import RouteNotFoundError, iter_routes, resolve_route
+from routes import RouteNotFoundError, iter_routes, resolve_route, translate_to_upstream_path
 
 
 PORT = int(os.getenv("PORT", "8000"))
@@ -150,7 +150,8 @@ class Handler(BaseHTTPRequestHandler):
         return
 
     def _proxy_request(self, method: str, path_with_query: str, trace_id: str) -> None:
-        path = urlparse(path_with_query).path
+        parsed = urlparse(path_with_query)
+        path = parsed.path
         try:
             route = resolve_route(path)
         except RouteNotFoundError:
@@ -162,7 +163,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(_error_payload("UPSTREAM_UNAVAILABLE", f"No upstream configured for '{route.upstream_service}'.", trace_id), status=502)
             return
 
-        upstream_url = urljoin(f"{upstream_base_url}/", path_with_query.lstrip("/"))
+        upstream_path = translate_to_upstream_path(route, path)
+        upstream_path_with_query = upstream_path if not parsed.query else f"{upstream_path}?{parsed.query}"
+        upstream_url = urljoin(f"{upstream_base_url}/", upstream_path_with_query.lstrip("/"))
         body = self._read_request_body()
         forward_headers = self._build_upstream_headers(trace_id=trace_id)
         if body and "Content-Type" in self.headers:
