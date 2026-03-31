@@ -62,7 +62,7 @@ Gateway and runtime handlers are aligned to plural canonical route families for 
 - Automations: `/api/v1/automations` → runtime `/automations`
 - Workflows: `/api/v1/workflows` → runtime `/workflows`
 
-Legacy singular aliases are still accepted by the gateway for compatibility and translated to the canonical plural runtime prefixes.
+Legacy singular aliases are not supported by default. Only the canonical plural route families above are accepted unless explicit alias handling is implemented in gateway/runtime code.
 
 ## Migration support
 
