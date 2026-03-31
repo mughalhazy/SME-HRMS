@@ -91,6 +91,94 @@ def build_service_runtime(service_name: str) -> tuple[list[Route], dict[str, Any
     def register(method: str, pattern: str, fn: Callable[[dict[str, str], dict[str, Any], dict[str, Any], dict[str, str]], tuple[int, dict[str, Any]]]) -> None:
         routes.append(Route(method=method, pattern=pattern, handler=fn))
 
+    def _employee_domain_departments() -> list[dict[str, Any]]:
+        seed_path = Path(__file__).resolve().parents[1] / "services" / "employee-service" / "domain-seed.ts"
+        fallback_departments = [
+            {
+                "tenant_id": "tenant-default",
+                "department_id": "dep-hr",
+                "name": "People Operations",
+                "code": "HR",
+                "description": "People operations, talent, and compliance.",
+                "status": "Active",
+            },
+            {
+                "tenant_id": "tenant-default",
+                "department_id": "dep-eng",
+                "name": "Engineering",
+                "code": "ENG",
+                "description": "Product engineering and platform delivery.",
+                "status": "Active",
+            },
+            {
+                "tenant_id": "tenant-default",
+                "department_id": "dep-fin",
+                "name": "Finance",
+                "code": "FIN",
+                "description": "Financial planning, accounting, and reporting.",
+                "status": "Active",
+            },
+        ]
+
+        if not seed_path.exists():
+            return fallback_departments
+
+        content = seed_path.read_text(encoding="utf-8")
+        marker = "export function seedDepartments"
+        marker_idx = content.find(marker)
+        if marker_idx < 0:
+            return fallback_departments
+
+        return_idx = content.find("return [", marker_idx)
+        if return_idx < 0:
+            return fallback_departments
+        cursor = return_idx + len("return [")
+
+        objects: list[dict[str, Any]] = []
+        while cursor < len(content):
+            obj_start = content.find("{", cursor)
+            if obj_start < 0:
+                break
+            if content[obj_start - 2:obj_start + 1] == "];\n":
+                break
+            depth = 0
+            end = obj_start
+            while end < len(content):
+                ch = content[end]
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                end += 1
+
+            if depth != 0:
+                break
+
+            block = content[obj_start:end + 1]
+            if "department_id" not in block:
+                break
+
+            item: dict[str, Any] = {}
+            for key in ("tenant_id", "department_id", "name", "code", "description", "status"):
+                match = re.search(rf"{key}:\s*([^,\n]+)", block)
+                if not match:
+                    continue
+                raw = match.group(1).strip()
+                if raw in {"tenantId", "tenant_id"}:
+                    item[key] = "tenant-default"
+                    continue
+                item[key] = raw.strip("'\"")
+            if item:
+                objects.append(item)
+
+            cursor = end + 1
+            if content[cursor:cursor + 2] == "];":
+                break
+
+        return objects or fallback_departments
+
     if service_name == "attendance-service":
         from attendance_service.api import get_attendance_records, post_attendance_records
         from attendance_service.service import Actor, AttendanceService, EmployeeSnapshot, InMemoryEmployeeDirectory
@@ -244,6 +332,49 @@ def build_service_runtime(service_name: str) -> tuple[list[Route], dict[str, Any
 
         register("POST", "/auth/login", lambda p, q, b, h: auth_api_mod.post_auth_login(service, b))
         register("GET", "/auth/me", lambda p, q, b, h: auth_api_mod.get_auth_me(service, h.get("Authorization")))
+    elif service_name == "employee-service":
+        departments = _employee_domain_departments()
+        dept_name_by_id = {department.get("department_id", ""): department.get("name", "") for department in departments}
+        employees: list[dict[str, Any]] = [
+            {
+                "tenant_id": "tenant-default",
+                "employee_id": "emp-hr-admin",
+                "employee_number": "E-100",
+                "first_name": "Helen",
+                "last_name": "Brooks",
+                "email": "helen.brooks@example.com",
+                "employment_type": "FullTime",
+                "status": "Active",
+                "department_id": "dep-hr",
+                "department_name": dept_name_by_id.get("dep-hr", "People Operations"),
+            },
+            {
+                "tenant_id": "tenant-default",
+                "employee_id": "emp-frontend-001",
+                "employee_number": "E-101",
+                "first_name": "Noah",
+                "last_name": "Bennett",
+                "email": "noah.bennett@example.com",
+                "employment_type": "FullTime",
+                "status": "Active",
+                "department_id": "dep-eng",
+                "department_name": dept_name_by_id.get("dep-eng", "Engineering"),
+            },
+        ]
+
+        def list_employees(_: dict[str, str], query: dict[str, Any], __: dict[str, Any], ___: dict[str, str]) -> tuple[int, dict[str, Any]]:
+            department_filter = query.get("department_id")
+            status_filter = query.get("status")
+            filtered = [item for item in employees if (not department_filter or item["department_id"] == department_filter) and (not status_filter or item["status"] == status_filter)]
+            return 200, success_payload({"items": filtered, "count": len(filtered)}, OBSERVABILITY.trace_id(None))
+
+        def list_departments(_: dict[str, str], query: dict[str, Any], __: dict[str, Any], ___: dict[str, str]) -> tuple[int, dict[str, Any]]:
+            status_filter = query.get("status")
+            filtered = [item for item in departments if not status_filter or item.get("status") == status_filter]
+            return 200, success_payload({"items": filtered, "count": len(filtered)}, OBSERVABILITY.trace_id(None))
+
+        register("GET", "/employees", list_employees)
+        register("GET", "/departments", list_departments)
     else:
         LOGGER.warning("No explicit runtime routes for service=%s", service_name)
 
