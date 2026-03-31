@@ -357,9 +357,11 @@ export class LearningService {
     if (Object.keys(patch).length === 0) {
       throw new ValidationError([{ field: 'body', reason: 'must include at least one updatable field' }]);
     }
+    const validationCourseCode = patch.course_code ?? 'COURSE-CODE-VALIDATION';
+    const validationTitle = patch.title ?? 'Course Title Validation';
     this.validateCourseInput({
-      course_code: 'patch-placeholder',
-      title: patch.title ?? 'patch-placeholder',
+      course_code: validationCourseCode,
+      title: validationTitle,
       delivery_mode: patch.delivery_mode ?? 'SelfPaced',
       duration_hours: patch.duration_hours,
       validity_days: patch.validity_days,
