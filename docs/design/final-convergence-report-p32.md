@@ -1,4 +1,4 @@
-# P32 Final System Convergence Report
+# P32 Final System Convergence Report (Design/Build Convergence)
 
 ## Scope
 
@@ -42,15 +42,15 @@ The implementation remains extend-only and preserves the existing service bounda
 
 ## Remaining risks
 
-- **Architectural drift:** resolved.
+- **Architectural drift:** resolved for the evaluated design/build scope.
 - **Duplicate logic patterns in the convergence scope:** resolved.
 - **Required control-layer inconsistency:** resolved.
 - **Canon-doc conflicts:** resolved.
-- **Open P32 risks:** none.
+- **Open P32 risks:** full per-route gateway-to-service runtime execution proof is outside P32 scope.
 
 ## No-drift architecture summary
 
-The repo converges on one enterprise platform shape:
+The repo converges on one enterprise platform shape at design/build level:
 
 - **Ingress and contracts:** services speak D1 envelopes and preserve request/tenant correlation metadata.
 - **Domain mutations:** services emit D2-aligned events and tenant-scoped audit trails.

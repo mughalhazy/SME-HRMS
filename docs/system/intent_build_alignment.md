@@ -1,14 +1,14 @@
-# Intent ↔ Build ↔ Runtime Alignment (Final Validation)
+# Intent ↔ Build ↔ Runtime Alignment (Evidence Snapshot)
 
 Date: 2026-03-31
 
 ## Objective
 
-Validate that product intent, repository build artifacts, and runtime/deployment contracts are aligned end-to-end.
+Document the current, evidence-backed relationship between product intent, repository build artifacts, and runtime/deployment behavior.
 
 ## Validation scope
 
-The final validation was executed across six gates:
+This snapshot evaluates six gates:
 
 1. Service topology and orchestration contracts.
 2. API availability and gateway routing contracts.
@@ -17,34 +17,41 @@ The final validation was executed across six gates:
 5. Domain completeness against implemented capability set (P1–P51).
 6. Documentation consistency.
 
-## Evidence summary
+## Verified evidence executed on 2026-03-31
 
-- `pytest -q` completed successfully with all tests green (`271 passed`, `68 subtests passed`).
-- `python deployment/qc_validate.py` returned `QC score: 11/11` including service containers, gateway connectivity, migrations, health checks, and build checks.
-- RE-QC certification checks passed:
+- `pytest -q` completed successfully: `279 passed`, `1 warning`, `73 subtests passed`.
+- `python deployment/qc_validate.py` returned `QC score: 11/11`.
+- RE-QC checks passed:
   - `python deployment/re_qc_validate_master_certification.py` (`5/5`)
   - `python deployment/re_qc_validate_addon_convergence.py` (`5/5`)
   - `python deployment/re_qc_validate_data_integrity.py` (`6/6`)
 
+## Status by alignment layer
+
+| Layer | Current status | Evidence basis | Interpretation |
+| --- | --- | --- | --- |
+| Route registry completeness | **Complete (repository contract level)** | Gateway/service URL keys and route-related contract checks pass in QC and regression tests. | The declared route surface is present and internally consistent in repo artifacts. |
+| Runtime service completeness | **Complete (environment/readiness level)** | QC checks pass for service definitions, health-check declarations, DB connectivity declarations, and migration hooks. | Required services are declared and pass readiness-oriented validation. |
+| True gateway-to-service execution validation | **Partially validated** | Existing evidence confirms tests and contract/readiness checks, but does not prove full per-route live gateway execution across every domain endpoint in one integrated run. | End-to-end runtime convergence is progressing, but cannot be declared fully complete from current evidence set alone. |
+
 ## Alignment decision
 
-**Status: ALIGNED**
+**Status: CONDITIONALLY ALIGNED (intent/build strong; runtime execution partially proven)**
 
-The repository now represents a consistent alignment between intent, build, and runtime contracts:
+What is validated now:
 
-- Domain surfaces are implemented and validated by certification/QC gates.
-- API gateway contract is canonical and backward-compatible.
-- Migration orchestration is deterministic and covered by QC checks.
-- Regression tests pass for the full suite.
+- Intent and build artifacts are aligned with canon contracts and certification validators.
+- Repository-level service/gateway declarations are consistent.
+- Regression tests and QC/RE-QC suites are green.
 
-## Notable final corrections
+What is **not** yet evidenced as complete:
 
-- Added legacy compatibility alias support for workflow routes (`/workflows/*`) in gateway route resolution.
-- Removed placeholder validation literals in learning domain patch validation.
-- Removed stale top-level duplicate service docs to avoid documentation drift.
+- Exhaustive gateway-to-service execution coverage for all registered routes in a single live runtime validation pass.
 
 ## Outcome
 
-System alignment target has been met for this repository snapshot:
+At this repository snapshot:
 
-**intent = build = runtime**.
+- **intent ≈ build** (strong evidence)
+- **build ↔ runtime declarations** (strong evidence)
+- **full runtime convergence (gateway → every service route)** (not yet fully evidenced)
