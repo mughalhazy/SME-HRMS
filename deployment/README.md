@@ -8,3 +8,5 @@ This directory contains deterministic deployment configuration:
 - `qc_validate.py` automated QC scoring (target 10/10).
 
 - `re_qc_validate_addon_convergence.py` P50 add-on convergence re-QC gate (must pass 10/10).
+
+- `re_qc_validate_master_certification.py` P51 master add-on certification re-QC gate (must pass 10/10).
