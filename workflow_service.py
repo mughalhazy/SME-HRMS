@@ -151,7 +151,7 @@ class WorkflowService:
                 "subject_id_field": "survey_id",
                 "context_fields": ("owner_employee_id", "target_department_id"),
                 "default_steps": [
-                    {"name": "review", "type": "approval", "assignee_template": "{owner_employee_id}", "sla": "PT168H"},
+                    {"name": "review", "type": "approval", "assignee": "role:HRAdmin", "sla": "PT168H"},
                 ],
             },
             "learning.enrollment.created": {
