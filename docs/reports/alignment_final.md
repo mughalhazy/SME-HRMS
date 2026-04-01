@@ -83,10 +83,15 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Integrated overtime pay into gross salary calculation so payroll outputs now explicitly include `overtime_pay` in result payloads.
 - Added targeted tests to verify source capture, overtime computation, attendance→payroll sync accuracy, and overtime inclusion in payroll totals.
 
-## 8) Workforce decision-metrics alignment update (2026-04-01)
+## 8) AI Payroll Guardian decision-system alignment update (2026-04-01)
 
-- Added `services/analytics/workforce.py` with canonical workforce metric calculators for absenteeism, overtime pattern, attrition risk, and burnout index.
-- Enforced Decision System scoring alignment on every metric payload with `risk_score` (0-100), `confidence` (0-100), and `threshold_level` (low/medium/high).
-- Added canonical `why_flagged` structure and `decision_card` schema fields (`trigger`, `impact`, `confidence`, `recommended_action`, `reversibility`, `expires_at`) to each metric result.
-- Added API contract wrappers in `api/workforce.py` to expose calculation entry points with standard success/error envelope semantics.
-- Added targeted tests validating metric correctness, API success paths, and validation error behavior.
+- Added `services/ai/payroll_guardian.py` with canonical anomaly detectors:
+  - `detect_salary_spike()`
+  - `detect_overtime_spike()`
+  - `detect_missing_tax()`
+  - `detect_ghost_employee()`
+- Aligned outputs to decision canon scoring contract for each detector:
+  - `risk_score` (0-100)
+  - `confidence` (0-100)
+  - `reason` in canonical `WHY_FLAGGED` explanation format with anomaly type, evidence, risk, confidence, and threshold level.
+- Added targeted tests in `tests/test_payroll_guardian.py` covering anomaly detection and scoring behavior.
