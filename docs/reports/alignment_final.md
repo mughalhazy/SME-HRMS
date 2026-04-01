@@ -55,3 +55,11 @@ This final declaration is evidence-backed and gated by verified checks across:
 2. runtime service executability,
 3. service topology completeness,
 4. repository-wide regression and QC/RE-QC validators.
+
+## 5) Pakistan compliance doc alignment update (2026-04-01)
+
+- Implemented Pakistan slab-based tax calculation for tax years 2024, 2025, and 2026 in a shared compliance service with exact thresholds/base/rate definitions from the compliance spec.
+- Implemented `validate_payroll()` checks for missing tax, invalid salary, and missing/invalid CNIC with blocking error output.
+- Implemented `generate_reports()` output for FBR Annexure-C JSON, EOBI PR-01 JSON, and PESSI JSON with period and employee payloads.
+- Integrated payroll run flow to map finalized payroll records into compliance input records and block completion when compliance validation fails.
+- Added targeted tests to verify slab formula behavior, report schema presence, and invalid-payroll blocking.

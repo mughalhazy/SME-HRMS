@@ -839,6 +839,30 @@ class PayrollService:
         except CountryResolverError as exc:
             raise ServiceError(exc.code, exc.message, 422) from exc
 
+    def _build_compliance_employee_record(self, record: dict[str, Any]) -> dict[str, Any]:
+        employee_id = str(record.get("employee_id", ""))
+        profile_id = self.payroll_tax_profile_index.get(employee_id)
+        metadata: dict[str, Any] = {}
+        if profile_id and profile_id in self.payroll_tax_profiles:
+            metadata = dict(self.payroll_tax_profiles[profile_id].metadata)
+
+        monthly_gross_salary = self._money(record.get("gross_pay", "0"), "gross_pay")
+        monthly_tax_deducted = self._money(record.get("deductions", "0"), "deductions")
+        annual_taxable_income = (monthly_gross_salary * Decimal("12")).quantize(Decimal("0.01"))
+        annual_tax = (monthly_tax_deducted * Decimal("12")).quantize(Decimal("0.01"))
+        return {
+            "employee_id": employee_id,
+            "cnic": str(metadata.get("cnic") or "0000000000000"),
+            "full_name": str(metadata.get("full_name") or employee_id),
+            "monthly_gross_salary": str(monthly_gross_salary),
+            "annual_gross_income": str(annual_taxable_income),
+            "annual_taxable_income": str(annual_taxable_income),
+            "annual_tax": str(annual_tax),
+            "monthly_tax_deducted": str(monthly_tax_deducted),
+            "tax_status": str(metadata.get("tax_status", "filer")),
+            "tax_slab_code": str(metadata.get("tax_slab_code", "")),
+        }
+
     def _line_item(self, *, code: str, name: str, category: str, amount: Decimal, source: str, taxable: bool = False, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         return {
             "code": code,
@@ -1785,10 +1809,11 @@ class PayrollService:
                 validation = self._validate_batch_consistency(batch)
                 adapter = self._resolve_country_adapter("ORG_PK_001")
                 finalized_records = [self.records[record_id].to_dict() for record_id in sorted(processed_ids)]
+                compliance_records = [self._build_compliance_employee_record(record) for record in finalized_records]
                 compliance_validation = adapter.compliance_engine.validate_payroll(
                     {
                         "period": f"{period_start[:7]}",
-                        "employee_records": finalized_records,
+                        "employee_records": compliance_records,
                         "organization_data": {"organization_id": "ORG_PK_001"},
                         "country_code": "PK",
                     }
@@ -1803,8 +1828,8 @@ class PayrollService:
                 compliance_reports = adapter.compliance_engine.generate_reports(
                     {
                         "period": f"{period_start[:7]}",
-                        "employee_records": finalized_records,
-                        "calculated_results": finalized_records,
+                        "employee_records": compliance_records,
+                        "calculated_results": compliance_records,
                         "organization_data": {"organization_id": "ORG_PK_001"},
                         "country_code": "PK",
                     }
