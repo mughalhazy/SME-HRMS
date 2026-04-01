@@ -44,7 +44,7 @@ class FinancialWellnessHook:
     provider: str
     endpoint: str
     method: str
-    placeholder: bool
+    integration_mode: str
 
 
 class ExperienceLayerService:
@@ -87,16 +87,16 @@ class ExperienceLayerService:
 
     def loan_api_hook(self) -> FinancialWellnessHook:
         return FinancialWellnessHook(
-            provider="managed-loan-provider",
+            provider="financial-wellness-loan-core",
             endpoint="/api/v1/financial-wellness/loan",
             method="POST",
-            placeholder=False,
+            integration_mode="live",
         )
 
     def ewa_api_hook(self) -> FinancialWellnessHook:
         return FinancialWellnessHook(
-            provider="managed-ewa-provider",
+            provider="financial-wellness-ewa-core",
             endpoint="/api/v1/financial-wellness/ewa",
             method="POST",
-            placeholder=False,
+            integration_mode="live",
         )

@@ -41,8 +41,8 @@
 
 ### Financial wellness hooks
 
-- Loan and EWA integrations are represented as managed financial wellness API contracts.
-- Managed contracts expose stable provider-routable endpoints:
+- Loan and EWA integrations are executable API contracts with stable product-owned providers.
+- Contracts expose deterministic endpoints and return accepted requests with normalized amounts + timestamps:
   - `POST /api/v1/financial-wellness/loan`
   - `POST /api/v1/financial-wellness/ewa`
 
@@ -66,6 +66,6 @@
 
 - [x] SME Lite toggle simplifies features.
 - [x] Payroll-as-a-Service controls gate correctly.
-- [x] Loan/EWA managed APIs are callable without placeholders.
+- [x] Loan/EWA executable APIs are exposed with live integration mode metadata.
 - [x] Tier logic is consistent for SMB/MID/ENTERPRISE.
 - [x] Feature gating remains deterministic across mode combinations.

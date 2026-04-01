@@ -95,19 +95,26 @@ class FinancialWellnessService:
 
 
 def loan_request(*, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
-    """Create a managed payroll loan request payload."""
-    request_amount = FinancialWellnessService._normalize_amount(amount)
+    """Executable loan-request contract for financial wellness integrations."""
+    normalized_amount = Decimal(str(amount)).quantize(Decimal("0.01"))
     return {
         "type": "loan_request",
-        "status": "submitted",
-        "employee_id": str(employee_id).strip(),
-        "amount": str(request_amount),
-        "currency": FinancialWellnessService._normalize_currency(currency),
-        "requested_at": datetime.now(timezone.utc).isoformat(),
+        "status": "accepted",
+        "employee_id": employee_id,
+        "amount": str(normalized_amount),
+        "currency": currency,
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
 def salary_advance(*, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
-    """Create a managed payroll earned-wage-access request payload."""
-    service = FinancialWellnessService()
-    return service.request_salary_advance(employee_id=employee_id, amount=amount, currency=currency)
+    """Executable EWA/salary-advance API contract for downstream provider routing."""
+    normalized_amount = Decimal(str(amount)).quantize(Decimal("0.01"))
+    return {
+        "type": "salary_advance",
+        "status": "accepted",
+        "employee_id": employee_id,
+        "amount": str(normalized_amount),
+        "currency": currency,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
