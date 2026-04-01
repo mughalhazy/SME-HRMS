@@ -55,6 +55,31 @@ class DecisionEngine:
             )
         return cards
 
+
+    def generate_from_ai_payroll_guardian(self, anomalies: list[dict[str, Any]]) -> list[DecisionCard]:
+        """Generate decision cards from explainable anomaly-engine output."""
+        normalized: list[dict[str, Any]] = []
+        for anomaly in anomalies:
+            anomaly_type = str(anomaly.get("anomaly_type", anomaly.get("type", "unknown_anomaly")))
+            explanation = str(anomaly.get("explanation", "")).strip()
+            lines = explanation.splitlines()
+            has_canonical_summary = explanation.startswith("WHY_FLAGGED:") and len(lines) >= 3
+            summary = (
+                lines[2].replace("- summary:", "").strip()
+                if has_canonical_summary
+                else str(anomaly.get("summary", "Anomaly detected by AI Payroll Guardian"))
+            )
+            normalized.append(
+                {
+                    "type": anomaly_type,
+                    "summary": summary,
+                    "risk_score": float(anomaly.get("risk_score", 0)),
+                    "confidence": float(anomaly.get("confidence", 0)),
+                    "estimate": anomaly.get("estimate"),
+                }
+            )
+        return self.generate_from_anomalies(normalized)
+
     def generate_from_compliance_issues(self, issues: list[dict[str, Any]]) -> list[DecisionCard]:
         cards: list[DecisionCard] = []
         for issue in issues:
