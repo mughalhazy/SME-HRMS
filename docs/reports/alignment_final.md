@@ -82,3 +82,11 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Updated `services/payroll_service.py` to include overtime as payroll input and compute `overtime_pay = overtime_hours × overtime_rate`.
 - Integrated overtime pay into gross salary calculation so payroll outputs now explicitly include `overtime_pay` in result payloads.
 - Added targeted tests to verify source capture, overtime computation, attendance→payroll sync accuracy, and overtime inclusion in payroll totals.
+
+## 8) Workforce decision-metrics alignment update (2026-04-01)
+
+- Added `services/analytics/workforce.py` with canonical workforce metric calculators for absenteeism, overtime pattern, attrition risk, and burnout index.
+- Enforced Decision System scoring alignment on every metric payload with `risk_score` (0-100), `confidence` (0-100), and `threshold_level` (low/medium/high).
+- Added canonical `why_flagged` structure and `decision_card` schema fields (`trigger`, `impact`, `confidence`, `recommended_action`, `reversibility`, `expires_at`) to each metric result.
+- Added API contract wrappers in `api/workforce.py` to expose calculation entry points with standard success/error envelope semantics.
+- Added targeted tests validating metric correctness, API success paths, and validation error behavior.
