@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import os
 from decimal import Decimal
 from typing import Any
 from uuid import uuid4
+
+from integrations.http_client import IntegrationHTTPError, JsonHTTPClient, RetryPolicy
 
 
 _REQUIRED_TOP_LEVEL_KEYS = {"tax_year", "period", "employer", "totals", "employees"}
@@ -32,7 +37,6 @@ def _is_non_negative_number(value: Any) -> bool:
 
 def _validate_annexure_c_payload(payload: dict[str, Any]) -> tuple[bool, list[str]]:
     errors: list[str] = []
-
     missing = _REQUIRED_TOP_LEVEL_KEYS.difference(payload.keys())
     if missing:
         errors.append(f"Missing top-level keys: {sorted(missing)}")
@@ -69,20 +73,13 @@ def _validate_annexure_c_payload(payload: dict[str, Any]) -> tuple[bool, list[st
         if len(cnic) != 13 or not cnic.isdigit():
             errors.append(f"employees[{idx}] invalid CNIC.")
 
-        for field in (
-            "annual_gross_income",
-            "annual_taxable_income",
-            "annual_tax",
-            "monthly_tax_deducted",
-        ):
+        for field in ("annual_gross_income", "annual_taxable_income", "annual_tax", "monthly_tax_deducted"):
             if not _is_non_negative_number(employee.get(field, 0)):
                 errors.append(f"employees[{idx}] {field} must be numeric and >= 0.")
 
     if isinstance(totals, dict):
-        expected_count = len(employees)
-        if totals.get("total_employees") != expected_count:
+        if totals.get("total_employees") != len(employees):
             errors.append("totals.total_employees does not match employees count.")
-
         sum_monthly = sum(Decimal(str(e.get("monthly_tax_deducted", 0))) for e in employees if isinstance(e, dict))
         if Decimal(str(totals.get("total_tax_deducted", 0))).quantize(Decimal("0.01")) != sum_monthly.quantize(Decimal("0.01")):
             errors.append("totals.total_tax_deducted does not match employee monthly tax sum.")
@@ -90,32 +87,61 @@ def _validate_annexure_c_payload(payload: dict[str, Any]) -> tuple[bool, list[st
     return len(errors) == 0, errors
 
 
-def submit_annexure_c(payload: dict[str, Any]) -> dict[str, Any]:
-    """Submit Annexure-C payload to FBR.
+def _signature(secret: str, submission_id: str, ntn: str) -> str:
+    to_sign = f"{submission_id}:{ntn}".encode("utf-8")
+    return hmac.new(secret.encode("utf-8"), to_sign, hashlib.sha256).hexdigest()
 
-    This adapter simulates submission in environments where the FBR API is unavailable.
-    """
 
+def submit_annexure_c(
+    payload: dict[str, Any],
+    *,
+    http_client: JsonHTTPClient | None = None,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     is_valid, errors = _validate_annexure_c_payload(payload)
     submission_id = f"fbr_{uuid4().hex[:12]}"
-
     if not is_valid:
+        return {"status": "failure", "submitted": False, "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": errors}
+
+    cfg = config or {}
+    base_url = str(cfg.get("base_url") or os.getenv("PAKISTAN_FBR_BASE_URL", "")).rstrip("/")
+    token = str(cfg.get("auth_token") or os.getenv("PAKISTAN_FBR_AUTH_TOKEN", ""))
+    signing_secret = str(cfg.get("signing_secret") or os.getenv("PAKISTAN_FBR_SIGNING_SECRET", ""))
+    timeout = float(cfg.get("timeout_seconds") or os.getenv("PAKISTAN_FBR_TIMEOUT_SECONDS", "10"))
+    attempts = int(cfg.get("retry_attempts") or os.getenv("PAKISTAN_FBR_RETRY_ATTEMPTS", "3"))
+
+    if not base_url or not token:
+        return {"status": "failure", "submitted": False, "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["Missing FBR integration configuration (base_url/auth_token)."]}
+
+    client = http_client or JsonHTTPClient(timeout_seconds=timeout, retry_policy=RetryPolicy(attempts=attempts))
+    endpoint = f"{base_url}/annexure-c/submissions"
+    headers = {"Authorization": f"Bearer {token}", "X-Submission-Id": submission_id}
+    if signing_secret:
+        headers["X-Signature"] = _signature(signing_secret, submission_id, str(payload.get("employer", {}).get("ntn", "")))
+
+    try:
+        response = client.post_json(endpoint, payload, headers=headers)
+        body = response.get("body", {})
+        ack_id = body.get("ack_id")
+        if not ack_id:
+            return {"status": "failure", "submitted": False, "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["FBR response missing ack_id."]}
+        return {
+            "status": "success",
+            "submitted": True,
+            "submission_id": submission_id,
+            "provider": "FBR",
+            "format": "annexure_c",
+            "errors": [],
+            "ack_id": str(ack_id),
+            "provider_status": str(body.get("status", "accepted")),
+        }
+    except IntegrationHTTPError as exc:
         return {
             "status": "failure",
             "submitted": False,
             "submission_id": submission_id,
             "provider": "FBR",
             "format": "annexure_c",
-            "errors": errors,
-            "mode": "simulated",
+            "errors": [f"{exc.code}: {exc.message}"],
+            "http_status": exc.status_code,
         }
-
-    return {
-        "status": "success",
-        "submitted": True,
-        "submission_id": submission_id,
-        "provider": "FBR",
-        "format": "annexure_c",
-        "errors": [],
-        "mode": "simulated",
-    }

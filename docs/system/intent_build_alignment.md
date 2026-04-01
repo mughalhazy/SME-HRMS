@@ -118,3 +118,28 @@ All are now verified and mutually consistent in this snapshot.
   - `prediction`
   - `confidence`
 - Added focused tests validating that all three models generate predictions and always include confidence, plus input validation coverage.
+
+## Pakistan real-integration alignment update (2026-04-01, productionization pass)
+
+- Replaced simulated Pakistan compliance adapter submissions with config-driven HTTP integrations:
+  - `integrations/pakistan/fbr_adapter.py`
+  - `integrations/pakistan/eobi_adapter.py`
+  - `integrations/pakistan/pessi_adapter.py`
+- Added shared HTTP transport `integrations/http_client.py` with:
+  - timeout controls
+  - retry policy (attempts + backoff + retryable status codes)
+  - provider error normalization (`IntegrationHTTPError`)
+- Enforced strict payload validation against Pakistan compliance document shapes:
+  - Annexure-C validation in FBR adapter
+  - PR-01 envelope validation in EOBI adapter
+  - contribution return envelope validation in PESSI adapter
+- Implemented request-signing support for FBR (`X-Signature`) when signing secret is configured.
+- Implemented response validation + mapped error contracts in all adapters.
+- Upgraded accounting connectors:
+  - QuickBooks: real API client flow to create journal entries via configurable realm endpoint.
+  - SAP: structured connector interface (`SAPConnectorConfig` + executable adapter contract) with real transport path.
+- Finalized payment exports for production readiness:
+  - bank salary CSV/Excel generators now validate required fields and PK IBAN + amount rules.
+  - Raast export now validates payment rows and emits normalized amounts.
+- Implemented biometric ingestion adapter mapping for real device payload variants (`emp_code`, `event_code`, `event_time`, `terminal_id`) in addition to canonical format.
+- Extended integration tests to cover success/failure scenarios and mockable HTTP client behavior across Pakistan adapters and accounting connectors.
