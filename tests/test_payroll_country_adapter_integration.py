@@ -54,7 +54,7 @@ class _StubResolver:
     def __init__(self):
         self.adapter = _StubAdapter()
 
-    def resolve(self, organization_id: str):
+    def get_adapter(self, organization_id: str):
         return self.adapter
 
 
@@ -66,9 +66,10 @@ def test_payroll_routes_through_country_adapter() -> None:
     service.upsert_payroll_tax_profile(
         {
             "employee_id": "emp-country-1",
-            "jurisdiction": "PK",
-            "tax_code": "PK-WHT",
+            "jurisdiction": "DEFAULT",
+            "tax_code": "WHT",
             "metadata": {"rate": "5.00"},
+            "organization_id": "ORG_DEFAULT",
         },
         admin,
     )
@@ -80,12 +81,18 @@ def test_payroll_routes_through_country_adapter() -> None:
             "pay_period_end": "2026-01-31",
             "base_salary": "1000.00",
             "currency": "USD",
+            "organization_id": "ORG_DEFAULT",
         },
         admin,
     )
     assert record["deductions"] == "10.00"
 
-    service.run_payroll("2026-01-01", "2026-01-31", admin)
+    service.run_payroll(
+        "2026-01-01",
+        "2026-01-31",
+        admin,
+        records=[{"employee_id": "emp-country-1", "pay_period_start": "2026-01-01", "pay_period_end": "2026-01-31", "organization_id": "ORG_DEFAULT"}],
+    )
     assert service.country_resolver.adapter.payroll_rules_engine.called is True
     assert service.country_resolver.adapter.tax_engine.called is True
     assert service.country_resolver.adapter.compliance_engine.called_validate is True

@@ -237,3 +237,17 @@ All are now verified and mutually consistent in this snapshot.
   - decision-card-only contract on all flows.
   - low-bandwidth/compression behavior.
   - token-auth success/failure handling in mobile product layer.
+
+## Country-agnostic statutory isolation refactor update (2026-04-01, leakage-removal pass)
+
+- Removed hardcoded organization/country literals from service orchestration paths and standardized country routing through `country_resolver.get_adapter(organization_id)`.
+- Refactored service-layer country coupling to be adapter-driven:
+  - `payroll_service.py` now resolves adapter via resolver in both record construction and batch compliance execution.
+  - `services/payroll_service.py` now orchestrates tax/compliance calls via resolver-selected adapter instead of direct Pakistan engine imports.
+- Enforced interface naming alignment in `country/base` with explicit interfaces:
+  - `TaxEngineInterface`
+  - `ComplianceEngineInterface`
+  - `PayrollRulesInterface`
+- Consolidated Pakistan statutory logic under `country/pakistan/` by moving tax/report/compliance formulas to `country/pakistan/statutory.py` and turning `services/compliance_service.py` into a compatibility export only.
+- Updated country-layer canon doc to reflect interface names and organization/legal-entity/config resolver path, removing stale hardcoded org examples from resolver/test flow references.
+- Updated/expanded tests to validate adapter resolution API (`get_adapter`) and adapter-routed payroll behavior without hardcoded org/country constants in service orchestration.

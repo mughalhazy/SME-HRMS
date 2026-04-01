@@ -756,7 +756,6 @@ class PayrollService:
                 "gross_salary": context.get("taxable_earnings", "0"),
                 "allowances": context.get("allowances", "0"),
                 "deductions": context.get("deductions", "0"),
-                "country_code": "PK",
                 "context": context,
                 "rules": [
                     {
@@ -838,7 +837,7 @@ class PayrollService:
 
     def _resolve_country_adapter(self, organization_id: str):
         try:
-            return self.country_resolver.resolve(organization_id)
+            return self.country_resolver.get_adapter(organization_id)
         except CountryResolverError as exc:
             raise ServiceError(exc.code, exc.message, 422) from exc
 
@@ -983,7 +982,7 @@ class PayrollService:
         components = self._components_for_period(str(employee_id), pay_period_start, pay_period_end) if employee_id is not None else []
         component_earnings = sum((component.amount for component in components if component.category == "earning"), Decimal("0.00"))
         component_deductions = sum((component.amount for component in components if component.category == "deduction"), Decimal("0.00"))
-        organization_id = str(payload.get("organization_id", "ORG_PK_001"))
+        organization_id = str(payload.get("organization_id") or "ORG_DEFAULT")
         context = {
             "base_salary": str(base_salary),
             "allowances": str(allowances),
@@ -1814,15 +1813,15 @@ class PayrollService:
 
                 self._recompute_batch(batch)
                 validation = self._validate_batch_consistency(batch)
-                adapter = self._resolve_country_adapter("ORG_PK_001")
+                organization_id = str((records or [{}])[0].get("organization_id") or "ORG_DEFAULT")
+                adapter = self._resolve_country_adapter(organization_id)
                 finalized_records = [self.records[record_id].to_dict() for record_id in sorted(processed_ids)]
                 compliance_records = [self._build_compliance_employee_record(record) for record in finalized_records]
                 compliance_payload = {
                     "period": f"{period_start[:7]}",
                     "employee_records": compliance_records,
                     "calculated_results": compliance_records,
-                    "organization_data": {"organization_id": "ORG_PK_001"},
-                    "country_code": "PK",
+                    "organization_data": {"organization_id": organization_id},
                 }
                 compliance_precheck = ComplianceAutopilot(adapter.compliance_engine).run_precheck(compliance_payload)
                 if compliance_precheck.get("stop_payroll", False):
