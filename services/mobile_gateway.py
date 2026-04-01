@@ -41,6 +41,30 @@ class MobileGatewayService:
         cards.sort(key=lambda item: ({'critical': 0, 'high': 1, 'medium': 2, 'low': 3}.get(item['severity'], 4), item.get('due_at') or ''))
         return cards
 
+    @staticmethod
+    def _card(
+        *,
+        card_id: str | None,
+        title: str,
+        action: str,
+        severity: str = 'medium',
+        why: str | None = None,
+        due_at: str | None = None,
+        extras: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        card: dict[str, Any] = {
+            'id': card_id,
+            'type': 'decision',
+            'severity': severity,
+            'title': title,
+            'action': action,
+            'why': why or 'Action required.',
+            'due_at': due_at,
+        }
+        if extras:
+            card.update(extras)
+        return card
+
     def _build(
         self,
         *,
@@ -98,13 +122,14 @@ class MobileGatewayService:
     def payslip_view(self, aggregate: dict[str, Any], *, page: int = 1, page_size: int = 10, request_id: str | None = None) -> tuple[int, dict[str, Any]]:
         trace = request_id or new_trace_id()
         items = [
-            {
-                'id': p.get('id'),
-                'period': p.get('period'),
-                'net_pay': p.get('net_pay'),
-                'currency': p.get('currency', 'PKR'),
-                'action': 'view_payslip',
-            }
+            self._card(
+                card_id=p.get('id'),
+                severity='low',
+                title=f"Payslip {p.get('period')}",
+                why='Latest payroll available for review.',
+                action='view_payslip',
+                extras={'period': p.get('period'), 'net_pay': p.get('net_pay'), 'currency': p.get('currency', 'PKR')},
+            )
             for p in aggregate.get('payroll', [])
         ]
         return self._build(
@@ -115,18 +140,27 @@ class MobileGatewayService:
             request_id=trace,
             page=page,
             page_size=page_size,
-            fallback_item={'id': 'fallback-payslip', 'period': None, 'net_pay': '0.00', 'currency': 'PKR', 'action': 'refresh'},
+            fallback_item=self._card(
+                card_id='fallback-payslip',
+                severity='low',
+                title='No payslip generated',
+                why='No payroll document is currently available.',
+                action='refresh',
+                extras={'period': None, 'net_pay': '0.00', 'currency': 'PKR'},
+            ),
         )
 
     def leave_apply(self, aggregate: dict[str, Any], *, page: int = 1, page_size: int = 5, request_id: str | None = None) -> tuple[int, dict[str, Any]]:
         trace = request_id or new_trace_id()
         items = [
-            {
-                'id': l.get('id'),
-                'leave_type': l.get('leave_type'),
-                'balance_days': l.get('balance_days'),
-                'action': 'apply_leave',
-            }
+            self._card(
+                card_id=l.get('id'),
+                severity='medium',
+                title=f"Apply {l.get('leave_type') or 'leave'}",
+                why='Leave balance ready for quick request.',
+                action='apply_leave',
+                extras={'leave_type': l.get('leave_type'), 'balance_days': l.get('balance_days')},
+            )
             for l in aggregate.get('attendance', [])
         ]
         return self._build(
@@ -137,18 +171,26 @@ class MobileGatewayService:
             request_id=trace,
             page=page,
             page_size=page_size,
-            fallback_item={'id': 'fallback-leave', 'leave_type': 'annual', 'balance_days': 0, 'action': 'apply_leave'},
+            fallback_item=self._card(
+                card_id='fallback-leave',
+                severity='low',
+                title='No leave balance data',
+                why='Balance sync pending; retry shortly.',
+                action='apply_leave',
+                extras={'leave_type': 'annual', 'balance_days': 0},
+            ),
         )
 
     def alerts(self, aggregate: dict[str, Any], *, page: int = 1, page_size: int = 10, request_id: str | None = None) -> tuple[int, dict[str, Any]]:
         trace = request_id or new_trace_id()
         items = [
-            {
-                'id': n.get('id'),
-                'severity': n.get('severity', 'medium'),
-                'title': n.get('title', 'Alert'),
-                'action': n.get('action', 'open_alert'),
-            }
+            self._card(
+                card_id=n.get('id'),
+                severity=n.get('severity', 'medium'),
+                title=n.get('title', 'Alert'),
+                why='Notification requires review.',
+                action=n.get('action', 'open_alert'),
+            )
             for n in aggregate.get('notifications', [])
         ]
         return self._build(
@@ -159,5 +201,11 @@ class MobileGatewayService:
             request_id=trace,
             page=page,
             page_size=page_size,
-            fallback_item={'id': 'fallback-alert', 'severity': 'low', 'title': 'No active alerts', 'action': 'refresh'},
+            fallback_item=self._card(
+                card_id='fallback-alert',
+                severity='low',
+                title='No active alerts',
+                why='No pending notifications require action.',
+                action='refresh',
+            ),
         )

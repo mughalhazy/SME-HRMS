@@ -4,6 +4,7 @@ import base64
 import gzip
 import json
 
+from mobile.app import MobileAppService
 from services.mobile_gateway import MobileGatewayService
 
 
@@ -65,13 +66,18 @@ def test_mobile_endpoints_functional_and_decision_first() -> None:
     assert alerts_status == 200
 
     assert dashboard['data']['decision_first'] is True
+    assert dashboard['data']['decision_cards_only'] is True
+    assert dashboard['data']['minimal_payload'] is True
     assert dashboard['data']['endpoint'] == '/api/mobile/dashboard'
     assert dashboard['data']['source'] == ['decisions']
     assert dashboard['meta']['pagination']['count'] == 1
 
     assert payslip['data']['endpoint'] == '/api/mobile/payslip'
+    assert payslip['data']['items'][0]['type'] == 'decision'
     assert leave['data']['endpoint'] == '/api/mobile/leave/apply'
+    assert leave['data']['items'][0]['type'] == 'decision'
     assert alerts['data']['endpoint'] == '/api/mobile/alerts'
+    assert alerts['data']['items'][0]['type'] == 'decision'
 
 
 def test_payloads_minimized_and_compressed() -> None:
@@ -98,3 +104,17 @@ def test_fallback_and_cache_behavior() -> None:
     assert first['meta']['request_id'] == 'first-request'
     # Cached response is reused for identical cache key.
     assert second['meta']['request_id'] == 'first-request'
+
+
+def test_mobile_session_token_auth_and_validation() -> None:
+    app = MobileAppService(session_secret='mobile-test-secret-123456')
+    token = app.sessions.issue_token(user_id='manager-1', role='Manager')
+    auth = f'Bearer {token}'
+
+    status, payload = app.get_dashboard(_aggregate(), authorization=auth, trace_id='mobile-auth-pass')
+    assert status == 200
+    assert payload['data']['decision_first'] is True
+
+    fail_status, fail_payload = app.get_dashboard(_aggregate(), authorization='Bearer invalid.token', trace_id='mobile-auth-fail')
+    assert fail_status == 401
+    assert fail_payload['error']['code'] == 'TOKEN_INVALID'

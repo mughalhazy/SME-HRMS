@@ -217,3 +217,23 @@ All are now verified and mutually consistent in this snapshot.
   - Raast export requires non-empty payment set and strict amount/identifier validation.
 - Expanded biometric normalization support for multiple vendor schemas:
   - Supports canonical, vendor flat, and nested device payload forms.
+
+## Mobile product-layer execution alignment update (2026-04-01, real mobile app pass)
+
+- Added executable mobile product layer package under `mobile/app/`:
+  - `mobile/app/product.py` introduces `MobileAppService` with authenticated mobile flows.
+  - `mobile/app/__init__.py` exports mobile product service entrypoint.
+- Added token-based lightweight session auth under `mobile/session.py`:
+  - stateless signed bearer tokens via `issue_token(...)`.
+  - lightweight validation via `validate_token(...)` with explicit `TOKEN_INVALID` handling path.
+- Hardened mobile contract enforcement in `mobile/contracts.py`:
+  - mobile responses now explicitly mark `decision_cards_only` and `minimal_payload` contract flags.
+  - compressed wire payload remains mandatory (`gzip+base64`) with size metadata.
+- Upgraded `services/mobile_gateway.py` so all mobile flows return decision-card structures only:
+  - dashboard, payslip, leave apply, and alerts now emit action-first decision cards.
+  - payload trimming and compact card shaping preserved.
+  - in-memory cache + fallback cards remain active for low-latency mobile behavior.
+- Extended mobile tests in `tests/test_mobile_gateway.py` to validate:
+  - decision-card-only contract on all flows.
+  - low-bandwidth/compression behavior.
+  - token-auth success/failure handling in mobile product layer.

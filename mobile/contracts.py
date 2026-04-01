@@ -44,6 +44,8 @@ def build_mobile_response(
     payload = {
         'endpoint': endpoint,
         'decision_first': True,
+        'decision_cards_only': True,
+        'minimal_payload': True,
         'fallback_used': fallback_used,
         'source': source,
         'items': items,
