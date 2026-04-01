@@ -52,3 +52,18 @@ This declaration is made only after explicit convergence verification across all
 - service topology/runability
 
 All are now verified and mutually consistent in this snapshot.
+
+---
+
+## Country-layer alignment update (2026-04-01)
+
+- Implemented a country abstraction layer aligned to `docs/canon/country-layer.md` with explicit base interfaces for:
+  - `TaxEngine.calculate_tax(input)`
+  - `ComplianceEngine.validate_payroll(input)`
+  - `ComplianceEngine.generate_reports(input)`
+  - `PayrollRulesEngine.apply_rules(input)`
+- Added Pakistan country adapter implementations under `country/pakistan/` and wired payroll execution through country-resolved adapter engines.
+- Added `core/country_resolver.py` with org→country→adapter resolution and explicit error contracts:
+  - `ORG_COUNTRY_NOT_FOUND`
+  - `COUNTRY_ADAPTER_NOT_REGISTERED`
+- Refactored payroll core flow so tax calculation, payroll-rule application, and compliance report generation route through the country adapter abstraction boundary rather than hardcoded core logic.
