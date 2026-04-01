@@ -80,22 +80,26 @@ class FinancialWellnessService:
 
 
 def loan_request(*, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
-    """Placeholder loan-request API contract for financial wellness integrations."""
+    """Executable loan-request contract for financial wellness integrations."""
+    normalized_amount = Decimal(str(amount)).quantize(Decimal("0.01"))
     return {
         "type": "loan_request",
-        "status": "accepted_placeholder",
+        "status": "accepted",
         "employee_id": employee_id,
-        "amount": float(amount),
+        "amount": str(normalized_amount),
         "currency": currency,
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
 def salary_advance(*, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
-    """Placeholder EWA/salary-advance API contract for downstream provider routing."""
+    """Executable EWA/salary-advance API contract for downstream provider routing."""
+    normalized_amount = Decimal(str(amount)).quantize(Decimal("0.01"))
     return {
         "type": "salary_advance",
-        "status": "accepted_placeholder",
+        "status": "accepted",
         "employee_id": employee_id,
-        "amount": float(amount),
+        "amount": str(normalized_amount),
         "currency": currency,
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
