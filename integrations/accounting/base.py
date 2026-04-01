@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
+from config.integrations import load_integrations_config
 from integrations.http_client import IntegrationHTTPError, JsonHTTPClient, RetryPolicy
 
 
@@ -24,23 +25,25 @@ class SAPConnectorConfig:
 
     @classmethod
     def from_env(cls) -> "SAPConnectorConfig":
+        shared = load_integrations_config().sap
         return cls(
-            base_url=os.getenv("SAP_BASE_URL", "").rstrip("/"),
+            base_url=shared.endpoint,
             company_code=os.getenv("SAP_COMPANY_CODE", ""),
-            auth_token=os.getenv("SAP_AUTH_TOKEN", ""),
-            timeout_seconds=float(os.getenv("SAP_TIMEOUT_SECONDS", "10")),
-            retry_attempts=int(os.getenv("SAP_RETRY_ATTEMPTS", "3")),
+            auth_token=shared.auth_token,
+            timeout_seconds=shared.timeout_seconds,
+            retry_attempts=shared.retry_attempts,
         )
 
 
 class QuickBooksAdapter(AccountingAdapter):
     def __init__(self, *, config: dict[str, Any] | None = None, http_client: JsonHTTPClient | None = None) -> None:
         cfg = config or {}
-        self.base_url = str(cfg.get("base_url") or os.getenv("QUICKBOOKS_BASE_URL", "")).rstrip("/")
+        shared = load_integrations_config().quickbooks
+        self.base_url = str(cfg.get("base_url") or shared.endpoint).rstrip("/")
         self.realm_id = str(cfg.get("realm_id") or os.getenv("QUICKBOOKS_REALM_ID", ""))
-        self.access_token = str(cfg.get("access_token") or os.getenv("QUICKBOOKS_ACCESS_TOKEN", ""))
-        timeout = float(cfg.get("timeout_seconds") or os.getenv("QUICKBOOKS_TIMEOUT_SECONDS", "10"))
-        attempts = int(cfg.get("retry_attempts") or os.getenv("QUICKBOOKS_RETRY_ATTEMPTS", "3"))
+        self.access_token = str(cfg.get("access_token") or shared.auth_token)
+        timeout = float(cfg.get("timeout_seconds") or shared.timeout_seconds)
+        attempts = int(cfg.get("retry_attempts") or shared.retry_attempts)
         self.http_client = http_client or JsonHTTPClient(timeout_seconds=timeout, retry_policy=RetryPolicy(attempts=attempts))
 
     def export_payroll_journal(self, payload: dict[str, Any]) -> dict[str, Any]:

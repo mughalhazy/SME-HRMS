@@ -136,6 +136,7 @@ class PakistanComplianceService:
         }
 
         eobi_pr_01 = {
+            "submission_format": "PR-01",
             "period": {"month": month, "year": year},
             "employer": {"name": str(org.get("name", "")), "registration_number": str(org.get("eobi_registration", ""))},
             "employees": [{"employee_id": item["employee_id"], "cnic": item["cnic"]} for item in employees],

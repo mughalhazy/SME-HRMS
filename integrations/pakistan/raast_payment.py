@@ -29,7 +29,10 @@ def build_raast_payment_export(payload: dict[str, Any]) -> dict[str, Any]:
 
     transactions: list[dict[str, str]] = []
     errors: list[str] = []
-    for idx, item in enumerate(list(payload.get("payments", []))):
+    payments = list(payload.get("payments", []))
+    if not payments:
+        errors.append("payments must be a non-empty array")
+    for idx, item in enumerate(payments):
         errors.extend(_validate_payment(item, idx))
         transactions.append(
             {

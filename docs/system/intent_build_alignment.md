@@ -170,3 +170,30 @@ All are now verified and mutually consistent in this snapshot.
   - `loan_request(...)`
   - `salary_advance(...)`
 - Expanded experience-layer tests to validate feature gating, tier restrictions, PaaS mode behavior, and callable placeholder APIs.
+
+## Pakistan + Integration production hardening alignment update (2026-04-01, QC uplift)
+
+- Added centralized integration runtime config layer: `config/integrations.py`.
+  - Supports endpoint + credential loading.
+  - Supports environment switching via `INTEGRATION_ENV` (`sandbox`/`live`).
+- Upgraded Pakistan statutory adapters with production-grade submission handling:
+  - `integrations/pakistan/fbr_adapter.py`
+  - `integrations/pakistan/eobi_adapter.py`
+  - `integrations/pakistan/pessi_adapter.py`
+  - Added auth headers, configurable retries/timeouts, structured failure mapping.
+- Added submission lifecycle tracking with payload persistence:
+  - `integrations/pakistan/submission_tracking.py`
+  - Status progression: `pending` → `submitted` / `failed`.
+  - Request/response payloads persisted in tracker records.
+- Enforced schema alignment for statutory submission formats:
+  - Annexure-C validation maintained in FBR adapter.
+  - PR-01 format contract enforced (`submission_format = PR-01`) and wired from compliance report generation.
+- Strengthened accounting connectors:
+  - QuickBooks connector uses real API POST path with config-driven endpoint/auth/retry/timeout.
+  - SAP adapter remains structured connector and now resolves runtime transport settings through config layer.
+- Finalized payment export validation hardening:
+  - Salary bank export requires non-empty employees and validates IBAN/amount constraints.
+  - Raast export requires non-empty payment set and strict amount/identifier validation.
+- Expanded biometric normalization support for multiple vendor schemas:
+  - Supports canonical, vendor flat, and nested device payload forms.
+

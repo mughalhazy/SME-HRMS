@@ -11,16 +11,30 @@ _EVENT_MAP = {
     "BREAK_OUT": "break_end",
     "check_in": "check_in",
     "check_out": "check_out",
+    "0": "check_in",
+    "1": "check_out",
 }
 
 
+def _extract_field(raw: dict[str, Any], *paths: str) -> str:
+    for path in paths:
+        value: Any = raw
+        for key in path.split("."):
+            if isinstance(value, dict):
+                value = value.get(key)
+            else:
+                value = None
+                break
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
 def _normalize_log(raw: dict[str, Any]) -> dict[str, str] | None:
-    # Supports canonical format and common vendor format:
-    # {"emp_code": "E1", "event_code": "IN", "event_time": "2026-01-01T09:00:00Z", "terminal_id": "D1"}
-    employee_id = str(raw.get("employee_id") or raw.get("emp_code") or "").strip()
-    event_raw = str(raw.get("event_type") or raw.get("event_code") or "").strip()
-    timestamp = str(raw.get("timestamp") or raw.get("event_time") or "").strip()
-    device_id = str(raw.get("device_id") or raw.get("terminal_id") or "")
+    employee_id = _extract_field(raw, "employee_id", "emp_code", "employee.code", "user_id")
+    event_raw = _extract_field(raw, "event_type", "event_code", "event", "event.id", "punch")
+    timestamp = _extract_field(raw, "timestamp", "event_time", "event.ts", "occurred_at", "datetime")
+    device_id = _extract_field(raw, "device_id", "terminal_id", "device.serial", "source_device")
 
     event_type = _EVENT_MAP.get(event_raw, event_raw.lower())
     if not employee_id or not event_type or not timestamp:
