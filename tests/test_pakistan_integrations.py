@@ -8,6 +8,7 @@ from integrations.pakistan.eobi_adapter import submit_pr01
 from integrations.pakistan.fbr_adapter import submit_annexure_c
 from integrations.pakistan.pessi_adapter import submit_contribution_return
 from integrations.pakistan.raast_payment import build_raast_payment_export
+from integrations.pakistan.payment_reconciliation import reconcile_payroll_payments
 from integrations.pakistan.submission_tracking import SubmissionTracker
 from services.compliance_service import PakistanComplianceService
 
@@ -187,3 +188,57 @@ def test_accounting_and_biometric_adapters() -> None:
     )
     assert biometric["accepted_logs"] == 2
     assert biometric["rejected_logs"] == 1
+
+
+def test_bank_salary_supports_multiple_formats_and_payroll_total_validation() -> None:
+    employees = [{"employee_id": "E-1", "full_name": "Ali Khan", "bank_account": "0123456789", "iban": "PK36SCBL0000001123456702", "net_salary": "50000"}]
+
+    hbl_csv = generate_salary_bank_csv({"employees": employees, "bank_format": "hbl_bulk", "payroll_total": "50000"})
+    assert "employee_id,employee_name,iban,amount,currency,narration,payment_reference" in hbl_csv
+
+    meezan_xlsx = generate_salary_bank_excel_rows({"employees": employees, "bank_format": "meezan_bulk", "payroll_total": "50000"})
+    assert meezan_xlsx["bank_format"] == "meezan_bulk"
+    assert meezan_xlsx["rows"][0] == ["employee_id", "employee_name", "account_or_iban", "amount", "currency", "payment_reference"]
+
+
+def test_raast_export_validates_mobile_and_payroll_total() -> None:
+    raast = build_raast_payment_export(
+        {
+            "company": "SME Demo",
+            "payroll_total": "97500.50",
+            "payments": [
+                {
+                    "transaction_id": "TX-1",
+                    "amount": "97500.50",
+                    "debtor_iban": "PK36SCBL0000001123456702",
+                    "creditor_mobile": "+923001234567",
+                    "employee_id": "E-1",
+                }
+            ],
+        }
+    )
+    assert raast["batch"]["transaction_count"] == 1
+
+
+def test_payment_reconciliation_detects_mismatch_and_failures() -> None:
+    result = reconcile_payroll_payments(
+        {
+            "payroll": [
+                {"employee_id": "E-1", "payout": "50000"},
+                {"employee_id": "E-2", "payout": "60000"},
+                {"employee_id": "E-3", "payout": "45000"},
+            ],
+            "payments": [
+                {"employee_id": "E-1", "amount": "50000", "status": "settled"},
+                {"employee_id": "E-2", "amount": "55000", "status": "paid"},
+                {"employee_id": "E-3", "amount": "0", "status": "failed", "failure_reason": "raast_timeout"},
+                {"employee_id": "E-404", "amount": "1200", "status": "paid"},
+            ],
+        }
+    )
+
+    assert result["summary"]["matched_count"] == 1
+    assert result["summary"]["mismatch_count"] == 1
+    assert result["summary"]["failure_count"] == 1
+    assert result["summary"]["unmatched_payment_count"] == 1
+    assert result["summary"]["is_balanced"] is False

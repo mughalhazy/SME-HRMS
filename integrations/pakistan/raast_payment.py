@@ -5,14 +5,24 @@ from decimal import Decimal
 from typing import Any
 
 
+
+def _is_valid_mobile(value: str) -> bool:
+    normalized = value.replace("+", "").replace("-", "").strip()
+    return normalized.isdigit() and len(normalized) in {11, 12}
+
+
 def _validate_payment(item: dict[str, Any], idx: int) -> list[str]:
     errors: list[str] = []
     if not str(item.get("transaction_id", "")).strip():
         errors.append(f"payments[{idx}].transaction_id is required")
     if not str(item.get("debtor_iban", "")).startswith("PK"):
         errors.append(f"payments[{idx}].debtor_iban must be PK IBAN")
-    if not (str(item.get("creditor_iban", "")).startswith("PK") or str(item.get("creditor_mobile", "")).strip()):
-        errors.append(f"payments[{idx}] must include creditor_iban or creditor_mobile")
+
+    creditor_iban = str(item.get("creditor_iban", "")).strip()
+    creditor_mobile = str(item.get("creditor_mobile", "")).strip()
+    if not creditor_iban.startswith("PK") and not _is_valid_mobile(creditor_mobile):
+        errors.append(f"payments[{idx}] must include creditor_iban (PK...) or valid creditor_mobile")
+
     try:
         amount = Decimal(str(item.get("amount", "0")))
         if amount <= 0:
@@ -20,6 +30,16 @@ def _validate_payment(item: dict[str, Any], idx: int) -> list[str]:
     except Exception:
         errors.append(f"payments[{idx}].amount must be numeric")
     return errors
+
+
+def _validate_batch_total(payload: dict[str, Any], transactions: list[dict[str, str]]) -> None:
+    payroll_total = payload.get("payroll_total")
+    if payroll_total is None:
+        return
+    txn_total = sum(Decimal(item["amount"]) for item in transactions)
+    expected = Decimal(str(payroll_total))
+    if txn_total.quantize(Decimal("0.01")) != expected.quantize(Decimal("0.01")):
+        raise ValueError(f"raast transaction total {txn_total:.2f} must match payroll_total {expected:.2f}")
 
 
 def build_raast_payment_export(payload: dict[str, Any]) -> dict[str, Any]:
@@ -49,6 +69,8 @@ def build_raast_payment_export(payload: dict[str, Any]) -> dict[str, Any]:
 
     if errors:
         raise ValueError("; ".join(errors))
+
+    _validate_batch_total(payload, transactions)
 
     return {
         "payment_network": "RAAST",
