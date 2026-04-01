@@ -1,13 +1,27 @@
 from __future__ import annotations
 
-from integrations.accounting.base import QuickBooksAdapter, SAPAdapter
+from integrations.accounting.base import QuickBooksAdapter, SAPAdapter, SAPConnectorConfig
 from integrations.biometric.device_adapter import ingest_device_logs
+from integrations.http_client import IntegrationHTTPError
 from integrations.pakistan.bank_salary import generate_salary_bank_csv, generate_salary_bank_excel_rows
 from integrations.pakistan.eobi_adapter import submit_pr01
 from integrations.pakistan.fbr_adapter import submit_annexure_c
 from integrations.pakistan.pessi_adapter import submit_contribution_return
 from integrations.pakistan.raast_payment import build_raast_payment_export
 from services.compliance_service import PakistanComplianceService
+
+
+class FakeHttpClient:
+    def __init__(self, response: dict[str, object] | None = None, error: Exception | None = None) -> None:
+        self.response = response or {"status_code": 200, "body": {"ack_id": "ACK-1", "status": "accepted"}}
+        self.error = error
+        self.calls: list[dict[str, object]] = []
+
+    def post_json(self, url: str, payload: dict[str, object], headers: dict[str, str] | None = None) -> dict[str, object]:
+        self.calls.append({"url": url, "payload": payload, "headers": headers or {}})
+        if self.error:
+            raise self.error
+        return self.response
 
 
 def _compliance_reports() -> dict[str, object]:
@@ -42,33 +56,45 @@ def _compliance_reports() -> dict[str, object]:
     return generated["reports"]
 
 
-def test_submission_adapters_accept_compliance_payloads() -> None:
+def test_submission_adapters_make_http_calls_with_compliance_payloads() -> None:
     reports = _compliance_reports()
 
-    fbr = submit_annexure_c(reports["fbr_annexure_c"])
+    fbr_client = FakeHttpClient(response={"status_code": 200, "body": {"ack_id": "FBR-ACK"}})
+    fbr = submit_annexure_c(
+        reports["fbr_annexure_c"],
+        http_client=fbr_client,
+        config={"base_url": "https://fbr.example", "auth_token": "token", "signing_secret": "secret"},
+    )
     assert fbr["submitted"] is True
+    assert len(fbr_client.calls) == 1
 
-    eobi = submit_pr01(reports["eobi_pr_01"])
+    eobi_client = FakeHttpClient(response={"status_code": 200, "body": {"ack_id": "EOBI-ACK"}})
+    eobi = submit_pr01(reports["eobi_pr_01"], http_client=eobi_client, config={"base_url": "https://eobi.example", "auth_token": "token"})
     assert eobi["submitted"] is True
 
-    pessi = submit_contribution_return(reports["pessi"])
+    pessi_client = FakeHttpClient(response={"status_code": 200, "body": {"ack_id": "PESSI-ACK"}})
+    pessi = submit_contribution_return(reports["pessi"], http_client=pessi_client, config={"base_url": "https://pessi.example", "auth_token": "token"})
     assert pessi["submitted"] is True
 
 
-def test_bank_salary_and_raast_exports_are_callable() -> None:
-    employees = [
-        {
-            "employee_id": "E-1",
-            "full_name": "Ali Khan",
-            "bank_account": "0123456789",
-            "iban": "PK36SCBL0000001123456702",
-            "net_salary": "97500.50",
-        }
-    ]
+def test_submission_adapters_map_http_errors() -> None:
+    reports = _compliance_reports()
+    err = IntegrationHTTPError(status_code=503, code="UNAVAILABLE", message="Service unavailable")
+    result = submit_annexure_c(
+        reports["fbr_annexure_c"],
+        http_client=FakeHttpClient(error=err),
+        config={"base_url": "https://fbr.example", "auth_token": "token"},
+    )
+    assert result["submitted"] is False
+    assert result["http_status"] == 503
+
+
+def test_bank_salary_and_raast_exports_validate_and_build() -> None:
+    employees = [{"employee_id": "E-1", "full_name": "Ali Khan", "bank_account": "0123456789", "iban": "PK36SCBL0000001123456702", "net_salary": "97500.50"}]
 
     csv_payload = generate_salary_bank_csv({"employees": employees, "currency": "PKR"})
     assert "employee_id,employee_name,bank_account,iban,net_salary,currency,payment_reference" in csv_payload
-    assert "E-1,Ali Khan" in csv_payload
+    assert "97500.50" in csv_payload
 
     excel_payload = generate_salary_bank_excel_rows({"employees": employees})
     assert excel_payload["sheet_name"] == "SalaryDisbursement"
@@ -77,32 +103,32 @@ def test_bank_salary_and_raast_exports_are_callable() -> None:
     raast = build_raast_payment_export(
         {
             "company": "SME Demo",
-            "payments": [
-                {
-                    "transaction_id": "TX-1",
-                    "amount": "97500.50",
-                    "debtor_iban": "PK36SCBL0000001123456702",
-                    "creditor_iban": "PK12HABB0000001010101010",
-                    "employee_id": "E-1",
-                }
-            ],
+            "payments": [{"transaction_id": "TX-1", "amount": "97500.50", "debtor_iban": "PK36SCBL0000001123456702", "creditor_iban": "PK12HABB0000001010101010", "employee_id": "E-1"}],
         }
     )
     assert raast["payment_network"] == "RAAST"
     assert raast["batch"]["transaction_count"] == 1
 
 
-def test_accounting_and_biometric_adapters_are_callable() -> None:
-    qb = QuickBooksAdapter().export_payroll_journal({"journal_entries": [{"account": "Salaries", "amount": "100"}]})
-    sap = SAPAdapter().export_payroll_journal({"journal_entries": [{"account": "Salaries", "amount": "100"}]})
+def test_accounting_and_biometric_adapters() -> None:
+    qb_client = FakeHttpClient(response={"status_code": 200, "body": {"JournalEntry": {"Id": "1", "SyncToken": "0"}}})
+    qb = QuickBooksAdapter(
+        config={"base_url": "https://quickbooks.example", "realm_id": "123", "access_token": "token"},
+        http_client=qb_client,
+    ).export_payroll_journal({"journal_entries": [{"account": "Salaries", "amount": "100"}]})
+    assert qb["status"] == "success"
 
-    assert qb["status"] == "stubbed"
-    assert sap["status"] == "stubbed"
+    sap_client = FakeHttpClient(response={"status_code": 200, "body": {"document_id": "DOC-1"}})
+    sap = SAPAdapter(
+        SAPConnectorConfig(base_url="https://sap.example", company_code="1000", auth_token="token"),
+        http_client=sap_client,
+    ).export_payroll_journal({"journal_entries": [{"gl": "5000", "amount": "100"}], "posting_date": "2026-01-31"})
+    assert sap["status"] == "success"
 
     biometric = ingest_device_logs(
         {
             "logs": [
-                {"employee_id": "E-1", "event_type": "check_in", "timestamp": "2026-01-01T09:00:00Z", "device_id": "BIO-1"},
+                {"emp_code": "E-1", "event_code": "IN", "event_time": "2026-01-01T09:00:00Z", "terminal_id": "BIO-1"},
                 {"employee_id": "", "event_type": "check_out", "timestamp": "not-a-date", "device_id": "BIO-1"},
             ]
         }
