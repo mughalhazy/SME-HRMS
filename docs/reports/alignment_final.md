@@ -63,3 +63,12 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Implemented `generate_reports()` output for FBR Annexure-C JSON, EOBI PR-01 JSON, and PESSI JSON with period and employee payloads.
 - Integrated payroll run flow to map finalized payroll records into compliance input records and block completion when compliance validation fails.
 - Added targeted tests to verify slab formula behavior, report schema presence, and invalid-payroll blocking.
+
+
+## 6) Pakistan payroll doc alignment update (2026-04-01)
+
+- Added `services/payroll_service.py` with spec-exact calculation flow: `gross = basic + allowances`, `taxable = gross - deductions`, `net = taxable - tax`.
+- Added payroll component helpers for `gratuity()`, `provident_fund()`, and `loan_deduction()` aligned to documented component requirements.
+- Added final-settlement support for leave encashment and pending deductions with explicit net settlement output.
+- Added configurable frequency handling for monthly, weekly, and daily runs while preserving the same calculation order.
+- Integrated payroll calculations with Pakistan country-layer `TaxEngine` and `ComplianceEngine` calls during computation.
