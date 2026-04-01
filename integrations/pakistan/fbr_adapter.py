@@ -108,6 +108,7 @@ def submit_annexure_c(
         result = {"status": "failed", "submitted": False, "submission_status": "failed", "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": errors, "response_payload": {"errors": errors}}
         track.mark_failed(submission_id, result["response_payload"])
         return result
+    track.mark_validated(submission_id)
 
     cfg = config or {}
     shared = load_integrations_config().fbr
@@ -123,46 +124,51 @@ def submit_annexure_c(
         track.mark_failed(submission_id, result["response_payload"])
         return result
 
-    client = http_client or JsonHTTPClient(timeout_seconds=timeout, retry_policy=RetryPolicy(attempts=attempts))
+    client = http_client or JsonHTTPClient(timeout_seconds=timeout, retry_policy=RetryPolicy(attempts=1))
     endpoint = f"{base_url}/annexure-c/submissions"
     headers = {"Authorization": f"Bearer {token}", "X-Submission-Id": submission_id}
     if signing_secret:
         headers["X-Signature"] = _signature(signing_secret, submission_id, str(payload.get("employer", {}).get("ntn", "")))
 
-    try:
-        response = client.post_json(endpoint, payload, headers=headers)
-        body = response.get("body", {})
-        ack_id = body.get("ack_id")
-        if not ack_id:
-            result = {"status": "failed", "submitted": False, "submission_status": "failed", "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["FBR response missing ack_id."], "response_payload": body}
-            track.mark_failed(submission_id, body)
-            return result
-        result = {
-            "status": "submitted",
-            "submitted": True,
-            "submission_status": "submitted",
-            "submission_id": submission_id,
-            "provider": "FBR",
-            "format": "annexure_c",
-            "errors": [],
-            "ack_id": str(ack_id),
-            "provider_status": str(body.get("status", "accepted")),
-            "response_payload": body,
-        }
-        track.mark_submitted(submission_id, body)
-        return result
-    except IntegrationHTTPError as exc:
-        response_payload = {"code": exc.code, "message": exc.message, "status_code": exc.status_code}
-        result = {
-            "status": "failed",
-            "submitted": False,
-            "submission_status": "failed",
-            "submission_id": submission_id,
-            "provider": "FBR",
-            "format": "annexure_c",
-            "errors": [f"{exc.code}: {exc.message}"],
-            "http_status": exc.status_code,
-            "response_payload": response_payload,
-        }
-        track.mark_failed(submission_id, response_payload)
-        return result
+    for attempt in range(1, max(attempts, 1) + 1):
+        try:
+            response = client.post_json(endpoint, payload, headers=headers)
+            body = response.get("body", {})
+            ack_id = body.get("ack_id")
+            if not ack_id:
+                result = {"status": "failed", "submitted": False, "submission_status": "failed", "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["FBR response missing ack_id."], "response_payload": body}
+                track.mark_failed(submission_id, body)
+                return result
+            track.mark_submitted(submission_id, body)
+            track.mark_acknowledged(submission_id, body)
+            return {
+                "status": "submitted",
+                "submitted": True,
+                "submission_status": "submitted",
+                "submission_id": submission_id,
+                "provider": "FBR",
+                "format": "annexure_c",
+                "errors": [],
+                "ack_id": str(ack_id),
+                "provider_status": str(body.get("status", "accepted")),
+                "response_payload": body,
+            }
+        except IntegrationHTTPError as exc:
+            response_payload = {"code": exc.code, "message": exc.message, "status_code": exc.status_code}
+            track.mark_failed(submission_id, response_payload)
+            if attempt < max(attempts, 1):
+                track.mark_retry(submission_id, f"attempt_{attempt}_failed")
+                track.mark_submitted(submission_id, {"retrying": True, "attempt": attempt + 1})
+                continue
+            return {
+                "status": "failed",
+                "submitted": False,
+                "submission_status": "failed",
+                "submission_id": submission_id,
+                "provider": "FBR",
+                "format": "annexure_c",
+                "errors": [f"{exc.code}: {exc.message}"],
+                "http_status": exc.status_code,
+                "response_payload": response_payload,
+            }
+    return {"status": "failed", "submitted": False, "submission_status": "failed", "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["Unexpected retry termination"], "response_payload": {}}
