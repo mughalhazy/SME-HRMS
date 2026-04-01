@@ -38,15 +38,30 @@ class FinancialWellnessService:
     def __init__(self) -> None:
         self._requests: dict[str, SalaryAdvanceRequest] = {}
 
+    @staticmethod
+    def _normalize_amount(amount: float | Decimal | int | str) -> Decimal:
+        normalized = Decimal(str(amount)).quantize(Decimal("0.01"))
+        if normalized <= Decimal("0.00"):
+            raise ValueError("amount must be greater than zero")
+        return normalized
+
+    @staticmethod
+    def _normalize_currency(currency: str) -> str:
+        value = str(currency).strip().upper()
+        if not value:
+            raise ValueError("currency is required")
+        return value
+
     def request_salary_advance(self, *, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
+        request_amount = self._normalize_amount(amount)
         request = SalaryAdvanceRequest(
             request_id=str(uuid4()),
-            employee_id=employee_id,
-            amount=Decimal(str(amount)).quantize(Decimal("0.01")),
-            currency=currency,
+            employee_id=str(employee_id).strip(),
+            amount=request_amount,
+            currency=self._normalize_currency(currency),
             status="PendingApproval",
             requested_at=datetime.now(timezone.utc),
-            remaining_balance=Decimal(str(amount)).quantize(Decimal("0.01")),
+            remaining_balance=request_amount,
         )
         self._requests[request.request_id] = request
         return request.to_dict()
