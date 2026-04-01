@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-RUNTIME_SCRIPT = """
+RUNTIME_SCRIPT = r"""
 const assert = require('node:assert/strict');
 const { SettingsRepository } = require('./services/settings-service/settings.repository.js');
 const { SettingsService } = require('./services/settings-service/settings.service.js');
