@@ -114,3 +114,13 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Implemented payslip retrieval flow with compact payroll essentials for employee self-service usage.
 - Applied mobile optimization by stripping null/empty fields through compact payload shaping to minimize response size.
 - Added targeted endpoint and payload tests in `tests/test_employee_portal_api.py` to validate functionality and optimization behavior.
+
+## 11) Governance decision lifecycle alignment update (2026-04-01)
+
+- Added `services/governance/` service module to enforce governance-level decision controls.
+- Implemented payroll approval lifecycle as strict `pending -> approved/rejected` transitions.
+- Enforced compliance submission gating so submissions are blocked until approval is `approved`.
+- Added anomaly override control that allows override only when a non-empty reason is provided.
+- Added governance audit trail records that store canonical fields: `user`, `action`, `timestamp`, and `reason`.
+- Added decision lifecycle handlers aligned to canon lifecycle semantics: `create`, `update`, and `expire`.
+- Added targeted tests in `tests/test_governance_service.py` covering approval enforcement, override tracking, audit completeness, and lifecycle behavior.
