@@ -143,3 +143,19 @@ All are now verified and mutually consistent in this snapshot.
   - Raast export now validates payment rows and emits normalized amounts.
 - Implemented biometric ingestion adapter mapping for real device payload variants (`emp_code`, `event_code`, `event_time`, `terminal_id`) in addition to canonical format.
 - Extended integration tests to cover success/failure scenarios and mockable HTTP client behavior across Pakistan adapters and accounting connectors.
+
+## Mobile experience alignment update (2026-04-01)
+
+- Added a dedicated mobile contract layer under `mobile/` with API-driven screen endpoints for:
+  - dashboard (decision cards only)
+  - payslip view
+  - leave apply
+  - alerts
+- Enforced decision-first UX for mobile payloads by returning action cards first and excluding non-action/report-heavy fields.
+- Enforced low-bandwidth constraints with compact JSON serialization + gzip/base64 wire payload encoding metadata (`raw_size_bytes`, `compressed_size_bytes`).
+- Added pagination-first response envelopes (cursor/next cursor/limit/count) and strict minimal-field projections to avoid heavy data responses.
+- Implemented `services/mobile_gateway.py` as an aggregator over payroll, attendance, decisions, and notifications with:
+  - lightweight endpoint-specific payload shaping
+  - basic in-memory cache keyed by endpoint/page/page-size/signature
+  - fallback responses when no actionable data exists
+- Added focused tests for endpoint functionality, payload-size minimization/compression, decision-first rendering, and fallback/cache behavior.
