@@ -105,3 +105,12 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Implemented interview workflow stage definitions and controlled forward-only stage transitions.
 - Implemented onboarding checklist generation with deterministic task assignment across provided assignees.
 - Added targeted tests validating parsing, scoring consistency, ranking order, workflow transitions, and onboarding task generation.
+
+## 10) Employee portal experience-layer alignment update (2026-04-01)
+
+- Added `api/employee_portal.py` with employee self-service endpoints: `/payslip`, `/leave/apply`, `/attendance`, and `/profile`.
+- Enforced decision-first UX response contract on every endpoint by returning a `decision` object with `next_action`, `why`, and `confidence`.
+- Implemented leave request submission flow with default `submitted` status and explicit next-step guidance.
+- Implemented payslip retrieval flow with compact payroll essentials for employee self-service usage.
+- Applied mobile optimization by stripping null/empty fields through compact payload shaping to minimize response size.
+- Added targeted endpoint and payload tests in `tests/test_employee_portal_api.py` to validate functionality and optimization behavior.
