@@ -3,7 +3,15 @@ from __future__ import annotations
 import base64
 import json
 
-from payroll_api import get_payroll_record, get_payroll_records, post_payroll_mark_paid, post_payroll_records, post_payroll_run
+from payroll_api import (
+    get_payroll_record,
+    get_payroll_records,
+    post_paas_override,
+    post_paas_run_payroll,
+    post_payroll_mark_paid,
+    post_payroll_records,
+    post_payroll_run,
+)
 from payroll_service import PayrollService
 
 
@@ -99,3 +107,48 @@ def test_payroll_api_errors_follow_d1_contract():
     assert payload['error']['code'] == 'VALIDATION_ERROR'
     assert payload['meta']['request_id'] == 'trace-payroll-api-invalid'
     assert payload['meta']['service'] == 'payroll-service'
+
+
+def test_paas_endpoints_and_ewa_deduction_are_runtime_functional():
+    service = PayrollService()
+    admin = token('Admin')
+
+    request = service.financial_wellness_service.request_salary_advance(employee_id='emp-900', amount=300, currency='USD')
+    service.financial_wellness_service.approve_salary_advance(request_id=str(request['request_id']), approver_id='mgr-900')
+
+    create_status, created = post_payroll_records(
+        service,
+        {
+            'employee_id': 'emp-900',
+            'pay_period_start': '2026-01-01',
+            'pay_period_end': '2026-01-31',
+            'base_salary': '2000.00',
+            'allowances': '0.00',
+            'deductions': '50.00',
+            'overtime_pay': '0.00',
+            'currency': 'USD',
+        },
+        admin,
+        trace_id='trace-payroll-ewa-create',
+    )
+    assert create_status == 201
+    assert created['data']['deductions'] == '350.00'
+
+    paas_status, paas_payload = post_paas_run_payroll(
+        service,
+        {'tier': 'MID', 'period_start': '2026-01-01', 'period_end': '2026-01-31', 'actor_mode': 'external_operator'},
+        admin,
+        trace_id='trace-paas-run',
+    )
+    assert paas_status == 200
+    assert paas_payload['data']['managed'] is True
+    assert paas_payload['data']['mode'] == 'external_operator'
+
+    override_status, override_payload = post_paas_override(
+        service,
+        {'tier': 'ENTERPRISE', 'payroll_record_id': created['data']['payroll_record_id'], 'payment_date': '2026-02-01', 'reason': 'urgent fix'},
+        admin,
+        trace_id='trace-paas-override',
+    )
+    assert override_status == 200
+    assert override_payload['data']['override'] is True
