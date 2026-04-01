@@ -1,4 +1,6 @@
 from services.payroll_service import PayrollService
+from services.attendance_service import AttendanceService
+from datetime import date, datetime
 
 
 def test_calculation_flow_matches_spec() -> None:
@@ -117,3 +119,45 @@ def test_policy_engine_supports_overtime_tiers_penalties_and_shift_rules() -> No
     assert result["penalties"] == "20.00"
     assert result["gross"] == "1255.00"
     assert result["taxable"] == "1185.00"
+
+
+def test_attendance_sync_penalties_and_overtime_feed_payroll_correctly() -> None:
+    attendance = AttendanceService()
+    payroll = PayrollService()
+
+    attendance.record_attendance(
+        employee_id="emp-3",
+        attendance_date=date(2026, 3, 1),
+        source="biometric",
+        shift_hours="8",
+        check_in=datetime(2026, 3, 1, 9, 30),
+        check_out=datetime(2026, 3, 1, 19, 30),
+        scheduled_start_hour=9,
+        grace_period_minutes=10,
+        late_penalty_ladder=[
+            {"up_to_minutes": 5, "penalty": "2"},
+            {"up_to_minutes": 30, "penalty": "10"},
+        ],
+    )
+
+    payroll_inputs = attendance.sync_attendance_to_payroll_inputs(
+        employee_id="emp-3",
+        period_start=date(2026, 3, 1),
+        period_end=date(2026, 3, 31),
+    )
+    result = payroll.calculate_payroll(
+        basic="1000",
+        allowances="100",
+        deductions="50",
+        overtime_hours=payroll_inputs["overtime_hours"],
+        overtime_rate="20",
+        penalties=[{"mode": "flat", "value": payroll_inputs["late_penalties"]}],
+        frequency="monthly",
+        compliance_payload={"employee_records": []},
+    )
+
+    assert payroll_inputs["overtime_hours"] == "2.00"
+    assert payroll_inputs["late_penalties"] == "10.00"
+    assert result["overtime_pay"] == "40.00"
+    assert result["penalties"] == "10.00"
+    assert result["taxable"] == "1080.00"
