@@ -251,3 +251,15 @@ All are now verified and mutually consistent in this snapshot.
 - Consolidated Pakistan statutory logic under `country/pakistan/` by moving tax/report/compliance formulas to `country/pakistan/statutory.py` and turning `services/compliance_service.py` into a compatibility export only.
 - Updated country-layer canon doc to reflect interface names and organization/legal-entity/config resolver path, removing stale hardcoded org examples from resolver/test flow references.
 - Updated/expanded tests to validate adapter resolution API (`get_adapter`) and adapter-routed payroll behavior without hardcoded org/country constants in service orchestration.
+
+## Pakistan payroll orchestration cleanup update (2026-04-01, P3)
+
+- Refactored `services/payroll_service.py` to keep payroll as orchestration-only:
+  - policy math delegated to `services/payroll_policy_engine.py`
+  - tax delegated exclusively through `adapter.tax_engine.calculate_tax(...)`
+  - compliance delegated exclusively through `adapter.compliance_engine.validate_payroll(...)`
+- Added `services/payroll_policy_engine.py` as the shared policy execution layer for:
+  - overtime tiered computation
+  - penalty computation
+  - shift-rule adjustments
+- Updated payroll outputs to include explicit policy contributions (`shift_pay`, `penalties`) and confirmed no duplicated policy/tax/compliance logic paths.

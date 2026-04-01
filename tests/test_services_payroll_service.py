@@ -91,3 +91,29 @@ def test_overtime_is_included_as_payroll_input() -> None:
     assert result["overtime_pay"] == "100.00"
     assert result["gross"] == "1200.00"
     assert result["taxable"] == "1150.00"
+
+
+def test_policy_engine_supports_overtime_tiers_penalties_and_shift_rules() -> None:
+    service = PayrollService()
+    result = service.calculate_payroll(
+        basic="1000",
+        allowances="100",
+        deductions="50",
+        overtime_hours="5",
+        overtime_rate="20",
+        overtime_tiers=[
+            {"up_to_hours": "2", "rate": "20"},
+            {"up_to_hours": "4", "rate": "30"},
+        ],
+        penalties=[{"mode": "flat", "value": "10"}, {"mode": "percent_of_basic", "value": "1"}],
+        shift_rules=[{"shift": "night", "mode": "flat", "value": "25"}],
+        shift_key="night",
+        frequency="monthly",
+        compliance_payload={"employee_records": []},
+    )
+
+    assert result["overtime_pay"] == "130.00"
+    assert result["shift_pay"] == "25.00"
+    assert result["penalties"] == "20.00"
+    assert result["gross"] == "1255.00"
+    assert result["taxable"] == "1185.00"
