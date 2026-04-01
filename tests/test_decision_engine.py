@@ -6,7 +6,8 @@ def test_decision_card_schema_fields_exist() -> None:
         trigger="salary_spike: salary +35% without promotion",
         impact="high payroll integrity impact (estimated 12000)",
         confidence=92.5,
-        action="Place payroll hold and escalate for immediate review",
+        recommended_action="Place payroll hold and escalate for immediate review",
+        reversibility="partially_reversible",
         expires_at="2026-04-02T00:00:00+00:00",
     )
 
@@ -15,7 +16,9 @@ def test_decision_card_schema_fields_exist() -> None:
     assert payload["trigger"] == card.trigger
     assert payload["impact"] == card.impact
     assert payload["confidence"] == card.confidence
-    assert payload["action"] == card.action
+    assert payload["recommended_action"] == card.recommended_action
+    assert payload["action"] == card.recommended_action
+    assert payload["reversibility"] == card.reversibility
     assert payload["expires_at"] == card.expires_at
 
 
@@ -47,11 +50,11 @@ def test_generation_from_anomalies_and_compliance_issues() -> None:
 
     assert len(anomaly_cards) == 1
     assert anomaly_cards[0].trigger.startswith("ghost_employee")
-    assert anomaly_cards[0].action == "Place payroll hold and escalate for immediate review"
+    assert anomaly_cards[0].recommended_action == "Place payroll hold and escalate for immediate review"
 
     assert len(compliance_cards) == 1
     assert compliance_cards[0].trigger.startswith("MISSING_TAX")
-    assert "Block payroll release" in compliance_cards[0].action
+    assert "Block payroll release" in compliance_cards[0].recommended_action
 
 
 def test_lifecycle_create_update_expire_and_immutability() -> None:
@@ -68,11 +71,13 @@ def test_lifecycle_create_update_expire_and_immutability() -> None:
 
     updated = engine.update_card(card, confidence=89, action="Assign payroll analyst for immediate validation")
     assert updated.confidence == 89
-    assert updated.action == "Assign payroll analyst for immediate validation"
+    assert updated.recommended_action == "Assign payroll analyst for immediate validation"
     assert updated.audit_history[-1]["event"] == "update"
+    assert updated.lifecycle_state == "update"
 
     expired = engine.expire_card(updated, reason="payroll period closed")
     assert expired.status == "expired"
+    assert expired.lifecycle_state == "expire"
     assert expired.audit_history[-1]["event"] == "expire"
 
     annotated = engine.update_card(expired, compliance_note="Regulator note attached")
@@ -84,3 +89,19 @@ def test_lifecycle_create_update_expire_and_immutability() -> None:
         assert "immutable" in str(exc)
     else:
         raise AssertionError("Expected immutability error for expired card updates")
+
+
+def test_override_tracking_records_user_reason_and_audit_event() -> None:
+    engine = DecisionEngine(default_ttl_hours=1)
+    card = engine.create_card(
+        trigger="ghost_employee: payroll issued to inactive employee",
+        impact="high payroll integrity impact",
+        confidence=97,
+        action="Place payroll hold and escalate for immediate review",
+        reversibility="irreversible",
+    )
+
+    overridden = engine.record_override(card, user="payroll_admin", reason="Vendor reconciliation completed")
+    assert overridden.override_tracking[-1]["user"] == "payroll_admin"
+    assert overridden.override_tracking[-1]["reason"] == "Vendor reconciliation completed"
+    assert overridden.audit_history[-1]["event"] == "override"

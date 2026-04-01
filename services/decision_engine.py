@@ -10,9 +10,12 @@ class DecisionCard:
     trigger: str
     impact: str
     confidence: float
-    action: str
+    recommended_action: str
+    reversibility: str
     expires_at: str
     status: str = "active"
+    lifecycle_state: str = "create"
+    override_tracking: list[dict[str, Any]] = field(default_factory=list)
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     audit_history: list[dict[str, Any]] = field(default_factory=list)
@@ -22,9 +25,14 @@ class DecisionCard:
             "trigger": self.trigger,
             "impact": self.impact,
             "confidence": self.confidence,
-            "action": self.action,
+            "recommended_action": self.recommended_action,
+            # Backward-compatible alias used by existing services.
+            "action": self.recommended_action,
+            "reversibility": self.reversibility,
             "expires_at": self.expires_at,
             "status": self.status,
+            "lifecycle_state": self.lifecycle_state,
+            "override_tracking": list(self.override_tracking),
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "audit_history": list(self.audit_history),
@@ -98,14 +106,22 @@ class DecisionEngine:
             )
         return cards
 
-    def create_card(self, trigger: str, impact: str, confidence: float, action: str) -> DecisionCard:
+    def create_card(
+        self,
+        trigger: str,
+        impact: str,
+        confidence: float,
+        action: str,
+        reversibility: str = "reversible",
+    ) -> DecisionCard:
         now = datetime.now(timezone.utc)
         expires_at = (now + timedelta(hours=self.default_ttl_hours)).isoformat()
         card = DecisionCard(
             trigger=trigger,
             impact=impact,
             confidence=confidence,
-            action=action,
+            recommended_action=action,
+            reversibility=reversibility,
             expires_at=expires_at,
             created_at=now.isoformat(),
             updated_at=now.isoformat(),
@@ -118,9 +134,12 @@ class DecisionEngine:
                     "trigger": trigger,
                     "impact": impact,
                     "confidence": confidence,
-                    "action": action,
+                    "recommended_action": action,
+                    "reversibility": reversibility,
                     "expires_at": expires_at,
                     "status": card.status,
+                    "lifecycle_state": card.lifecycle_state,
+                    "override_tracking": list(card.override_tracking),
                 },
             }
         )
@@ -141,11 +160,14 @@ class DecisionEngine:
             raise ValueError("Expired decision cards are immutable except for compliance annotations")
 
         before = card.to_dict()
-        for field_name in ("trigger", "impact", "confidence", "action", "expires_at"):
+        for field_name in ("trigger", "impact", "confidence", "recommended_action", "reversibility", "expires_at"):
             if field_name in changes:
                 setattr(card, field_name, changes[field_name])
+        if "action" in changes:
+            card.recommended_action = str(changes["action"])
 
         card.updated_at = datetime.now(timezone.utc).isoformat()
+        card.lifecycle_state = "update"
         card.audit_history.append(
             {
                 "event": "update",
@@ -161,6 +183,7 @@ class DecisionEngine:
             return card
 
         card.status = "expired"
+        card.lifecycle_state = "expire"
         card.updated_at = datetime.now(timezone.utc).isoformat()
         card.audit_history.append(
             {
@@ -169,6 +192,17 @@ class DecisionEngine:
                 "reason": reason,
             }
         )
+        return card
+
+    def record_override(self, card: DecisionCard, *, user: str, reason: str) -> DecisionCard:
+        entry = {
+            "user": user,
+            "reason": reason,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        card.override_tracking.append(entry)
+        card.updated_at = entry["timestamp"]
+        card.audit_history.append({"event": "override", **entry})
         return card
 
     @staticmethod
