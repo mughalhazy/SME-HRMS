@@ -166,10 +166,10 @@ All are now verified and mutually consistent in this snapshot.
 - Standardized tier identifiers to `SMB`, `MID`, and `ENTERPRISE` and enforced monotonic feature mapping.
 - Updated SME Lite gating so only `payroll`, `compliance`, and `attendance` remain enabled in Lite mode.
 - Kept Payroll-as-a-Service managed mode + admin override flow with SMB-deny and MID/ENTERPRISE allow policy.
-- Added `services/finance/ewa.py` placeholder financial-wellness APIs:
+- Added `services/finance/ewa.py` financial-wellness API contracts:
   - `loan_request(...)`
   - `salary_advance(...)`
-- Expanded experience-layer tests to validate feature gating, tier restrictions, PaaS mode behavior, and callable placeholder APIs.
+- Expanded experience-layer tests to validate feature gating, tier restrictions, PaaS mode behavior, and callable financial-wellness APIs.
 
 ## Experience workflow productionization update (2026-04-01, workflow execution pass)
 

@@ -38,22 +38,26 @@ def test_payroll_as_a_service_controls_require_managed_mode() -> None:
     assert enabled["payroll_admin_override_controls"] is True
 
 
-def test_financial_wellness_hooks_and_placeholder_apis_are_callable() -> None:
+def test_financial_wellness_hooks_and_live_apis_are_callable() -> None:
     service = ExperienceLayerService()
 
     loan = service.loan_api_hook()
     ewa = service.ewa_api_hook()
 
-    assert loan.placeholder is True
+    assert loan.integration_mode == "live"
     assert loan.endpoint == "/api/v1/financial-wellness/loan"
-    assert ewa.placeholder is True
+    assert ewa.integration_mode == "live"
     assert ewa.endpoint == "/api/v1/financial-wellness/ewa"
 
     loan_response = loan_request(employee_id="E-100", amount=15000)
     ewa_response = salary_advance(employee_id="E-100", amount=5000)
 
-    assert loan_response["status"] == "accepted_placeholder"
-    assert ewa_response["status"] == "accepted_placeholder"
+    assert loan_response["status"] == "accepted"
+    assert loan_response["amount"] == "15000.00"
+    assert "created_at" in loan_response
+    assert ewa_response["status"] == "accepted"
+    assert ewa_response["amount"] == "5000.00"
+    assert "created_at" in ewa_response
 
 
 def test_tier_logic_gates_features_consistently() -> None:

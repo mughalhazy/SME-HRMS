@@ -130,11 +130,11 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Added `services/experience_layer_service.py` to centralize experience-mode toggles and deterministic feature gating.
 - Implemented **SME Lite mode** toggle to simplify feature exposure while preserving core HR, attendance, leave, and basic payroll.
 - Implemented **Payroll-as-a-Service** controls with managed payroll mode and admin override gating, including explicit SMB denial and Mid/Enterprise allowance.
-- Added **financial wellness hooks** for loan and earned-wage-access (EWA) as placeholder API contracts:
+- Added **financial wellness hooks** for loan and earned-wage-access (EWA) as executable API contracts:
   - `POST /api/v1/financial-wellness/loan`
   - `POST /api/v1/financial-wellness/ewa`
 - Added tier-based feature policy for **SMB / Mid / Enterprise** with monotonic gating (`SMB ⊆ Mid ⊆ Enterprise`).
-- Added focused tests in `tests/test_experience_layer_service.py` verifying mode toggles, tier gating consistency, and placeholder hook contracts.
+- Added focused tests in `tests/test_experience_layer_service.py` verifying mode toggles, tier gating consistency, and live hook contracts.
 
 ## 13) Face-recognition attendance → payroll alignment update (2026-04-01)
 
