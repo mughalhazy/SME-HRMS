@@ -67,3 +67,16 @@ All are now verified and mutually consistent in this snapshot.
   - `ORG_COUNTRY_NOT_FOUND`
   - `COUNTRY_ADAPTER_NOT_REGISTERED`
 - Refactored payroll core flow so tax calculation, payroll-rule application, and compliance report generation route through the country adapter abstraction boundary rather than hardcoded core logic.
+
+## Manager dashboard API alignment update (2026-04-01)
+
+- Implemented manager dashboard decision APIs in `api/manager_dashboard.py` with explicit issue-first endpoint surfaces:
+  - `/alerts`
+  - `/overtime`
+  - `/approvals`
+  - `/burnout`
+  - `/performance`
+- Enforced decision-first output behavior by returning only actionable exception items sorted by severity and urgency.
+- Implemented aggregate fusion inputs from attendance, payroll, and analytics datasets with per-endpoint source metadata.
+- Enforced JSON-only payload design for manager dashboard APIs (no chart or visualization payload structures).
+- Added targeted API tests validating endpoint coverage, aggregate accuracy, decision ordering, and no-chart contract.
