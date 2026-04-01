@@ -82,3 +82,16 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Updated `services/payroll_service.py` to include overtime as payroll input and compute `overtime_pay = overtime_hours × overtime_rate`.
 - Integrated overtime pay into gross salary calculation so payroll outputs now explicitly include `overtime_pay` in result payloads.
 - Added targeted tests to verify source capture, overtime computation, attendance→payroll sync accuracy, and overtime inclusion in payroll totals.
+
+## 8) AI Payroll Guardian decision-system alignment update (2026-04-01)
+
+- Added `services/ai/payroll_guardian.py` with canonical anomaly detectors:
+  - `detect_salary_spike()`
+  - `detect_overtime_spike()`
+  - `detect_missing_tax()`
+  - `detect_ghost_employee()`
+- Aligned outputs to decision canon scoring contract for each detector:
+  - `risk_score` (0-100)
+  - `confidence` (0-100)
+  - `reason` in canonical `WHY_FLAGGED` explanation format with anomaly type, evidence, risk, confidence, and threshold level.
+- Added targeted tests in `tests/test_payroll_guardian.py` covering anomaly detection and scoring behavior.
