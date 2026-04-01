@@ -78,3 +78,19 @@ All are now verified and mutually consistent in this snapshot.
   - `leave` → `leave.apply`
   - `approval` → `approval.pending`
 - Added focused webhook + intent tests to verify command parsing, response schema, and invalid-command help behavior.
+
+## Pakistan integration alignment update (2026-04-01)
+
+- Added `integrations/pakistan/` adapters aligned to `docs/specs/country/pakistan/compliance.md` submission shapes:
+  - `fbr_adapter.submit_annexure_c(payload)` validates Annexure-C schema fields/constraints and simulates API submission.
+  - `eobi_adapter.submit_pr01(payload)` validates PR-01 payload envelope and simulates submission.
+  - `pessi_adapter.submit_contribution_return(payload)` validates PESSI/SESSI contribution return envelope and simulates submission.
+- Added payroll disbursement exports for downstream payment execution:
+  - `bank_salary.generate_salary_bank_csv(payload)` for CSV.
+  - `bank_salary.generate_salary_bank_excel_rows(payload)` for Excel-friendly row structure.
+  - `raast_payment.build_raast_payment_export(payload)` for Raast batch transaction export.
+- Added accounting integration contract and stubs under `integrations/accounting/base.py`:
+  - `AccountingAdapter` interface.
+  - `QuickBooksAdapter` and `SAPAdapter` stub implementations.
+- Added biometric ingestion adapter `integrations/biometric/device_adapter.py` to normalize device logs for attendance workflows.
+- Added integration tests to verify adapter callability, simulated submissions, and compliance-payload compatibility generated from `PakistanComplianceService.generate_reports`.
