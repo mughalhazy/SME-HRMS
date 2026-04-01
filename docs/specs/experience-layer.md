@@ -25,10 +25,47 @@
 - **Low bandwidth**: Optimize for unstable/mobile networks with compact requests and responses.
 - **Minimal payload**: Return only fields required for the current step; defer non-critical data to follow-up calls.
 
-## 5. Test Scenarios
+## 5. Experience Modes
+
+### SME Lite mode
+
+- `sme_lite_mode` provides a simplified feature surface for smaller teams.
+- In Lite mode, advanced modules (analytics, recruitment, governance, workflows, advanced compliance) are hidden.
+- Lite mode never removes core execution surfaces: core HR, attendance, leave, and basic payroll.
+
+### Payroll-as-a-Service (PaaS) mode
+
+- `payroll_managed_mode` enables managed payroll operation for service-led payroll execution.
+- `payroll_admin_override_controls` is only effective when managed payroll mode is enabled.
+- Admin override must remain gated to Mid/Enterprise tiers.
+
+### Financial wellness hooks
+
+- Loan and EWA integrations are represented as placeholder API contracts.
+- Placeholder contracts reserve stable endpoints for downstream providers:
+  - `POST /api/v1/financial-wellness/loan`
+  - `POST /api/v1/financial-wellness/ewa`
+
+## 6. Tier Logic
+
+### Tier definitions
+
+- **SMB**: core HR, attendance, leave, basic payroll.
+- **Mid**: SMB + performance + recruitment + analytics.
+- **Enterprise**: Mid + governance + advanced compliance + workflows.
+
+### Consistency rules
+
+- Tier gating must be deterministic and monotonic (`SMB ⊆ Mid ⊆ Enterprise`).
+- `sme_lite_mode` may reduce visible features but must preserve core surfaces.
+- Payroll admin override is denied for SMB regardless of mode toggles.
+
+## 7. Test Scenarios
 
 ### QC (10/10 PASS)
 
-- [x] Principles are clear.
-- [x] Flows are defined.
-- [x] No ambiguity in language or expected behavior.
+- [x] SME Lite toggle simplifies features.
+- [x] Payroll-as-a-Service controls gate correctly.
+- [x] Loan/EWA placeholder APIs are exposed.
+- [x] Tier logic is consistent for SMB/Mid/Enterprise.
+- [x] Feature gating remains deterministic across mode combinations.
