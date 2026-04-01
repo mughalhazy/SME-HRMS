@@ -74,3 +74,20 @@ def test_negative_net_is_blocked_for_payout_and_carried_forward() -> None:
     assert result["net"] == "-4000.00"
     assert result["payout"] == "0.00"
     assert result["carry_forward"] == "4000.00"
+
+
+def test_overtime_is_included_as_payroll_input() -> None:
+    service = PayrollService()
+    result = service.calculate_payroll(
+        basic="1000",
+        allowances="100",
+        deductions="50",
+        overtime_hours="5",
+        overtime_rate="20",
+        frequency="monthly",
+        compliance_payload={"employee_records": []},
+    )
+
+    assert result["overtime_pay"] == "100.00"
+    assert result["gross"] == "1200.00"
+    assert result["taxable"] == "1150.00"

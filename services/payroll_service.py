@@ -22,6 +22,7 @@ class PayrollComputation:
     basic: Decimal
     allowances: Decimal
     deductions: Decimal
+    overtime_pay: Decimal
     tax: Decimal
     gross: Decimal
     taxable: Decimal
@@ -45,8 +46,11 @@ class PayrollService:
     def _money(cls, value: Any) -> Decimal:
         return cls._decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    def calculate_gross(self, basic: Any, allowances: Any) -> Decimal:
-        return (self._money(basic) + self._money(allowances)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    def calculate_gross(self, basic: Any, allowances: Any, overtime_pay: Any = 0) -> Decimal:
+        return (self._money(basic) + self._money(allowances) + self._money(overtime_pay)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    def calculate_overtime_pay(self, overtime_hours: Any, overtime_rate: Any) -> Decimal:
+        return (self._money(overtime_hours) * self._money(overtime_rate)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def calculate_taxable(self, gross: Any, deductions: Any) -> Decimal:
         return (self._money(gross) - self._money(deductions)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -79,6 +83,8 @@ class PayrollService:
         basic: Any,
         allowances: Any,
         deductions: Any,
+        overtime_hours: Any = 0,
+        overtime_rate: Any = 0,
         frequency: PayrollFrequency = "monthly",
         tax_year: str = "2026",
         compliance_payload: dict[str, Any] | None = None,
@@ -90,8 +96,10 @@ class PayrollService:
         period_basic = (self._money(basic) / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         period_allowances = (self._money(allowances) / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         period_deductions = (self._money(deductions) / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        period_overtime_hours = (self._money(overtime_hours) / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        overtime_pay = self.calculate_overtime_pay(period_overtime_hours, overtime_rate)
 
-        gross = self.calculate_gross(period_basic, period_allowances)
+        gross = self.calculate_gross(period_basic, period_allowances, overtime_pay)
         taxable = self.calculate_taxable(gross, period_deductions)
 
         tax_base = taxable if taxable > Decimal("0") else Decimal("0.00")
@@ -107,6 +115,7 @@ class PayrollService:
             basic=period_basic,
             allowances=period_allowances,
             deductions=period_deductions,
+            overtime_pay=overtime_pay,
             tax=tax,
             gross=gross,
             taxable=taxable,
@@ -122,6 +131,7 @@ class PayrollService:
             "basic": str(computation.basic),
             "allowances": str(computation.allowances),
             "deductions": str(computation.deductions),
+            "overtime_pay": str(computation.overtime_pay),
             "gross": str(computation.gross),
             "taxable": str(computation.taxable),
             "tax": str(computation.tax),

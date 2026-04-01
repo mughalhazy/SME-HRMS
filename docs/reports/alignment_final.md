@@ -73,3 +73,12 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Added final-settlement support for leave encashment and pending deductions with explicit net settlement output.
 - Added configurable frequency handling for monthly, weekly, and daily runs while preserving the same calculation order.
 - Integrated payroll calculations with Pakistan country-layer `TaxEngine` and `ComplianceEngine` calls during computation.
+
+## 7) Pakistan attendance + payroll linkage alignment update (2026-04-01)
+
+- Added `services/attendance_service.py` to support attendance input sources `biometric`, `gps`, and `manual`.
+- Added shift-assignment and worked-hours calculation primitives with overtime derived by spec rule: `hours > shift => overtime`.
+- Added attendance-to-payroll sync output that exports period totals (`total_hours`, `overtime_hours`) as payroll variable inputs.
+- Updated `services/payroll_service.py` to include overtime as payroll input and compute `overtime_pay = overtime_hours × overtime_rate`.
+- Integrated overtime pay into gross salary calculation so payroll outputs now explicitly include `overtime_pay` in result payloads.
+- Added targeted tests to verify source capture, overtime computation, attendance→payroll sync accuracy, and overtime inclusion in payroll totals.
