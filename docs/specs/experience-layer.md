@@ -30,14 +30,14 @@
 ### SME Lite mode
 
 - `sme_lite_mode` provides a simplified feature surface for smaller teams.
-- In Lite mode, advanced modules (analytics, recruitment, governance, workflows, advanced compliance) are hidden.
-- Lite mode never removes core execution surfaces: core HR, attendance, leave, and basic payroll.
+- In Lite mode, only payroll, compliance, and attendance remain enabled.
+- Lite mode explicitly hides all other modules regardless of tier.
 
 ### Payroll-as-a-Service (PaaS) mode
 
 - `payroll_managed_mode` enables managed payroll operation for service-led payroll execution.
 - `payroll_admin_override_controls` is only effective when managed payroll mode is enabled.
-- Admin override must remain gated to Mid/Enterprise tiers.
+- Admin override must remain gated to MID/ENTERPRISE tiers.
 
 ### Financial wellness hooks
 
@@ -50,13 +50,13 @@
 
 ### Tier definitions
 
-- **SMB**: core HR, attendance, leave, basic payroll.
-- **Mid**: SMB + performance + recruitment + analytics.
-- **Enterprise**: Mid + governance + advanced compliance + workflows.
+- **SMB**: payroll + compliance + attendance.
+- **MID**: SMB + performance + recruitment + analytics.
+- **ENTERPRISE**: MID + governance + advanced compliance + workflows.
 
 ### Consistency rules
 
-- Tier gating must be deterministic and monotonic (`SMB ⊆ Mid ⊆ Enterprise`).
+- Tier gating must be deterministic and monotonic (`SMB ⊆ MID ⊆ ENTERPRISE`).
 - `sme_lite_mode` may reduce visible features but must preserve core surfaces.
 - Payroll admin override is denied for SMB regardless of mode toggles.
 
@@ -67,5 +67,5 @@
 - [x] SME Lite toggle simplifies features.
 - [x] Payroll-as-a-Service controls gate correctly.
 - [x] Loan/EWA placeholder APIs are exposed.
-- [x] Tier logic is consistent for SMB/Mid/Enterprise.
+- [x] Tier logic is consistent for SMB/MID/ENTERPRISE.
 - [x] Feature gating remains deterministic across mode combinations.

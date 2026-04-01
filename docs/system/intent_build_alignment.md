@@ -159,3 +159,14 @@ All are now verified and mutually consistent in this snapshot.
   - basic in-memory cache keyed by endpoint/page/page-size/signature
   - fallback responses when no actionable data exists
 - Added focused tests for endpoint functionality, payload-size minimization/compression, decision-first rendering, and fallback/cache behavior.
+
+## Experience/product-tier alignment update (2026-04-01)
+
+- Added `services/product/experience.py` as the product-domain home for experience-mode and tier feature policy.
+- Standardized tier identifiers to `SMB`, `MID`, and `ENTERPRISE` and enforced monotonic feature mapping.
+- Updated SME Lite gating so only `payroll`, `compliance`, and `attendance` remain enabled in Lite mode.
+- Kept Payroll-as-a-Service managed mode + admin override flow with SMB-deny and MID/ENTERPRISE allow policy.
+- Added `services/finance/ewa.py` placeholder financial-wellness APIs:
+  - `loan_request(...)`
+  - `salary_advance(...)`
+- Expanded experience-layer tests to validate feature gating, tier restrictions, PaaS mode behavior, and callable placeholder APIs.
