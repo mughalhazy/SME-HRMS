@@ -190,6 +190,15 @@ Given annual taxable income `TI`:
 
 All values must be rounded to 2 decimal places using standard rounding.
 
+### Profile-based withholding override
+
+To support organization-specific withholding policies, an employee tax profile may provide a `metadata.rate` percentage.
+
+- If `metadata.rate` exists, monthly withholding is:
+  - `monthly_tax = period_taxable_income * (rate / 100)`
+- If `metadata.rate` is absent, use the slab workflow above.
+- Override output must still be rounded to 2 decimals.
+
 ---
 
 ## 3) EOBI
