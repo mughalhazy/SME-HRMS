@@ -60,10 +60,11 @@ This final declaration is evidence-backed and gated by verified checks across:
 
 - Implemented Pakistan slab-based tax calculation for tax years 2024, 2025, and 2026 in a shared compliance service with exact thresholds/base/rate definitions from the compliance spec.
 - Implemented `validate_payroll()` checks for missing tax, invalid salary, and missing/invalid CNIC with blocking error output.
-- Implemented `generate_reports()` output for FBR Annexure-C JSON, EOBI PR-01 JSON, and PESSI JSON with period and employee payloads.
+- Implemented `generate_reports()` output for FBR Annexure-C JSON, EOBI PR-01 JSON, and province-aware social security payloads (PESSI for Punjab, SESSI for Sindh, KP for Khyber Pakhtunkhwa).
 - Integrated payroll run flow to map finalized payroll records into compliance input records and block completion when compliance validation fails.
 - Added targeted tests to verify slab formula behavior, report schema presence, and invalid-payroll blocking.
 - Added `services/compliance_autopilot.py` with `run_precheck(payroll_batch)` orchestration to always call `validate_payroll()`, block invalid payroll runs, and emit `fbr_json`, `eobi_json`, and `pessi_json` outputs from generated reports.
+- Hardened submission lifecycle with persisted states `DRAFT → VALIDATED → SUBMITTED → ACKNOWLEDGED`, failure handling `FAILED → RETRY`, retry attempts, audit logging on each transition, and manual fallback utilities for export/reconcile flows.
 
 
 ## 6) Pakistan payroll doc alignment update (2026-04-01)

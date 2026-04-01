@@ -100,6 +100,7 @@ class PakistanStatutoryService:
         org = dict(payload.get("organization_data", {}))
         employees = []
         for employee in list(payload.get("employee_records", [])):
+            province = str(employee.get("province", "")).strip()
             employees.append(
                 {
                     "employee_id": str(employee.get("employee_id", "")),
@@ -112,11 +113,38 @@ class PakistanStatutoryService:
                     "annual_tax": float(self._money(employee.get("annual_tax", 0))),
                     "monthly_tax_deducted": float(self._money(employee.get("monthly_tax_deducted", 0))),
                     "exemptions": list(employee.get("exemptions", [])),
+                    "province": province,
                 }
             )
 
         total_taxable_income = sum((Decimal(str(item["annual_taxable_income"])) for item in employees), Decimal("0"))
         total_tax_deducted = sum((Decimal(str(item["monthly_tax_deducted"])) for item in employees), Decimal("0"))
+
+        province_social_reports: dict[str, dict[str, Any]] = {}
+        for item in employees:
+            province = str(item.get("province", "")).strip().lower()
+            if province == "punjab":
+                key = "pessi"
+                regime = "PESSI"
+            elif province == "sindh":
+                key = "sessi"
+                regime = "SESSI"
+            elif province in {"khyber pakhtunkhwa", "kp", "kpk"}:
+                key = "kp"
+                regime = "KP"
+            else:
+                continue
+            if key not in province_social_reports:
+                province_social_reports[key] = {
+                    "period": {"month": month, "year": year},
+                    "establishment": {
+                        "name": str(org.get("name", "")),
+                        "registration_number": str(org.get(f"{key}_registration", org.get("pessi_registration", ""))),
+                        "social_security_regime": regime,
+                    },
+                    "employees": [],
+                }
+            province_social_reports[key]["employees"].append({"employee_id": item["employee_id"], "cnic": item["cnic"], "province": item.get("province", "")})
 
         return {
             "reports": {
@@ -142,11 +170,30 @@ class PakistanStatutoryService:
                     "employer": {"name": str(org.get("name", "")), "registration_number": str(org.get("eobi_registration", ""))},
                     "employees": [{"employee_id": item["employee_id"], "cnic": item["cnic"]} for item in employees],
                 },
-                "pessi": {
-                    "period": {"month": month, "year": year},
-                    "establishment": {"name": str(org.get("name", "")), "registration_number": str(org.get("pessi_registration", ""))},
-                    "employees": [{"employee_id": item["employee_id"], "cnic": item["cnic"]} for item in employees],
-                },
+                "pessi": province_social_reports.get(
+                    "pessi",
+                    {
+                        "period": {"month": month, "year": year},
+                        "establishment": {"name": str(org.get("name", "")), "registration_number": str(org.get("pessi_registration", "")), "social_security_regime": "PESSI"},
+                        "employees": [],
+                    },
+                ),
+                "sessi": province_social_reports.get(
+                    "sessi",
+                    {
+                        "period": {"month": month, "year": year},
+                        "establishment": {"name": str(org.get("name", "")), "registration_number": str(org.get("sessi_registration", "")), "social_security_regime": "SESSI"},
+                        "employees": [],
+                    },
+                ),
+                "kp": province_social_reports.get(
+                    "kp",
+                    {
+                        "period": {"month": month, "year": year},
+                        "establishment": {"name": str(org.get("name", "")), "registration_number": str(org.get("kp_registration", "")), "social_security_regime": "KP"},
+                        "employees": [],
+                    },
+                ),
             },
             "metadata": {
                 "country_code": str(payload.get("country_code") or payload.get("jurisdiction") or "").upper(),

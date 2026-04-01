@@ -94,8 +94,9 @@ def test_submission_adapters_make_http_calls_with_compliance_payloads() -> None:
 
     stored = tracker.get(eobi["submission_id"])
     assert stored is not None
-    assert stored.status == "submitted"
+    assert stored.status == "ACKNOWLEDGED"
     assert stored.response_payload["ack_id"] == "EOBI-ACK"
+    assert stored.attempt_count == 1
 
 
 def test_submission_adapters_map_http_errors() -> None:
@@ -113,7 +114,30 @@ def test_submission_adapters_map_http_errors() -> None:
     assert result["http_status"] == 503
     stored = tracker.get(result["submission_id"])
     assert stored is not None
-    assert stored.status == "failed"
+    assert stored.status == "FAILED"
+
+
+def test_submission_lifecycle_retry_and_manual_reconcile_flow() -> None:
+    reports = _compliance_reports()
+    tracker = SubmissionTracker()
+    err = IntegrationHTTPError(status_code=503, code="UNAVAILABLE", message="Service unavailable")
+    result = submit_annexure_c(
+        reports["fbr_annexure_c"],
+        http_client=FakeHttpClient(error=err),
+        tracker=tracker,
+        config={"base_url": "https://fbr.example", "auth_token": "token", "retry_attempts": 2},
+    )
+    assert result["submitted"] is False
+    stored = tracker.get(result["submission_id"])
+    assert stored is not None
+    assert stored.status == "FAILED"
+    assert any(h["to"] == "RETRY" for h in (stored.history or []))
+    exports = tracker.export_for_manual_fallback()
+    assert any(row["submission_id"] == result["submission_id"] for row in exports)
+
+    reconciled = tracker.reconcile_manual_ack(result["submission_id"], {"ack_id": "MANUAL-ACK"})
+    assert reconciled is True
+    assert tracker.get(result["submission_id"]).status == "ACKNOWLEDGED"
 
 
 def test_bank_salary_and_raast_exports_validate_and_build() -> None:

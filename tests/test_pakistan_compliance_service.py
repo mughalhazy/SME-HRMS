@@ -50,7 +50,27 @@ def test_report_schema_contains_required_payloads() -> None:
     assert "fbr_annexure_c" in reports
     assert "eobi_pr_01" in reports
     assert "pessi" in reports
+    assert "sessi" in reports
+    assert "kp" in reports
     assert reports["fbr_annexure_c"]["totals"]["total_employees"] == 1
+
+
+def test_report_applies_province_social_security_buckets() -> None:
+    service = PakistanComplianceService()
+    reports = service.generate_reports(
+        {
+            "period": "2026-01",
+            "organization_data": {"name": "Demo Org", "pessi_registration": "P1", "sessi_registration": "S1", "kp_registration": "K1"},
+            "employee_records": [
+                {"employee_id": "E-PB", "cnic": "1234567890123", "full_name": "A", "province": "Punjab"},
+                {"employee_id": "E-SD", "cnic": "1234567890124", "full_name": "B", "province": "Sindh"},
+                {"employee_id": "E-KP", "cnic": "1234567890125", "full_name": "C", "province": "KP"},
+            ],
+        }
+    )["reports"]
+    assert len(reports["pessi"]["employees"]) == 1
+    assert len(reports["sessi"]["employees"]) == 1
+    assert len(reports["kp"]["employees"]) == 1
 
 
 def test_invalid_payroll_is_blocked_for_missing_cnic() -> None:
