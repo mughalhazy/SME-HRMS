@@ -82,3 +82,10 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Updated `services/payroll_service.py` to include overtime as payroll input and compute `overtime_pay = overtime_hours × overtime_rate`.
 - Integrated overtime pay into gross salary calculation so payroll outputs now explicitly include `overtime_pay` in result payloads.
 - Added targeted tests to verify source capture, overtime computation, attendance→payroll sync accuracy, and overtime inclusion in payroll totals.
+
+## 8) Decision system doc alignment update (2026-04-01)
+
+- Added `services/decision_engine.py` with canonical `DecisionCard` schema fields aligned to the decision system doc: `trigger`, `impact`, `confidence`, `action`, and `expires_at`.
+- Implemented decision-card generation from anomaly inputs (`generate_from_anomalies`) and compliance issues (`generate_from_compliance_issues`) for AI Payroll Guardian routing.
+- Implemented strict lifecycle operations (`create_card`, `update_card`, `expire_card`) with audit history continuity and immutable-after-expiry behavior except compliance annotations.
+- Added targeted tests to validate schema fidelity, generation paths, and lifecycle transitions Create → Update → Expire.
