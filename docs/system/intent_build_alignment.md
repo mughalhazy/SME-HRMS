@@ -94,3 +94,16 @@ All are now verified and mutually consistent in this snapshot.
   - `QuickBooksAdapter` and `SAPAdapter` stub implementations.
 - Added biometric ingestion adapter `integrations/biometric/device_adapter.py` to normalize device logs for attendance workflows.
 - Added integration tests to verify adapter callability, simulated submissions, and compliance-payload compatibility generated from `PakistanComplianceService.generate_reports`.
+
+## HR Copilot decision alignment update (2026-04-01)
+
+- Added `services/ai/hr_copilot.py` to answer canonical HR assistant prompts:
+  - `salary breakdown`
+  - `leave balance`
+  - `tax explanation`
+- Enforced role-based access controls for query execution (`Admin`, `HR`, `Payroll`, `Manager`) and explicit denial for unauthorized roles.
+- Ensured explainability by returning a dual-output contract for each query:
+  - `answer`: direct response value for the requested HR question.
+  - `explanation`: traceable calculation/policy rationale grounded in source data.
+- Implemented responses that combine payroll and compliance datasets so outcomes are both financially and policy aligned.
+- Added focused tests validating answer correctness, explanation presence, and unauthorized access denial.
