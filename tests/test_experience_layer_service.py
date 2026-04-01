@@ -1,5 +1,6 @@
 from services.experience_layer_service import ExperienceLayerService
-from services.finance.ewa import loan_request, salary_advance
+from services.finance.ewa import FinancialWellnessService, loan_request, salary_advance
+from services.product.tier_enforcer import TierAccessError, TierEnforcer
 
 
 def test_sme_lite_mode_limits_features_to_payroll_compliance_attendance() -> None:
@@ -76,3 +77,32 @@ def test_tier_logic_gates_features_consistently() -> None:
         payroll_managed_mode=True,
         admin_override_controls=True,
     ) is True
+
+
+def test_tier_enforcer_blocks_advanced_features_for_smb_and_sme_lite() -> None:
+    smb = TierEnforcer(tier="SMB")
+    smb.ensure_feature_access("payroll")
+    try:
+        smb.ensure_feature_access("analytics")
+        raise AssertionError("Expected TierAccessError")
+    except TierAccessError:
+        pass
+
+    lite = TierEnforcer(tier="ENTERPRISE", sme_lite_mode=True)
+    try:
+        lite.ensure_feature_access("workflows")
+        raise AssertionError("Expected TierAccessError")
+    except TierAccessError:
+        pass
+
+
+def test_financial_wellness_salary_advance_flow_integrates_deduction() -> None:
+    service = FinancialWellnessService()
+    request = service.request_salary_advance(employee_id="E-100", amount=3000, currency="PKR")
+    assert request["status"] == "PendingApproval"
+
+    approved = service.approve_salary_advance(request_id=str(request["request_id"]), approver_id="mgr-1")
+    assert approved["status"] == "Approved"
+
+    deduction = service.payroll_deduction_for_employee(employee_id="E-100", max_deduction=1000)
+    assert str(deduction) == "1000.00"

@@ -171,6 +171,27 @@ All are now verified and mutually consistent in this snapshot.
   - `salary_advance(...)`
 - Expanded experience-layer tests to validate feature gating, tier restrictions, PaaS mode behavior, and callable placeholder APIs.
 
+## Experience workflow productionization update (2026-04-01, workflow execution pass)
+
+- Converted experience-layer runtime from mode-only flag resolution to executable workflow gating:
+  - Added `services/product/tier_enforcer.py` with strict `SMB` / `MID` / `ENTERPRISE` enforcement contracts.
+  - Added runtime middleware guard `services/product/middleware.py` to block advanced workflows at execution time.
+- Enforced SME Lite as a restricted workflow profile:
+  - Only `payroll`, `compliance`, and `attendance` workflows are executable in Lite mode.
+  - Advanced workflows are denied by runtime middleware even if requested by caller payload.
+- Added Payroll-as-a-Service managed flow execution in `services/payroll/paas.py`:
+  - Managed payroll run workflow supports external operator mode.
+  - Admin override path enforces tier gating (`MID`+ only) and reason capture.
+  - Managed-flow audit entries are captured for both run and override operations.
+- Exposed PaaS API handlers in `payroll_api.py`:
+  - `post_paas_run_payroll(...)` for `POST /paas/run-payroll`
+  - `post_paas_override(...)` for `POST /paas/override`
+- Upgraded financial wellness from placeholder-only response contracts to executable EWA workflow in `services/finance/ewa.py`:
+  - Salary advance request flow (`request_salary_advance`)
+  - Approval workflow (`approve_salary_advance`)
+  - Payroll deduction integration (`payroll_deduction_for_employee`)
+- Integrated EWA deductions into payroll runtime computation in `payroll_service.py` so approved advances are deducted automatically during payroll record construction.
+
 ## Pakistan + Integration production hardening alignment update (2026-04-01, QC uplift)
 
 - Added centralized integration runtime config layer: `config/integrations.py`.
@@ -196,4 +217,3 @@ All are now verified and mutually consistent in this snapshot.
   - Raast export requires non-empty payment set and strict amount/identifier validation.
 - Expanded biometric normalization support for multiple vendor schemas:
   - Supports canonical, vendor flat, and nested device payload forms.
-

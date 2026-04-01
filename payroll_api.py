@@ -6,6 +6,7 @@ from typing import Any, Callable
 from api_contract import error_response, pagination_payload, success_response
 from payroll_service import PayrollService, ServiceError
 from resilience import new_trace_id
+from services.payroll.paas import PayrollManagedService
 
 
 SERVICE_NAME = 'payroll-service'
@@ -157,3 +158,33 @@ def post_payroll_mark_paid(service: PayrollService, payroll_record_id: str, payl
         trace_id=trace_id,
     )
     return status, _normalize_payload(result)
+
+
+@with_error_handling
+def post_paas_run_payroll(service: PayrollService, payload: dict[str, Any], authorization: str | None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    managed = PayrollManagedService(service)
+    data = managed.run_payroll(
+        tier=str(payload["tier"]),
+        actor_id=str(payload.get("actor_id", "external-operator")),
+        actor_mode=str(payload.get("actor_mode", "external_operator")),
+        period_start=str(payload["period_start"]),
+        period_end=str(payload["period_end"]),
+        authorization=authorization,
+        trace_id=trace_id,
+    )
+    return 200, data
+
+
+@with_error_handling
+def post_paas_override(service: PayrollService, payload: dict[str, Any], authorization: str | None, *, trace_id: str) -> tuple[int, dict[str, Any]]:
+    managed = PayrollManagedService(service)
+    data = managed.admin_override(
+        tier=str(payload["tier"]),
+        actor_id=str(payload.get("actor_id", "admin")),
+        payroll_record_id=str(payload["payroll_record_id"]),
+        payment_date=payload.get("payment_date"),
+        reason=payload.get("reason"),
+        authorization=authorization,
+        trace_id=trace_id,
+    )
+    return 200, data

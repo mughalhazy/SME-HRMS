@@ -21,6 +21,7 @@ from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Ob
 from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
 from services.compliance_autopilot import ComplianceAutopilot
+from services.finance import FinancialWellnessService
 
 
 class Role(str, Enum):
@@ -387,7 +388,7 @@ class ServiceError(Exception):
 class PayrollService:
     """Canonical payroll-service business logic and API-compatible handlers."""
 
-    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None):
+    def __init__(self, db_path: str | None = None, *, workflow_service: WorkflowService | None = None, notification_service: NotificationService | None = None, financial_wellness_service: FinancialWellnessService | None = None):
         self.records = PersistentKVStore[str, PayrollRecord](service='payroll-service', namespace='records', db_path=db_path)
         shared_db_path = self.records.db_path
         self.employee_profiles = PersistentKVStore[str, EmployeePayrollProfile](service='payroll-service', namespace='employee_profiles', db_path=shared_db_path)
@@ -420,6 +421,7 @@ class PayrollService:
         self.event_registry = EventRegistry()
         self.notification_service = notification_service or NotificationService()
         self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
+        self.financial_wellness_service = financial_wellness_service or FinancialWellnessService()
         self.country_resolver = CountryResolver()
         self.outbox = OutboxManager(
             service_name='payroll-service',
@@ -1006,8 +1008,12 @@ class PayrollService:
             context=context,
             organization_id=organization_id,
         )
+        salary_advance_deduction = self.financial_wellness_service.payroll_deduction_for_employee(
+            employee_id=str(employee_id),
+            max_deduction=(base_salary * Decimal("0.30")).quantize(Decimal("0.01")),
+        )
         allowances = (allowances + component_earnings + rule_earnings).quantize(Decimal("0.01"))
-        deductions = (deductions + component_deductions + rule_deductions + tax_deduction).quantize(Decimal("0.01"))
+        deductions = (deductions + component_deductions + rule_deductions + tax_deduction + salary_advance_deduction).quantize(Decimal("0.01"))
         gross, net = self._calc(base_salary, allowances, overtime_pay, deductions)
         self._validate_declared_totals(payload, gross, net)
         currency = self._validate_currency(payload.get("currency", salary_structure.currency if salary_structure else "USD"))
