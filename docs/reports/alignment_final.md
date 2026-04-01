@@ -83,9 +83,15 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Integrated overtime pay into gross salary calculation so payroll outputs now explicitly include `overtime_pay` in result payloads.
 - Added targeted tests to verify source capture, overtime computation, attendance→payroll sync accuracy, and overtime inclusion in payroll totals.
 
-## 8) Decision system doc alignment update (2026-04-01)
+## 8) AI Payroll Guardian decision-system alignment update (2026-04-01)
 
-- Added `services/decision_engine.py` with canonical `DecisionCard` schema fields aligned to the decision system doc: `trigger`, `impact`, `confidence`, `action`, and `expires_at`.
-- Implemented decision-card generation from anomaly inputs (`generate_from_anomalies`) and compliance issues (`generate_from_compliance_issues`) for AI Payroll Guardian routing.
-- Implemented strict lifecycle operations (`create_card`, `update_card`, `expire_card`) with audit history continuity and immutable-after-expiry behavior except compliance annotations.
-- Added targeted tests to validate schema fidelity, generation paths, and lifecycle transitions Create → Update → Expire.
+- Added `services/ai/payroll_guardian.py` with canonical anomaly detectors:
+  - `detect_salary_spike()`
+  - `detect_overtime_spike()`
+  - `detect_missing_tax()`
+  - `detect_ghost_employee()`
+- Aligned outputs to decision canon scoring contract for each detector:
+  - `risk_score` (0-100)
+  - `confidence` (0-100)
+  - `reason` in canonical `WHY_FLAGGED` explanation format with anomaly type, evidence, risk, confidence, and threshold level.
+- Added targeted tests in `tests/test_payroll_guardian.py` covering anomaly detection and scoring behavior.
