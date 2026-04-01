@@ -87,16 +87,16 @@ class ExperienceLayerService:
 
     def loan_api_hook(self) -> FinancialWellnessHook:
         return FinancialWellnessHook(
-            provider="placeholder-loan-provider",
+            provider="managed-loan-provider",
             endpoint="/api/v1/financial-wellness/loan",
             method="POST",
-            placeholder=True,
+            placeholder=False,
         )
 
     def ewa_api_hook(self) -> FinancialWellnessHook:
         return FinancialWellnessHook(
-            provider="placeholder-ewa-provider",
+            provider="managed-ewa-provider",
             endpoint="/api/v1/financial-wellness/ewa",
             method="POST",
-            placeholder=True,
+            placeholder=False,
         )

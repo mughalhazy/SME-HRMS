@@ -38,15 +38,30 @@ class FinancialWellnessService:
     def __init__(self) -> None:
         self._requests: dict[str, SalaryAdvanceRequest] = {}
 
+    @staticmethod
+    def _normalize_amount(amount: float | Decimal | int | str) -> Decimal:
+        normalized = Decimal(str(amount)).quantize(Decimal("0.01"))
+        if normalized <= Decimal("0.00"):
+            raise ValueError("amount must be greater than zero")
+        return normalized
+
+    @staticmethod
+    def _normalize_currency(currency: str) -> str:
+        value = str(currency).strip().upper()
+        if not value:
+            raise ValueError("currency is required")
+        return value
+
     def request_salary_advance(self, *, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
+        request_amount = self._normalize_amount(amount)
         request = SalaryAdvanceRequest(
             request_id=str(uuid4()),
-            employee_id=employee_id,
-            amount=Decimal(str(amount)).quantize(Decimal("0.01")),
-            currency=currency,
+            employee_id=str(employee_id).strip(),
+            amount=request_amount,
+            currency=self._normalize_currency(currency),
             status="PendingApproval",
             requested_at=datetime.now(timezone.utc),
-            remaining_balance=Decimal(str(amount)).quantize(Decimal("0.01")),
+            remaining_balance=request_amount,
         )
         self._requests[request.request_id] = request
         return request.to_dict()
@@ -80,22 +95,19 @@ class FinancialWellnessService:
 
 
 def loan_request(*, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
-    """Placeholder loan-request API contract for financial wellness integrations."""
+    """Create a managed payroll loan request payload."""
+    request_amount = FinancialWellnessService._normalize_amount(amount)
     return {
         "type": "loan_request",
-        "status": "accepted_placeholder",
-        "employee_id": employee_id,
-        "amount": float(amount),
-        "currency": currency,
+        "status": "submitted",
+        "employee_id": str(employee_id).strip(),
+        "amount": str(request_amount),
+        "currency": FinancialWellnessService._normalize_currency(currency),
+        "requested_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
 def salary_advance(*, employee_id: str, amount: float, currency: str = "PKR") -> dict[str, object]:
-    """Placeholder EWA/salary-advance API contract for downstream provider routing."""
-    return {
-        "type": "salary_advance",
-        "status": "accepted_placeholder",
-        "employee_id": employee_id,
-        "amount": float(amount),
-        "currency": currency,
-    }
+    """Create a managed payroll earned-wage-access request payload."""
+    service = FinancialWellnessService()
+    return service.request_salary_advance(employee_id=employee_id, amount=amount, currency=currency)
