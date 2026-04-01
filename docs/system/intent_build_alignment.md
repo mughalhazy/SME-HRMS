@@ -107,3 +107,14 @@ All are now verified and mutually consistent in this snapshot.
   - `explanation`: traceable calculation/policy rationale grounded in source data.
 - Implemented responses that combine payroll and compliance datasets so outcomes are both financially and policy aligned.
 - Added focused tests validating answer correctness, explanation presence, and unauthorized access denial.
+
+## Predictive analytics alignment update (2026-04-01)
+
+- Added `services/analytics/predictive.py` with three predictive models aligned to decision-system confidence requirements:
+  - `predict_attrition_risk(...)`
+  - `predict_workforce_forecast(...)`
+  - `predict_compliance_risk(...)`
+- Enforced output contract for all predictive models with both:
+  - `prediction`
+  - `confidence`
+- Added focused tests validating that all three models generate predictions and always include confidence, plus input validation coverage.
