@@ -46,4 +46,4 @@ def test_decision_engine_generates_cards_from_anomaly_engine_output() -> None:
 
     assert len(cards) == 1
     assert cards[0].trigger.startswith("ghost_employee")
-    assert cards[0].action == "Place payroll hold and escalate for immediate review"
+    assert cards[0].recommended_action == "Place payroll hold and escalate for immediate review"
