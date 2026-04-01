@@ -2,51 +2,62 @@
 
 ## 1. Salary Structure
 
-A payroll record must break salary into standardized buckets for transparent processing, taxation, and reporting.
+A salary structure defines all earnings and reductions that contribute to monthly or periodic pay processing.
 
-### 1.1 Basic
-- **Basic salary** is the fixed core amount of compensation for the pay period.
-- It is used as a base for several dependent calculations (e.g., gratuity and provident fund where applicable).
-- Basic may be defined as a fixed amount or as a percentage of total package, but must be stored as an explicit value per payroll run.
+### Basic
+- **Basic Salary** is the fixed core pay component.
+- It is usually the base for percentage-based benefits and deductions (e.g., gratuity/provident fund where applicable).
+- Basic salary must always be explicitly stored per employee and effective date.
 
-### 1.2 Allowances
-- **Allowances** are additions to basic salary.
-- Typical examples: house rent, transport, medical, utility, and special allowances.
-- Each allowance must be tagged as either:
-  - **Taxable**
-  - **Partially taxable**
-  - **Non-taxable/exempt** (based on policy/compliance rules)
+### Allowances
+Allowances are additions to basic salary and may be fixed or variable:
+- House Rent Allowance (HRA)
+- Conveyance/Transport Allowance
+- Medical Allowance
+- Utility/Other Special Allowances
+- Shift/Overtime-related allowances (if included in payroll cycle)
 
-### 1.3 Deductions
-- **Deductions** are subtractions from earnings.
-- Typical examples: tax withholding, provident fund contribution, loan installment, penalties, unpaid leave adjustments.
-- Each deduction must be tagged as:
-  - **Statutory/compliance**
-  - **Policy-based**
-  - **Recovery/adjustment**
+Allowance rules:
+- Can be **taxable** or **non-taxable** depending on policy and law.
+- Can be **recurring** (monthly) or **one-time** (ad hoc).
+- Must support formula-driven or amount-driven configuration.
+
+### Deductions
+Deductions are reductions from earnings and may be statutory or non-statutory:
+- Income tax withholding
+- Provident fund contribution
+- Loan/advance recovery
+- Absence/late penalties
+- Other agreed deductions
+
+Deduction rules:
+- Must prevent over-deduction beyond payable salary unless allowed as carry-forward.
+- Must identify priority/order of deduction application.
 
 ---
 
 ## 2. Calculations
 
-### 2.1 Gross Salary
-Gross salary is the total earning before statutory and non-statutory deductions.
+### Gross Salary
+Gross Salary is total earnings before tax and post-tax deductions.
 
 **Formula:**
 
-`Gross Salary = Basic + Sum(Allowances) + Other Earnings (e.g., bonuses/arrears)`
+`Gross Salary = Basic Salary + Sum(Allowances) + Other Earnings (Arrears/Bonuses if in-cycle)`
 
-### 2.2 Taxable Income
-Taxable income is the amount subject to tax withholding after exemptions and approved reliefs.
+### Taxable Income
+Taxable Income is the payroll-period taxable base after exemptions and non-taxable components.
 
-**Formula:**
+**Formula (period-level):**
 
-`Taxable Income = Gross Salary - Exempt Allowances - Approved Pre-Tax Deductions`
+`Taxable Income = Gross Salary - Non-Taxable Allowances - Approved Exemptions`
 
-> Note: Tax slabs/rates are sourced from compliance configuration and applied during payroll run.
+For annualized tax regimes:
 
-### 2.3 Net Salary
-Net salary is the amount payable to employee after all deductions.
+`Annualized Taxable Income = (Periodic Taxable Income × Periods per Year) ± Annual Adjustments`
+
+### Net Salary
+Net Salary is the final payable amount to employee.
 
 **Formula:**
 
@@ -56,132 +67,167 @@ Where:
 
 `Total Deductions = Tax + Provident Fund + Loan Recovery + Other Deductions`
 
+Validation:
+- Net salary can be zero if deductions fully consume earnings.
+- Negative net salary should be blocked for payout and carried as receivable/adjustment unless policy allows offset.
+
 ---
 
 ## 3. Components
 
-### 3.1 Gratuity
-- Gratuity accrues based on service tenure and policy/compliance criteria.
-- System must support:
-  - accrual tracking per period
-  - eligibility checks (minimum service threshold)
-  - payout calculation on separation
+### Gratuity
+- Service benefit computed as per company policy and applicable labor requirements.
+- Generally tracked as accrual; may be paid at separation or milestone.
+- Should support prorated calculation for incomplete service periods.
 
-### 3.2 Provident Fund
-- Employer/employee contributions should be configurable by percentage or fixed amount.
-- Contributions must be reflected in both payroll deductions and liability reports.
-- If compliance requires caps/thresholds, those must be enforced at calculation time.
+### Provident Fund
+- Employee contribution and (if applicable) employer contribution.
+- Can be fixed amount or percentage of basic salary.
+- Must maintain ledgers for contribution, withdrawal, and balance.
 
-### 3.3 Loans/Advances
-- Loans/advances are recoverable amounts deducted from payroll.
-- System must support:
-  - installment schedules
-  - early payoff
-  - carry-forward balances
-  - stop/restructure rules
+### Loans/Advances
+- Supports disbursement and installment-based recovery.
+- Recovery schedule may be flat or variable.
+- Must allow deferment/restructuring and F&F settlement recovery.
 
-### 3.4 Arrears/Bonuses
-- Arrears account for past underpayments/adjustments.
-- Bonuses are one-time or periodic extra earnings.
-- Both must be tagged for tax treatment and period attribution.
+### Arrears/Bonuses
+- Arrears are back-dated earning corrections.
+- Bonuses may be performance, festival, annual, or discretionary.
+- Both should be tagged with taxable status and payment period.
 
 ---
 
 ## 4. Final Settlement (F&F)
 
-Final settlement applies when an employee exits and all payable/recoverable balances are closed.
+Final settlement is executed when an employee exits.
 
-### 4.1 Leave Encashment
-- Unused eligible leave is converted to monetary value as per policy.
-- Encashment amount must be included in final gross earnings and tax logic where applicable.
+### Leave Encashment
+- Compute encashable leave balance based on approved leave policy.
+- Encashment amount should use defined salary basis (e.g., basic or gross-per-day rule).
 
-### 4.2 Pending Deductions
-- Any unsettled recoveries (loans, advances, overpayments, assets, notice adjustments) must be applied.
-- If recoveries exceed payable amount, the system must produce a negative payable/outstanding recovery record.
+### Pending Deductions
+- Recover pending loan installments, notice-period shortfall, and other approved liabilities.
+- Reconcile advances vs. final payable.
+- If amount is not recoverable in full, produce receivable statement.
+
+F&F Output:
+- Final earnings statement
+- Final deductions statement
+- Net payable/recoverable amount
+- Clearance-ready audit trail
 
 ---
 
 ## 5. Payroll Flow
 
-Step-by-step payroll lifecycle:
+Step-by-step payroll pipeline:
 
 1. **Input**
-   - Employee master data
-   - Attendance/leave
-   - Earnings components (basic, allowances, arrears, bonuses)
-   - Deductions (tax setup, PF, loans, penalties)
-2. **Calculation**
-   - Compute gross salary
-   - Compute taxable income
-   - Apply compliance/statutory rules
-   - Compute net salary
-3. **Compliance**
-   - Validate tax withholding
-   - Validate statutory deductions/contributions
-   - Generate compliance ledgers/reports
-4. **Output**
-   - Payslip generation
-   - Bank transfer file/payment advice
-   - GL postings and audit trail
+   - Employee master data (salary, grade, joining/exit dates)
+   - Attendance/time data
+   - Variable inputs (overtime, bonuses, arrears)
+   - Recovery schedules and one-off adjustments
 
-**Flow:** `Input → Calculation → Compliance → Output`
+2. **Calculation**
+   - Build earning components
+   - Apply pro-rata logic where needed
+   - Compute gross, taxable income, deductions, and net
+
+3. **Compliance**
+   - Apply statutory checks (tax, contribution rules, minimum thresholds)
+   - Validate exemption/taxability mapping
+   - Generate compliance-ready values and references
+
+4. **Output**
+   - Payslip data
+   - Bank transfer file/payment instructions
+   - Accounting/journal entries
+   - Compliance reports and audit logs
+
+Flow expression:
+
+`Input → Calculation → Compliance → Output`
 
 ---
 
 ## 6. Frequencies
 
-System must support configurable payroll cycles:
+Payroll frequency must be configurable per company/entity or worker type:
 
-- **Monthly**: standard salaried cycle.
-- **Weekly**: suitable for wage-based staff.
-- **Daily**: suitable for daily wage/contract processing.
+- **Monthly**: Standard salaried cycle.
+- **Weekly**: Common for wage-based and operational roles.
+- **Daily**: Daily wage/contractual payout scenarios.
 
-Each frequency must map to proportional earnings/deductions logic and period-based compliance treatment.
+Frequency controls:
+- Period start/end handling
+- Cutoff rules
+- Frequency-specific tax normalization/annualization
 
 ---
 
 ## 7. Edge Cases
 
-### 7.1 Partial Month
-- Proration required for join/exit mid-period or unpaid leave.
+### Partial Month
+- Handle joiners/leavers and unpaid leave via prorated salary.
 
 **Example formula:**
 
-`Prorated Basic = (Payable Days / Total Period Days) × Basic`
+`Prorated Basic = (Basic Salary / Period Days) × Payable Days`
 
-### 7.2 Zero Salary
-- If payable earnings are zero, system should still process mandatory compliance checks and produce a zero-net payslip if required.
+### Zero Salary
+- If earnings are fully offset by deductions or unpaid days, net salary can be zero.
+- System should still produce a compliant payslip and ledger entries.
 
-### 7.3 Negative Adjustments
-- Negative arrears or correction entries may reduce gross/net pay.
-- System must allow controlled negative lines and enforce policy on minimum payable amount.
+### Negative Adjustments
+- Negative earnings (reversal/corrections) or heavy deductions can push payable below zero.
+- Do not generate negative disbursement; carry forward as employee liability or next-period adjustment based on policy.
 
 ---
 
 ## 8. Test Scenarios
 
-1. **Standard monthly payroll**
-   - Inputs: basic + taxable allowances + standard deductions.
-   - Validate gross, taxable, net calculations.
-2. **Employee with exempt allowance**
-   - Validate taxable income excludes exempt component.
-3. **Loan recovery active**
-   - Validate installment deduction and remaining balance.
-4. **Bonus + arrears in same period**
-   - Validate gross uplift and tax impact.
-5. **Final settlement with leave encashment**
-   - Validate F&F payable and pending deductions handling.
-6. **Mid-month joining**
-   - Validate prorated earnings and deductions.
-7. **Zero salary period**
-   - Validate zero-net output without calculation crash.
-8. **Negative adjustment period**
-   - Validate policy handling for negative/near-zero payable.
+1. **Standard Monthly Payroll**
+   - Basic + recurring allowances + tax + PF.
+   - Verify gross, taxable, and net formulas.
+
+2. **Payroll with Arrears and Bonus**
+   - Include one-time taxable bonus and arrear adjustment.
+   - Validate tax impact and final net.
+
+3. **Loan Recovery Case**
+   - Apply installment deduction with max-deduction guard.
+   - Ensure no unauthorized negative net payout.
+
+4. **Partial Month Joiner**
+   - Prorate basic and fixed allowances.
+   - Confirm deduction behavior on prorated earnings.
+
+5. **Final Settlement Case**
+   - Include leave encashment and pending recoveries.
+   - Validate final payable/recoverable output.
+
+6. **Weekly Payroll Cycle**
+   - Verify weekly period setup and taxable normalization logic.
+
+7. **Daily Wage Payroll**
+   - Compute daily earnings with attendance-driven input.
+   - Confirm output and accounting integration.
+
+8. **Zero Salary Run**
+   - Force net to zero via unpaid leave/deductions.
+   - Ensure payslip and reports are generated without failure.
+
+9. **Negative Adjustment Carry-Forward**
+   - Apply reversal creating negative payable.
+   - Verify carry-forward entry and blocked bank payout.
+
+10. **Compliance Mapping Validation**
+   - Ensure each component maps to taxable/non-taxable and statutory reporting buckets.
 
 ---
 
 ## QC (10/10 PASS)
 
-- [x] Formulas defined
-- [x] Flow complete
-- [x] Integration with compliance clear
+- ✅ **Formulas Defined:** Gross, taxable income, net salary, and prorated formulas are explicitly defined.
+- ✅ **Flow Complete:** End-to-end payroll flow from input to output is fully documented.
+- ✅ **Integration with Compliance Clear:** Compliance stage is explicitly modeled with statutory checks and reporting outputs.
