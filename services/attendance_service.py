@@ -23,7 +23,7 @@ class AttendanceEntry:
 
 
 class AttendanceService:
-    """Attendance capture + overtime + payroll-input sync aligned to Pakistan payroll flow docs."""
+    """Attendance capture + overtime + payroll-input sync aligned to country payroll flow docs."""
 
     def __init__(self) -> None:
         self._entries: list[AttendanceEntry] = []

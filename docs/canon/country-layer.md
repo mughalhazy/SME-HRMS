@@ -28,7 +28,7 @@ The country abstraction layer exists to keep payroll core behavior stable while 
 
 All country modules must implement the following interfaces.
 
-### 2.1 TaxEngine
+### 2.1 TaxEngineInterface
 
 #### Method
 `calculate_tax(input)`
@@ -51,7 +51,7 @@ tax_amount: number
 
 ---
 
-### 2.2 ComplianceEngine
+### 2.2 ComplianceEngineInterface
 
 #### Method A
 `validate_payroll(input)`
@@ -101,7 +101,7 @@ metadata: object
 
 ---
 
-### 2.3 PayrollRulesEngine
+### 2.3 PayrollRulesInterface
 
 #### Method
 `apply_rules(input)`
@@ -137,7 +137,7 @@ final_deductions: object
 Each country module is an **adapter** that conforms to the shared interfaces while implementing local logic internally.
 
 ### Pattern definition
-- Core code depends on interface contracts (`TaxEngine`, `ComplianceEngine`, `PayrollRulesEngine`), not concrete country classes.
+- Core code depends on interface contracts (`TaxEngineInterface`, `ComplianceEngineInterface`, `PayrollRulesInterface`), not concrete country classes.
 - Country adapters translate generic input into local statutory logic and return standardized outputs.
 
 ### Implementation expectations
@@ -154,16 +154,17 @@ The resolver selects the correct country adapter for a payroll run.
 
 ### Selection logic
 1. Read organization identifier from payroll context.
-2. Resolve organization to country via org→country mapping.
-3. Load adapter registered for that country.
+2. Resolve organization/legal-entity/config context to an adapter key.
+3. Load adapter registered for the resolved key.
 4. Fail fast with explicit error if mapping or adapter is missing.
 
-### Org → country mapping
-- Source may be config DB, master data service, or static registry.
-- Required mapping shape:
+### Organization resolver path
+- Source should come from organization/legal-entity/config records.
+- Required resolver shape:
 
 ```yaml
 organization_id: string
+legal_entity_id: string?
 country_code: string
 adapter_key: string
 ```
@@ -180,15 +181,15 @@ adapter_key: string
 ## 5. Data Flow (step-by-step)
 
 1. Core payroll service receives payroll run request (`organization_id`, period, employee records).
-2. Resolver maps `organization_id` to `country_code` and loads corresponding country adapter.
-3. For each employee, core calls `PayrollRulesEngine.apply_rules(input)`.
+2. Resolver reads organization/legal-entity/config path and loads corresponding country adapter.
+3. For each employee, core calls `PayrollRulesInterface.apply_rules(input)`.
 4. Adapter returns adjusted salary, deductions, and rule trace.
-5. Core calls `TaxEngine.calculate_tax(input)` using adjusted values.
+5. Core calls `TaxEngineInterface.calculate_tax(input)` using adjusted values.
 6. Adapter returns `tax_amount`.
 7. Core aggregates per-employee calculations into payroll results.
-8. Core calls `ComplianceEngine.validate_payroll(input)` on finalized results.
+8. Core calls `ComplianceEngineInterface.validate_payroll(input)` on finalized results.
 9. If invalid, core halts finalization and surfaces violation list.
-10. If valid, core calls `ComplianceEngine.generate_reports(input)`.
+10. If valid, core calls `ComplianceEngineInterface.generate_reports(input)`.
 11. Adapter returns report artifacts and metadata.
 12. Core persists outputs and publishes completion status.
 
@@ -197,13 +198,13 @@ adapter_key: string
 ## 6. Example (Pakistan flow)
 
 ### Scenario
-- Organization: `ORG_PK_001`
-- Mapped country: `PK`
+- Organization: `<organization_id>`
+- Mapped country: `<country_code>`
 - Payroll period: `2026-03`
 
 ### End-to-end flow
-1. Core receives payroll request for `ORG_PK_001`.
-2. Resolver finds mapping: `ORG_PK_001 -> PK -> PakistanAdapter`.
+1. Core receives payroll request for `<organization_id>`.
+2. Resolver resolves organization/legal-entity/config and returns `<country_adapter>`.
 3. For employee A, core sends local inputs to `apply_rules`.
 4. Pakistan adapter applies Pakistan-specific rules (allowance handling, deductible treatments, local thresholds) and returns adjusted values.
 5. Core calls `calculate_tax` with adjusted gross salary + employee data.
@@ -229,7 +230,7 @@ adapter_key: string
    - Verify input/output shapes match schemas in this document.
 
 2. **Resolver mapping success**
-   - Given valid org→country mapping, resolver returns expected adapter.
+   - Given valid org/config mapping, resolver returns expected adapter.
 
 3. **Resolver missing mapping failure**
    - Given unknown `organization_id`, resolver returns `ORG_COUNTRY_NOT_FOUND`.
@@ -244,7 +245,7 @@ adapter_key: string
    - If `validate_payroll` returns `is_valid: false`, report generation is not executed.
 
 7. **End-to-end Pakistan flow test**
-   - `ORG_PK_001` run executes the sequence:
+   - `<organization_id>` run executes the sequence:
      `resolve -> apply_rules -> calculate_tax -> validate_payroll -> generate_reports`.
 
 **QC status target: 10/10 PASS**

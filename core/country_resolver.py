@@ -22,11 +22,11 @@ class CountryResolverError(Exception):
 class CountryResolver:
     def __init__(self) -> None:
         self._mappings: dict[str, OrgCountryMapping] = {
-            "ORG_PK_001": OrgCountryMapping("ORG_PK_001", "PK", "pakistan")
+            "ORG_DEFAULT": OrgCountryMapping("ORG_DEFAULT", "DEFAULT", "pakistan")
         }
         self._adapters = {"pakistan": PakistanAdapter}
 
-    def resolve(self, organization_id: str):
+    def get_adapter(self, organization_id: str):
         mapping = self._mappings.get(organization_id)
         if mapping is None:
             raise CountryResolverError("ORG_COUNTRY_NOT_FOUND", f"No country mapping found for organization_id={organization_id}")
@@ -37,3 +37,6 @@ class CountryResolver:
                 f"No adapter registered for adapter_key={mapping.adapter_key}",
             )
         return adapter_cls()
+
+    def resolve(self, organization_id: str):
+        return self.get_adapter(organization_id)

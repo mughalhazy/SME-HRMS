@@ -4,12 +4,12 @@ from decimal import Decimal
 from typing import Any
 
 from country.base import TaxEngine
-from services.compliance_service import PakistanComplianceService
+from country.pakistan.statutory import PakistanStatutoryService
 
 
 class PakistanTaxEngine(TaxEngine):
     def __init__(self) -> None:
-        self.service = PakistanComplianceService()
+        self.service = PakistanStatutoryService()
 
     def calculate_tax(self, input: dict[str, Any]) -> dict[str, float]:
         employee_data = input.get("employee_data") or {}

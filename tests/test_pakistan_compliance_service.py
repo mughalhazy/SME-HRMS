@@ -59,8 +59,8 @@ def test_invalid_payroll_is_blocked_for_missing_cnic() -> None:
     payroll.upsert_payroll_tax_profile(
         {
             "employee_id": "emp-invalid-cnic",
-            "jurisdiction": "PK",
-            "tax_code": "PK-WHT",
+            "jurisdiction": "DEFAULT",
+            "tax_code": "WHT",
             "metadata": {"rate": "5.00", "cnic": "abc"},
         },
         admin,

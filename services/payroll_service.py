@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Literal
 
-from country.pakistan.compliance_engine import PakistanComplianceEngine
-from country.pakistan.tax_engine import PakistanTaxEngine
+from core.country_resolver import CountryResolver
 
 PayrollFrequency = Literal["monthly", "weekly", "daily"]
 
@@ -32,11 +31,15 @@ class PayrollComputation:
 
 
 class PayrollService:
-    """Pakistan payroll calculation flow aligned to docs/specs/country/pakistan/payroll.md."""
+    """Country-agnostic payroll orchestration flow using the country adapter boundary."""
 
-    def __init__(self, tax_engine: PakistanTaxEngine | None = None, compliance_engine: PakistanComplianceEngine | None = None) -> None:
-        self.tax_engine = tax_engine or PakistanTaxEngine()
-        self.compliance_engine = compliance_engine or PakistanComplianceEngine()
+    def __init__(self, *, country_resolver: CountryResolver | None = None, organization_id: str = "ORG_DEFAULT") -> None:
+        self.country_resolver = country_resolver or CountryResolver()
+        self.organization_id = organization_id
+
+    @property
+    def adapter(self):
+        return self.country_resolver.get_adapter(self.organization_id)
 
     @staticmethod
     def _decimal(value: Any) -> Decimal:
@@ -103,7 +106,7 @@ class PayrollService:
         taxable = self.calculate_taxable(gross, period_deductions)
 
         tax_base = taxable if taxable > Decimal("0") else Decimal("0.00")
-        tax_result = self.tax_engine.calculate_tax({"gross_salary": str(tax_base), "tax_year": tax_year})
+        tax_result = self.adapter.tax_engine.calculate_tax({"gross_salary": str(tax_base), "tax_year": tax_year})
         tax = self._money(tax_result.get("tax_amount", "0"))
         net = self.calculate_net(taxable, tax)
 
@@ -124,7 +127,7 @@ class PayrollService:
             carry_forward=carry_forward,
         )
 
-        validation = self.compliance_engine.validate_payroll(compliance_payload or {"employee_records": []})
+        validation = self.adapter.compliance_engine.validate_payroll(compliance_payload or {"employee_records": []})
 
         return {
             "frequency": computation.frequency,

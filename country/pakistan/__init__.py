@@ -1,5 +1,6 @@
 from .compliance_engine import PakistanComplianceEngine
 from .payroll_rules import PakistanPayrollRulesEngine
+from .statutory import PakistanComplianceService, PakistanStatutoryService
 from .tax_engine import PakistanTaxEngine
 
 
@@ -10,4 +11,4 @@ class PakistanAdapter:
         self.payroll_rules_engine = PakistanPayrollRulesEngine()
 
 
-__all__ = ["PakistanAdapter", "PakistanTaxEngine", "PakistanComplianceEngine", "PakistanPayrollRulesEngine"]
+__all__ = ["PakistanAdapter", "PakistanTaxEngine", "PakistanComplianceEngine", "PakistanPayrollRulesEngine", "PakistanStatutoryService", "PakistanComplianceService"]
