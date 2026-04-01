@@ -5,7 +5,9 @@ from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Literal
 
-AttendanceInputSource = Literal["biometric", "gps", "manual"]
+from services.attendance.face_recognition import FaceRecognitionAttendanceRecord, FaceRecognitionService
+
+AttendanceInputSource = Literal["biometric", "gps", "manual", "face_recognition"]
 
 
 @dataclass(slots=True)
@@ -25,6 +27,8 @@ class AttendanceService:
 
     def __init__(self) -> None:
         self._entries: list[AttendanceEntry] = []
+        self._face_service = FaceRecognitionService()
+        self._face_records: list[FaceRecognitionAttendanceRecord] = []
 
     @staticmethod
     def _decimal(value: Any) -> Decimal:
@@ -51,6 +55,35 @@ class AttendanceService:
             return Decimal("0.00")
         return overtime.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+    def ingest_face_encodings(self, *, employee_database: dict[str, list[float] | tuple[float, ...]]) -> None:
+        self._face_service.ingest_employee_encodings(employee_database)
+
+    def record_face_attendance(
+        self,
+        *,
+        frame: list[float] | tuple[float, ...],
+        attendance_date: date,
+        shift_hours: Any,
+        check_in: datetime | None = None,
+        check_out: datetime | None = None,
+        worked_hours: Any | None = None,
+    ) -> FaceRecognitionAttendanceRecord:
+        match = self._face_service.match_employee_identity(frame)
+        if match is None:
+            raise ValueError("unable to match employee identity")
+
+        self._face_records.append(match)
+        self.record_attendance(
+            employee_id=match.employee_id,
+            attendance_date=attendance_date,
+            source="face_recognition",
+            shift_hours=shift_hours,
+            check_in=check_in,
+            check_out=check_out,
+            worked_hours=worked_hours,
+        )
+        return match
+
     def record_attendance(
         self,
         *,
@@ -62,8 +95,8 @@ class AttendanceService:
         check_out: datetime | None = None,
         worked_hours: Any | None = None,
     ) -> AttendanceEntry:
-        if source not in {"biometric", "gps", "manual"}:
-            raise ValueError("source must be biometric, gps, or manual")
+        if source not in {"biometric", "gps", "manual", "face_recognition"}:
+            raise ValueError("source must be biometric, gps, manual, or face_recognition")
 
         assigned_shift_hours = self.assign_shift(shift_hours=shift_hours)
         computed_worked = self._hours(worked_hours) if worked_hours is not None else self.calculate_hours(check_in=check_in, check_out=check_out)

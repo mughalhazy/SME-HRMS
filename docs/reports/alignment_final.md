@@ -135,3 +135,11 @@ This final declaration is evidence-backed and gated by verified checks across:
   - `POST /api/v1/financial-wellness/ewa`
 - Added tier-based feature policy for **SMB / Mid / Enterprise** with monotonic gating (`SMB ⊆ Mid ⊆ Enterprise`).
 - Added focused tests in `tests/test_experience_layer_service.py` verifying mode toggles, tier gating consistency, and placeholder hook contracts.
+
+## 13) Face-recognition attendance → payroll alignment update (2026-04-01)
+
+- Added `services/attendance/face_recognition.py` with deterministic face-encoding ingestion and identity matching for attendance capture.
+- Added a face attendance output contract with `employee_id`, `timestamp`, and `confidence` to support downstream auditability.
+- Integrated face recognition into `services/attendance_service.py` via `ingest_face_encodings()` and `record_face_attendance()` so matched identities are recorded as attendance source `face_recognition`.
+- Kept attendance-to-payroll sync on the same aggregation path (`sync_attendance_to_payroll_inputs`) so face-recognized records now automatically contribute worked/overtime totals for payroll calculations.
+- Added focused tests simulating matching scenarios, confidence presence, attendance recording correctness, and payroll-sync integration.
