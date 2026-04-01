@@ -95,3 +95,13 @@ This final declaration is evidence-backed and gated by verified checks across:
   - `confidence` (0-100)
   - `reason` in canonical `WHY_FLAGGED` explanation format with anomaly type, evidence, risk, confidence, and threshold level.
 - Added targeted tests in `tests/test_payroll_guardian.py` covering anomaly detection and scoring behavior.
+
+## 9) Recruitment experience-layer alignment update (2026-04-01)
+
+- Added `services/recruitment/` service layer for deterministic, explainable hiring workflows aligned to the experience-layer principle of showing action + rationale.
+- Implemented CV parsing for both text and PDF-like inputs with explicit extraction of `name`, `skills`, `experience`, and `education` fields.
+- Implemented deterministic candidate scoring using fixed weighted logic: `70% skills match + 30% experience years`, returning both numeric score and textual explanation.
+- Implemented candidate ranking sorted by descending score with stable deterministic tie-break behavior.
+- Implemented interview workflow stage definitions and controlled forward-only stage transitions.
+- Implemented onboarding checklist generation with deterministic task assignment across provided assignees.
+- Added targeted tests validating parsing, scoring consistency, ranking order, workflow transitions, and onboarding task generation.
