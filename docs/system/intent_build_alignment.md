@@ -68,15 +68,13 @@ All are now verified and mutually consistent in this snapshot.
   - `COUNTRY_ADAPTER_NOT_REGISTERED`
 - Refactored payroll core flow so tax calculation, payroll-rule application, and compliance report generation route through the country adapter abstraction boundary rather than hardcoded core logic.
 
-## Manager dashboard API alignment update (2026-04-01)
+## WhatsApp integration alignment update (2026-04-01)
 
-- Implemented manager dashboard decision APIs in `api/manager_dashboard.py` with explicit issue-first endpoint surfaces:
-  - `/alerts`
-  - `/overtime`
-  - `/approvals`
-  - `/burnout`
-  - `/performance`
-- Enforced decision-first output behavior by returning only actionable exception items sorted by severity and urgency.
-- Implemented aggregate fusion inputs from attendance, payroll, and analytics datasets with per-endpoint source metadata.
-- Enforced JSON-only payload design for manager dashboard APIs (no chart or visualization payload structures).
-- Added targeted API tests validating endpoint coverage, aggregate accuracy, decision ordering, and no-chart contract.
+- Added `integrations/whatsapp/webhook.py` with:
+  - `receive_message(payload)` to validate inbound webhook payloads and emit outbound provider-ready responses.
+  - `parse_intent(message_text)` to map supported commands to documented intents.
+- Command coverage is aligned to `docs/specs/integrations/whatsapp.md` command set for:
+  - `payslip` → `payslip.get`
+  - `leave` → `leave.apply`
+  - `approval` → `approval.pending`
+- Added focused webhook + intent tests to verify command parsing, response schema, and invalid-command help behavior.
