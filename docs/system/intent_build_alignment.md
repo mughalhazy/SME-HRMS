@@ -107,3 +107,26 @@ All are now verified and mutually consistent in this snapshot.
   - `explanation`: traceable calculation/policy rationale grounded in source data.
 - Implemented responses that combine payroll and compliance datasets so outcomes are both financially and policy aligned.
 - Added focused tests validating answer correctness, explanation presence, and unauthorized access denial.
+
+## Performance insights alignment update (2026-04-01)
+
+- Added a dedicated `services/performance/` module with a deterministic `PerformanceInsightsService` for explainable insight generation.
+- Implemented three explainable feature outputs aligned to the decision-system explainability principle:
+  - `employee_performance_summary`
+  - `manager_insights`
+  - `skill_signals`
+- Each feature returns a dual insight contract with:
+  - `text` (human-readable explanation)
+  - `score` (0–100 normalized scoring)
+  - `evidence` (machine-readable metric breakdown)
+- Added overall performance synthesis score derived from weighted feature scores to keep scoring behavior stable and auditable.
+- Added focused tests to verify:
+  - insights are generated for all required features,
+  - score generation is consistent for identical payloads,
+  - score inputs are clamped for robust normalization behavior.
+
+## QC (10/10 PASS)
+
+- [x] insights generated
+- [x] consistent scoring
+- [x] tests pass
