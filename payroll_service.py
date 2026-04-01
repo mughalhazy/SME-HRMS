@@ -12,6 +12,7 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
+from core.country_resolver import CountryResolver, CountryResolverError
 from event_contract import EventRegistry
 from notification_service import NotificationService
 from outbox_system import OutboxManager
@@ -418,6 +419,7 @@ class PayrollService:
         self.event_registry = EventRegistry()
         self.notification_service = notification_service or NotificationService()
         self.workflow_service = workflow_service or WorkflowService(notification_service=self.notification_service)
+        self.country_resolver = CountryResolver()
         self.outbox = OutboxManager(
             service_name='payroll-service',
             tenant_id=self.tenant_id,
@@ -727,61 +729,94 @@ class PayrollService:
     def _apply_payroll_rules(
         self,
         *,
+        organization_id: str,
         employee_id: str,
         period_start: date,
         period_end: date,
         context: dict[str, Any],
         components: list[PayrollComponent],
     ) -> tuple[Decimal, Decimal, list[dict[str, Any]]]:
-        extra_earnings = Decimal("0.00")
-        extra_deductions = Decimal("0.00")
-        derived_components: list[dict[str, Any]] = []
+        adapter = self._resolve_country_adapter(organization_id)
         active_rules = sorted(
             [rule for rule in self.payroll_rules.values() if rule.active],
             key=lambda item: (item.priority, item.code),
         )
+        applicable_rules = [
+            rule
+            for rule in active_rules
+            if self._rule_applies(rule, employee_id, period_start, period_end, context)
+        ]
+        result = adapter.payroll_rules_engine.apply_rules(
+            {
+                "period": f"{period_start.isoformat()}:{period_end.isoformat()}",
+                "employee_record": {"employee_id": employee_id},
+                "gross_salary": context.get("taxable_earnings", "0"),
+                "allowances": context.get("allowances", "0"),
+                "deductions": context.get("deductions", "0"),
+                "country_code": "PK",
+                "context": context,
+                "rules": [
+                    {
+                        "code": rule.code,
+                        "name": rule.name,
+                        "category": rule.category,
+                        "calculation_mode": rule.calculation_mode,
+                        "value": str(rule.value),
+                        "input_key": rule.input_key,
+                        "active": rule.active,
+                    }
+                    for rule in applicable_rules
+                ],
+            }
+        )
+
+        extra_earnings = Decimal(str(result.get("extra_earnings", "0"))).quantize(Decimal("0.01"))
+        extra_deductions = Decimal(str(result.get("extra_deductions", "0"))).quantize(Decimal("0.01"))
+        derived_components: list[dict[str, Any]] = []
         existing_codes = {component.code for component in components}
-        for rule in active_rules:
-            if not self._rule_applies(rule, employee_id, period_start, period_end, context):
+        for adjustment in result.get("rule_adjustments", []):
+            rule_code = str(adjustment.get("rule_id", "RULE"))
+            matched_rule = next((item for item in applicable_rules if item.code == rule_code), None)
+            if matched_rule is None:
                 continue
-            if rule.calculation_mode == "flat":
-                amount = rule.value
-            elif rule.calculation_mode == "percentage":
-                base_amount = Decimal(str(context.get(rule.input_key or "taxable_earnings", "0")))
-                amount = (base_amount * rule.value / Decimal("100")).quantize(Decimal("0.01"))
-            else:
-                raise ServiceError("VALIDATION_ERROR", f"Unsupported payroll rule calculation_mode: {rule.calculation_mode}", 422)
-            amount = amount.quantize(Decimal("0.01"))
-            if rule.category == "earning":
-                extra_earnings += amount
-            elif rule.category == "deduction":
-                extra_deductions += amount
-            else:
-                raise ServiceError("VALIDATION_ERROR", f"Unsupported payroll rule category: {rule.category}", 422)
-            component_code = rule.target_component_code or rule.code
+            component_code = matched_rule.target_component_code or matched_rule.code
             if component_code in existing_codes:
                 continue
+            amount = Decimal(str(abs(adjustment.get("amount_delta", 0)))).quantize(Decimal("0.01"))
             derived_components.append(
                 {
                     "code": component_code,
-                    "name": rule.name,
-                    "category": rule.category,
+                    "name": matched_rule.name,
+                    "category": matched_rule.category,
                     "amount": str(amount),
                     "source": "rule",
-                    "rule_code": rule.code,
-                    "taxable": rule.category == "earning",
+                    "rule_code": matched_rule.code,
+                    "taxable": matched_rule.category == "earning",
                 }
             )
             existing_codes.add(component_code)
-        return extra_earnings.quantize(Decimal("0.01")), extra_deductions.quantize(Decimal("0.01")), derived_components
+        return extra_earnings, extra_deductions, derived_components
 
-    def _calculate_tax_deduction(self, employee_id: str, taxable_earnings: Decimal, *, context: dict[str, Any]) -> tuple[Decimal, dict[str, Any] | None]:
+    def _calculate_tax_deduction(
+        self, employee_id: str, taxable_earnings: Decimal, *, context: dict[str, Any], organization_id: str
+    ) -> tuple[Decimal, dict[str, Any] | None]:
         profile_id = self.payroll_tax_profile_index.get(employee_id)
         if not profile_id:
             return Decimal("0.00"), None
         profile = self.payroll_tax_profiles[profile_id]
+        adapter = self._resolve_country_adapter(organization_id)
+        tax_result = adapter.tax_engine.calculate_tax(
+            {
+                "gross_salary": str(taxable_earnings),
+                "employee_data": {
+                    "employee_id": employee_id,
+                    "tax_profile_id": profile.payroll_tax_profile_id,
+                    "metadata": profile.metadata,
+                },
+            }
+        )
+        amount = self._money(tax_result.get("tax_amount"), "tax_amount")
         rate = self._money(profile.metadata.get("rate"), "tax_rate")
-        amount = (taxable_earnings * rate / Decimal("100")).quantize(Decimal("0.01"))
         return amount, {
             "code": f"TAX-{profile.tax_code}",
             "name": f"{profile.jurisdiction} tax",
@@ -797,6 +832,12 @@ class PayrollService:
                 "tax_context": dict(context),
             },
         }
+
+    def _resolve_country_adapter(self, organization_id: str):
+        try:
+            return self.country_resolver.resolve(organization_id)
+        except CountryResolverError as exc:
+            raise ServiceError(exc.code, exc.message, 422) from exc
 
     def _line_item(self, *, code: str, name: str, category: str, amount: Decimal, source: str, taxable: bool = False, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         return {
@@ -915,6 +956,7 @@ class PayrollService:
         components = self._components_for_period(str(employee_id), pay_period_start, pay_period_end) if employee_id is not None else []
         component_earnings = sum((component.amount for component in components if component.category == "earning"), Decimal("0.00"))
         component_deductions = sum((component.amount for component in components if component.category == "deduction"), Decimal("0.00"))
+        organization_id = str(payload.get("organization_id", "ORG_PK_001"))
         context = {
             "base_salary": str(base_salary),
             "allowances": str(allowances),
@@ -926,6 +968,7 @@ class PayrollService:
             "taxable_earnings": str(base_salary + allowances + overtime_pay + component_earnings),
         }
         rule_earnings, rule_deductions, _derived_rule_components = self._apply_payroll_rules(
+            organization_id=organization_id,
             employee_id=str(employee_id),
             period_start=pay_period_start,
             period_end=pay_period_end,
@@ -936,6 +979,7 @@ class PayrollService:
             str(employee_id),
             Decimal(context["taxable_earnings"]) + rule_earnings,
             context=context,
+            organization_id=organization_id,
         )
         allowances = (allowances + component_earnings + rule_earnings).quantize(Decimal("0.01"))
         deductions = (deductions + component_deductions + rule_deductions + tax_deduction).quantize(Decimal("0.01"))
@@ -1739,6 +1783,32 @@ class PayrollService:
 
                 self._recompute_batch(batch)
                 validation = self._validate_batch_consistency(batch)
+                adapter = self._resolve_country_adapter("ORG_PK_001")
+                finalized_records = [self.records[record_id].to_dict() for record_id in sorted(processed_ids)]
+                compliance_validation = adapter.compliance_engine.validate_payroll(
+                    {
+                        "period": f"{period_start[:7]}",
+                        "employee_records": finalized_records,
+                        "organization_data": {"organization_id": "ORG_PK_001"},
+                        "country_code": "PK",
+                    }
+                )
+                if not compliance_validation.get("is_valid", False):
+                    raise ServiceError(
+                        "COMPLIANCE_VALIDATION_FAILED",
+                        "Payroll compliance validation failed",
+                        422,
+                        details=list(compliance_validation.get("violations", [])),
+                    )
+                compliance_reports = adapter.compliance_engine.generate_reports(
+                    {
+                        "period": f"{period_start[:7]}",
+                        "employee_records": finalized_records,
+                        "calculated_results": finalized_records,
+                        "organization_data": {"organization_id": "ORG_PK_001"},
+                        "country_code": "PK",
+                    }
+                )
                 response = {
                     "data": {
                         "batch": batch.to_dict(),
@@ -1749,6 +1819,10 @@ class PayrollService:
                         "failed_count": len(batch.failures),
                         "failures": [dict(item) for item in batch.failures],
                         "consistency": validation,
+                        "compliance": {
+                            "validation": compliance_validation,
+                            "reports": compliance_reports,
+                        },
                     }
                 }
             self.outbox.dispatch_pending(self.events.append)
