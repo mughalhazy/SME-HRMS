@@ -20,6 +20,7 @@ from persistent_store import PersistentKVStore
 from resilience import CentralErrorLogger, DeadLetterQueue, IdempotencyStore, Observability
 from workflow_support import require_terminal_workflow_result, resolve_workflow_action
 from workflow_service import WorkflowService, WorkflowServiceError
+from services.compliance_autopilot import ComplianceAutopilot
 
 
 class Role(str, Enum):
@@ -1810,30 +1811,22 @@ class PayrollService:
                 adapter = self._resolve_country_adapter("ORG_PK_001")
                 finalized_records = [self.records[record_id].to_dict() for record_id in sorted(processed_ids)]
                 compliance_records = [self._build_compliance_employee_record(record) for record in finalized_records]
-                compliance_validation = adapter.compliance_engine.validate_payroll(
-                    {
-                        "period": f"{period_start[:7]}",
-                        "employee_records": compliance_records,
-                        "organization_data": {"organization_id": "ORG_PK_001"},
-                        "country_code": "PK",
-                    }
-                )
-                if not compliance_validation.get("is_valid", False):
+                compliance_payload = {
+                    "period": f"{period_start[:7]}",
+                    "employee_records": compliance_records,
+                    "calculated_results": compliance_records,
+                    "organization_data": {"organization_id": "ORG_PK_001"},
+                    "country_code": "PK",
+                }
+                compliance_precheck = ComplianceAutopilot(adapter.compliance_engine).run_precheck(compliance_payload)
+                if compliance_precheck.get("stop_payroll", False):
+                    error = dict(compliance_precheck.get("error", {}))
                     raise ServiceError(
-                        "COMPLIANCE_VALIDATION_FAILED",
-                        "Payroll compliance validation failed",
+                        str(error.get("code", "COMPLIANCE_VALIDATION_FAILED")),
+                        str(error.get("message", "Payroll compliance validation failed")),
                         422,
-                        details=list(compliance_validation.get("violations", [])),
+                        details=list(error.get("details", [])),
                     )
-                compliance_reports = adapter.compliance_engine.generate_reports(
-                    {
-                        "period": f"{period_start[:7]}",
-                        "employee_records": compliance_records,
-                        "calculated_results": compliance_records,
-                        "organization_data": {"organization_id": "ORG_PK_001"},
-                        "country_code": "PK",
-                    }
-                )
                 response = {
                     "data": {
                         "batch": batch.to_dict(),
@@ -1845,8 +1838,9 @@ class PayrollService:
                         "failures": [dict(item) for item in batch.failures],
                         "consistency": validation,
                         "compliance": {
-                            "validation": compliance_validation,
-                            "reports": compliance_reports,
+                            "validation": compliance_precheck.get("validation", {}),
+                            "reports": compliance_precheck.get("reports", {}),
+                            "outputs": compliance_precheck.get("outputs", {}),
                         },
                     }
                 }

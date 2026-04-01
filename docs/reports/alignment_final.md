@@ -63,6 +63,7 @@ This final declaration is evidence-backed and gated by verified checks across:
 - Implemented `generate_reports()` output for FBR Annexure-C JSON, EOBI PR-01 JSON, and PESSI JSON with period and employee payloads.
 - Integrated payroll run flow to map finalized payroll records into compliance input records and block completion when compliance validation fails.
 - Added targeted tests to verify slab formula behavior, report schema presence, and invalid-payroll blocking.
+- Added `services/compliance_autopilot.py` with `run_precheck(payroll_batch)` orchestration to always call `validate_payroll()`, block invalid payroll runs, and emit `fbr_json`, `eobi_json`, and `pessi_json` outputs from generated reports.
 
 
 ## 6) Pakistan payroll doc alignment update (2026-04-01)
