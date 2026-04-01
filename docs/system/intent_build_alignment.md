@@ -67,3 +67,14 @@ All are now verified and mutually consistent in this snapshot.
   - `ORG_COUNTRY_NOT_FOUND`
   - `COUNTRY_ADAPTER_NOT_REGISTERED`
 - Refactored payroll core flow so tax calculation, payroll-rule application, and compliance report generation route through the country adapter abstraction boundary rather than hardcoded core logic.
+
+## WhatsApp integration alignment update (2026-04-01)
+
+- Added `integrations/whatsapp/webhook.py` with:
+  - `receive_message(payload)` to validate inbound webhook payloads and emit outbound provider-ready responses.
+  - `parse_intent(message_text)` to map supported commands to documented intents.
+- Command coverage is aligned to `docs/specs/integrations/whatsapp.md` command set for:
+  - `payslip` → `payslip.get`
+  - `leave` → `leave.apply`
+  - `approval` → `approval.pending`
+- Added focused webhook + intent tests to verify command parsing, response schema, and invalid-command help behavior.
