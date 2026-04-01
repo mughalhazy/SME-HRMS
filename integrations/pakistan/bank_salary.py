@@ -42,6 +42,8 @@ def generate_salary_bank_csv(payload: dict[str, Any]) -> str:
     employees = list(payload.get("employees", []))
     currency = str(payload.get("currency", "PKR"))
     errors: list[str] = []
+    if not employees:
+        errors.append("employees must be a non-empty array")
     for idx, employee in enumerate(employees):
         errors.extend(_validate_employee(employee, idx))
     if errors:
@@ -58,6 +60,8 @@ def generate_salary_bank_csv(payload: dict[str, Any]) -> str:
 def generate_salary_bank_excel_rows(payload: dict[str, Any]) -> dict[str, Any]:
     employees = list(payload.get("employees", []))
     currency = str(payload.get("currency", "PKR"))
+    if not employees:
+        raise ValueError("employees must be a non-empty array")
     rows = [_HEADERS]
     for idx, employee in enumerate(employees):
         validation = _validate_employee(employee, idx)

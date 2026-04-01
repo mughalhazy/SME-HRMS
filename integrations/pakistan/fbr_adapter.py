@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
+from config.integrations import load_integrations_config
 from integrations.http_client import IntegrationHTTPError, JsonHTTPClient, RetryPolicy
+from integrations.pakistan.submission_tracking import DEFAULT_SUBMISSION_TRACKER, SubmissionTracker
 
 
 _REQUIRED_TOP_LEVEL_KEYS = {"tax_year", "period", "employer", "totals", "employees"}
@@ -97,21 +98,30 @@ def submit_annexure_c(
     *,
     http_client: JsonHTTPClient | None = None,
     config: dict[str, Any] | None = None,
+    tracker: SubmissionTracker | None = None,
 ) -> dict[str, Any]:
     is_valid, errors = _validate_annexure_c_payload(payload)
     submission_id = f"fbr_{uuid4().hex[:12]}"
+    track = tracker or DEFAULT_SUBMISSION_TRACKER
+    track.create_pending(submission_id, "FBR", "annexure_c", payload)
     if not is_valid:
-        return {"status": "failure", "submitted": False, "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": errors}
+        result = {"status": "failed", "submitted": False, "submission_status": "failed", "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": errors, "response_payload": {"errors": errors}}
+        track.mark_failed(submission_id, result["response_payload"])
+        return result
 
     cfg = config or {}
-    base_url = str(cfg.get("base_url") or os.getenv("PAKISTAN_FBR_BASE_URL", "")).rstrip("/")
-    token = str(cfg.get("auth_token") or os.getenv("PAKISTAN_FBR_AUTH_TOKEN", ""))
-    signing_secret = str(cfg.get("signing_secret") or os.getenv("PAKISTAN_FBR_SIGNING_SECRET", ""))
-    timeout = float(cfg.get("timeout_seconds") or os.getenv("PAKISTAN_FBR_TIMEOUT_SECONDS", "10"))
-    attempts = int(cfg.get("retry_attempts") or os.getenv("PAKISTAN_FBR_RETRY_ATTEMPTS", "3"))
+    shared = load_integrations_config().fbr
+    base_url = str(cfg.get("base_url") or shared.endpoint).rstrip("/")
+    token = str(cfg.get("auth_token") or shared.auth_token)
+    signing_secret = str(cfg.get("signing_secret") or "")
+    timeout = float(cfg.get("timeout_seconds") or shared.timeout_seconds)
+    attempts = int(cfg.get("retry_attempts") or shared.retry_attempts)
 
     if not base_url or not token:
-        return {"status": "failure", "submitted": False, "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["Missing FBR integration configuration (base_url/auth_token)."]}
+        errors = ["Missing FBR integration configuration (base_url/auth_token)."]
+        result = {"status": "failed", "submitted": False, "submission_status": "failed", "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": errors, "response_payload": {"errors": errors}}
+        track.mark_failed(submission_id, result["response_payload"])
+        return result
 
     client = http_client or JsonHTTPClient(timeout_seconds=timeout, retry_policy=RetryPolicy(attempts=attempts))
     endpoint = f"{base_url}/annexure-c/submissions"
@@ -124,24 +134,35 @@ def submit_annexure_c(
         body = response.get("body", {})
         ack_id = body.get("ack_id")
         if not ack_id:
-            return {"status": "failure", "submitted": False, "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["FBR response missing ack_id."]}
-        return {
-            "status": "success",
+            result = {"status": "failed", "submitted": False, "submission_status": "failed", "submission_id": submission_id, "provider": "FBR", "format": "annexure_c", "errors": ["FBR response missing ack_id."], "response_payload": body}
+            track.mark_failed(submission_id, body)
+            return result
+        result = {
+            "status": "submitted",
             "submitted": True,
+            "submission_status": "submitted",
             "submission_id": submission_id,
             "provider": "FBR",
             "format": "annexure_c",
             "errors": [],
             "ack_id": str(ack_id),
             "provider_status": str(body.get("status", "accepted")),
+            "response_payload": body,
         }
+        track.mark_submitted(submission_id, body)
+        return result
     except IntegrationHTTPError as exc:
-        return {
-            "status": "failure",
+        response_payload = {"code": exc.code, "message": exc.message, "status_code": exc.status_code}
+        result = {
+            "status": "failed",
             "submitted": False,
+            "submission_status": "failed",
             "submission_id": submission_id,
             "provider": "FBR",
             "format": "annexure_c",
             "errors": [f"{exc.code}: {exc.message}"],
             "http_status": exc.status_code,
+            "response_payload": response_payload,
         }
+        track.mark_failed(submission_id, response_payload)
+        return result
