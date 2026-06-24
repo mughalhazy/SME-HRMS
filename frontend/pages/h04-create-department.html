@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Create Department</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#EFF6FF;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+
+/* Page title bar */
+.page-title-bar{background:var(--w);border-bottom:1px solid var(--bd);padding:16px 24px;flex-shrink:0}
+.pt-title{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.pt-sub{font-size:12.5px;color:var(--t3);margin-top:3px}
+
+/* Form layout */
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+
+/* Sections */
+.section{margin-bottom:24px}
+.sec-heading{margin-bottom:14px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1)}
+.sec-sub{font-size:12px;color:var(--t3);margin-top:3px}
+.sec-div{height:1px;background:var(--bd);margin:20px 0}
+
+/* Field grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=email],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);
+  font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);
+  transition:border-color .14s,box-shadow .14s;line-height:1.5
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:80px}
+.fhint{font-size:11px;color:var(--t4)}
+.field-mono input{font-family:var(--mono);font-size:12.5px;letter-spacing:.02em}
+
+/* Code slug preview */
+.slug-preview{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;background:var(--t5);border-radius:5px;font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--t2);margin-top:4px}
+.slug-preview .slug-label{font-family:'Inter',sans-serif;font-size:11px;color:var(--t4);font-weight:400}
+
+/* Colour picker (icon colour) */
+.colour-opts{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+.col-opt{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .12s;position:relative}
+.col-opt.on{border-color:var(--t1)}
+.col-opt.on::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+
+/* Radio */
+.radio-group{display:flex;gap:7px;flex-wrap:wrap}
+.ropt{display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;font-size:12.5px;color:var(--t2);user-select:none}
+.ropt:hover{border-color:var(--tb);background:var(--tl)}
+.ropt.on{border-color:var(--teal);background:var(--tl);color:var(--teal);font-weight:600}
+.rdot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.ropt.on .rdot{border-color:var(--teal);background:var(--teal)}
+.ropt.on .rdot::after{content:'';width:5px;height:5px;border-radius:50%;background:#fff}
+
+/* Rail */
+.rail-sec{margin-bottom:18px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3);flex-shrink:0}
+.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.sum-empty{color:var(--t4);font-style:italic;font-weight:400}
+
+/* Preview card */
+.dept-preview{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:13px;margin-bottom:14px}
+.dp-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;margin-bottom:10px}
+.dp-name{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.dp-code{font-family:var(--mono);font-size:11px;color:var(--t3);margin-bottom:6px}
+.dp-desc{font-size:12px;color:var(--t3);line-height:1.5}
+
+/* Help tip */
+.help-tip{display:flex;gap:8px;padding:10px 12px;background:var(--bl);border:1px solid #BFDBFE;border-radius:var(--r);margin-bottom:16px}
+.help-tip svg{flex-shrink:0;margin-top:1px}
+.help-tip-text{font-size:12px;color:var(--t2);line-height:1.5}
+
+/* Footer */
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+.ff-info strong{color:var(--t2);font-weight:600}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="crumb">
+      <a>Departments</a><span class="sep">›</span>
+      <span class="cur">Create Department</span>
+    </div>
+    <div class="tb-vd"></div>
+    <button class="btn">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Cancel
+    </button>
+    <button class="btn btn-p" onclick="submitForm()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      Create Department
+    </button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- Page title -->
+  <div class="page-title-bar">
+    <div class="pt-title">Create Department</div>
+    <div class="pt-sub">Define a new organisational unit. Employees can be assigned after creation.</div>
+  </div>
+
+  <!-- Form body -->
+  <div class="form-wrap">
+
+    <!-- Main -->
+    <div class="form-main">
+
+      <div class="section">
+        <div class="sec-heading">
+          <div class="sec-title">Basic Information</div>
+          <div class="sec-sub">Name and code are required. The code is used in reports and integrations.</div>
+        </div>
+        <div class="fg">
+          <div class="fgroup span2">
+            <label>Department Name <span class="req">*</span></label>
+            <input type="text" id="dept-name" placeholder="e.g. People Operations" oninput="updatePreview()">
+            <span class="fhint">Displayed on employee profiles, org chart, and reports</span>
+          </div>
+          <div class="fgroup field-mono">
+            <label>Department Code <span class="req">*</span></label>
+            <input type="text" id="dept-code" placeholder="e.g. DEPT-HR" oninput="updatePreview()" style="text-transform:uppercase">
+            <div class="slug-preview"><span class="slug-label">Preview:</span><span id="code-preview">DEPT-HR</span></div>
+          </div>
+          <div class="fgroup">
+            <label>Initial Status</label>
+            <select id="dept-status" onchange="updatePreview()">
+              <option value="Proposed" selected>Proposed</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Archived">Archived</option>
+            </select>
+            <span class="fhint">Use <em>Proposed</em> during setup; set to <em>Active</em> to enable employee assignment</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-heading">
+          <div class="sec-title">Description</div>
+        </div>
+        <div class="fgroup">
+          <label>Department Description</label>
+          <textarea id="dept-desc" placeholder="Briefly describe the department's purpose, function, and scope." rows="3" oninput="updatePreview()"></textarea>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-heading">
+          <div class="sec-title">Department Head</div>
+          <div class="sec-sub">Optional — can be assigned after department is created.</div>
+        </div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>Department Head</label>
+            <select id="dept-head">
+              <option value="">— Assign later —</option>
+              <option value="aisha-al-rashidi">Aisha Al-Rashidi · VP People</option>
+              <option value="james-okonkwo">James Okonkwo · CHRO</option>
+              <option value="dev-patel">Dev Patel · Director Engineering</option>
+              <option value="priya-subra">Priya Subramaniam · Senior HRBP</option>
+              <option value="sara-mendez">Sara Mendez · Finance Controller</option>
+              <option value="li-wei">Li Wei · Head of Legal</option>
+            </select>
+            <span class="fhint">This employee will appear as the department head on the org chart</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-heading">
+          <div class="sec-title">Visual Identity</div>
+          <div class="sec-sub">Choose a colour for the department icon across the system.</div>
+        </div>
+        <label style="margin-bottom:8px;display:block">Icon Colour</label>
+        <div class="colour-opts" id="colour-opts">
+          <div class="col-opt on" style="background:linear-gradient(135deg,#0A8F84,#0EA5E9)" onclick="selColour(this,'teal-blue')" title="Teal Blue"></div>
+          <div class="col-opt" style="background:linear-gradient(135deg,#5B21B6,#7C3AED)" onclick="selColour(this,'violet')" title="Violet"></div>
+          <div class="col-opt" style="background:linear-gradient(135deg,#1E40AF,#3B82F6)" onclick="selColour(this,'blue')" title="Blue"></div>
+          <div class="col-opt" style="background:linear-gradient(135deg,#15803D,#22C55E)" onclick="selColour(this,'green')" title="Green"></div>
+          <div class="col-opt" style="background:linear-gradient(135deg,#B45309,#F59E0B)" onclick="selColour(this,'amber')" title="Amber"></div>
+          <div class="col-opt" style="background:linear-gradient(135deg,#B91C1C,#EF4444)" onclick="selColour(this,'red')" title="Red"></div>
+          <div class="col-opt" style="background:linear-gradient(135deg,#0E7490,#06B6D4)" onclick="selColour(this,'cyan')" title="Cyan"></div>
+          <div class="col-opt" style="background:linear-gradient(135deg,#374151,#6B7280)" onclick="selColour(this,'grey')" title="Grey"></div>
+        </div>
+      </div>
+
+    </div><!-- /form-main -->
+
+    <!-- Rail -->
+    <div class="form-rail">
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Preview</div>
+        <div class="dept-preview">
+          <div class="dp-icon" id="prev-icon" style="background:linear-gradient(135deg,#0A8F84,#0EA5E9)">D</div>
+          <div class="dp-name" id="prev-name">Department Name</div>
+          <div class="dp-code" id="prev-code">DEPT-CODE</div>
+          <div class="dp-desc" id="prev-desc" style="color:var(--t4);font-style:italic">No description provided.</div>
+        </div>
+      </div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Form Summary</div>
+        <div class="sum-row"><span class="sum-l">Name</span><span class="sum-v" id="sum-name"><span class="sum-empty">—</span></span></div>
+        <div class="sum-row"><span class="sum-l">Code</span><span class="sum-v" id="sum-code" style="font-family:var(--mono);font-size:11px"><span class="sum-empty">—</span></span></div>
+        <div class="sum-row"><span class="sum-l">Status</span><span class="sum-v" id="sum-status">Proposed</span></div>
+        <div class="sum-row"><span class="sum-l">Head</span><span class="sum-v" id="sum-head"><span class="sum-empty">Unassigned</span></span></div>
+      </div>
+
+      <div class="sec-div" style="margin:12px 0"></div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">What happens next</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--t2)">
+            <div style="width:16px;height:16px;border-radius:50%;background:var(--teal);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
+            Department record is created with <code>status: Proposed</code>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--t2)">
+            <div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t3);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
+            Set status to <strong>Active</strong> to enable employee assignment
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--t2)">
+            <div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t3);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
+            Assign employees via Edit Employee or bulk transfer
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--t2)">
+            <div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t3);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div>
+            Add cost centre and budget links via Organisation Settings
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /form-rail -->
+  </div><!-- /form-wrap -->
+
+  <!-- Footer -->
+  <div class="form-footer">
+    <div class="ff-info">Submits <code>POST /api/v1/departments</code> — employee-service</div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Create Department</button>
+  </div>
+
+</main>
+</div>
+
+<script>
+let selectedColour = 'teal-blue';
+const colourMap = {
+  'teal-blue': 'linear-gradient(135deg,#0A8F84,#0EA5E9)',
+  'violet':    'linear-gradient(135deg,#5B21B6,#7C3AED)',
+  'blue':      'linear-gradient(135deg,#1E40AF,#3B82F6)',
+  'green':     'linear-gradient(135deg,#15803D,#22C55E)',
+  'amber':     'linear-gradient(135deg,#B45309,#F59E0B)',
+  'red':       'linear-gradient(135deg,#B91C1C,#EF4444)',
+  'cyan':      'linear-gradient(135deg,#0E7490,#06B6D4)',
+  'grey':      'linear-gradient(135deg,#374151,#6B7280)'
+};
+
+function selColour(el, key) {
+  document.querySelectorAll('.col-opt').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  selectedColour = key;
+  document.getElementById('prev-icon').style.background = colourMap[key];
+}
+
+function updatePreview() {
+  const name = document.getElementById('dept-name').value.trim();
+  const code = document.getElementById('dept-code').value.trim().toUpperCase();
+  const desc = document.getElementById('dept-desc').value.trim();
+  const status = document.getElementById('dept-status').value;
+
+  // Icon initial
+  const icon = document.getElementById('prev-icon');
+  icon.textContent = name ? name.charAt(0).toUpperCase() : 'D';
+
+  // Preview card
+  document.getElementById('prev-name').textContent = name || 'Department Name';
+  document.getElementById('prev-name').style.color = name ? 'var(--t1)' : 'var(--t4)';
+  document.getElementById('prev-code').textContent = code || 'DEPT-CODE';
+  document.getElementById('prev-code').style.color = code ? 'var(--t3)' : 'var(--t4)';
+  const descEl = document.getElementById('prev-desc');
+  if (desc) {
+    descEl.textContent = desc;
+    descEl.style.fontStyle = 'normal';
+    descEl.style.color = 'var(--t3)';
+  } else {
+    descEl.textContent = 'No description provided.';
+    descEl.style.fontStyle = 'italic';
+    descEl.style.color = 'var(--t4)';
+  }
+
+  // Code preview slug
+  document.getElementById('code-preview').textContent = code || '—';
+
+  // Rail summary
+  document.getElementById('sum-name').innerHTML = name ? `<span>${name}</span>` : '<span class="sum-empty">—</span>';
+  document.getElementById('sum-code').innerHTML = code ? `<span>${code}</span>` : '<span class="sum-empty">—</span>';
+  document.getElementById('sum-status').textContent = status;
+}
+
+document.getElementById('dept-head').addEventListener('change', function() {
+  const text = this.options[this.selectedIndex].text;
+  const sumHead = document.getElementById('sum-head');
+  if (this.value) {
+    sumHead.innerHTML = `<span>${text.split(' · ')[0]}</span>`;
+  } else {
+    sumHead.innerHTML = '<span class="sum-empty">Unassigned</span>';
+  }
+});
+
+function submitForm() {
+  const name = document.getElementById('dept-name').value.trim();
+  const code = document.getElementById('dept-code').value.trim().toUpperCase();
+  if (!name || !code) {
+    alert('Department name and code are required.');
+    return;
+  }
+  const payload = {
+    name,
+    code,
+    status: document.getElementById('dept-status').value,
+    description: document.getElementById('dept-desc').value.trim() || undefined,
+    head_employee_id: document.getElementById('dept-head').value || undefined
+  };
+  alert('POST /api/v1/departments\n\n' + JSON.stringify(payload, null, 2));
+}
+</script>
+</body>
+</html>

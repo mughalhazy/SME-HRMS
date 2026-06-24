@@ -1,0 +1,193 @@
+﻿{
+  "id": "hrms-h11-survey-builder-contract",
+  "version": "1.0",
+  "last_updated": "2026-03-29",
+  "archetype_ref": "hrms-schema-template.json",
+  "seed_page_ref": "frontend/seeds/p11-builder.html",
+  "page": "h11-survey-builder.html",
+  "description": "Survey Builder — create and configure engagement surveys with dimension-grouped Likert5 questions, publish lifecycle, and real-time properties panel",
+  "services": ["engagement_service"],
+  "gaps": ["BG-030"],
+  "gap_notes": {
+    "BG-030": "engagement_service.QUESTION_KINDS = {'Likert5'} only. Short Text, Long Text, Rating Stars, Multi-choice, NPS palette items are chrome."
+  },
+  "enums": {
+    "SurveyStatus": ["Draft", "Open", "Closed"],
+    "QuestionKind": ["Likert5"],
+    "Dimension": ["D1", "D2", "D3", "D4", "D5"]
+  },
+  "endpoints": [
+    {
+      "id": "E01",
+      "label": "List surveys",
+      "method": "GET",
+      "path": "/api/v1/surveys",
+      "service": "engagement_service",
+      "handler": "get_surveys",
+      "query_params": {
+        "status": "ref:api-contracts#SurveyStatus (optional)",
+        "tenant_id": "string (optional)"
+      },
+      "response_model": "Survey[]",
+      "response_schema": {
+        "tenant_id": "string",
+        "items": [
+          {
+            "survey_id": "string",
+            "code": "string",
+            "title": "string",
+            "description": "string",
+            "status": "ref:api-contracts#SurveyStatus",
+            "owner_employee_id": "string",
+            "target_department_id": "string | null",
+            "questions": "SurveyQuestion[]",
+            "published_at": "ISO 8601 | null",
+            "closed_at": "ISO 8601 | null",
+            "created_at": "ISO 8601",
+            "updated_at": "ISO 8601"
+          }
+        ]
+      },
+      "used_by": ["topbar survey switcher"]
+    },
+    {
+      "id": "E02",
+      "label": "Get survey",
+      "method": "GET",
+      "path": "/api/v1/surveys/{survey_id}",
+      "service": "engagement_service",
+      "handler": "get_survey",
+      "response_model": "Survey",
+      "used_by": ["canvas section rendering", "properties panel"]
+    },
+    {
+      "id": "E03",
+      "label": "Create survey",
+      "method": "POST",
+      "path": "/api/v1/surveys",
+      "service": "engagement_service",
+      "handler": "post_surveys",
+      "request_body": {
+        "code": "string (required)",
+        "title": "string (required)",
+        "description": "string (optional)",
+        "owner_employee_id": "string (required)",
+        "target_department_id": "string | null",
+        "questions": [
+          {
+            "question_id": "string (optional — uuid if omitted)",
+            "prompt": "string (required · unique within survey)",
+            "dimension": "ref:api-contracts#Dimension (required)",
+            "kind": "Likert5 (only valid value)",
+            "required": "boolean (default true)",
+            "scale_min": "integer (must be 1)",
+            "scale_max": "integer (must be 5)"
+          }
+        ]
+      },
+      "response_model": "Survey",
+      "used_by": ["canvas save action"]
+    },
+    {
+      "id": "E04",
+      "label": "Publish survey",
+      "method": "POST",
+      "path": "/api/v1/surveys/{survey_id}/publish",
+      "service": "engagement_service",
+      "handler": "post_survey_publish",
+      "description": "Transitions survey from Draft → Open. Returns updated Survey with published_at set.",
+      "response_model": "Survey",
+      "used_by": ["topbar Publish Survey button"]
+    },
+    {
+      "id": "E05",
+      "label": "Close survey",
+      "method": "POST",
+      "path": "/api/v1/surveys/{survey_id}/close",
+      "service": "engagement_service",
+      "handler": "post_survey_close",
+      "description": "Transitions survey from Open → Closed. Triggers aggregate rebuild.",
+      "response_model": "Survey",
+      "used_by": ["topbar Close Survey button (visible when status=Open)"]
+    },
+    {
+      "id": "E06",
+      "label": "Get aggregated results",
+      "method": "GET",
+      "path": "/api/v1/surveys/{survey_id}/results",
+      "service": "engagement_service",
+      "handler": "get_aggregated_results",
+      "response_model": "AggregatedSurveyResult",
+      "response_schema": {
+        "survey_id": "string",
+        "response_count": "integer",
+        "participant_count": "integer",
+        "target_population": "integer",
+        "participation_rate": "float",
+        "overall_average_score": "float",
+        "favorable_ratio": "float",
+        "question_scores": "array",
+        "dimension_scores": "array",
+        "score_distribution": "object (keys: '1'–'5')",
+        "generated_at": "ISO 8601"
+      },
+      "used_by": ["Results view tab (canvas view switcher)"]
+    },
+    {
+      "id": "E07",
+      "label": "List responses",
+      "method": "GET",
+      "path": "/api/v1/surveys/{survey_id}/responses",
+      "service": "engagement_service",
+      "handler": "get_responses",
+      "response_model": "SurveyResponse[]",
+      "used_by": ["Results view tab — response list"]
+    }
+  ],
+  "renderer_schema": {
+    "dsl_version": "1.0",
+    "layout": "three-panel-builder",
+    "panels": {
+      "palette": {
+        "sections": ["question-types", "structure", "settings"],
+        "real_components": ["Likert Scale (Likert5)", "Dimension Group", "Target Audience"],
+        "chrome_components": ["Short Text", "Long Text", "Rating Stars", "Multi-choice", "NPS Score", "Page Break", "Anonymity", "Response Window", "Reminder Schedule"],
+        "chrome_refs": ["BG-030"]
+      },
+      "canvas": {
+        "sections": [
+          {
+            "id": "s0",
+            "label": "Survey Details",
+            "chrome": false,
+            "source": "engagement_service › Survey",
+            "fields": ["code", "title", "description", "status", "owner_employee_id", "target_department_id"]
+          },
+          {
+            "id": "s1",
+            "label": "D1 — Clarity & Direction",
+            "chrome": false,
+            "source": "engagement_service › Survey.questions[dimension=D1]",
+            "fields": ["question_id", "prompt", "dimension", "kind", "required", "scale_min", "scale_max"]
+          },
+          {
+            "id": "s2",
+            "label": "D2 — Manager Effectiveness",
+            "chrome": false,
+            "source": "engagement_service › Survey.questions[dimension=D2]"
+          },
+          {
+            "id": "s3",
+            "label": "D3 — Wellbeing & Balance",
+            "chrome": false,
+            "source": "engagement_service › Survey.questions[dimension=D3]"
+          }
+        ]
+      },
+      "properties": {
+        "active_section": "s0 (default)",
+        "real_fields": ["code", "title", "description", "owner_employee_id", "target_department_id", "dimension", "prompt", "kind", "required", "scale_min", "scale_max"]
+      }
+    }
+  }
+}

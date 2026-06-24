@@ -1,0 +1,92 @@
+﻿{
+  "_meta": {
+    "id": "h04-create-role",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Create Role",
+    "variant": "Simple (single scroll)",
+    "surface": "admin",
+    "primary_actor": "HR Admin",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Roles", "Create Role"],
+      "actions": [
+        { "label": "Cancel",      "style": "secondary", "leads_to": "H02 Roles" },
+        { "label": "Create Role", "style": "primary",   "action": "POST /api/v1/roles", "colour": "violet" }
+      ]
+    },
+
+    "FORM_SECTIONS": {
+      "role_identity": {
+        "fields": [
+          { "id": "title",       "label": "Role Title",   "type": "text",     "required": true,  "maps_to": "Role.title" },
+          { "id": "level",       "label": "Level / Band", "type": "text",     "required": false, "maps_to": "Role.level" },
+          { "id": "status",      "label": "Status",       "type": "select",   "required": false, "enum_ref": "employee.model.ROLE_STATUSES", "values": ["Draft","Active","Inactive","Archived"], "default": "Draft", "maps_to": "Role.status" },
+          { "id": "description", "label": "Description",  "type": "textarea", "required": false, "maps_to": "Role.description" }
+        ]
+      },
+
+      "employment_category": {
+        "component": "category_cards",
+        "required": true,
+        "enum_ref": "employee.model.ROLE_EMPLOYMENT_CATEGORIES",
+        "values": ["Staff","Manager","Executive","Contractor"],
+        "maps_to": "Role.employment_category"
+      },
+
+      "system_permissions": {
+        "component": "permission_tag_selector",
+        "note": "UI-level indicators only. Actual enforcement is via auth-service permission policies (BG-007). Permission tags are not sent in POST /api/v1/roles payload.",
+        "gap_ref": "BG-007"
+      }
+    },
+
+    "FORM_RAIL": {
+      "role_preview": {
+        "description": "Live preview card updates as user types — shows role icon (violet), title, category, level"
+      },
+      "form_summary": {
+        "fields": ["title","employment_category","level","status","permission_count"]
+      },
+      "status_guide": {
+        "draft": "Created but not yet assigned",
+        "active": "Available for employee assignment",
+        "inactive": "Hidden from dropdowns but retained",
+        "archived": "Retired — employees must be reassigned before archiving"
+      }
+    },
+
+    "FORM_FOOTER": {
+      "left_info": "Submits POST /api/v1/roles — employee-service",
+      "right": [
+        { "label": "Cancel",      "style": "secondary" },
+        { "label": "Create Role", "style": "primary",   "action": "POST /api/v1/roles" }
+      ]
+    }
+  },
+
+  "submit_flow": {
+    "method": "POST",
+    "endpoint": "/api/v1/roles",
+    "service": "employee-service",
+    "body": {
+      "title": "string (required)",
+      "level": "string (optional)",
+      "description": "string (optional)",
+      "employment_category": "RoleEmploymentCategory (required)",
+      "status": "RoleStatus (default: Draft)"
+    },
+    "on_success": { "redirect": "H03 Role Detail" }
+  },
+
+  "known_gaps": ["BG-007"],
+
+  "patterns_applied": ["P-07", "P-31", "P-32"],
+
+  "notes": "System permissions are UI-only toggles. The Role model has no permissions[] field — enforcement is in auth-service. BG-007 tracks the missing HTTP endpoint for role assignment."
+}

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Survey Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+
+/* Shell */
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sb-ico{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--t4);transition:all .12s}
+.sb-ico:hover{background:var(--bg);color:var(--t2)}.sb-ico.on{background:var(--tl);color:var(--teal)}
+.sb-ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 0 0 18px;gap:0;flex-shrink:0}
+.tb-brand{display:flex;align-items:center;gap:6px;padding-right:18px;border-right:1px solid var(--bd)}
+.tb-brand-name{font-size:13.5px;font-weight:700;color:var(--t1)}
+.tb-brand-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--tl);color:var(--teal);font-family:var(--mono)}
+.tb-meta{display:flex;align-items:center;gap:8px;padding:0 18px;flex:1}
+.tb-name{font-size:13px;font-weight:600;color:var(--t1)}
+.tb-vd{width:1px;height:18px;background:var(--bd);margin:0 4px}
+.tb-status-dot{width:6px;height:6px;border-radius:50%;background:var(--grn2);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.35)}50%{box-shadow:0 0 0 5px rgba(22,163,74,0)}}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--t3)}.btn-ghost:hover{background:var(--bg);color:var(--t1)}
+.tb-actions{display:flex;align-items:center;gap:7px;padding:0 18px}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0}
+
+/* P-07 chip */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.cg{background:var(--gl);color:var(--grn)}
+.ca{background:var(--al);color:var(--amber)}
+.cr{background:var(--rl);color:var(--red)}
+.cb{background:var(--bl);color:var(--blue)}
+.ct{background:var(--tl);color:var(--teal)}
+.cn{background:var(--t5);color:var(--t3)}
+
+/* Builder layout — P-32 */
+.builder{flex:1;overflow:hidden;display:grid;grid-template-columns:248px 1fr 272px;min-height:0}
+
+/* ── PALETTE ── */
+.palette{background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.pal-head{padding:12px 14px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.pal-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:9px}
+.pal-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;transition:all .14s}
+.pal-srch:focus-within{border-color:var(--teal);background:var(--w)}
+.pal-srch input{background:none;border:none;outline:none;font-size:12px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.pal-srch input::placeholder{color:var(--t4)}
+.pal-srch svg{width:12px;height:12px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.pal-body{flex:1;overflow-y:auto;min-height:0;padding:10px 10px 12vh}
+.pal-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:8px 6px 5px;display:block}
+.pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px}
+.pal-comp{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:9px 8px;cursor:grab;transition:all .14s;text-align:center;user-select:none}
+.pal-comp:hover{background:var(--tl);border-color:var(--tb);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.pal-comp:active{cursor:grabbing;transform:scale(.97)}
+.pal-comp-icon{font-size:17px;margin-bottom:4px}
+.pal-comp-label{font-size:11px;font-weight:600;color:var(--t2)}
+.pal-comp-sub{font-size:10px;color:var(--t4);margin-top:1px}
+.pal-comp-chrome{opacity:.6;cursor:not-allowed}
+.pal-comp-chrome:hover{background:var(--bg);border-color:var(--bd);transform:none;box-shadow:none}
+
+/* ── CANVAS ── */
+.canvas-wrap{display:flex;flex-direction:column;background:#EEF1F6;overflow:hidden;min-height:0}
+.canvas-toolbar{background:var(--w);border-bottom:1px solid var(--bd);padding:8px 16px;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.ct-sp{flex:1}
+.view-sel{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:3px}
+.vs-btn{padding:4px 12px;border-radius:5px;font-size:12px;font-weight:500;color:var(--t3);cursor:pointer;transition:all .12s;user-select:none}
+.vs-btn:hover{color:var(--t1)}.vs-btn.on{background:var(--w);color:var(--t1);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.zoom-ctrl{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--t3)}
+.zoom-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--t3);transition:all .12s}
+.zoom-btn:hover{background:var(--bg);color:var(--t1)}
+.zoom-val{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t2);padding:0 6px;min-width:36px;text-align:center}
+.canvas-area{flex:1;overflow:auto;min-height:0;padding:24px 24px 12vh}
+.canvas-frame{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);min-height:540px;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden;position:relative;transition:transform .1s}
+
+/* Canvas survey sections */
+.cs{border-bottom:1px solid var(--bd);padding:16px 20px;cursor:pointer;transition:background .09s;position:relative}
+.cs:hover{background:var(--t6)}.cs:hover .cs-controls{opacity:1}
+.cs.sel{background:var(--tl);border-left:2px solid var(--teal)}
+.cs-header{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.cs-header-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cs-badge{margin-left:auto}
+.cs-controls{position:absolute;top:10px;right:10px;display:flex;gap:4px;opacity:0;transition:opacity .12s;z-index:2}
+.cs-ctrl{width:22px;height:22px;border-radius:4px;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;font-size:11px;font-weight:600;line-height:1}
+.cs-ctrl:hover{background:var(--bg);color:var(--t1)}
+.cs-ctrl.del:hover{background:var(--rl);color:var(--red);border-color:#FECACA}
+
+/* Canvas survey-detail header */
+.sv-detail{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sv-field{display:flex;flex-direction:column;gap:4px}
+.sv-field.sv-full{grid-column:1/-1}
+.sv-label{font-size:11.5px;font-weight:600;color:var(--t2)}
+.sv-value{font-size:12.5px;color:var(--t1);padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);background:var(--t6);pointer-events:none}
+.sv-value.sv-code{font-family:var(--mono);font-size:12px}
+.sv-desc{height:52px;resize:none;overflow:hidden;line-height:1.5;font-family:'Inter',sans-serif}
+
+/* Dimension group in canvas */
+.dim-group{display:flex;flex-direction:column;gap:8px}
+.dim-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 6px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.dim-q{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)}
+.dim-q-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t4);min-width:18px;padding-top:1px}
+.dim-q-body{flex:1}
+.dim-q-prompt{font-size:12.5px;color:var(--t1);line-height:1.45;margin-bottom:5px}
+.dim-q-scale{display:flex;align-items:center;gap:4px}
+.scale-pip{width:26px;height:26px;border-radius:50%;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--t3)}
+.scale-lbl{font-size:10px;color:var(--t4);margin:0 6px}
+.dim-q-meta{display:flex;align-items:center;gap:6px;margin-top:6px}
+.dim-q-kind{font-size:10px;color:var(--t4)}
+.dim-q-req{font-size:10px;color:var(--red2)}
+
+/* Chrome notice */
+.chrome-notice{background:var(--al);border:1px solid #FCD34D;border-radius:var(--r);padding:9px 12px;margin-bottom:12px;font-size:11.5px;color:var(--amber);display:flex;align-items:flex-start;gap:7px}
+.chrome-notice svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;margin-top:1px}
+
+/* Drop zone */
+.drop-zone{border:2px dashed var(--bd);border-radius:var(--r2);padding:18px;text-align:center;color:var(--t4);font-size:12.5px;margin:12px 16px 16px;cursor:pointer;transition:all .14s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.drop-zone:hover{border-color:var(--teal);background:var(--tl);color:var(--teal)}
+.drop-zone svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── PROPERTIES ── */
+.props{background:var(--w);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.props-head{padding:13px 16px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.props-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:1px}
+.props-sub{font-size:11.5px;color:var(--t4)}
+.props-body{flex:1;overflow-y:auto;min-height:0;padding-bottom:12vh}
+.prop-sec{padding:13px 16px;border-bottom:1px solid var(--bd)}
+.prop-sec-t{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:10px}
+.prop-row{margin-bottom:10px}.prop-row:last-child{margin-bottom:0}
+.prop-row label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px}
+input[type=text],select,textarea{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12.5px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s,box-shadow .14s}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:60px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.toggle-row:last-child{margin-bottom:0}
+.toggle-lbl{font-size:12.5px;color:var(--t2)}
+.toggle{width:34px;height:18px;background:var(--bd);border-radius:99px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--teal)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle.on::after{transform:translateX(16px)}
+.swatch-row{display:flex;gap:6px;margin-top:5px}
+.swatch{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .12s}
+.swatch:hover{transform:scale(1.15)}.swatch.on{border-color:var(--t1)}
+
+/* Drag list (questions) */
+.drag-list{display:flex;flex-direction:column;gap:5px}
+.drag-item{display:flex;align-items:flex-start;gap:7px;padding:7px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);cursor:grab;font-size:12px;color:var(--t2);user-select:none;transition:all .12s}
+.drag-item:hover{background:var(--tl);border-color:var(--tb)}
+.drag-handle{color:var(--t4);font-size:13px;padding-top:1px;flex-shrink:0}
+.drag-lbl{flex:1;line-height:1.4}
+.drag-meta{font-size:10px;color:var(--t4);margin-top:2px}
+.drag-del{color:var(--t4);font-size:14px;cursor:pointer;padding:0 2px;transition:color .12s;flex-shrink:0}
+.drag-del:hover{color:var(--red2)}
+.add-q-btn{display:flex;align-items:center;gap:6px;width:100%;padding:7px 10px;border:1px dashed var(--bd);border-radius:var(--r);font-size:12px;font-weight:600;color:var(--teal);background:transparent;cursor:pointer;transition:all .14s;margin-top:8px}
+.add-q-btn:hover{background:var(--tl);border-color:var(--tb)}
+.add-q-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round}
+
+/* Builder footer */
+.builder-footer{background:var(--w);border-top:1px solid var(--bd);padding:11px 18px;display:flex;align-items:center;gap:9px;flex-shrink:0}
+.bf-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--grn2)}
+.bf-sp{flex:1}
+.bf-meta{font-size:12px;color:var(--t4)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="sb-ico on"><svg viewBox="0 0 24 24"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"/><line x1="3" y1="22" x2="21" y2="22"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="tb-brand">
+      <span class="tb-brand-name">Survey Builder</span>
+      <span class="tb-brand-badge">v1.0</span>
+    </div>
+    <div class="tb-meta">
+      <span class="tb-name">Q1 2026 Employee Engagement Survey</span>
+      <div class="tb-vd"></div>
+      <span class="chip ca" style="font-size:10px">Draft</span>
+      <div class="tb-vd"></div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--grn2)"><div class="tb-status-dot"></div>Auto-saved</div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost btn-sm"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>Undo</button>
+      <button class="btn btn-ghost btn-sm"><svg viewBox="0 0 24 24"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 014-4h12"/></svg>Redo</button>
+      <div class="tb-vd"></div>
+      <button class="btn btn-sm">Preview</button>
+      <button class="btn btn-p btn-sm"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>Publish Survey</button>
+      <div class="tav">AW</div>
+    </div>
+  </div>
+
+  <div class="builder">
+
+    <!-- Palette -->
+    <div class="palette">
+      <div class="pal-head">
+        <div class="pal-title">Components</div>
+        <div class="pal-srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search components…" id="pal-search" oninput="filterPalette(this.value)"></div>
+      </div>
+      <div class="pal-body">
+
+        <span class="pal-sec">Question Types</span>
+        <div class="pal-grid">
+          <div class="pal-comp" data-label="Likert Scale" onclick="addDimSection('likert')">
+            <div class="pal-comp-icon">⭐</div>
+            <div class="pal-comp-label">Likert Scale</div>
+            <div class="pal-comp-sub">1–5 · Likert5</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Short Text" title="Chrome — BG-030: only Likert5 supported">
+            <div class="pal-comp-icon">✏️</div>
+            <div class="pal-comp-label">Short Text</div>
+            <div class="pal-comp-sub">Chrome · BG-030</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Long Text" title="Chrome — BG-030: only Likert5 supported">
+            <div class="pal-comp-icon">📝</div>
+            <div class="pal-comp-label">Long Text</div>
+            <div class="pal-comp-sub">Chrome · BG-030</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Rating Stars" title="Chrome — BG-030: only Likert5 supported">
+            <div class="pal-comp-icon">🌟</div>
+            <div class="pal-comp-label">Rating Stars</div>
+            <div class="pal-comp-sub">Chrome · BG-030</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Multi-choice" title="Chrome — BG-030: only Likert5 supported">
+            <div class="pal-comp-icon">☑️</div>
+            <div class="pal-comp-label">Multi-choice</div>
+            <div class="pal-comp-sub">Chrome · BG-030</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="NPS Score" title="Chrome — BG-030: only Likert5 supported">
+            <div class="pal-comp-icon">📊</div>
+            <div class="pal-comp-label">NPS Score</div>
+            <div class="pal-comp-sub">Chrome · BG-030</div>
+          </div>
+        </div>
+
+        <span class="pal-sec">Structure</span>
+        <div class="pal-grid">
+          <div class="pal-comp" data-label="Dimension Group" onclick="addDimSection('group')">
+            <div class="pal-comp-icon">📂</div>
+            <div class="pal-comp-label">Dimension Group</div>
+            <div class="pal-comp-sub">D1–D5 · questions[]</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Page Break" title="Chrome — no multi-page support in engagement_service">
+            <div class="pal-comp-icon">📄</div>
+            <div class="pal-comp-label">Page Break</div>
+            <div class="pal-comp-sub">Chrome</div>
+          </div>
+        </div>
+
+        <span class="pal-sec">Settings</span>
+        <div class="pal-grid">
+          <div class="pal-comp" data-label="Target Audience" onclick="addDimSection('audience')">
+            <div class="pal-comp-icon">🎯</div>
+            <div class="pal-comp-label">Target Audience</div>
+            <div class="pal-comp-sub">target_department_id</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Anonymity" title="Chrome — no anonymity flag in engagement_service">
+            <div class="pal-comp-icon">🔒</div>
+            <div class="pal-comp-label">Anonymity</div>
+            <div class="pal-comp-sub">Chrome</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Response Window" title="Chrome — no deadline/window field in engagement_service">
+            <div class="pal-comp-icon">🗓️</div>
+            <div class="pal-comp-label">Response Window</div>
+            <div class="pal-comp-sub">Chrome</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Reminder Schedule" title="Chrome — no reminder model in engagement_service">
+            <div class="pal-comp-icon">🔔</div>
+            <div class="pal-comp-label">Reminder Schedule</div>
+            <div class="pal-comp-sub">Chrome</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrap">
+      <div class="canvas-toolbar">
+        <div class="view-sel">
+          <div class="vs-btn on" onclick="setVS(this)">Build</div>
+          <div class="vs-btn" onclick="setVS(this)">Preview</div>
+          <div class="vs-btn" onclick="setVS(this)">Results</div>
+        </div>
+        <div class="ct-sp"></div>
+        <div class="zoom-ctrl">
+          <div class="zoom-btn" onclick="zoom(-10)">−</div>
+          <div class="zoom-val" id="zoom-val">100%</div>
+          <div class="zoom-btn" onclick="zoom(10)">+</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="zoom(0,true)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Fit</button>
+      </div>
+
+      <div class="canvas-area">
+        <div class="canvas-frame" id="canvas-frame">
+
+          <!-- s0: Survey Details -->
+          <div class="cs sel" id="cs-s0" onclick="selSection(this,'s0')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--teal)"></div>
+              Survey Details
+              <span class="chip ct cs-badge" style="font-size:10px">Survey · code · title · description</span>
+            </div>
+            <div class="sv-detail">
+              <div class="sv-field">
+                <div class="sv-label">Survey Code</div>
+                <div class="sv-value sv-code">eng-q1-2026</div>
+              </div>
+              <div class="sv-field">
+                <div class="sv-label">Status</div>
+                <div class="sv-value">Draft</div>
+              </div>
+              <div class="sv-field sv-full">
+                <div class="sv-label">Survey Title</div>
+                <div class="sv-value">Q1 2026 Employee Engagement Survey</div>
+              </div>
+              <div class="sv-field sv-full">
+                <div class="sv-label">Description</div>
+                <div class="sv-value sv-desc">Your voice shapes our culture. This confidential survey takes 5–8 minutes and covers clarity of direction, manager effectiveness, wellbeing, growth, and recognition.</div>
+              </div>
+              <div class="sv-field">
+                <div class="sv-label">Owner</div>
+                <div class="sv-value">emp-042 · Aisha Williams</div>
+              </div>
+              <div class="sv-field">
+                <div class="sv-label">Target Department</div>
+                <div class="sv-value" style="color:var(--t4)">All departments</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- s1: D1 — Clarity & Direction -->
+          <div class="cs" id="cs-s1" onclick="selSection(this,'s1')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--teal)"></div>
+              D1 — Clarity &amp; Direction
+              <span class="chip ct cs-badge" style="font-size:10px">dimension: D1 · 3 questions</span>
+            </div>
+            <div class="dim-group">
+              <div class="dim-q">
+                <div class="dim-q-num">Q1</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">I understand how my work contributes to the company's goals.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+              <div class="dim-q">
+                <div class="dim-q-num">Q2</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">My team has a clear sense of direction and priorities.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+              <div class="dim-q">
+                <div class="dim-q-num">Q3</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">Leadership communicates important decisions in a timely way.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- s2: D2 — Manager Effectiveness -->
+          <div class="cs" id="cs-s2" onclick="selSection(this,'s2')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--blue2)"></div>
+              D2 — Manager Effectiveness
+              <span class="chip cb cs-badge" style="font-size:10px">dimension: D2 · 3 questions</span>
+            </div>
+            <div class="dim-group">
+              <div class="dim-q">
+                <div class="dim-q-num">Q4</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">My manager provides feedback that helps me grow.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+              <div class="dim-q">
+                <div class="dim-q-num">Q5</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">I feel comfortable raising concerns with my manager.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+              <div class="dim-q">
+                <div class="dim-q-num">Q6</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">My manager recognises my contributions fairly.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- s3: D3 — Wellbeing & Balance -->
+          <div class="cs" id="cs-s3" onclick="selSection(this,'s3')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--grn2)"></div>
+              D3 — Wellbeing &amp; Balance
+              <span class="chip cg cs-badge" style="font-size:10px">dimension: D3 · 2 questions</span>
+            </div>
+            <div class="dim-group">
+              <div class="dim-q">
+                <div class="dim-q-num">Q7</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">I am able to maintain a healthy balance between work and personal life.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+              <div class="dim-q">
+                <div class="dim-q-num">Q8</div>
+                <div class="dim-q-body">
+                  <div class="dim-q-prompt">I do not feel consistently overwhelmed by my workload.</div>
+                  <div class="dim-q-scale">
+                    <div class="scale-pip">1</div><div class="scale-pip">2</div><div class="scale-pip">3</div><div class="scale-pip">4</div><div class="scale-pip">5</div>
+                    <span class="scale-lbl">Strongly Disagree → Strongly Agree</span>
+                  </div>
+                  <div class="dim-q-meta"><span class="dim-q-kind">Likert5 · scale 1–5</span><span class="dim-q-req">● Required</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drop zone -->
+          <div class="drop-zone" onclick="addDimSection('group')">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add a dimension group or drag a component here
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Builder footer -->
+      <div class="builder-footer">
+        <div class="bf-status"><div class="tb-status-dot"></div>All changes saved</div>
+        <div class="bf-sp"></div>
+        <div class="bf-meta" id="footer-meta">4 sections · 8 questions · 3 dimensions</div>
+      </div>
+    </div>
+
+    <!-- Properties panel -->
+    <div class="props">
+      <div class="props-head">
+        <div class="props-title" id="props-title">Survey Details</div>
+        <div class="props-sub" id="props-sub">Survey · code · title · description · target</div>
+      </div>
+      <div class="props-body" id="props-body">
+
+        <!-- s0 default properties -->
+        <div class="prop-sec">
+          <div class="prop-sec-t">Survey Metadata</div>
+          <div class="prop-row">
+            <label>Survey Code <span style="color:var(--red2)">*</span></label>
+            <input type="text" value="eng-q1-2026" placeholder="e.g. eng-q1-2026">
+          </div>
+          <div class="prop-row">
+            <label>Title <span style="color:var(--red2)">*</span></label>
+            <input type="text" value="Q1 2026 Employee Engagement Survey">
+          </div>
+          <div class="prop-row">
+            <label>Description</label>
+            <textarea style="height:72px">Your voice shapes our culture. This confidential survey takes 5–8 minutes and covers clarity of direction, manager effectiveness, wellbeing, growth, and recognition.</textarea>
+          </div>
+        </div>
+        <div class="prop-sec">
+          <div class="prop-sec-t">Audience</div>
+          <div class="prop-row">
+            <label>Owner Employee ID <span style="color:var(--red2)">*</span></label>
+            <input type="text" value="emp-042" placeholder="owner_employee_id">
+          </div>
+          <div class="prop-row">
+            <label>Target Department</label>
+            <select>
+              <option value="">All departments (no filter)</option>
+              <option>Engineering</option>
+              <option>Operations</option>
+              <option>Finance</option>
+              <option>HR</option>
+            </select>
+          </div>
+        </div>
+        <div class="prop-sec">
+          <div class="prop-sec-t">Section Colour</div>
+          <div class="swatch-row">
+            <div class="swatch on" style="background:var(--teal)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--blue2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--violet2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--amber2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--grn2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--t4)" onclick="setSwatch(this)"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- .builder -->
+</main>
+</div><!-- .shell -->
+
+<script>
+let selectedSection = 's0';
+let sectionCount = 4;
+let zoomLevel = 100;
+
+const PROP_PANELS = {
+  s0: {
+    title: 'Survey Details',
+    sub: 'Survey · code · title · description · target',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">Survey Metadata</div>
+        <div class="prop-row"><label>Survey Code <span style="color:var(--red2)">*</span></label><input type="text" value="eng-q1-2026"></div>
+        <div class="prop-row"><label>Title <span style="color:var(--red2)">*</span></label><input type="text" value="Q1 2026 Employee Engagement Survey"></div>
+        <div class="prop-row"><label>Description</label><textarea style="height:72px">Your voice shapes our culture. This confidential survey takes 5–8 minutes.</textarea></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Audience</div>
+        <div class="prop-row"><label>Owner Employee ID <span style="color:var(--red2)">*</span></label><input type="text" value="emp-042" placeholder="owner_employee_id"></div>
+        <div class="prop-row"><label>Target Department</label><select><option value="">All departments (no filter)</option><option>Engineering</option><option>Operations</option><option>Finance</option><option>HR</option></select></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Section Colour</div>
+        <div class="swatch-row">
+          <div class="swatch on" style="background:var(--teal)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--blue2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--violet2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--amber2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--grn2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--t4)" onclick="setSwatch(this)"></div>
+        </div>
+      </div>`
+  },
+  s1: {
+    title: 'D1 — Clarity & Direction',
+    sub: 'dimension: D1 · Likert5 · 3 questions',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">Dimension</div>
+        <div class="prop-row"><label>Dimension <span style="color:var(--red2)">*</span></label>
+          <select><option>D1 — Clarity &amp; Direction</option><option>D2 — Manager Effectiveness</option><option>D3 — Wellbeing &amp; Balance</option><option>D4 — Growth &amp; Development</option><option>D5 — Recognition &amp; Reward</option></select>
+        </div>
+        <div class="prop-row"><label>Section Title</label><input type="text" value="Clarity &amp; Direction"></div>
+        <div class="toggle-row"><span class="toggle-lbl">Collapsible</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Required to complete</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Questions (3)</div>
+        <div class="drag-list">
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">I understand how my work contributes to the company's goals.<div class="drag-meta">Likert5 · D1 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">My team has a clear sense of direction and priorities.<div class="drag-meta">Likert5 · D1 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">Leadership communicates important decisions in a timely way.<div class="drag-meta">Likert5 · D1 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+        </div>
+        <button class="add-q-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add question</button>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Scale</div>
+        <div class="prop-row"><label>Kind</label><select><option>Likert5 (1–5)</option></select></div>
+        <div class="prop-row"><label>Scale Min Label</label><input type="text" value="Strongly Disagree"></div>
+        <div class="prop-row"><label>Scale Max Label</label><input type="text" value="Strongly Agree"></div>
+      </div>`
+  },
+  s2: {
+    title: 'D2 — Manager Effectiveness',
+    sub: 'dimension: D2 · Likert5 · 3 questions',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">Dimension</div>
+        <div class="prop-row"><label>Dimension <span style="color:var(--red2)">*</span></label>
+          <select><option>D1 — Clarity &amp; Direction</option><option selected>D2 — Manager Effectiveness</option><option>D3 — Wellbeing &amp; Balance</option><option>D4 — Growth &amp; Development</option><option>D5 — Recognition &amp; Reward</option></select>
+        </div>
+        <div class="prop-row"><label>Section Title</label><input type="text" value="Manager Effectiveness"></div>
+        <div class="toggle-row"><span class="toggle-lbl">Collapsible</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Required to complete</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Questions (3)</div>
+        <div class="drag-list">
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">My manager provides feedback that helps me grow.<div class="drag-meta">Likert5 · D2 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">I feel comfortable raising concerns with my manager.<div class="drag-meta">Likert5 · D2 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">My manager recognises my contributions fairly.<div class="drag-meta">Likert5 · D2 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+        </div>
+        <button class="add-q-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add question</button>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Scale</div>
+        <div class="prop-row"><label>Kind</label><select><option>Likert5 (1–5)</option></select></div>
+        <div class="prop-row"><label>Scale Min Label</label><input type="text" value="Strongly Disagree"></div>
+        <div class="prop-row"><label>Scale Max Label</label><input type="text" value="Strongly Agree"></div>
+      </div>`
+  },
+  s3: {
+    title: 'D3 — Wellbeing & Balance',
+    sub: 'dimension: D3 · Likert5 · 2 questions',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">Dimension</div>
+        <div class="prop-row"><label>Dimension <span style="color:var(--red2)">*</span></label>
+          <select><option>D1 — Clarity &amp; Direction</option><option>D2 — Manager Effectiveness</option><option selected>D3 — Wellbeing &amp; Balance</option><option>D4 — Growth &amp; Development</option><option>D5 — Recognition &amp; Reward</option></select>
+        </div>
+        <div class="prop-row"><label>Section Title</label><input type="text" value="Wellbeing &amp; Balance"></div>
+        <div class="toggle-row"><span class="toggle-lbl">Collapsible</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Required to complete</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Questions (2)</div>
+        <div class="drag-list">
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">I am able to maintain a healthy balance between work and personal life.<div class="drag-meta">Likert5 · D3 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+          <div class="drag-item">
+            <span class="drag-handle">⠿</span>
+            <div class="drag-lbl">I do not feel consistently overwhelmed by my workload.<div class="drag-meta">Likert5 · D3 · Required</div></div>
+            <span class="drag-del">✕</span>
+          </div>
+        </div>
+        <button class="add-q-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add question</button>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Scale</div>
+        <div class="prop-row"><label>Kind</label><select><option>Likert5 (1–5)</option></select></div>
+        <div class="prop-row"><label>Scale Min Label</label><input type="text" value="Strongly Disagree"></div>
+        <div class="prop-row"><label>Scale Max Label</label><input type="text" value="Strongly Agree"></div>
+      </div>`
+  }
+};
+
+function selSection(el, key) {
+  document.querySelectorAll('.cs').forEach(s => s.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedSection = key;
+  const cfg = PROP_PANELS[key] || { title:'Properties', sub:'Select a section to edit', html:'' };
+  document.getElementById('props-title').textContent = cfg.title;
+  document.getElementById('props-sub').textContent = cfg.sub;
+  document.getElementById('props-body').innerHTML = cfg.html;
+}
+
+function addDimSection(type) {
+  sectionCount++;
+  const frame = document.getElementById('canvas-frame');
+  const dz = frame.querySelector('.drop-zone');
+  const newId = 's' + Date.now();
+  const dimLabels = ['D4 — Growth & Development', 'D5 — Recognition & Reward'];
+  const colors = { likert:'var(--teal)', group:'var(--violet2)', audience:'var(--amber2)' };
+  const labels = { likert:'New Likert Section', group:'New Dimension Group', audience:'Target Audience' };
+  const el = document.createElement('div');
+  el.className = 'cs';
+  el.id = 'cs-' + newId;
+  el.setAttribute('onclick', `selSection(this,'${newId}')`);
+  el.innerHTML = `
+    <div class="cs-controls">
+      <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+    </div>
+    <div class="cs-header">
+      <div class="cs-header-dot" style="background:${colors[type]||'var(--teal)'}"></div>
+      Section ${sectionCount} — ${labels[type]||'New Section'}
+    </div>
+    <div style="padding:10px 0;color:var(--t4);font-size:12.5px">Select a dimension and add questions in the Properties panel →</div>`;
+  PROP_PANELS[newId] = {
+    title: `Section ${sectionCount}`,
+    sub: type === 'likert' ? 'Likert5 · dimension: D? · 0 questions' : 'Configure in properties',
+    html: PROP_PANELS['s1'].html
+  };
+  frame.insertBefore(el, dz);
+  selSection(el, newId);
+  document.getElementById('footer-meta').textContent = `${sectionCount} sections · 8 questions · 3 dimensions`;
+}
+
+function zoom(delta, fit) {
+  if (fit) { zoomLevel = 100; }
+  else { zoomLevel = Math.max(50, Math.min(200, zoomLevel + delta)); }
+  document.getElementById('zoom-val').textContent = zoomLevel + '%';
+  const frame = document.getElementById('canvas-frame');
+  frame.style.transform = `scale(${zoomLevel/100})`;
+  frame.style.transformOrigin = 'top center';
+}
+
+function setVS(el) {
+  document.querySelectorAll('.vs-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function setSwatch(el) {
+  el.closest('.swatch-row').querySelectorAll('.swatch').forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function filterPalette(q) {
+  const lower = q.toLowerCase();
+  document.querySelectorAll('.pal-comp').forEach(c => {
+    const lbl = c.dataset.label || '';
+    c.style.display = (!q || lbl.toLowerCase().includes(lower)) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

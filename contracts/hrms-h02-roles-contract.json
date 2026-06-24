@@ -1,0 +1,72 @@
+﻿{
+  "_meta": {
+    "id": "h02-roles", "archetype": "H02 List", "page": "Roles", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "HR Administrator",
+    "leads_to": ["H03 Role Detail", "H04 Create Role"],
+    "actions": { "primary": "Create Role", "secondary": ["Export"] }
+  },
+  "api_contract": {
+    "services": ["employee-service"],
+    "endpoints": {
+      "list":    "GET /api/v1/roles",
+      "summary": "BG-005: no aggregate — headcount per role requires join with Employee list",
+      "create":  "POST /api/v1/roles"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Roles", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Roles", "subtitle": "{{total}} roles across {{category_count}} categories",
+        "actions": [
+          { "label": "Export",      "type": "secondary", "icon": "download" },
+          { "label": "Create Role", "type": "primary",   "icon": "plus" }
+        ]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 4, "gap_ref": "BG-005",
+        "items": [
+          { "key": "total",      "label": "Total",      "source": "BG-005 mock" },
+          { "key": "active",     "label": "Active",     "source": "BG-005 mock" },
+          { "key": "filled",     "label": "Filled",     "source": "BG-005 mock" },
+          { "key": "categories", "label": "Categories", "source": "BG-005 mock" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All", "filter": null },
+          { "label": "Active", "filter": "status=Active" },
+          { "label": "Draft", "filter": "status=Draft" }
+        ],
+        "filters": [
+          { "key": "employment_category", "label": "Category", "type": "select",
+            "enum_ref": "ref:api-contracts#Role.employment_category" }
+        ],
+        "search": { "placeholder": "Search roles…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "employee-service › Role",
+        "row_action": "navigate → H03 Role Detail",
+        "columns": [
+          { "key": "title",               "label": "Role",      "width_pct": 34 },
+          { "key": "level",               "label": "Level",     "width_pct": 12, "font": "mono" },
+          { "key": "employment_category", "label": "Category",  "width_pct": 18, "enum_ref": "ref:api-contracts#Role.employment_category" },
+          { "key": "headcount",           "label": "Headcount", "width_pct": 18, "font": "mono", "sortable": true },
+          { "key": "status",              "label": "Status",    "width_pct": 18, "component": "chip", "enum_ref": "ref:api-contracts#Role.status" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

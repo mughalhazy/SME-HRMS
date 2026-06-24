@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Role Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;--grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;--blue:#1D4ED8;--bl:#DBEAFE;--violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--vl);color:var(--violet)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--violet)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;position:relative}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--violet);color:#fff;border-color:var(--violet)}.btn-p:hover{background:#4C1D95}
+.btn-sm{padding:4px 10px;font-size:12px}
+.page{flex:1;overflow-y:auto;min-height:0}
+.prof-head{background:var(--w);border-bottom:1px solid var(--bd);padding:22px 26px 0;position:sticky;top:0;z-index:10}
+.ph-row{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px}
+.ent-icon{width:56px;height:56px;border-radius:var(--r2);background:linear-gradient(135deg,#5B21B6,var(--violet));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 3px var(--w),0 0 0 5px var(--bd)}
+.ent-icon svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ph-info{flex:1}
+.ph-name{font-size:20px;font-weight:700;color:var(--t1);letter-spacing:-0.025em;margin-bottom:3px}
+.ph-role{font-size:13px;color:var(--t3);margin-bottom:10px}
+.ph-chips{display:flex;gap:6px;flex-wrap:wrap}
+.ph-acts{display:flex;gap:7px;flex-shrink:0}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.cv{background:var(--vl);color:var(--violet)}.cv::before{background:var(--violet)}
+.ptabs{display:flex;gap:2px;margin-bottom:-1px}
+.ptab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.ptab:hover{color:var(--t1)}.ptab.on{color:var(--violet);border-bottom-color:var(--violet);font-weight:600}
+.tab-scroll{display:block;padding-bottom:12vh}
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct2{font-size:13px;font-weight:700;color:var(--t1)}
+.cl{font-size:12px;font-weight:600;color:var(--violet);cursor:pointer}.cl:hover{text-decoration:underline}
+.cb2{padding:16px 17px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{background:var(--bg);border-radius:var(--r);padding:9px 12px}
+.fl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.fv{font-size:13px;font-weight:500;color:var(--t1)}
+.fv.mono{font-family:var(--mono);font-size:12.5px}
+.dr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--t5)}
+.dr:last-child{border-bottom:none}
+.dl{font-size:12.5px;color:var(--t3)}.dv{font-size:12.5px;font-weight:600;color:var(--t1)}
+.dv.mono{font-family:var(--mono)}
+.member-row{display:flex;align-items:center;gap:12px;padding:9px 17px;border-bottom:1px solid var(--t5)}
+.member-row:last-child{border-bottom:none}
+.member-row:hover{background:var(--bg)}
+.m-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.m-name{font-size:13px;font-weight:500;color:var(--t1)}
+.m-role{font-size:11.5px;color:var(--t3)}
+.tab-panel{display:none}.tab-panel.active{display:grid}
+.tab-panel.active.single{display:block}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:14px 16px}
+.kpi-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em}
+.perm-grid{display:flex;flex-wrap:wrap;gap:6px;padding:14px 17px}
+.perm-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:var(--r);background:var(--vl);color:var(--violet);font-size:11.5px;font-weight:600;font-family:var(--mono)}
+.perm-tag svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>Organisation</a><span class="sep">›</span><a>Roles</a><span class="sep">›</span><span class="cur">Senior HR Business Partner</span></div>
+    <div class="tbi"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tb-vd"></div>
+    <button class="btn btn-sm"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>Edit Role</button>
+    <button class="btn btn-sm btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Employee</button>
+    <div class="tav">AW</div>
+  </div>
+  <div class="page">
+    <div class="prof-head">
+      <div class="ph-row">
+        <div class="ent-icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z"/></svg></div>
+        <div class="ph-info">
+          <div class="ph-name">Senior HR Business Partner</div>
+          <div class="ph-role">Role &middot; Staff Level &middot; Full Time</div>
+          <div class="ph-chips">
+            <span class="chip cg">Active</span>
+            <span class="chip cn" style="font-family:var(--mono);text-transform:none;letter-spacing:0">ROLE-HCM-012</span>
+            <span class="chip cv">Staff</span>
+            <span class="chip cn">Senior</span>
+            <span class="chip cn">3 Employees</span>
+          </div>
+        </div>
+        <div class="ph-acts">
+          <button class="btn btn-sm"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>Edit</button>
+        </div>
+      </div>
+      <div class="ptabs">
+        <div class="ptab on" onclick="switchTab(this,'overview')">Overview</div>
+        <div class="ptab" onclick="switchTab(this,'employees')">Employees in Role</div>
+      </div>
+    </div>
+    <div class="tab-scroll">
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview" class="tab-panel active" style="padding:22px 26px 32px;grid-template-columns:1fr 292px;gap:16px;align-items:start">
+      <div>
+        <div class="card">
+          <div class="ch"><div class="ct2">Role Details</div><span class="cl">Edit</span></div>
+          <div class="cb2">
+            <div class="fg">
+              <div class="field"><div class="fl">Role Title</div><div class="fv">Senior HR Business Partner</div></div>
+              <div class="field"><div class="fl">Code</div><div class="fv mono">ROLE-HCM-012</div></div>
+              <div class="field"><div class="fl">Level</div><div class="fv">Staff</div></div>
+              <div class="field"><div class="fl">Category</div><div class="fv">Human Resources</div></div>
+              <div class="field"><div class="fl">Employment Type</div><div class="fv">Full Time</div></div>
+              <div class="field"><div class="fl">Status</div><div class="fv"><span class="chip cg">Active</span></div></div>
+              <div class="field"><div class="fl">Created</div><div class="fv mono">Mar 01, 2023</div></div>
+              <div class="field"><div class="fl">Last Updated</div><div class="fv mono">Dec 10, 2024</div></div>
+            </div>
+            <div style="margin-top:14px;background:var(--bg);border-radius:var(--r);padding:9px 12px">
+              <div class="fl">Description</div>
+              <div class="fv" style="margin-top:4px;line-height:1.55;font-weight:400">Partners with business leaders to deliver people strategy, talent planning, and HR advisory support. Owns employee lifecycle from onboarding through offboarding for assigned business units.</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct2">System Permissions</div><span class="cl">Edit</span></div>
+          <div class="perm-grid">
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>employee:read</span>
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>employee:write</span>
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>leave:read</span>
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>leave:approve</span>
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>performance:read</span>
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>performance:write</span>
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>reports:hr</span>
+            <span class="perm-tag"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>payroll:read</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="kpi-strip" style="grid-template-columns:1fr 1fr">
+          <div class="kpi"><div class="kpi-val">3</div><div class="kpi-lbl">In Role</div></div>
+          <div class="kpi"><div class="kpi-val">0</div><div class="kpi-lbl">Open Jobs</div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct2">At a Glance</div></div>
+          <div style="padding:6px 17px 14px">
+            <div class="dr"><span class="dl">Active</span><span class="dv mono">3</span></div>
+            <div class="dr"><span class="dl">On Leave</span><span class="dv mono">0</span></div>
+            <div class="dr"><span class="dl">Avg Tenure</span><span class="dv mono">2.4 yrs</span></div>
+            <div class="dr"><span class="dl">Department</span><span class="dv">People Operations</span></div>
+            <div class="dr"><span class="dl">Grade Band</span><span class="dv">G4 &ndash; G5</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES IN ROLE -->
+    <div id="tab-employees" class="tab-panel single" style="padding:22px 26px">
+      <div class="card">
+        <div class="ch"><div class="ct2">Employees in Role (3)</div><button class="btn btn-sm btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Assign</button></div>
+        <div style="padding:6px 0">
+          <!-- employee-service: GET /api/v1/employees?role_id=ROLE-HCM-012 -->
+          <div class="member-row">
+            <div class="m-av" style="background:linear-gradient(135deg,#7C3AED,#4F46E5)">PS</div>
+            <div style="flex:1">
+              <div class="m-name">Priya Subramaniam</div>
+              <div class="m-role">People Operations &middot; Dubai, UAE</div>
+            </div>
+            <span class="chip cg">Active</span>
+            <button class="btn btn-sm">View</button>
+          </div>
+          <div class="member-row">
+            <div class="m-av" style="background:linear-gradient(135deg,var(--teal),#0EA5E9)">AN</div>
+            <div style="flex:1">
+              <div class="m-name">Ayesha Nair</div>
+              <div class="m-role">People Operations &middot; Abu Dhabi, UAE</div>
+            </div>
+            <span class="chip cg">Active</span>
+            <button class="btn btn-sm">View</button>
+          </div>
+          <div class="member-row">
+            <div class="m-av" style="background:linear-gradient(135deg,#B45309,#D97706)">KO</div>
+            <div style="flex:1">
+              <div class="m-name">Kwame Owusu</div>
+              <div class="m-role">People Operations &middot; Riyadh, KSA</div>
+            </div>
+            <span class="chip cg">Active</span>
+            <button class="btn btn-sm">View</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+  </div>
+</main>
+</div>
+<script>
+function switchTab(el,name){document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));el.classList.add('on');document.querySelectorAll('.tab-panel').forEach(p=>{p.classList.remove('active');p.style.display='none'});const tgt=document.getElementById('tab-'+name);if(tgt){tgt.style.display=name==='overview'?'grid':'block';tgt.classList.add('active')}document.querySelector('.page').scrollTop=0}
+document.querySelectorAll('.si').forEach(el=>el.addEventListener('click',function(){document.querySelectorAll('.si').forEach(x=>x.classList.remove('on'));this.classList.add('on')}));
+</script>
+</body>
+</html>

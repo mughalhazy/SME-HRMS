@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+
+/* Settings layout */
+.settings-body{flex:1;overflow:hidden;display:grid;grid-template-columns:232px 1fr}
+
+/* Settings nav */
+.settings-nav{background:var(--w);border-right:1px solid var(--bd);overflow-y:auto;padding:12px 10px}
+.sn-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:10px 8px 4px;display:block}
+.sn-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);color:var(--t3);font-size:13px;font-weight:450;cursor:pointer;transition:all .12s;margin-bottom:1px;user-select:none}
+.sn-item:hover{background:var(--bg);color:var(--t1)}.sn-item.on{background:var(--tl);color:var(--teal);font-weight:600}
+.sn-item svg{width:14px;height:14px;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sn-item:not(.on) svg{stroke:var(--t4)}.sn-item.on svg{stroke:var(--teal)}
+.sn-div{height:1px;background:var(--bd);margin:6px 8px}
+.sn-badge{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:99px;font-family:var(--mono)}
+.b-r{background:var(--rl);color:var(--red)}.b-g{background:var(--gl);color:var(--grn)}.b-a{background:var(--al);color:var(--amber)}
+
+/* Content */
+.settings-content{overflow-y:auto;padding:26px 30px}
+.sc-title{font-size:18px;font-weight:700;color:var(--t1);letter-spacing:-0.02em;margin-bottom:4px}
+.sc-sub{font-size:13px;color:var(--t3);margin-bottom:24px}
+
+/* Setting groups */
+.sg{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:18px}
+.sg-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.sg-title{font-size:13px;font-weight:700;color:var(--t1)}
+.sg-sub{font-size:11.5px;color:var(--t4);margin-top:1px}
+.sg-link{font-size:12px;font-weight:600;color:var(--teal);cursor:pointer}.sg-link:hover{text-decoration:underline}
+
+/* Setting rows */
+.sr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--t5)}
+.sr:last-child{border-bottom:none}
+.sr-info{flex:1;padding-right:24px}
+.sr-label{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.sr-desc{font-size:12px;color:var(--t3);line-height:1.5}
+/* Toggle */
+.toggle{width:38px;height:21px;background:var(--bd);border-radius:99px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--teal)}
+.toggle::after{content:'';position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle.on::after{transform:translateX(17px)}
+/* Field rows */
+.fr{padding:14px 18px;border-bottom:1px solid var(--t5)}.fr:last-child{border-bottom:none}
+.fr label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:6px}
+input[type=text],input[type=email],input[type=url],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s,box-shadow .14s;line-height:1.5
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder{color:var(--t4)}
+.fr-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fr-hint{font-size:11px;color:var(--t4);margin-top:5px}
+/* Avatar upload */
+.av-section{display:flex;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid var(--t5)}
+.av-preview{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 2px var(--w),0 0 0 4px var(--bd)}
+.av-info{flex:1}.av-name{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:2px}.av-role{font-size:12px;color:var(--t3)}
+.av-acts{display:flex;gap:7px}
+/* Danger zone */
+.danger-zone{background:var(--rl);border:1px solid #FECACA;border-radius:var(--r2);overflow:hidden;margin-bottom:18px}
+.dz-head{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid #FECACA}
+.dz-icon svg{width:15px;height:15px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dz-title{font-size:13px;font-weight:700;color:var(--red)}
+.dz-row{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #FEE2E2}.dz-row:last-child{border-bottom:none}
+.dz-lbl{font-size:13px;font-weight:600;color:var(--red2);margin-bottom:2px}
+.dz-desc{font-size:12px;color:var(--red)}
+/* Integration card */
+.int-card{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--t5)}.int-card:last-child{border-bottom:none}
+.int-logo{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--t5);border:1px solid var(--bd)}
+.int-info{flex:1}.int-name{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:1px}.int-desc{font-size:12px;color:var(--t3)}
+.int-status{display:flex;align-items:center;gap:8px}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-txt{font-size:12px;font-weight:600}
+.sd-green{background:var(--grn2)}.st-green{color:var(--grn2)}
+.sd-gray{background:var(--t4)}.st-gray{color:var(--t4)}
+/* Tab panels */
+.tab-pane{display:none}.tab-pane.active{display:block}
+/* Notification matrix */
+.notif-matrix table{width:100%}
+.notif-matrix th{padding:8px 16px;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;background:var(--t6);border-bottom:1px solid var(--bd)}
+.notif-matrix td{padding:11px 16px;border-bottom:1px solid var(--t5);font-size:13px}
+.notif-matrix tr:last-child td{border-bottom:none}
+.notif-matrix tbody tr:hover td{background:var(--bg)}
+.notif-event{font-weight:500;color:var(--t1);display:block}
+.notif-sub{font-size:11.5px;color:var(--t4)}
+.check-cell{text-align:center}
+.check-cell input[type=checkbox]{width:15px;height:15px;accent-color:var(--teal);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="tb-t">Settings</div>
+    <div class="tb-vd"></div>
+    <button class="btn btn-p">Save Changes</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <div class="settings-body">
+
+    <!-- Settings nav -->
+    <div class="settings-nav">
+      <span class="sn-sec">Account</span>
+      <div class="sn-item on" onclick="setSection(this,'profile')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </div>
+      <div class="sn-item" onclick="setSection(this,'security')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Security
+      </div>
+      <div class="sn-item" onclick="setSection(this,'notifications')">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Notifications
+        <span class="sn-badge b-r">3</span>
+      </div>
+
+      <span class="sn-sec">Organisation</span>
+      <div class="sn-item" onclick="setSection(this,'company')">
+        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z"/></svg>
+        Company Details
+      </div>
+      <div class="sn-item" onclick="setSection(this,'leave-policies')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        Leave Policies
+      </div>
+      <div class="sn-item" onclick="setSection(this,'payroll-config')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Payroll Config
+        <span class="sn-badge b-a">!</span>
+      </div>
+      <div class="sn-item" onclick="setSection(this,'roles')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Roles & Permissions
+      </div>
+
+      <div class="sn-div"></div>
+
+      <span class="sn-sec">System</span>
+      <div class="sn-item" onclick="setSection(this,'integrations')">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Integrations
+        <span class="sn-badge b-g">6</span>
+      </div>
+      <div class="sn-item" onclick="setSection(this,'ai')">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        AI & Automation
+      </div>
+      <div class="sn-item" onclick="setSection(this,'audit')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Audit Log
+      </div>
+      <div class="sn-item" onclick="setSection(this,'data')">
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Data & Retention
+      </div>
+    </div>
+
+    <!-- Content area -->
+    <div class="settings-content">
+
+      <!-- PROFILE -->
+      <div id="sec-profile" class="tab-pane active">
+        <div class="sc-title">Profile Settings</div>
+        <div class="sc-sub">Manage your account information and display preferences</div>
+
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">Your Profile</div><div class="sg-sub">Name, photo, and contact details</div></div></div>
+          <div class="av-section">
+            <div class="av-preview">AW</div>
+            <div class="av-info"><div class="av-name">Alex Wang</div><div class="av-role">HR Administrator · Acme Corp</div></div>
+            <div class="av-acts"><button class="btn btn-sm">Upload Photo</button><button class="btn btn-sm" style="color:var(--t4)">Remove</button></div>
+          </div>
+          <div class="fr">
+            <div class="fr-2col">
+              <div><label>First Name</label><input type="text" value="Alex"></div>
+              <div><label>Last Name</label><input type="text" value="Wang"></div>
+            </div>
+          </div>
+          <div class="fr"><label>Work Email</label><input type="email" value="a.wang@acme.com"><div class="fr-hint">Used for notifications and login</div></div>
+          <div class="fr"><label>Job Title</label><input type="text" value="HR Administrator"></div>
+          <div class="fr">
+            <div class="fr-2col">
+              <div><label>Phone</label><input type="text" value="+1 (415) 555-0198"></div>
+              <div><label>Location</label><input type="text" value="San Francisco, CA"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">Locale & Display</div><div class="sg-sub">Language, timezone, and formatting preferences</div></div></div>
+          <div class="fr">
+            <div class="fr-2col">
+              <div><label>Language</label><select><option>English (US)</option><option>English (UK)</option><option>French</option><option>German</option><option>Spanish</option></select></div>
+              <div><label>Timezone</label><select><option>America/Los_Angeles (PST)</option><option>America/New_York (EST)</option><option>Europe/London (GMT)</option><option>Asia/Singapore (SGT)</option></select></div>
+            </div>
+          </div>
+          <div class="fr">
+            <div class="fr-2col">
+              <div><label>Date Format</label><select><option>MMM D, YYYY (Mar 19, 2026)</option><option>DD/MM/YYYY (19/03/2026)</option><option>YYYY-MM-DD (2026-03-19)</option></select></div>
+              <div><label>Currency Display</label><select><option>USD — US Dollar ($)</option><option>GBP — British Pound (£)</option><option>EUR — Euro (€)</option></select></div>
+            </div>
+          </div>
+          <div class="sr">
+            <div class="sr-info"><div class="sr-label">Compact density</div><div class="sr-desc">Show more data per page with reduced padding on tables and lists</div></div>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="sr" style="border-bottom:none">
+            <div class="sr-info"><div class="sr-label">Dark mode</div><div class="sr-desc">Switch to a dark colour scheme — follows system preference by default</div></div>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div id="sec-notifications" class="tab-pane">
+        <div class="sc-title">Notification Preferences</div>
+        <div class="sc-sub">Choose which events trigger notifications and how you receive them</div>
+
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">Delivery Channels</div><div class="sg-sub">Where notifications are sent</div></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">In-app notifications</div><div class="sr-desc">Alerts shown in the Meridian interface</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Email digest</div><div class="sr-desc">Daily summary sent to a.wang@acme.com every Monday at 9:00 AM</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Slack notifications</div><div class="sr-desc">Send urgent alerts to your connected Slack workspace</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr" style="border-bottom:none"><div class="sr-info"><div class="sr-label">SMS alerts</div><div class="sr-desc">Critical-only alerts sent by SMS to +1 (415) 555-0198</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+
+        <div class="sg notif-matrix">
+          <div class="sg-head"><div><div class="sg-title">Notification Matrix</div><div class="sg-sub">Choose which events trigger each channel</div></div></div>
+          <table>
+            <thead><tr>
+              <th style="width:40%">Event</th>
+              <th class="check-cell">In-app</th>
+              <th class="check-cell">Email</th>
+              <th class="check-cell">Slack</th>
+              <th class="check-cell">SMS</th>
+            </tr></thead>
+            <tbody>
+              <tr><td><span class="notif-event">Leave approval requested</span><span class="notif-sub">Employee submits leave request</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox"></td><td class="check-cell"><input type="checkbox"></td></tr>
+              <tr><td><span class="notif-event">SLA breach</span><span class="notif-sub">Approval overdue beyond SLA</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td></tr>
+              <tr><td><span class="notif-event">Payroll anomaly detected</span><span class="notif-sub">AI flags unusual payroll variance</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td></tr>
+              <tr><td><span class="notif-event">Attrition risk flagged</span><span class="notif-sub">AI detects flight risk signals</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox"></td></tr>
+              <tr><td><span class="notif-event">Contract expiry approaching</span><span class="notif-sub">30-day and 7-day warnings</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox"></td><td class="check-cell"><input type="checkbox"></td></tr>
+              <tr><td><span class="notif-event">New hire added</span><span class="notif-sub">Employee record created</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox"></td><td class="check-cell"><input type="checkbox"></td><td class="check-cell"><input type="checkbox"></td></tr>
+              <tr><td><span class="notif-event">Payroll run complete</span><span class="notif-sub">Monthly processing confirmed</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox"></td><td class="check-cell"><input type="checkbox"></td></tr>
+              <tr><td><span class="notif-event">Performance review due</span><span class="notif-sub">Manager review deadline approaching</span></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox" checked></td><td class="check-cell"><input type="checkbox"></td><td class="check-cell"><input type="checkbox"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INTEGRATIONS -->
+      <div id="sec-integrations" class="tab-pane">
+        <div class="sc-title">Integrations</div>
+        <div class="sc-sub">Connect Meridian HCM to your other tools and services</div>
+
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">Connected Apps</div><div class="sg-sub">6 integrations active</div></div><button class="btn btn-sm btn-p">Browse Marketplace</button></div>
+          <div class="int-card">
+            <div class="int-logo">💬</div>
+            <div class="int-info"><div class="int-name">Slack</div><div class="int-desc">Send alerts and approvals to Slack channels</div></div>
+            <div class="int-status"><div class="status-dot sd-green"></div><div class="status-txt st-green">Connected</div><button class="btn btn-sm" style="margin-left:8px">Configure</button></div>
+          </div>
+          <div class="int-card">
+            <div class="int-logo">📧</div>
+            <div class="int-info"><div class="int-name">Google Workspace</div><div class="int-desc">Sync employee directory, calendar and email</div></div>
+            <div class="int-status"><div class="status-dot sd-green"></div><div class="status-txt st-green">Connected</div><button class="btn btn-sm" style="margin-left:8px">Configure</button></div>
+          </div>
+          <div class="int-card">
+            <div class="int-logo">🐙</div>
+            <div class="int-info"><div class="int-name">GitHub</div><div class="int-desc">Provision and deprovision Engineering team access</div></div>
+            <div class="int-status"><div class="status-dot sd-green"></div><div class="status-txt st-green">Connected</div><button class="btn btn-sm" style="margin-left:8px">Configure</button></div>
+          </div>
+          <div class="int-card">
+            <div class="int-logo">🎟️</div>
+            <div class="int-info"><div class="int-name">Jira</div><div class="int-desc">Create onboarding tasks and access tickets automatically</div></div>
+            <div class="int-status"><div class="status-dot sd-green"></div><div class="status-txt st-green">Connected</div><button class="btn btn-sm" style="margin-left:8px">Configure</button></div>
+          </div>
+          <div class="int-card">
+            <div class="int-logo">💳</div>
+            <div class="int-info"><div class="int-name">Stripe Payouts</div><div class="int-desc">Direct payroll disbursement via Stripe</div></div>
+            <div class="int-status"><div class="status-dot sd-green"></div><div class="status-txt st-green">Connected</div><button class="btn btn-sm" style="margin-left:8px">Configure</button></div>
+          </div>
+          <div class="int-card">
+            <div class="int-logo">📊</div>
+            <div class="int-info"><div class="int-name">Looker</div><div class="int-desc">Export HR analytics to your Looker dashboards</div></div>
+            <div class="int-status"><div class="status-dot sd-green"></div><div class="status-txt st-green">Connected</div><button class="btn btn-sm" style="margin-left:8px">Configure</button></div>
+          </div>
+          <div class="int-card">
+            <div class="int-logo">🔒</div>
+            <div class="int-info"><div class="int-name">Okta SSO</div><div class="int-desc">Single sign-on and user provisioning via SCIM</div></div>
+            <div class="int-status"><div class="status-dot sd-gray"></div><div class="status-txt st-gray">Not connected</div><button class="btn btn-sm" style="margin-left:8px">Connect</button></div>
+          </div>
+          <div class="int-card">
+            <div class="int-logo">☁️</div>
+            <div class="int-info"><div class="int-name">AWS IAM</div><div class="int-desc">Auto-provision AWS access on hire and offboard on exit</div></div>
+            <div class="int-status"><div class="status-dot sd-gray"></div><div class="status-txt st-gray">Not connected</div><button class="btn btn-sm" style="margin-left:8px">Connect</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI SETTINGS -->
+      <div id="sec-ai" class="tab-pane">
+        <div class="sc-title">AI & Automation</div>
+        <div class="sc-sub">Configure how Meridian's AI features operate across your organisation</div>
+
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">AI Features</div><div class="sg-sub">Enable or disable individual AI capabilities</div></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Attrition risk detection</div><div class="sr-desc">Analyse engagement signals to surface employees at risk of leaving</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Payroll anomaly detection</div><div class="sr-desc">Flag unusual variance in payroll data before each run</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Smart form suggestions</div><div class="sr-desc">Pre-fill fields based on role, department, and historical data</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Candidate AI scoring</div><div class="sr-desc">Score applicants against job descriptions using semantic matching</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Approval risk assessment</div><div class="sr-desc">Assess risk level of leave and contract requests before they reach approvers</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr" style="border-bottom:none"><div class="sr-info"><div class="sr-label">Automated scheduling suggestions</div><div class="sr-desc">Suggest interview slots and check-in times based on team calendars</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">Confidence Thresholds</div><div class="sg-sub">Minimum confidence score before AI alerts are surfaced to admins</div></div></div>
+          <div class="fr"><label>Attrition risk minimum confidence</label><select><option>70% — Show most alerts</option><option selected>80% — Balanced (recommended)</option><option>90% — High confidence only</option></select><div class="fr-hint">Currently: 83% average confidence for surfaced alerts</div></div>
+          <div class="fr"><label>Payroll anomaly sensitivity</label><select><option>5% variance — Very sensitive</option><option selected>10% variance — Standard</option><option>15% variance — Current threshold</option><option>20% variance — Low sensitivity</option></select></div>
+          <div class="fr" style="border-bottom:none"><label>Candidate score threshold</label><select><option>60%+ — Show all candidates</option><option selected>70%+ — Show good matches and above</option><option>85%+ — Strong matches only</option></select></div>
+        </div>
+      </div>
+
+      <!-- Other panels (stubs) -->
+      <div id="sec-security" class="tab-pane">
+        <div class="sc-title">Security</div>
+        <div class="sc-sub">Password, two-factor authentication, and session management</div>
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">Authentication</div></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">Two-factor authentication</div><div class="sr-desc">Require 2FA on every login for your account</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr"><div class="sr-info"><div class="sr-label">SSO via Google</div><div class="sr-desc">Sign in with your Acme Corp Google Workspace account</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sr" style="border-bottom:none"><div class="sr-info"><div class="sr-label">Session timeout</div><div class="sr-desc">Automatically log out after period of inactivity</div></div><select style="width:180px"><option>8 hours</option><option>4 hours</option><option>1 hour</option><option>30 minutes</option></select></div>
+        </div>
+        <div class="sg">
+          <div class="sg-head"><div><div class="sg-title">Change Password</div></div></div>
+          <div class="fr"><label>Current Password</label><input type="text" placeholder="••••••••••"></div>
+          <div class="fr"><label>New Password</label><input type="text" placeholder="••••••••••"></div>
+          <div class="fr" style="border-bottom:none"><label>Confirm New Password</label><input type="text" placeholder="••••••••••"></div>
+        </div>
+      </div>
+
+      <div id="sec-company" class="tab-pane"><div class="sc-title">Company Details</div><div class="sc-sub">Organisation name, branding, and legal information</div><div class="sg"><div class="sg-head"><div class="sg-title">Organisation</div></div><div class="fr"><label>Company Name</label><input type="text" value="Acme Corp"></div><div class="fr"><label>Domain</label><input type="text" value="acme.com"></div><div class="fr" style="border-bottom:none"><label>HQ Address</label><input type="text" value="100 Market Street, San Francisco, CA 94105"></div></div></div>
+      <div id="sec-leave-policies" class="tab-pane"><div class="sc-title">Leave Policies</div><div class="sc-sub">Annual entitlements, carry-over rules, and approval SLAs</div><div class="sg"><div class="sg-head"><div class="sg-title">Annual Leave</div></div><div class="fr"><label>Default Annual Entitlement (days)</label><input type="number" value="25"></div><div class="fr"><label>Max Carry-Over (days)</label><input type="number" value="5"></div><div class="fr" style="border-bottom:none"><label>Approval SLA (days)</label><input type="number" value="5"></div></div></div>
+      <div id="sec-payroll-config" class="tab-pane"><div class="sc-title">Payroll Configuration</div><div class="sc-sub">Pay cycle, cut-off dates, and anomaly thresholds</div><div class="sg"><div class="sg-head"><div class="sg-title">Pay Cycle</div></div><div class="fr"><label>Pay Frequency</label><select><option>Monthly</option><option>Semi-monthly</option><option>Bi-weekly</option></select></div><div class="fr"><label>Pay Day</label><select><option>1st of month</option><option>Last working day</option><option>15th of month</option></select></div><div class="fr" style="border-bottom:none"><label>Anomaly Threshold (%)</label><input type="number" value="15"></div></div></div>
+      <div id="sec-roles" class="tab-pane"><div class="sc-title">Roles & Permissions</div><div class="sc-sub">Manage HR admin roles and data access levels</div></div>
+      <div id="sec-audit" class="tab-pane"><div class="sc-title">Audit Log</div><div class="sc-sub">View a full history of all system actions and changes</div></div>
+      <div id="sec-data" class="tab-pane"><div class="sc-title">Data & Retention</div><div class="sc-sub">Configure data retention policies and GDPR compliance settings</div></div>
+
+      <!-- Danger zone (shared) -->
+      <div id="sec-danger">
+        <div class="danger-zone">
+          <div class="dz-head"><div class="dz-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="dz-title">Danger Zone</div></div>
+          <div class="dz-row"><div><div class="dz-lbl">Export all organisation data</div><div class="dz-desc">Download a full export of all employee records, payroll history, and audit logs</div></div><button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;flex-shrink:0">Export All Data</button></div>
+          <div class="dz-row"><div><div class="dz-lbl">Reset to default settings</div><div class="dz-desc">Restore all system settings to factory defaults — cannot be undone</div></div><button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;flex-shrink:0">Reset Settings</button></div>
+          <div class="dz-row"><div><div class="dz-lbl">Revoke your admin access</div><div class="dz-desc">Remove your own admin privileges — requires another admin to re-grant</div></div><button class="btn btn-sm" style="color:var(--red);border-color:#FECACA;flex-shrink:0">Revoke Access</button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+function setSection(el, key) {
+  document.querySelectorAll('.sn-item').forEach(i => i.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById('sec-' + key);
+  if (target) target.classList.add('active');
+  // Always show danger zone for relevant sections
+  const danger = document.getElementById('sec-danger');
+  const showDanger = ['profile','security','company','data'].includes(key);
+  danger.style.display = showDanger ? 'block' : 'none';
+}
+document.querySelectorAll('.si').forEach(el => el.addEventListener('click', function() { document.querySelectorAll('.si').forEach(x => x.classList.remove('on')); this.classList.add('on'); }));
+// Init danger zone visibility
+document.getElementById('sec-danger').style.display = 'block';
+</script>
+</body>
+</html>

@@ -1,0 +1,887 @@
+{
+  "hrms-api-contracts": {
+    "primary": "docs\\hrms-api-contracts.md",
+    "mirror": null,
+    "sha256": "025a716212699ee9e40aa838ce4b87a5114aeb32d152bfadc27e98444187128c",
+    "size": 17654,
+    "lines": 517,
+    "sealed": "2026-06-06T06:06:47Z",
+    "prev_sha256": "d6c3e257234e82125ca512d29eb06769bc11998cfea14a0e8086b76f575524c5"
+  },
+  "hrms-ui-backend-gaps": {
+    "primary": "docs\\hrms-ui-backend-gaps.md",
+    "mirror": null,
+    "sha256": "5d4fdd47f2a6e7e13425bce8c3d3d94e918b8e69ffc34751dade5f0db88e366a",
+    "size": 47323,
+    "lines": 725,
+    "sealed": "2026-03-30T07:16:05Z",
+    "prev_sha256": "bd8b186ca5ec38a85f35111684b5b8a558e5a1d6a2d2de4b01d40d561b5113e0"
+  },
+  "hrms-archetype-system-v1": {
+    "primary": "docs\\hrms-archetype-system-v1.md",
+    "mirror": null,
+    "sha256": "5bc6c6bbb853d93f9bce9c012c97b896e0a7ae5b256dae2d4f3f0bdcaeff1539",
+    "size": 24471,
+    "lines": 515,
+    "sealed": "2026-06-06T06:06:47Z",
+    "prev_sha256": "6e17099e7fb23a97cd80197c5ac237f2fec52ff2e72680d34cc2750f6cc89da8"
+  },
+  "hrms-design-register-v1": {
+    "primary": "docs\\hrms-design-register-v1.md",
+    "mirror": null,
+    "sha256": "69a40d0acd38d2955eb88718be4fe1fb8a5b11ddc96b82166b9028948bc3cd5f",
+    "size": 21285,
+    "lines": 507,
+    "sealed": "2026-03-29T13:50:53Z",
+    "prev_sha256": "dd3fc5cdbac7cd79cfa9cc3a2f0fd1c6ce72dfe4613e0e5446dbd44ac64581a0"
+  },
+  "hrms-contract-structure-v1": {
+    "primary": "docs\\hrms-contract-structure-v1.md",
+    "mirror": null,
+    "sha256": "c55d5b224fd02dffd2575c106ab2485a2101459f7fafbd519face091170c9bb5",
+    "size": 7989,
+    "lines": 285,
+    "sealed": "2026-03-22T13:41:50Z"
+  },
+  "hrms-build-protocol-sop-v1": {
+    "primary": "docs\\hrms-build-protocol-sop-v1.md",
+    "mirror": null,
+    "sha256": "c844055412bae40ad7879292863c92d7751cff347a775b28ef0d32e3c0131c3e",
+    "size": 5615,
+    "lines": 155,
+    "sealed": "2026-03-28T06:00:48Z",
+    "prev_sha256": "fd57de75c3c9867f4ee1dd6b18c33f08916eb81b141f05e6aa51bac548b848c9"
+  },
+  "hrms-stabilisation-sop-v1": {
+    "primary": "docs\\hrms-stabilisation-sop-v1.md",
+    "mirror": null,
+    "sha256": "cd89f5d6a283d7b0f119f26d9bae3ce2039bb619880c3ac543182f3fc6a810b2",
+    "size": 19116,
+    "lines": 416,
+    "sealed": "2026-03-30T13:46:40Z",
+    "prev_sha256": "8e338d3affa8eeaa80179316d3c7abc62173e09ffa15e7b397026c7d6b2270de"
+  },
+  "hrms-doc-catalogue-v1": {
+    "primary": "docs\\hrms-doc-catalogue-v1.md",
+    "mirror": null,
+    "sha256": "93a0052091679f4b6749fe5c712c1516f59f86ac67b5f3f8f8d681f163d7cb72",
+    "size": 185025,
+    "lines": 1937,
+    "sealed": "2026-06-06T06:06:47Z",
+    "prev_sha256": "94f1b15f83cc138589f19552f04739fd8f687bf3a3aa07f194c2af05fff0b85e"
+  },
+  "hrms-claude-code-prompt-v1": {
+    "primary": "docs\\hrms-claude-code-prompt-v1.md",
+    "mirror": null,
+    "sha256": "4bfe3e5f598e93ec299e678a4073e3d06dd42223725cc2f887697424f63778d2",
+    "size": 8509,
+    "lines": 230,
+    "sealed": "2026-03-30T13:46:40Z",
+    "prev_sha256": "1ae623aee19dbbd59dbde047ad476bebb45ea42f88db6689985c816866f59be2"
+  },
+  "h01-hr-manager-dashboard": {
+    "primary": "pages\\h01-hr-manager-dashboard.html",
+    "mirror": null,
+    "sha256": "74578fb9c0810e56ede2746ff942417a7fd28a9a73b524c5224e8588e7e1d2ea",
+    "size": 30245,
+    "lines": 440,
+    "sealed": "2026-03-23T12:21:04Z",
+    "prev_sha256": "27caa21e8bce697861ac5f42e9680bed20c9dd42d85dc5847f84fb1594500d88"
+  },
+  "hrms-h01-hr-manager-dashboard-contract": {
+    "primary": "contracts\\hrms-h01-hr-manager-dashboard-contract.json",
+    "mirror": null,
+    "sha256": "667dfdc41f12eb257d08bf3fc31c14160efd4bca701eb2ac7595372acc666e39",
+    "size": 7531,
+    "lines": 181,
+    "sealed": "2026-03-22T15:03:13Z"
+  },
+  "hrms-progress": {
+    "primary": "hrms-progress.md",
+    "mirror": null,
+    "sha256": "a32ea1ce7bcbfbc5746f722764615f41a984d39210898ad7bc78f44136e276c5",
+    "size": 68346,
+    "lines": 1116,
+    "sealed": "2026-06-06T06:06:47Z",
+    "prev_sha256": "5e25a510c87bdae8ef55dcba6a02038bd3eb4c3ab393c85bdcfc82eb10f2a9dd"
+  },
+  "h01-employee-self-service": {
+    "primary": "pages\\h01-employee-self-service.html",
+    "mirror": null,
+    "sha256": "ed6368a820ae58549f426be92603d2619795b14c07890dad1d781fc03a368fe1",
+    "size": 29111,
+    "lines": 451,
+    "sealed": "2026-03-23T12:21:04Z",
+    "prev_sha256": "04105e124e74d6c248c6b7853390fdd93c700785da0ca7409456ebff4b190ee4"
+  },
+  "hrms-h01-employee-self-service-contract": {
+    "primary": "contracts\\hrms-h01-employee-self-service-contract.json",
+    "mirror": null,
+    "sha256": "44abee63b390603e13ead1abd38b30e20f9ccfd5d8d86f4bff85067b9004ac07",
+    "size": 4984,
+    "lines": 141,
+    "sealed": "2026-03-22T15:12:44Z"
+  },
+  "h01-payroll-admin-dashboard": {
+    "primary": "pages\\h01-payroll-admin-dashboard.html",
+    "mirror": null,
+    "sha256": "2495e75e4e37b27e95e1925aa3300f81093386a62404c1a41102c780f0723c71",
+    "size": 25918,
+    "lines": 392,
+    "sealed": "2026-03-23T12:21:04Z",
+    "prev_sha256": "859c4b156128ee92e81230964686ea318bf809c9b986cc11be4ecfe027330f3f"
+  },
+  "hrms-h01-payroll-admin-dashboard-contract": {
+    "primary": "contracts\\hrms-h01-payroll-admin-dashboard-contract.json",
+    "mirror": null,
+    "sha256": "4a4cd69d24392e4f6cee4a7d735f5e67bf62c706d2d98f7ba43ad122eac0b9f5",
+    "size": 5254,
+    "lines": 145,
+    "sealed": "2026-03-22T15:16:07Z"
+  },
+  "h01-recruitment-dashboard": {
+    "primary": "pages\\h01-recruitment-dashboard.html",
+    "mirror": null,
+    "sha256": "6a1ae3c83afac408d61de96575809b53c13dbfaac2afcb9bc070d817da03d601",
+    "size": 23501,
+    "lines": 348,
+    "sealed": "2026-03-23T12:21:04Z",
+    "prev_sha256": "b7c86e73f9dc86cacc930643af0075bf16f5b344498f173c3584a7959ebc10b6"
+  },
+  "hrms-h01-recruitment-dashboard-contract": {
+    "primary": "contracts\\hrms-h01-recruitment-dashboard-contract.json",
+    "mirror": null,
+    "sha256": "09237434fc46e0d78664eb643f11235a0d6b46b67462fd7542080e0b83498acc",
+    "size": 4682,
+    "lines": 131,
+    "sealed": "2026-03-22T15:21:23Z"
+  },
+  "h02-employees": {
+    "primary": "pages\\h02-employees.html",
+    "mirror": null,
+    "sha256": "05d3e41cd7812c1c86b07b95933cb4da1e9c37b40f187ada5a592596d27d9cb8",
+    "size": 20439,
+    "lines": 287,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "a369032781a0bbc7de31e3776e4c0ada4ed69b93aad0158425d44aa7663ffc96"
+  },
+  "hrms-h02-employees-contract": {
+    "primary": "contracts\\hrms-h02-employees-contract.json",
+    "mirror": null,
+    "sha256": "07ea6e220806a3a26fbedbb5319ed68a2116a539f4a6c489243f57203c492716",
+    "size": 4313,
+    "lines": 108,
+    "sealed": "2026-03-22T15:40:55Z"
+  },
+  "h02-departments": {
+    "primary": "pages\\h02-departments.html",
+    "mirror": null,
+    "sha256": "8089c37dd596dc1196c84650cc730281d450dd6d26b3f804bb4ea7eb14ff47c2",
+    "size": 14434,
+    "lines": 174,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "3a58987e9ff0a4abd75d0209221c48f194729e5de011a411492d6f2201f81c6b"
+  },
+  "hrms-h02-departments-contract": {
+    "primary": "contracts\\hrms-h02-departments-contract.json",
+    "mirror": null,
+    "sha256": "d1c5704550234f5e44aded8cfa0d1bfa04f99a56f82098582c20bc720e5b1a14",
+    "size": 3261,
+    "lines": 80,
+    "sealed": "2026-03-22T15:43:02Z"
+  },
+  "h02-roles": {
+    "primary": "pages\\h02-roles.html",
+    "mirror": null,
+    "sha256": "3eaba5f43841a0a72bb8f6f0ba429ad532708fe022d8b82f9ce32fe3c1f00fdd",
+    "size": 14453,
+    "lines": 177,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "a2ae6c865524d6ce3334a5166786a7ff1b8f5fc2b9712005a94f7a2d330fe904"
+  },
+  "hrms-h02-roles-contract": {
+    "primary": "contracts\\hrms-h02-roles-contract.json",
+    "mirror": null,
+    "sha256": "9a29cf22b5fdbd6ca8938b95ca3efd4f6fb2e52432c1c0c37e07e3c6e42ab0c7",
+    "size": 3082,
+    "lines": 72,
+    "sealed": "2026-03-22T15:45:14Z"
+  },
+  "h02-job-postings": {
+    "primary": "pages\\h02-job-postings.html",
+    "mirror": null,
+    "sha256": "b36a49b3a1030eed935b9242b15d6a4f53a0a8e65785546eb643cf224f1a1ef8",
+    "size": 16139,
+    "lines": 187,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "f3dc72850456202eeedf559e3236fb5e669b76b102f7d9e5870472828b510a8f"
+  },
+  "hrms-h02-job-postings-contract": {
+    "primary": "contracts\\hrms-h02-job-postings-contract.json",
+    "mirror": null,
+    "sha256": "6bb95e3e9a8db7f9c4a204f0c663b409750256976cbc61ef2409748e3bbe14b4",
+    "size": 3593,
+    "lines": 76,
+    "sealed": "2026-03-22T15:47:26Z"
+  },
+  "h02-leave-requests": {
+    "primary": "pages\\h02-leave-requests.html",
+    "mirror": null,
+    "sha256": "49c88e3de3131d510a7f0d0a33c49dd7994c493e905706382600ad2df7568ea4",
+    "size": 16994,
+    "lines": 234,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "87716df5d3a3da5722138be9f0eb7d2bcd01589ed5ac83674289b73832422ad9"
+  },
+  "hrms-h02-leave-requests-contract": {
+    "primary": "contracts\\hrms-h02-leave-requests-contract.json",
+    "mirror": null,
+    "sha256": "4f5767ae3f2514f25ab7f6833bb50ff1c69be5dc6ba8f510d2766956096f014e",
+    "size": 3711,
+    "lines": 73,
+    "sealed": "2026-03-22T16:01:31Z"
+  },
+  "h02-payroll-records": {
+    "primary": "pages\\h02-payroll-records.html",
+    "mirror": null,
+    "sha256": "31d07fa829be4440d79393b312b0d9daeb403c2e24e85cb9af62ba7a980ab6a5",
+    "size": 16810,
+    "lines": 232,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "5bb9260de0147bd863e3ea2e20e9a93909285e377635b39cdf186ca54eb81f91"
+  },
+  "hrms-h02-payroll-records-contract": {
+    "primary": "contracts\\hrms-h02-payroll-records-contract.json",
+    "mirror": null,
+    "sha256": "5b7f55bdb2988bd5f57e5b1210ecb392496fe23abca8bd9ff8a63b463ea89ab6",
+    "size": 3899,
+    "lines": 76,
+    "sealed": "2026-03-22T16:01:32Z"
+  },
+  "h02-expense-claims": {
+    "primary": "pages\\h02-expense-claims.html",
+    "mirror": null,
+    "sha256": "577818ceb9f7a7e1723a01c40b69fc994fe0fb5be8525efd18b98875d1d88a03",
+    "size": 17348,
+    "lines": 234,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "37fd14fd1954285b8c9133f3dfa145fe5a6b13b703cf1bdb720f280b92fb8cfb"
+  },
+  "hrms-h02-expense-claims-contract": {
+    "primary": "contracts\\hrms-h02-expense-claims-contract.json",
+    "mirror": null,
+    "sha256": "1bed4b014e298abe37ec7cb354d1b090bf4289dfa9fd680699e6df08a945a580",
+    "size": 3610,
+    "lines": 72,
+    "sealed": "2026-03-22T16:01:33Z"
+  },
+  "h02-travel-requests": {
+    "primary": "pages\\h02-travel-requests.html",
+    "mirror": null,
+    "sha256": "e61a28a4a33de06899416bc8df9206aef7ca9c1dca6aba183e31e4bff44334a4",
+    "size": 17022,
+    "lines": 230,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "d5b191e77861cd43d1153bacdf2afb5112abcdf93d4e6308fa19c630cd118d09"
+  },
+  "hrms-h02-travel-requests-contract": {
+    "primary": "contracts\\hrms-h02-travel-requests-contract.json",
+    "mirror": null,
+    "sha256": "ad4d396197e15dfe851a432854266ac7e24c096386efeb062944855412b0bd66",
+    "size": 3430,
+    "lines": 69,
+    "sealed": "2026-03-22T16:01:34Z"
+  },
+  "h02-attendance-records": {
+    "primary": "pages\\h02-attendance-records.html",
+    "mirror": null,
+    "sha256": "618d955f2aa83d9b8db8d1ee19d6cf4f84be24eb7d6e58ed9bcd0c554de05de4",
+    "size": 17917,
+    "lines": 244,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "bdcb87167583d91c714f90befabdc0828cdd2463a70cadbef68249ab37cd0e30"
+  },
+  "hrms-h02-attendance-records-contract": {
+    "primary": "contracts\\hrms-h02-attendance-records-contract.json",
+    "mirror": null,
+    "sha256": "42a0e2bd715ee262dc03e9c3f7db45e052dce7a311413233295db466e5eebe73",
+    "size": 4039,
+    "lines": 75,
+    "sealed": "2026-03-22T16:01:34Z"
+  },
+  "h02-performance-reviews": {
+    "primary": "pages\\h02-performance-reviews.html",
+    "mirror": null,
+    "sha256": "232f7d5d41706d69bd301eb97d100cab17fbe4ba048ec95c6185f08170611691",
+    "size": 16786,
+    "lines": 233,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "10c5db9aa511ec6d4f35a612c2a16f4efc3d31a432ae328e66c2830079371da0"
+  },
+  "hrms-h02-performance-reviews-contract": {
+    "primary": "contracts\\hrms-h02-performance-reviews-contract.json",
+    "mirror": null,
+    "sha256": "17486de22b0a77fba89771f24881d9d8377b872e24ba2753a518aab0638ef99b",
+    "size": 3547,
+    "lines": 72,
+    "sealed": "2026-03-22T16:01:35Z"
+  },
+  "h02-documents": {
+    "primary": "pages\\h02-documents.html",
+    "mirror": null,
+    "sha256": "4dbfbdfdaf13a404a4ca81577800eb000662ef210335b50f1a6739a428e031df",
+    "size": 18401,
+    "lines": 237,
+    "sealed": "2026-03-23T12:31:08Z",
+    "prev_sha256": "1491424abae6ddcc189da5c4c4637b46b6923e205b5016a348e0592d12fedc91"
+  },
+  "hrms-h02-documents-contract": {
+    "primary": "contracts\\hrms-h02-documents-contract.json",
+    "mirror": null,
+    "sha256": "a2770f1666d0a244d2204a34822265be1d93a0228d890ca0861b00cc03f39c98",
+    "size": 3681,
+    "lines": 74,
+    "sealed": "2026-03-22T16:01:35Z"
+  },
+  "h03-employee-profile": {
+    "primary": "pages\\h03-employee-profile.html",
+    "mirror": null,
+    "sha256": "2f2acb4ba2dc2e6bf0e5df87a02e6e2e409e9bc35b7c17331226abb4f5cb8422",
+    "size": 44407,
+    "lines": 585,
+    "sealed": "2026-03-23T11:14:21Z",
+    "prev_sha256": "f5c418fdef740f7aef5db68625bd9e4fa356c242e2a9fe2e6dfefe3d28835133"
+  },
+  "hrms-h03-employee-profile-contract": {
+    "primary": "contracts\\hrms-h03-employee-profile-contract.json",
+    "mirror": null,
+    "sha256": "c1ea8bf8315a7f6c8e091fe13737ddfd14d9e2ec7390d7eec0a0a417b77f740a",
+    "size": 9080,
+    "lines": 222,
+    "sealed": "2026-03-23T01:59:04Z"
+  },
+  "h03-department-detail": {
+    "primary": "pages\\h03-department-detail.html",
+    "mirror": null,
+    "sha256": "09469e7599ae096b29ae36cb3af470ecc61f1203c973abaa3e52c2e7a3a83af0",
+    "size": 32506,
+    "lines": 368,
+    "sealed": "2026-03-23T11:02:04Z",
+    "prev_sha256": "79762be54218c4487185a30b61b1268eae071b4d828cc9a6542205e7e3f89ca0"
+  },
+  "h03-role-detail": {
+    "primary": "pages\\h03-role-detail.html",
+    "mirror": null,
+    "sha256": "91438b1139589db90445f72d76073986bb9d77a7a5595b8ea9118e953a076de8",
+    "size": 18296,
+    "lines": 242,
+    "sealed": "2026-03-23T12:04:51Z",
+    "prev_sha256": "2897e98e49570a4c5f242e11854a0b3db2584499928ab166afc1cc00967d0ffb"
+  },
+  "h03-job-posting-detail": {
+    "primary": "pages\\h03-job-posting-detail.html",
+    "mirror": null,
+    "sha256": "f9be016cc2d9d976e143b1cc02b1d23e62fd072dc063d07e1653d324d4349a6b",
+    "size": 26187,
+    "lines": 328,
+    "sealed": "2026-03-23T11:35:55Z",
+    "prev_sha256": "4c26c04c0ecbcf1baa6d2f9dbf47e49a81e6c815c1c7216a5289d8e509a3c2f6"
+  },
+  "h03-leave-request-detail": {
+    "primary": "pages\\h03-leave-request-detail.html",
+    "mirror": null,
+    "sha256": "fd5895e87bbca0dbf7938aca5571a2bb2a7bca8532c1170882821ceaec80c7d3",
+    "size": 15957,
+    "lines": 200,
+    "sealed": "2026-03-23T11:40:29Z",
+    "prev_sha256": "274a486b3bf31705e2a8baffdb8048d0bb23d9176fb29ea954d4a6a06f49bc89"
+  },
+  "h03-payroll-record-detail": {
+    "primary": "pages\\h03-payroll-record-detail.html",
+    "mirror": null,
+    "sha256": "22ccf57262a1cc71621c4788ae08546cadd8d13fbe0972b54d44b12ae5cfd7ee",
+    "size": 13624,
+    "lines": 166,
+    "sealed": "2026-03-23T12:04:51Z",
+    "prev_sha256": "de983dffd51cdef8fd9fa8b65732ebce6abe6691aff96499725ac99faf00cca2"
+  },
+  "h03-expense-claim-detail": {
+    "primary": "pages\\h03-expense-claim-detail.html",
+    "mirror": null,
+    "sha256": "ab983f8a4ffc061798670277659a104c21aae264df8e36f224fd660eb2816eec",
+    "size": 25694,
+    "lines": 417,
+    "sealed": "2026-03-23T11:28:03Z",
+    "prev_sha256": "8223d355194190ebdef01cf1bc37c60c4e1f8fbfeea8d3caccfc1ef379c2b4d1"
+  },
+  "h03-performance-review-detail": {
+    "primary": "pages\\h03-performance-review-detail.html",
+    "mirror": null,
+    "sha256": "632d5ecacfaa05d1717a1d1a247b867518c7df3ff0368629451bcb701c841ddc",
+    "size": 40175,
+    "lines": 594,
+    "sealed": "2026-03-23T12:04:51Z",
+    "prev_sha256": "4b4fbe3cf90ba9283af2c4a28645d95a4187d1c52873ab480f92422fce7e9dae"
+  },
+  "hrms-h03-department-detail-contract": {
+    "primary": "contracts\\hrms-h03-department-detail-contract.json",
+    "mirror": null,
+    "sha256": "d97bd2520d9939be30579dc8fd3fd40e18404a012fb66980279fa3f9d429cce6",
+    "size": 3829,
+    "lines": 112,
+    "sealed": "2026-03-23T02:23:01Z"
+  },
+  "hrms-h03-role-detail-contract": {
+    "primary": "contracts\\hrms-h03-role-detail-contract.json",
+    "mirror": null,
+    "sha256": "8067486d8d9ddbd74487f5af595e33c08b1017177c96aaebbc3a00685aed97cc",
+    "size": 3272,
+    "lines": 108,
+    "sealed": "2026-03-23T02:23:01Z"
+  },
+  "hrms-h03-job-posting-detail-contract": {
+    "primary": "contracts\\hrms-h03-job-posting-detail-contract.json",
+    "mirror": null,
+    "sha256": "a0a3dac7eceb8c5e019a08d43f5fedb7f1829ead0961fac7aa01e93641508317",
+    "size": 4482,
+    "lines": 132,
+    "sealed": "2026-03-23T02:23:01Z"
+  },
+  "hrms-h03-leave-request-detail-contract": {
+    "primary": "contracts\\hrms-h03-leave-request-detail-contract.json",
+    "mirror": null,
+    "sha256": "94ff30fb72287b7662fc64006eafa15748062f6c7d9889d765241b42d5b5da8e",
+    "size": 4064,
+    "lines": 123,
+    "sealed": "2026-03-23T02:23:06Z"
+  },
+  "hrms-h03-payroll-record-detail-contract": {
+    "primary": "contracts\\hrms-h03-payroll-record-detail-contract.json",
+    "mirror": null,
+    "sha256": "27e3b17a793f22dc7e9403e789e56b2d0ef391d763d1f9babbceac87443f8c8f",
+    "size": 3327,
+    "lines": 113,
+    "sealed": "2026-03-23T02:23:06Z"
+  },
+  "hrms-h03-expense-claim-detail-contract": {
+    "primary": "contracts\\hrms-h03-expense-claim-detail-contract.json",
+    "mirror": null,
+    "sha256": "567a7e292aee1f07b4fc2d86b18eeb9ba6476189b8a6acc9e0da12bf6c88646e",
+    "size": 4696,
+    "lines": 134,
+    "sealed": "2026-03-23T02:23:06Z"
+  },
+  "hrms-h03-performance-review-detail-contract": {
+    "primary": "contracts\\hrms-h03-performance-review-detail-contract.json",
+    "mirror": null,
+    "sha256": "964d8c4491f6d82be26f3e75e4fb6743305a6d70d89f34614c9121e6b9765cf3",
+    "size": 7170,
+    "lines": 165,
+    "sealed": "2026-03-23T02:23:06Z"
+  },
+  "h04-add-employee": {
+    "primary": "pages\\h04-add-employee.html",
+    "mirror": null,
+    "sha256": "3c39e94b38d61176d13cea300364b9c409339748bcb94893a36423e7582c1501",
+    "size": 38844,
+    "lines": 508,
+    "sealed": "2026-03-23T06:23:18Z",
+    "prev_sha256": "cd4b0dbd752fde9900651e7679f3f491c2a4312e560d227c69a9a2501fb04787"
+  },
+  "hrms-h04-add-employee-contract": {
+    "primary": "contracts\\hrms-h04-add-employee-contract.json",
+    "mirror": null,
+    "sha256": "738405f947584d1abfa9b48e0624ef5aa2a9956f59d9cf397d3523839cfbb8f7",
+    "size": 9226,
+    "lines": 166,
+    "sealed": "2026-03-23T05:30:05Z"
+  },
+  "h04-edit-employee": {
+    "primary": "pages\\h04-edit-employee.html",
+    "mirror": null,
+    "sha256": "e06a2fdd1c6e9f443ad15ad3e0033c8abf5a57a2520697c28c82765ffd9a1637",
+    "size": 34393,
+    "lines": 663,
+    "sealed": "2026-03-23T05:35:53Z"
+  },
+  "hrms-h04-edit-employee-contract": {
+    "primary": "contracts\\hrms-h04-edit-employee-contract.json",
+    "mirror": null,
+    "sha256": "010b8387eb14cdf8d339374993b279fadb40d33e77953bbf728a04d901c3a52d",
+    "size": 9190,
+    "lines": 183,
+    "sealed": "2026-03-23T05:36:37Z"
+  },
+  "h04-create-department": {
+    "primary": "pages\\h04-create-department.html",
+    "mirror": null,
+    "sha256": "3c4b99c851a8faa589e2f3b155315c1d3374a2a6c79e2e12b3c7f340d9402e7d",
+    "size": 22094,
+    "lines": 401,
+    "sealed": "2026-03-23T05:39:09Z"
+  },
+  "hrms-h04-create-department-contract": {
+    "primary": "contracts\\hrms-h04-create-department-contract.json",
+    "mirror": null,
+    "sha256": "1f524442eac7140ca41e20b900b50a483bb077fc00bae0cab4cde2187370c28c",
+    "size": 4037,
+    "lines": 108,
+    "sealed": "2026-03-23T05:39:34Z"
+  },
+  "h04-create-role": {
+    "primary": "pages\\h04-create-role.html",
+    "mirror": null,
+    "sha256": "7985fb94d59942a7a1a38d6824f72d9dfa1a4dbd0fdb1f09cadfb8c8cf21f7cd",
+    "size": 20029,
+    "lines": 370,
+    "sealed": "2026-03-23T05:41:30Z"
+  },
+  "hrms-h04-create-role-contract": {
+    "primary": "contracts\\hrms-h04-create-role-contract.json",
+    "mirror": null,
+    "sha256": "c4167a8bf7a4f9c18191d4cac4ff3b796dec1ea52f76849e9f5c39f4837db416",
+    "size": 3488,
+    "lines": 92,
+    "sealed": "2026-03-23T05:41:56Z"
+  },
+  "h04-create-job-posting": {
+    "primary": "pages\\h04-create-job-posting.html",
+    "mirror": null,
+    "sha256": "da8f5df466c55754ef3b47bfd390641bd070614c751097d121b8b616a109539f",
+    "size": 39786,
+    "lines": 753,
+    "sealed": "2026-03-23T05:47:23Z"
+  },
+  "hrms-h04-create-job-posting-contract": {
+    "primary": "contracts\\hrms-h04-create-job-posting-contract.json",
+    "mirror": null,
+    "sha256": "ba664e348ee78a7189820309dae519d1fa9386c71ab8d351146382701f878f8c",
+    "size": 7513,
+    "lines": 134,
+    "sealed": "2026-03-23T05:48:03Z"
+  },
+  "h04-raise-leave-request": {
+    "primary": "pages\\h04-raise-leave-request.html",
+    "mirror": null,
+    "sha256": "3dd2baa79a3a4fd7695812a59ba2cebcc1f31a23db55bb1bff2bf389a10324a7",
+    "size": 15451,
+    "lines": 268,
+    "sealed": "2026-03-23T05:50:31Z"
+  },
+  "h04-raise-expense-claim": {
+    "primary": "pages\\h04-raise-expense-claim.html",
+    "mirror": null,
+    "sha256": "4005558e239280b420f58bc4ae1e19c505f78c1db59ad59d87b2b365354f1ace",
+    "size": 26636,
+    "lines": 413,
+    "sealed": "2026-03-23T05:53:01Z"
+  },
+  "h04-raise-travel-request": {
+    "primary": "pages\\h04-raise-travel-request.html",
+    "mirror": null,
+    "sha256": "69e70976f43159f36f97f8f1ec2f83bfb2f9d6687ffb112f9291bb5fd079d4e6",
+    "size": 15853,
+    "lines": 276,
+    "sealed": "2026-03-23T05:54:35Z"
+  },
+  "h04-salary-revision": {
+    "primary": "pages\\h04-salary-revision.html",
+    "mirror": null,
+    "sha256": "57beadad013952f843623b613450e4dd1343ac0c345363885cbc2130d943fa1f",
+    "size": 19593,
+    "lines": 350,
+    "sealed": "2026-03-23T06:23:34Z",
+    "prev_sha256": "e71e7cc6bc260dd45acd18003ec5bae11d1c57d7fffa1f662863d4da0608e97b"
+  },
+  "hrms-h04-raise-leave-request-contract": {
+    "primary": "contracts\\hrms-h04-raise-leave-request-contract.json",
+    "mirror": null,
+    "sha256": "61da785dfc0deb92e8c4cf6ce1f20fa814eb0766c0f495650d8526b82e3a0611",
+    "size": 3060,
+    "lines": 73,
+    "sealed": "2026-03-23T05:57:49Z"
+  },
+  "hrms-h04-raise-expense-claim-contract": {
+    "primary": "contracts\\hrms-h04-raise-expense-claim-contract.json",
+    "mirror": null,
+    "sha256": "ff2d8835f9ce4360f2f1f442b93740e750afb8c1a5a4443d87ea324ffbf9499a",
+    "size": 2978,
+    "lines": 69,
+    "sealed": "2026-03-23T05:57:49Z"
+  },
+  "hrms-h04-raise-travel-request-contract": {
+    "primary": "contracts\\hrms-h04-raise-travel-request-contract.json",
+    "mirror": null,
+    "sha256": "3411a39e61f8f900a9b7f779eb4e28a5b4398c2b779b46946dd1091d369c5b66",
+    "size": 3373,
+    "lines": 82,
+    "sealed": "2026-03-23T05:57:50Z"
+  },
+  "hrms-h04-salary-revision-contract": {
+    "primary": "contracts\\hrms-h04-salary-revision-contract.json",
+    "mirror": null,
+    "sha256": "31afbaddbb2424372f9f5e5515da8ec4240ebbfbc09360bad437e08396a6788d",
+    "size": 3993,
+    "lines": 92,
+    "sealed": "2026-03-23T05:57:50Z"
+  },
+  "h05-approval-inbox": {
+    "primary": "pages\\h05-approval-inbox.html",
+    "mirror": null,
+    "sha256": "e39a76e469a82f0af5865c1cc33f7098771c6eefafe8df92481447684ab7da5b",
+    "size": 25793,
+    "lines": 361,
+    "sealed": "2026-03-23T20:05:23Z",
+    "prev_sha256": "d825e9a56a3ee4542930e5ed1b11dfa2ec7669650ecf2712be9d9391467deed0"
+  },
+  "hrms-h05-approval-inbox-contract": {
+    "primary": "contracts\\hrms-h05-approval-inbox-contract.json",
+    "mirror": null,
+    "sha256": "29731073ba46adb466a03021a21bdb9a7ad468fd5618f51cc1333bf5168103ff",
+    "size": 12847,
+    "lines": 271,
+    "sealed": "2026-03-23T20:01:27Z"
+  },
+  "h06-leave-calendar": {
+    "primary": "pages\\h06-leave-calendar.html",
+    "mirror": null,
+    "sha256": "da6379ffbff6e78a6983e6a2bae816099f9f2c4df6d07cb7277fe89baed0d458",
+    "size": 26378,
+    "lines": 399,
+    "sealed": "2026-03-23T20:13:57Z"
+  },
+  "h06-attendance-timeline": {
+    "primary": "pages\\h06-attendance-timeline.html",
+    "mirror": null,
+    "sha256": "676b31bdd64288007311ccfbc6ff0e83d440df60f21e4aabd3d8467f2d95530b",
+    "size": 23971,
+    "lines": 376,
+    "sealed": "2026-03-23T20:41:32Z",
+    "prev_sha256": "02a8caf0a700bc22a1ca2a6820b6d9f9ce9e79379cb223a35041541802d6ac2d"
+  },
+  "h06-shift-roster": {
+    "primary": "pages\\h06-shift-roster.html",
+    "mirror": null,
+    "sha256": "1dcd917b178e3cc48270eaee3470eb9d04802394807dc76fce605fc4cf5f4b19",
+    "size": 23482,
+    "lines": 376,
+    "sealed": "2026-03-23T20:41:32Z",
+    "prev_sha256": "bd30d733869f2a6d0c756c5ba42a09de46c406075ae6d70aca6a5a3d0c208cb5"
+  },
+  "h07-hr-analytics": {
+    "primary": "pages\\h07-hr-analytics.html",
+    "mirror": null,
+    "sha256": "9f71a673254d9d351712d8940e409a40e6173e1e5559a406d19a790e2956255c",
+    "size": 55795,
+    "lines": 663,
+    "sealed": "2026-03-28T13:10:53Z",
+    "prev_sha256": "45b8dca710e795f090dd311e2cc39ee416e572bf4a25d67bde7bd7b2a925ea3e"
+  },
+  "hrms-h07-hr-analytics-contract": {
+    "primary": "contracts\\hrms-h07-hr-analytics-contract.json",
+    "mirror": null,
+    "sha256": "3ea0ac92d02c8ea42388afa35d2fe622e2959d6516d624264fb1d6b627edb9fc",
+    "size": 9583,
+    "lines": 254,
+    "sealed": "2026-03-28T06:29:19Z"
+  },
+  "h07-payroll-reports": {
+    "primary": "pages\\h07-payroll-reports.html",
+    "mirror": null,
+    "sha256": "2dac157190495abb3a857b3971c5a8544c64317f4ff168b269bcc7d916c1da86",
+    "size": 41325,
+    "lines": 537,
+    "sealed": "2026-03-28T13:22:56Z"
+  },
+  "h07-attendance-summary": {
+    "primary": "pages\\h07-attendance-summary.html",
+    "mirror": null,
+    "sha256": "16828860425209292b65dc678fa492e756df531566d22fface26740f201da308",
+    "size": 49978,
+    "lines": 513,
+    "sealed": "2026-03-28T13:54:32Z",
+    "prev_sha256": "3312866240d048b419632ae1406259e6f8cab31272413db412bd94a5e739d73d"
+  },
+  "hrms-h07-attendance-summary-contract": {
+    "primary": "contracts\\hrms-h07-attendance-summary-contract.json",
+    "mirror": null,
+    "sha256": "9e1950af98f5d74418297aa36ce3202d72beca049046b1aadf9236169b4721ab",
+    "size": 8357,
+    "lines": 198,
+    "sealed": "2026-03-28T13:34:25Z"
+  },
+  "h07-engagement-results": {
+    "primary": "pages\\h07-engagement-results.html",
+    "mirror": null,
+    "sha256": "132ac0ae52d017a681986ceda776b3b1aaacbfd52b8bc3e12141ff8b7778c43e",
+    "size": 43645,
+    "lines": 507,
+    "sealed": "2026-03-28T13:44:21Z"
+  },
+  "hrms-h07-engagement-results-contract": {
+    "primary": "contracts\\hrms-h07-engagement-results-contract.json",
+    "mirror": null,
+    "sha256": "600a86ecd2b030a6aec739389ca123f89f0ddf0cfabcc973850ea8511bb0290c",
+    "size": 7398,
+    "lines": 192,
+    "sealed": "2026-03-28T13:45:09Z"
+  },
+  "h07-compliance-reports": {
+    "primary": "pages\\h07-compliance-reports.html",
+    "mirror": null,
+    "sha256": "8829b518307bd5b8623313cf9aaabce195b679062b3c65320f857c88936c4b07",
+    "size": 57183,
+    "lines": 945,
+    "sealed": "2026-03-29T04:29:42Z",
+    "prev_sha256": "99168852c65b079a8ab0fc7d66996af60533eeb4223a92e9cd8a3f1d4fddddd9"
+  },
+  "hrms-h07-compliance-reports-contract": {
+    "primary": "contracts\\hrms-h07-compliance-reports-contract.json",
+    "mirror": null,
+    "sha256": "7ccc06f0a02eb5e730ed0fb38b43c3603c44b143b9cae22dfc5a03ae5d8f390f",
+    "size": 7363,
+    "lines": 155,
+    "sealed": "2026-03-29T04:18:38Z"
+  },
+  "h08-global-search": {
+    "primary": "pages\\h08-global-search.html",
+    "mirror": null,
+    "sha256": "c0eb5b35d76c9dfe920ffefbe9098f9a0be3e067f1e8bf1f458cc6a4baf54dd4",
+    "size": 33151,
+    "lines": 588,
+    "sealed": "2026-03-29T05:22:59Z",
+    "prev_sha256": "db7cb00d2d2ae25c622091381b6b4e18ffda78600b21d142c29fb013210fa598"
+  },
+  "hrms-h08-global-search-contract": {
+    "primary": "contracts\\hrms-h08-global-search-contract.json",
+    "mirror": null,
+    "sha256": "8c5a8babc2f85dbb0629719126c6e8489dc277fd1a654458fe5229d166bfb94b",
+    "size": 5420,
+    "lines": 120,
+    "sealed": "2026-03-29T05:02:34Z",
+    "prev_sha256": "93c54f9d40d6aad0cd8143ea81ac40cd12f9ca225e0c79a6f65f13d42bab2da3"
+  },
+  "h09-notifications-inbox": {
+    "primary": "pages\\h09-notifications-inbox.html",
+    "mirror": null,
+    "sha256": "be0c0255b1e14d196831522d9d7188846881fab012b8157866c702f0a4bac663",
+    "size": 38685,
+    "lines": 616,
+    "sealed": "2026-03-29T05:47:15Z",
+    "prev_sha256": "9026412c6728b96a376e83cc1786b331580d4d7dd745c882437d455eaccb789e"
+  },
+  "hrms-h09-notifications-inbox-contract": {
+    "primary": "contracts\\hrms-h09-notifications-inbox-contract.json",
+    "mirror": null,
+    "sha256": "af942aea8ecca7e5d45e778f1255b7e9f447d727afc21633ae5b1647fb5426cd",
+    "size": 5420,
+    "lines": 122,
+    "sealed": "2026-03-29T05:33:04Z"
+  },
+  "h10-org-settings": {
+    "primary": "pages\\h10-org-settings.html",
+    "mirror": null,
+    "sha256": "d6c0496d9c97e5330a5ca7609e20a5f96850b82be119240d66e47efce137b576",
+    "size": 63929,
+    "lines": 787,
+    "sealed": "2026-03-29T05:59:42Z"
+  },
+  "hrms-h10-org-settings-contract": {
+    "primary": "contracts\\hrms-h10-org-settings-contract.json",
+    "mirror": null,
+    "sha256": "025c4cb772994cdd6a7f618655ff79691cbc48f973fab97480320f901468da73",
+    "size": 9420,
+    "lines": 170,
+    "sealed": "2026-03-29T06:03:42Z"
+  },
+  "h11-workflow-builder": {
+    "primary": "pages\\h11-workflow-builder.html",
+    "mirror": null,
+    "sha256": "846d7164fdf8114ca89739719a4cfdff404e275d6b43fca811c8c994918e3330",
+    "size": 54048,
+    "lines": 839,
+    "sealed": "2026-03-29T13:07:30Z",
+    "prev_sha256": "d0d97d09c723c1f4b9bb6efa71afd3cabe9b08751b24ad0117eaf276e95e75d0"
+  },
+  "hrms-h11-workflow-builder-contract": {
+    "primary": "contracts\\hrms-h11-workflow-builder-contract.json",
+    "mirror": null,
+    "sha256": "8bc3b158c496fa02057015ca34697e6cdca61bcab7e9575ec5185b0a5de94923",
+    "size": 6121,
+    "lines": 185,
+    "sealed": "2026-03-29T09:00:00Z",
+    "prev_sha256": null
+  },
+  "h11-survey-builder": {
+    "primary": "pages\\h11-survey-builder.html",
+    "mirror": null,
+    "sha256": "ab1c3053f33be860318f15d49101463e1ec72e22a859b7fd15027868bd54712e",
+    "size": 48962,
+    "lines": 806,
+    "sealed": "2026-03-29T10:00:00Z",
+    "prev_sha256": null
+  },
+  "hrms-h11-survey-builder-contract": {
+    "primary": "contracts\\hrms-h11-survey-builder-contract.json",
+    "mirror": null,
+    "sha256": "ae876633d6d50461557ef4e68e644ab83b6f7566829d48db405731e059683de8",
+    "size": 6874,
+    "lines": 194,
+    "sealed": "2026-03-29T10:00:00Z",
+    "prev_sha256": null
+  },
+  "h11-report-builder": {
+    "primary": "pages\\h11-report-builder.html",
+    "mirror": null,
+    "sha256": "7cda5a208a0bf7053667117e38d3c34d08298c4cea378afcf3491cd459c2aa82",
+    "size": 42969,
+    "lines": 769,
+    "sealed": "2026-03-30T00:00:00Z",
+    "prev_sha256": null
+  },
+  "hrms-h11-report-builder-contract": {
+    "primary": "contracts\\hrms-h11-report-builder-contract.json",
+    "mirror": null,
+    "sha256": "11ea7a8c6f4418d2ef294faef1337bb17e486129f4ef7c34581df1438da9d01e",
+    "size": 8425,
+    "lines": 253,
+    "sealed": "2026-03-30T00:00:00Z",
+    "prev_sha256": null
+  },
+  "h12-helpdesk": {
+    "primary": "pages\\h12-helpdesk.html",
+    "mirror": null,
+    "sha256": "02aebd9522f3918f1aff58ff9a26715079f3f54b9ce690b017716b8c5b377f60",
+    "size": 45358,
+    "lines": 769,
+    "sealed": "2026-03-30T06:35:00Z",
+    "prev_sha256": "aaa258ff125619c9a39dd517babd8c52259ffd13171e89614d1e4b1e06ac0987"
+  },
+  "hrms-h12-helpdesk-contract": {
+    "primary": "contracts\\hrms-h12-helpdesk-contract.json",
+    "mirror": null,
+    "sha256": "99b798784818f37ba84ccb5c5e9cd520dfcb9f13e8923a817c7ad2a574d5b70e",
+    "size": 8662,
+    "lines": 255,
+    "sealed": "2026-03-30T07:27:00Z",
+    "prev_sha256": "29bac3a0d110bb89aed4d3c72d6b12eaeeac2e3d2fb27987a7901e3424d92eed"
+  },
+  "h13-candidate-pipeline": {
+    "primary": "pages\\h13-candidate-pipeline.html",
+    "mirror": null,
+    "sha256": "b28fcc4e97e7493a693dcd2a72efadcb7836cc5bc0b7458a8c48cfa35ffcadb4",
+    "size": 49079,
+    "lines": 828,
+    "sealed": "2026-04-12T04:20:34Z",
+    "prev_sha256": "bbad0e8c2c1631977229e8b40c349473b1a10ca58509596de916024b56676fa7"
+  },
+  "hrms-h13-candidate-pipeline-contract": {
+    "primary": "contracts\\hrms-h13-candidate-pipeline-contract.json",
+    "mirror": null,
+    "sha256": "c3346203f6e4ea7e75e15cd6480f803bc6d624b8b72e49b82c107217e791d034",
+    "size": 8653,
+    "lines": 225,
+    "sealed": "2026-03-30T07:27:00Z",
+    "prev_sha256": "51e1d23eaf2a2664e9b669d95354f80b686f52cae95f3083e3cbc8c37f65661b"
+  }
+}

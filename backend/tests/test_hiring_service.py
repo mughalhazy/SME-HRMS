@@ -1,0 +1,608 @@
+import unittest
+
+from services.hiring_service import HiringService
+from services.hiring_service.service import HiringValidationError
+
+
+class HiringServiceTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.service = HiringService()
+        self.posting = self.service.create_job_posting(
+            {
+                "title": "Backend Engineer",
+                "department_id": "dep-1",
+                "role_id": "role-1",
+                "employment_type": "FullTime",
+                "description": "Build core APIs",
+                "openings_count": 2,
+                "posting_date": "2026-01-01",
+                "status": "Open",
+            }
+        )
+
+    def test_candidate_hiring_happy_path(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Ava",
+                "last_name": "Stone",
+                "email": "ava@example.com",
+                "application_date": "2026-01-03",
+                "changed_by": "recruiter-1",
+                "stage_reason": "initial application",
+            }
+        )
+        self.assertEqual(candidate["status"], "Applied")
+
+        screening = self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.assertEqual(screening["status"], "Screening")
+
+        interviewing = self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+        self.assertEqual(interviewing["status"], "Interviewing")
+
+        interview = self.service.create_interview(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-08T10:00:00Z",
+                "scheduled_end": "2026-01-08T11:00:00Z",
+                "interviewer_employee_ids": ["emp-1", "emp-2"],
+            }
+        )
+        self.assertEqual(interview["status"], "Scheduled")
+
+        completed = self.service.update_interview(interview["interview_id"], {"status": "Completed", "recommendation": "Hire"})
+        self.assertEqual(completed["status"], "Completed")
+
+        offered = self.service.update_candidate(candidate["candidate_id"], {"status": "Offered"})
+        self.assertEqual(offered["status"], "Offered")
+
+        hired = self.service.mark_candidate_hired(candidate["candidate_id"])
+        self.assertEqual(hired["status"], "Hired")
+
+        event_types = [event["event_type"] for event in self.service.events]
+        self.assertIn("hiring.job_posting.opened", event_types)
+        self.assertIn("hiring.candidate.applied", event_types)
+        self.assertIn("hiring.candidate.stage_transition.recorded", event_types)
+        self.assertIn("hiring.interview.scheduled", event_types)
+        self.assertIn("hiring.interview.completed", event_types)
+        self.assertIn("hiring.candidate.hired", event_types)
+
+    def test_candidate_stage_history_tracks_initial_and_subsequent_stage_changes(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "June",
+                "last_name": "Park",
+                "email": "june@example.com",
+                "application_date": "2026-01-03",
+                "changed_by": "recruiter-1",
+                "stage_reason": "candidate submitted application",
+                "stage_notes": "career site flow",
+            }
+        )
+
+        self.service.update_candidate(
+            candidate["candidate_id"],
+            {
+                "status": "Screening",
+                "changed_by": "recruiter-2",
+                "stage_reason": "resume matched requirements",
+                "stage_notes": "advance to recruiter screen",
+            },
+        )
+        self.service.update_candidate(
+            candidate["candidate_id"],
+            {
+                "status": "Interviewing",
+                "changed_by": "recruiter-2",
+                "stage_reason": "screen passed",
+            },
+        )
+
+        stage_history = self.service.list_candidate_stage_history(candidate["candidate_id"])
+        self.assertEqual([entry["to_status"] for entry in stage_history], ["Applied", "Screening", "Interviewing"])
+        self.assertEqual(stage_history[0]["from_status"], None)
+        self.assertEqual(stage_history[0]["changed_by"], "recruiter-1")
+        self.assertEqual(stage_history[0]["reason"], "candidate submitted application")
+        self.assertEqual(stage_history[1]["from_status"], "Applied")
+        self.assertEqual(stage_history[1]["notes"], "advance to recruiter screen")
+
+        hydrated = self.service.get_candidate(candidate["candidate_id"])
+        self.assertEqual(len(hydrated["stage_history"]), 3)
+
+    def test_invalid_candidate_transition_rejected(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Kai",
+                "last_name": "Ng",
+                "email": "kai@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.update_candidate(candidate["candidate_id"], {"status": "Hired"})
+
+    def test_duplicate_candidate_email_per_posting_rejected(self) -> None:
+        self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "First",
+                "last_name": "Person",
+                "email": "dupe@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.create_candidate(
+                {
+                    "job_posting_id": self.posting["job_posting_id"],
+                    "first_name": "Second",
+                    "last_name": "Person",
+                    "email": "dupe@example.com",
+                    "application_date": "2026-01-04",
+                }
+            )
+
+
+    def test_job_posting_read_model_supports_get_list_and_pagination(self) -> None:
+        second = self.service.create_job_posting(
+            {
+                "title": "Data Engineer",
+                "department_id": "dep-1",
+                "employment_type": "FullTime",
+                "description": "Build pipelines",
+                "openings_count": 1,
+                "posting_date": "2026-01-02",
+                "status": "Draft",
+            }
+        )
+        self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Mina",
+                "last_name": "Cole",
+                "email": "mina@example.com",
+                "application_date": "2026-01-05",
+            }
+        )
+
+        fetched = self.service.get_job_posting(self.posting["job_posting_id"])
+        self.assertEqual(fetched["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(fetched["candidate_count"], 1)
+
+        first_page = self.service.list_job_postings(limit=1)
+        self.assertEqual(len(first_page), 1)
+        self.assertEqual(first_page[0]["job_posting_id"], second["job_posting_id"])
+
+        second_page = self.service.list_job_postings(limit=1, cursor=first_page[0]["job_posting_id"])
+        self.assertEqual(len(second_page), 1)
+        self.assertEqual(second_page[0]["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(second_page[0]["candidate_count"], 1)
+
+    def test_delete_job_posting_rejects_existing_candidates_and_removes_empty_posting(self) -> None:
+        self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Nina",
+                "last_name": "Shaw",
+                "email": "nina.delete@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.delete_job_posting(self.posting["job_posting_id"])
+
+        removable = self.service.create_job_posting(
+            {
+                "title": "QA Engineer",
+                "department_id": "dep-2",
+                "employment_type": "Contract",
+                "description": "Test releases",
+                "openings_count": 1,
+                "posting_date": "2026-01-10",
+                "status": "Draft",
+            }
+        )
+
+        deleted = self.service.delete_job_posting(removable["job_posting_id"])
+        self.assertEqual(deleted["job_posting_id"], removable["job_posting_id"])
+
+        with self.assertRaises(HiringValidationError):
+            self.service.get_job_posting(removable["job_posting_id"])
+
+    def test_list_candidate_pipeline_view_maps_read_model_fields(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Noah",
+                "last_name": "Lane",
+                "email": "noah@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+        self.service.create_interview(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-08T10:00:00Z",
+                "scheduled_end": "2026-01-08T11:00:00Z",
+                "interviewer_employee_ids": ["emp-1"],
+            }
+        )
+
+        rows = self.service.list_candidate_pipeline_view(pipeline_stage="Interviewing")
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["candidate_id"], candidate["candidate_id"])
+        self.assertEqual(row["candidate_name"], "Noah Lane")
+        self.assertEqual(row["candidate_email"], "noah@example.com")
+        self.assertEqual(row["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(row["job_title"], "Backend Engineer")
+        self.assertEqual(row["department_id"], "dep-1")
+        self.assertEqual(row["pipeline_stage"], "Interviewing")
+        self.assertEqual(row["source"], None)
+        self.assertEqual(row["source_candidate_id"], None)
+        self.assertEqual(row["next_interview_at"], "2026-01-08T10:00:00+00:00")
+        self.assertEqual(row["interview_count"], 1)
+        self.assertEqual(row["last_interview_recommendation"], None)
+
+    def test_list_candidate_pipeline_view_includes_latest_interview_recommendation(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Tara",
+                "last_name": "Cole",
+                "email": "tara@example.com",
+                "application_date": "2026-01-03",
+                "source": "LinkedIn",
+                "source_candidate_id": "ln-500",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+        interview = self.service.create_interview(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-10T10:00:00Z",
+                "scheduled_end": "2026-01-10T11:00:00Z",
+            }
+        )
+        self.service.update_interview(interview["interview_id"], {"status": "Completed", "recommendation": "StrongHire"})
+
+        rows = self.service.list_candidate_pipeline_view(job_posting_id=self.posting["job_posting_id"])
+        tara = next(row for row in rows if row["candidate_id"] == candidate["candidate_id"])
+        self.assertEqual(tara["source"], "LinkedIn")
+        self.assertEqual(tara["source_candidate_id"], "ln-500")
+        self.assertEqual(tara["last_interview_recommendation"], "StrongHire")
+
+
+    def test_schedule_interview_with_google_calendar_emits_sync_event(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Lia",
+                "last_name": "North",
+                "email": "lia@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+
+        interview = self.service.schedule_interview_with_google_calendar(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-09T10:00:00Z",
+                "scheduled_end": "2026-01-09T11:00:00Z",
+            }
+        )
+
+        self.assertIsNotNone(interview["google_calendar_event_id"])
+        self.assertIn("calendar.google.com", interview["google_calendar_event_link"])
+        self.assertIn("meet.google.com", interview["location_or_link"])
+        event_types = [event["event_type"] for event in self.service.events]
+        self.assertIn("hiring.interview.calendar_synced", event_types)
+
+    def test_import_candidates_from_linkedin(self) -> None:
+        result = self.service.import_candidates_from_linkedin(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "candidates": [
+                    {
+                        "linkedin_member_id": "ln-100",
+                        "full_name": "Mia Gray",
+                        "email": "mia@example.com",
+                        "linkedin_profile_url": "https://linkedin.example/mia",
+                        "resume_url": "https://cdn.example/mia.pdf",
+                        "application_date": "2026-01-06",
+                    },
+                    {
+                        "linkedin_member_id": "ln-101",
+                        "full_name": "No Email",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(result["provider"], "LinkedIn")
+        self.assertEqual(len(result["imported"]), 1)
+        self.assertEqual(len(result["skipped"]), 1)
+        imported = result["imported"][0]
+        self.assertEqual(imported["source"], "LinkedIn")
+        self.assertEqual(imported["source_candidate_id"], "ln-100")
+        self.assertEqual(imported["source_profile_url"], "https://linkedin.example/mia")
+
+        event_types = [event["event_type"] for event in self.service.events]
+        self.assertIn("hiring.candidate.imported", event_types)
+        self.assertIn("hiring.linkedin_candidates.imported", event_types)
+
+    def test_build_hiring_ui_returns_job_postings_and_candidate_pipeline_surfaces(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Iris",
+                "last_name": "Vale",
+                "email": "iris@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+
+        surfaces = self.service.build_hiring_ui(department_id="dep-1", job_posting_id=self.posting["job_posting_id"])
+        self.assertEqual(set(surfaces.keys()), {"job_postings", "candidate_pipeline"})
+        self.assertEqual(len(surfaces["job_postings"]), 1)
+        self.assertEqual(surfaces["job_postings"][0]["job_posting_id"], self.posting["job_posting_id"])
+        self.assertEqual(len(surfaces["candidate_pipeline"]), 1)
+        self.assertEqual(surfaces["candidate_pipeline"][0]["candidate_id"], candidate["candidate_id"])
+
+    def test_candidate_and_interview_query_support(self) -> None:
+        first = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Rae",
+                "last_name": "West",
+                "email": "rae@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        second = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Sol",
+                "last_name": "Hart",
+                "email": "sol@example.com",
+                "application_date": "2026-01-04",
+            }
+        )
+        self.service.update_candidate(first["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(first["candidate_id"], {"status": "Interviewing"})
+        interview = self.service.create_interview(
+            {
+                "candidate_id": first["candidate_id"],
+                "interview_type": "Technical",
+                "scheduled_start": "2026-01-08T10:00:00Z",
+                "scheduled_end": "2026-01-08T11:00:00Z",
+            }
+        )
+
+        by_job = self.service.list_candidates(job_posting_id=self.posting["job_posting_id"])
+        self.assertEqual({row["candidate_id"] for row in by_job}, {first["candidate_id"], second["candidate_id"]})
+
+        by_stage = self.service.list_candidates(status="Interviewing")
+        self.assertEqual([row["candidate_id"] for row in by_stage], [first["candidate_id"]])
+
+        interviews = self.service.list_interviews(candidate_id=first["candidate_id"])
+        self.assertEqual(len(interviews), 1)
+        self.assertEqual(interviews[0]["interview_id"], interview["interview_id"])
+        self.assertEqual(interviews[0]["candidate"]["candidate_id"], first["candidate_id"])
+
+    def test_validation_rejects_invalid_references_and_initial_status(self) -> None:
+        with self.assertRaises(HiringValidationError):
+            self.service.create_candidate(
+                {
+                    "job_posting_id": "missing-job",
+                    "first_name": "Bad",
+                    "last_name": "Ref",
+                    "email": "bad@example.com",
+                    "application_date": "2026-01-03",
+                }
+            )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.create_candidate(
+                {
+                    "job_posting_id": self.posting["job_posting_id"],
+                    "first_name": "Skip",
+                    "last_name": "Stage",
+                    "email": "skip@example.com",
+                    "application_date": "2026-01-03",
+                    "status": "Interviewing",
+                }
+            )
+
+        with self.assertRaises(HiringValidationError):
+            self.service.create_interview(
+                {
+                    "candidate_id": "missing-candidate",
+                    "interview_type": "Technical",
+                    "scheduled_start": "2026-01-08T10:00:00Z",
+                    "scheduled_end": "2026-01-08T11:00:00Z",
+                }
+            )
+
+    def test_mark_candidate_hired_creates_employee_profile(self) -> None:
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": self.posting["job_posting_id"],
+                "first_name": "Leah",
+                "last_name": "Ford",
+                "email": "leah@example.com",
+                "application_date": "2026-01-03",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Offered"})
+
+        hired = self.service.mark_candidate_hired(candidate["candidate_id"], {"employee_id": "emp-200", "hire_date": "2026-01-20"})
+
+        self.assertEqual(hired["status"], "Hired")
+        self.assertEqual(hired["employee_profile"]["employee_id"], "emp-200")
+        self.assertEqual(hired["employee_profile"]["department_id"], self.posting["department_id"])
+        self.assertEqual(hired["employee_profile"]["role_id"], self.posting["role_id"])
+        self.assertEqual(self.service.list_employee_profiles(candidate_id=candidate["candidate_id"])[0]["employee_id"], "emp-200")
+
+
+    def test_requisition_pipeline_offer_and_onboarding_handoff_flow(self) -> None:
+        requisition = self.service.create_requisition(
+            {
+                "title": "Platform Engineer",
+                "department_id": "dep-1",
+                "role_id": "role-1",
+                "employment_type": "FullTime",
+                "justification": "Backfill critical role",
+                "openings_count": 1,
+                "requested_by": "manager-1",
+                "hiring_manager_id": "manager-1",
+                "recruiter_ids": ["recruiter-1"],
+                "hiring_plan": {"headcount": 1, "must_have_skills": ["Python", "ATS"]},
+                "actor_role": "Manager",
+            }
+        )
+        self.assertEqual(requisition["status"], "Draft")
+
+        submitted = self.service.submit_requisition_for_approval(
+            requisition["requisition_id"],
+            {"changed_by": "manager-1", "actor_role": "Manager", "department_id": "dep-1"},
+        )
+        self.assertEqual(submitted["status"], "PendingApproval")
+
+        approved = self.service.approve_requisition(
+            requisition["requisition_id"],
+            {
+                "changed_by": "manager-1",
+                "actor_role": "Manager",
+                "department_id": "dep-1",
+                "posting_date": "2026-01-02",
+                "description": "Platform ownership",
+            },
+        )
+        self.assertEqual(approved["status"], "Open")
+        self.assertIsNotNone(approved["job_posting_id"])
+
+        candidate = self.service.create_candidate(
+            {
+                "job_posting_id": approved["job_posting_id"],
+                "first_name": "Rin",
+                "last_name": "Aster",
+                "email": "rin@example.com",
+                "application_date": "2026-01-03",
+                "changed_by": "recruiter-1",
+                "actor_role": "Recruiter",
+            }
+        )
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Screening", "changed_by": "recruiter-1", "actor_role": "Recruiter"})
+        self.service.update_candidate(candidate["candidate_id"], {"status": "Interviewing", "changed_by": "recruiter-1", "actor_role": "Recruiter"})
+        form = self.service.create_evaluation_form(
+            {
+                "name": "Panel form",
+                "stage": "Interview",
+                "sections": [{"name": "Competencies", "questions": ["Architecture", "Communication"]}],
+            }
+        )
+        interview = self.service.create_interview(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "interview_type": "Panel",
+                "scheduled_start": "2026-01-04T10:00:00Z",
+                "scheduled_end": "2026-01-04T11:00:00Z",
+                "evaluation_form_id": form["evaluation_form_id"],
+                "interviewer_employee_ids": ["emp-1", "emp-2"],
+                "changed_by": "recruiter-1",
+                "actor_role": "Recruiter",
+            }
+        )
+        scorecard = self.service.create_scorecard(
+            {
+                "interview_id": interview["interview_id"],
+                "overall_rating": 4.5,
+                "recommendation": "Hire",
+                "submitted_by": "emp-1",
+                "structured_feedback": {"summary": "Strong panel round"},
+                "competencies": [{"name": "Architecture", "score": 5}],
+            }
+        )
+        self.assertEqual(scorecard["recommendation"], "Hire")
+
+        offer = self.service.create_offer(
+            {
+                "candidate_id": candidate["candidate_id"],
+                "salary_amount": 120000,
+                "currency": "USD",
+                "start_date": "2026-02-01",
+                "created_by": "recruiter-1",
+                "changed_by": "recruiter-1",
+                "actor_role": "Recruiter",
+            }
+        )
+        self.assertEqual(offer["status"], "Draft")
+        submitted_offer = self.service.submit_offer_for_approval(offer["offer_id"], {"changed_by": "recruiter-1", "actor_role": "Recruiter"})
+        self.assertEqual(submitted_offer["status"], "PendingApproval")
+        approved_offer = self.service.approve_offer(offer["offer_id"], {"changed_by": "manager-1", "actor_role": "Manager", "department_id": "dep-1"})
+        self.assertEqual(approved_offer["status"], "Approved")
+        accepted_offer = self.service.accept_offer(offer["offer_id"], {"changed_by": "candidate-portal"})
+        self.assertEqual(accepted_offer["status"], "Accepted")
+
+        hired = self.service.mark_candidate_hired(
+            candidate["candidate_id"],
+            {"changed_by": "manager-1", "approver_role": "Manager", "department_id": "dep-1", "hire_date": "2026-02-01"},
+        )
+        self.assertEqual(hired["status"], "Hired")
+        self.assertEqual(hired["employee_profile"]["onboarding_status"], "HandoffCompleted")
+        self.assertEqual(hired["employee_profile"]["employee_service_record"]["source"], "hiring-service")
+
+    def test_tenant_pipeline_templates_and_access_are_isolated(self) -> None:
+        tenant_a = self.service.configure_pipeline_template(
+            {
+                "tenant_id": "tenant-a",
+                "name": "Tenant A Pipeline",
+                "stages": [
+                    {"code": "Applied", "sequence": 1},
+                    {"code": "Screening", "sequence": 2},
+                    {"code": "Interview", "sequence": 3},
+                    {"code": "Offer", "sequence": 4},
+                    {"code": "Hired", "sequence": 5, "terminal": True},
+                    {"code": "Rejected", "sequence": 6, "terminal": True},
+                ],
+            }
+        )
+        self.assertEqual(tenant_a["tenant_id"], "tenant-a")
+        self.assertEqual(self.service.get_default_pipeline_template(tenant_id="tenant-a")["name"], "Tenant A Pipeline")
+
+        other_posting = self.service.create_job_posting(
+            {
+                "tenant_id": "tenant-b",
+                "title": "Tenant B Role",
+                "department_id": "dep-b",
+                "employment_type": "FullTime",
+                "description": "Tenant isolated",
+                "openings_count": 1,
+                "posting_date": "2026-01-01",
+                "status": "Open",
+            }
+        )
+        self.assertEqual(other_posting["tenant_id"], "tenant-b")
+        with self.assertRaises(PermissionError):
+            self.service.get_job_posting(other_posting["job_posting_id"], tenant_id="tenant-a")
+
+
+if __name__ == "__main__":
+    unittest.main()

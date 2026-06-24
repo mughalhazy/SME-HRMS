@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — HR Manager Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;
+  --amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;
+  --violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─────────────────────────────── */
+.sb{width:216px;min-width:216px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-logo{padding:18px 14px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-name{font-size:14px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.logo-sub{font-size:9.5px;color:var(--t4);text-transform:uppercase;letter-spacing:.07em}
+.sb-nav{flex:1;padding:8px 8px 4px}
+.sb-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:10px 8px 3px;display:block}
+.sb-a{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);color:var(--t3);font-size:13px;font-weight:450;cursor:pointer;transition:all .12s;margin-bottom:1px;user-select:none;position:relative}
+.sb-a:hover{background:var(--bg);color:var(--t1)}
+.sb-a.on{background:var(--tl);color:var(--teal);font-weight:600}
+.sb-a.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--teal);border-radius:0 3px 3px 0}
+.sb-ic{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sb-ic svg{width:14px;height:14px;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-a:not(.on) .sb-ic svg{stroke:var(--t4)}.sb-a.on .sb-ic svg{stroke:var(--teal)}
+.sb-badge{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:99px;font-family:var(--mono)}
+.b-g{background:var(--gl);color:var(--grn)}.b-a{background:var(--al);color:var(--amber)}.b-v{background:var(--vl);color:var(--violet)}
+.sb-div{height:1px;background:var(--bd);margin:6px 10px}
+.sb-foot{margin-top:auto;padding:8px;border-top:1px solid var(--bd)}
+.sb-user{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;transition:background .12s}
+.sb-user:hover{background:var(--bg)}
+.u-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.u-name{font-size:12px;font-weight:600;color:var(--t1)}.u-role{font-size:10.5px;color:var(--t4)}
+.u-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;margin-left:auto;flex-shrink:0}
+
+/* ─── MAIN ────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1;letter-spacing:-0.01em}
+.tb-d{font-size:12px;color:var(--t4);margin-left:7px;font-weight:400}
+.tb-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 11px;width:208px;transition:all .14s}
+.tb-srch:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.tb-srch input{background:none;border:none;outline:none;font-size:12.5px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.tb-srch input::placeholder{color:var(--t4)}
+.tb-srch svg{width:13px;height:13px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;position:relative}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.tbi.bell::after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#EF4444;border:1.5px solid var(--w)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:#0C9E92}
+
+/* ─── PAGE ────────────────────────────────── */
+.page{flex:1;overflow-y:auto;min-height:0;padding:24px 24px 12vh}
+
+/* AI bar — P-12 */
+.ai-bar{display:flex;align-items:center;gap:12px;background:var(--tl);border:1px solid var(--tb);border-radius:var(--r2);padding:12px 16px;margin-bottom:20px}
+.ai-icon{width:32px;height:32px;border-radius:var(--r);background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ai-icon svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ai-text{flex:1;font-size:12.5px;color:var(--t1);line-height:1.5}
+.ai-text strong{font-weight:600}
+.ai-conf{font-size:11px;font-weight:600;color:var(--teal);background:rgba(10,143,132,.1);padding:3px 8px;border-radius:5px;flex-shrink:0}
+.ai-x{color:var(--t4);cursor:pointer;font-size:15px;padding:2px;transition:color .12s;flex-shrink:0}.ai-x:hover{color:var(--t2)}
+
+/* KPI strip — P-11 inspired */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px;cursor:default;transition:box-shadow .14s,transform .14s}
+.kpi:hover{box-shadow:0 4px 12px rgba(0,0,0,.06);transform:translateY(-1px)}
+.kpi.warn{background:var(--al);border-color:#FCD34D}
+.kpi-dot{width:6px;height:6px;border-radius:50%;margin-bottom:10px}
+.kpi-v{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--t1);line-height:1;margin-bottom:5px}
+.kpi-l{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.kpi-f{display:flex;align-items:center;gap:5px}
+.kpi-b{font-size:10.5px;font-weight:600;padding:2px 5px;border-radius:3px;font-family:var(--mono)}
+.ku{background:var(--gl);color:var(--grn)}.kd{background:var(--rl);color:var(--red)}.kn{background:var(--t5);color:var(--t3)}
+.kpi-n{font-size:11px;color:var(--t4)}
+
+/* Layout grids */
+.g3{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.right-col{display:flex;flex-direction:column;gap:14px}
+
+/* Cards */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct{font-size:13px;font-weight:700;color:var(--t1)}
+.cs{font-size:11.5px;color:var(--t4);margin-top:1px}
+.cl{font-size:11.5px;font-weight:600;color:var(--teal);cursor:pointer;flex-shrink:0}.cl:hover{text-decoration:underline}
+.cb{padding:15px 17px}
+
+/* Department bars */
+.dr{display:flex;align-items:center;gap:10px;margin-bottom:9px}.dr:last-child{margin-bottom:0}
+.dn{font-size:12px;font-weight:500;color:var(--t2);width:88px;flex-shrink:0}
+.dt{flex:1;height:5px;background:var(--t5);border-radius:99px;overflow:hidden}
+.df{height:100%;border-radius:99px;transition:width .9s cubic-bezier(.25,.8,.25,1)}
+.dc{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--t1);width:26px;text-align:right;flex-shrink:0}
+.dd{font-family:var(--mono);font-size:11px;width:28px;text-align:right;flex-shrink:0}
+.dup{color:#16A34A}.ddn{color:#EF4444}.dfl{color:var(--t4)}
+
+/* Attendance donut */
+.dw{display:flex;align-items:center;gap:14px}
+.dl{display:flex;flex-direction:column;gap:8px;flex:1}
+.dlr{display:flex;align-items:center;gap:8px;font-size:12px}
+.dld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dll{color:var(--t2);flex:1}.dlv{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t1)}
+
+/* Action items */
+.ali{display:flex;align-items:flex-start;gap:10px;padding:10px 15px;border-bottom:1px solid var(--t5);transition:background .09s;cursor:default}
+.ali:last-child{border-bottom:none}.ali:hover{background:var(--bg)}
+.al-bar{width:2px;align-self:stretch;border-radius:99px;flex-shrink:0;min-height:26px}
+.al-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.10em;padding:2px 5px;border-radius:3px;font-family:var(--mono);display:inline-block;margin-bottom:3px}
+.al-t{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.al-d{font-size:11.5px;color:var(--t3);line-height:1.4}
+.al-act{font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap}.al-act:hover{text-decoration:underline}
+
+/* Recent hires table */
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg);border-bottom:1px solid var(--bd)}
+th{padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--t5);vertical-align:middle;font-size:12.5px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--tl);cursor:pointer}
+.p{display:flex;align-items:center;gap:8px}
+.pav{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.pn{font-weight:600;color:var(--t1)}.ps{font-family:var(--mono);font-size:10.5px;color:var(--t4)}
+
+/* Chips — P-07 */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cb2{background:var(--bl);color:var(--blue)}.cb2::before{background:#3B82F6}
+.ct2{background:var(--tl);color:var(--teal)}.ct2::before{background:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+
+/* Activity feed */
+.act{display:flex;align-items:flex-start;gap:9px;padding:9px 15px;border-bottom:1px solid var(--t5);transition:background .09s}
+.act:last-child{border-bottom:none}.act:hover{background:var(--bg)}
+.aav{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin-top:1px}
+.atx{font-size:12px;color:var(--t2);line-height:1.5}
+.atx strong{font-weight:600;color:var(--t1)}
+.att{font-size:10.5px;color:var(--t4);font-family:var(--mono);margin-top:2px}
+
+/* Motion — P-27 */
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.a1{animation:fu .28s ease both}
+.a2{animation:fu .28s .06s ease both}
+.a3{animation:fu .28s .12s ease both}
+.a4{animation:fu .28s .18s ease both}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ─── SIDEBAR ─────────────────────────────── -->
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+    <div><div class="logo-name">Meridian</div><div class="logo-sub">HCM Suite</div></div>
+  </div>
+  <nav class="sb-nav">
+    <span class="sb-sec">Overview</span>
+    <div class="sb-a on"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>Dashboard</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>Analytics</div>
+    <span class="sb-sec">Workforce</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>Employees<span class="sb-badge b-g">342</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Departments</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></span>Attendance</div>
+    <span class="sb-sec">Compensation</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Payroll<span class="sb-badge b-a">!</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>Leave<span class="sb-badge b-a">5</span></div>
+    <span class="sb-sec">Talent</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>Recruiting<span class="sb-badge b-g">18</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>Performance</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Documents</div>
+    <div class="sb-div"></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>AI Insights<span class="sb-badge b-v">3</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>Settings</div>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="u-av">AW</div>
+      <div><div class="u-name">Alex Wang</div><div class="u-role">HR Administrator</div></div>
+      <div class="u-dot"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── MAIN ────────────────────────────────── -->
+<main class="main">
+  <div class="topbar a1">
+    <div class="tb-t">Dashboard<span class="tb-d">Sun, 22 Mar 2026</span></div>
+    <div class="tb-srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search employees, reports…"></div>
+    <div class="tb-vd"></div>
+    <div class="tbi bell"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tbi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <div class="tb-vd"></div>
+    <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Employee</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <div class="page">
+
+    <!-- AI bar — P-12 · teal · confidence · dismissable · BG-002 mock -->
+    <div class="ai-bar a1" id="ai-bar">
+      <div class="ai-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="ai-text"><strong>AI · Flight risk in Engineering:</strong> 3 employees show elevated attrition signals — low engagement scores combined with manager friction patterns over the past 14 days.</div>
+      <div class="ai-conf">83% confidence</div>
+      <button class="btn btn-p" style="height:28px;padding:0 10px;font-size:11.5px">Review</button>
+      <button class="btn" style="height:28px;padding:0 10px;font-size:11.5px;border-color:var(--tb);color:var(--teal)">Dismiss</button>
+      <span class="ai-x" onclick="document.getElementById('ai-bar').style.display='none'">✕</span>
+    </div>
+
+    <!-- KPI row — BG-001 mock data · employee-service + payroll_service + hiring_service + attendance_service -->
+    <div class="kpi-row a2">
+      <div class="kpi">
+        <div class="kpi-dot" style="background:var(--teal)"></div>
+        <div class="kpi-v">342</div>
+        <div class="kpi-l">Total Headcount</div>
+        <div class="kpi-f"><span class="kpi-b ku">+14</span><span class="kpi-n">vs last quarter</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#16A34A"></div>
+        <div class="kpi-v">94.2%</div>
+        <div class="kpi-l">Retention Rate</div>
+        <div class="kpi-f"><span class="kpi-b ku">+2.1%</span><span class="kpi-n">year-over-year</span></div>
+      </div>
+      <div class="kpi warn">
+        <div class="kpi-dot" style="background:var(--amber)"></div>
+        <div class="kpi-v">$1.84M</div>
+        <div class="kpi-l">Monthly Payroll</div>
+        <div class="kpi-f"><span class="kpi-b kd">−3%</span><span class="kpi-n">anomaly flagged</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#3B82F6"></div>
+        <div class="kpi-v">18</div>
+        <div class="kpi-l">Open Positions</div>
+        <div class="kpi-f"><span class="kpi-b ku">+3</span><span class="kpi-n">this month</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#8B5CF6"></div>
+        <div class="kpi-v">34d</div>
+        <div class="kpi-l">Avg Time-to-Hire</div>
+        <div class="kpi-f"><span class="kpi-b kn">target 40d</span></div>
+      </div>
+    </div>
+
+    <!-- Row 1: Dept headcount (1.7fr) + Attendance donut + Action items (1fr) -->
+    <div class="g3 a3">
+      <!-- Headcount by Department — employee-service -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Headcount by Department</div><div class="cs">342 employees · 7 departments</div></div>
+          <span class="cl">View all →</span>
+        </div>
+        <div class="cb" id="dept-bars"></div>
+      </div>
+
+      <div class="right-col">
+        <!-- Attendance Today — attendance_service · AttendanceStatus enums -->
+        <div class="card">
+          <div class="ch">
+            <div class="ct">Attendance Today</div>
+            <span class="cs">307 / 342</span>
+          </div>
+          <div class="cb">
+            <div class="dw">
+              <svg width="86" height="86" viewBox="0 0 36 36" style="flex-shrink:0">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#F1F4F8" stroke-width="4"/>
+                <!-- Present: 249 → 71.0% of circumference (87.96 * 0.710 = 62.45) -->
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#3B82F6" stroke-width="4" stroke-dasharray="62 87.96" stroke-dashoffset="22" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                <!-- OnLeave: 18 → 20.6% (87.96 * 0.206 = 18.1) — offset = -(62-22)=-40 -->
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#22C55E" stroke-width="4" stroke-dasharray="18 87.96" stroke-dashoffset="-40" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                <!-- Late: 16 → offset continues -->
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#F59E0B" stroke-width="4" stroke-dasharray="5 87.96" stroke-dashoffset="-58" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                <text x="18" y="15.5" text-anchor="middle" fill="#0F1623" font-size="5.5" font-weight="600" font-family="JetBrains Mono,monospace">90%</text>
+                <text x="18" y="21" text-anchor="middle" fill="#94A3B8" font-size="3.5">present</text>
+              </svg>
+              <div class="dl">
+                <!-- AttendanceStatus: Present → green, Absent → red, Late → amber, HalfDay → blue -->
+                <div class="dlr"><div class="dld" style="background:#3B82F6"></div><div class="dll">Present</div><div class="dlv">249</div></div>
+                <div class="dlr"><div class="dld" style="background:#22C55E"></div><div class="dll">On Leave</div><div class="dlv">18</div></div>
+                <div class="dlr"><div class="dld" style="background:#F59E0B"></div><div class="dll">Late</div><div class="dlv">16</div></div>
+                <div class="dlr"><div class="dld" style="background:#EF4444"></div><div class="dll">Absent</div><div class="dlv">5</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Items — workflow_service + payroll_service + leave_service -->
+        <div class="card" style="flex:1">
+          <div class="ch"><div class="ct">Action Items</div><span class="cl">11 total →</span></div>
+          <!-- BG-003 mock: payroll anomaly -->
+          <div class="ali">
+            <div class="al-bar" style="background:#EF4444"></div>
+            <div style="flex:1">
+              <div class="al-tag" style="background:#FEE2E2;color:#B91C1C">Critical</div>
+              <div class="al-t">Payroll Anomaly — March</div>
+              <div class="al-d">3 records deviate &gt;15% from prior cycle.</div>
+            </div>
+            <span class="al-act" style="color:#B91C1C">Review →</span>
+          </div>
+          <!-- Leave.status: Submitted → displayed as "Pending" per api-contracts -->
+          <div class="ali" style="background:#FFFBEB">
+            <div class="al-bar" style="background:#F59E0B"></div>
+            <div style="flex:1">
+              <div class="al-tag" style="background:#FEF3C7;color:#B45309">Warning</div>
+              <div class="al-t">5 Leave Approvals Pending</div>
+              <div class="al-d">Oldest: 7 days ago. SLA = 5 days.</div>
+            </div>
+            <span class="al-act" style="color:#B45309">Approve →</span>
+          </div>
+          <!-- Employee.contract_type: IndependentContractor / StatementOfWork expiry -->
+          <div class="ali" style="background:#EFF6FF">
+            <div class="al-bar" style="background:#3B82F6"></div>
+            <div style="flex:1">
+              <div class="al-tag" style="background:#DBEAFE;color:#1D4ED8">Info</div>
+              <div class="al-t">6 Contracts Expiring</div>
+              <div class="al-d">Fixed-term renewals due within 30 days.</div>
+            </div>
+            <span class="al-act" style="color:#1D4ED8">View →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Recent Hires + Activity feed -->
+    <div class="g2 a4">
+      <!-- Recent Hires — employee-service · Employee.status enums: Active (green), Draft/Onboarding (blue) -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Recent Hires</div><div class="cs">14 new employees this month</div></div>
+          <span class="cl">View all →</span>
+        </div>
+        <table>
+          <thead><tr><th>Employee</th><th>Dept</th><th>Start</th><th>Status</th><th>Salary</th></tr></thead>
+          <tbody id="hires"></tbody>
+        </table>
+      </div>
+
+      <!-- Recent Activity — cross-service activity feed -->
+      <div class="card">
+        <div class="ch"><div class="ct">Recent Activity</div><span class="cl">All →</span></div>
+        <div id="activity"></div>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+</main>
+</div><!-- /shell -->
+
+<script>
+// Dept headcount — employee-service · department_id + employee count
+const depts=[
+  {n:'Engineering',c:128,p:75,col:'#3B82F6',d:'+8',u:1},
+  {n:'Product',c:54,p:32,col:'#7C3AED',d:'+2',u:1},
+  {n:'Sales',c:46,p:27,col:'#22C55E',d:'+1',u:1},
+  {n:'Marketing',c:38,p:22,col:'#F59E0B',d:'±0',u:0},
+  {n:'HR & Ops',c:32,p:19,col:'#0EA5E9',d:'+1',u:1},
+  {n:'Finance',c:24,p:14,col:'#EF4444',d:'−1',u:-1},
+  {n:'Legal',c:20,p:12,col:'#64748B',d:'+3',u:1}
+];
+document.getElementById('dept-bars').innerHTML=depts.map(d=>`
+  <div class="dr">
+    <div class="dn">${d.n}</div>
+    <div class="dt"><div class="df" style="width:0%;background:${d.col}" data-w="${d.p}"></div></div>
+    <div class="dc">${d.c}</div>
+    <div class="dd ${d.u===1?'dup':d.u===-1?'ddn':'dfl'}">${d.d}</div>
+  </div>`).join('');
+
+// Recent hires — Employee.status: Active (green), Draft (amber), OnLeave (blue)
+// EmploymentType: FullTime, PartTime, Contract, Intern
+const hires=[
+  {n:'James Okafor',i:'JO',c:'#4F46E5',dept:'Engineering',d:'Mar 10',s:'Active',sal:'$185,000'},
+  {n:'Priya Rajesh',i:'PR',c:'#059669',dept:'Product',d:'Mar 03',s:'Active',sal:'$162,000'},
+  {n:'Tom Nakamura',i:'TN',c:'#B45309',dept:'Sales',d:'Feb 24',s:'Active',sal:'$134,000'},
+  {n:'Amara Kofi',i:'AK',c:'#7C3AED',dept:'Marketing',d:'Feb 17',s:'Active',sal:'$118,000'},
+  {n:'Eva Fischer',i:'EF',c:'#DC2626',dept:'Finance',d:'Feb 10',s:'Draft',sal:'$105,000'}
+];
+// Chip mapping per Employee.status from hrms-api-contracts.md
+const sc={Active:'cg',Draft:'ca',OnLeave:'cb2',Suspended:'cr',Terminated:'cn'};
+// Display labels per enum
+const sl={Active:'Active',Draft:'Draft',OnLeave:'On Leave',Suspended:'Suspended',Terminated:'Terminated'};
+document.getElementById('hires').innerHTML=hires.map((e,i)=>`
+  <tr>
+    <td><div class="p"><div class="pav" style="background:${e.c}">${e.i}</div><div><div class="pn">${e.n}</div><div class="ps">EMP-034${i+1}</div></div></div></td>
+    <td style="color:var(--t3)">${e.dept}</td>
+    <td style="font-family:var(--mono);font-size:12px;color:var(--t3)">${e.d}</td>
+    <td><span class="chip ${sc[e.s]||'cn'}">${sl[e.s]||e.s}</span></td>
+    <td style="font-family:var(--mono);font-weight:600">${e.sal}</td>
+  </tr>`).join('');
+
+// Activity feed — cross-service events
+const acts=[
+  {i:'JO',c:'#4F46E5',t:'<strong>J. Okafor</strong> completed Day 7 onboarding checklist',ts:'just now'},
+  {i:'!',c:'#D97706',t:'Payroll flagged — 3 anomalies detected in March cycle',ts:'18 min'},
+  {i:'TN',c:'#059669',t:'<strong>T. Nakamura</strong> accepted offer — AE, Enterprise EMEA',ts:'1 hr'},
+  {i:'Q1',c:'#7C3AED',t:'Q1 2026 performance review cycle opened — 342 participants',ts:'3 hrs'},
+  {i:'EF',c:'#0284C7',t:'<strong>E. Fischer</strong> submitted leave request Apr 7–10 (Annual)',ts:'5 hrs'},
+  {i:'AM',c:'#0891B2',t:'<strong>A. Mensah</strong> expense claim $1,240 submitted for approval',ts:'6 hrs'}
+];
+document.getElementById('activity').innerHTML=acts.map(a=>`
+  <div class="act">
+    <div class="aav" style="background:${a.c}">${a.i}</div>
+    <div><div class="atx">${a.t}</div><div class="att">${a.ts} ago</div></div>
+  </div>`).join('');
+
+// Nav active state
+document.querySelectorAll('.sb-a').forEach(el=>el.addEventListener('click',function(){
+  document.querySelectorAll('.sb-a').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+
+// Animate department bars — P-27 (800ms bar fill)
+window.addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('.df').forEach(el=>{el.style.width=el.dataset.w+'%'});
+},120));
+</script>
+</body>
+</html>

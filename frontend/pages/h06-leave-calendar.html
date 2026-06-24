@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Leave Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─────────────────────────────────────── */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* ─── MAIN ────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* ─── TOPBAR ──────────────────────────────────────── */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:9px;flex-shrink:0}
+.tb-title{font-size:14px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+.cal-nav{display:flex;align-items:center;gap:4px;margin-left:6px}
+.nav-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s}
+.nav-btn:hover{background:var(--bg);color:var(--t1)}
+.nav-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.cal-month{font-size:14px;font-weight:700;color:var(--t1);padding:0 10px;letter-spacing:-0.01em;font-family:var(--mono)}
+.tb-sp{flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+
+/* ─── TOOLBAR ─────────────────────────────────────── */
+.cal-toolbar{background:var(--w);border-bottom:1px solid var(--bd);padding:0 20px;display:flex;align-items:center;gap:8px;height:46px;flex-shrink:0}
+.view-tog{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:3px}
+.vt{padding:4px 12px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--t3);cursor:pointer;transition:all .12s;user-select:none}
+.vt:hover{color:var(--t1)}.vt.on{background:var(--w);color:var(--t1);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ct-sep{width:1px;height:16px;background:var(--bd)}
+.ct-sp{flex:1}
+/* Filter pills — type-based colours, not P-07 status chips */
+.fp{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:5px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid;transition:all .12s;user-select:none}
+.fp-annual{background:var(--gl);color:var(--grn);border-color:#86EFAC}
+.fp-sick{background:var(--bl);color:var(--blue);border-color:#93C5FD}
+.fp-casual{background:var(--vl);color:var(--violet);border-color:#C4B5FD}
+.fp-pending{background:var(--al);color:var(--amber);border-color:#FCD34D}
+.fp-holiday{background:var(--t5);color:var(--t3);border-color:var(--bd)}
+.fp.off{opacity:.38}
+.sel-sel{background:var(--w);border:1px solid var(--bd);border-radius:var(--r);padding:5px 8px;font-size:12.5px;color:var(--t2);font-family:'Inter',sans-serif;cursor:pointer;outline:none}
+.sel-sel:focus{border-color:var(--teal)}
+
+/* ─── CALENDAR AREA ───────────────────────────────── */
+/* P-32: min-height:0 required on flex parent for children to scroll */
+.cal-area{flex:1;overflow:hidden;display:flex;min-height:0}
+
+/* ─── CAL SIDEBAR ─────────────────────────────────── */
+/* P-32: overflow-y:auto + min-height:0 */
+.cal-sidebar{width:220px;min-width:220px;background:var(--w);border-right:1px solid var(--bd);overflow-y:auto;min-height:0;padding:16px}
+.mini-cal-title{font-size:12.5px;font-weight:700;color:var(--t1);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.mini-hdr{font-size:9.5px;font-weight:700;color:var(--t4);text-align:center;padding:3px 0;text-transform:uppercase}
+.mini-day{font-size:11.5px;color:var(--t2);text-align:center;padding:4px 2px;border-radius:4px;cursor:pointer;transition:background .12s}
+.mini-day:hover{background:var(--bg)}
+.mini-day.today{background:var(--teal);color:#fff;font-weight:700;border-radius:50%}
+.mini-day.other{color:var(--t4)}
+.mini-day.has-ev{position:relative}
+.mini-day.has-ev::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--teal)}
+.sidebar-sec{margin-top:18px}
+.sidebar-sec-t{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:10px}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:7px;cursor:pointer}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.legend-lbl{flex:1;color:var(--t2)}
+.legend-ct{font-family:var(--mono);font-size:11px;color:var(--t4)}
+.sidebar-sec-divider{height:1px;background:var(--bd);margin:14px 0}
+.upcoming-item{padding:8px 0;border-bottom:1px solid var(--t5);cursor:pointer}
+.upcoming-item:last-child{border-bottom:none}
+.upcoming-date{font-family:var(--mono);font-size:10.5px;color:var(--teal);margin-bottom:2px;font-weight:600}
+.upcoming-title{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:1px}
+.upcoming-sub{font-size:11px;color:var(--t4)}
+
+/* ─── MAIN CALENDAR ───────────────────────────────── */
+/* P-32: overflow:hidden + min-height:0 on container; cal-grid scrolls inside */
+.cal-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.day-hdrs{display:grid;grid-template-columns:repeat(7,1fr);background:var(--w);border-bottom:1px solid var(--bd);flex-shrink:0}
+.dh{padding:8px 0;text-align:center;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;border-right:1px solid var(--bd)}
+.dh:last-child{border-right:none}
+/* P-32: flex:1 + overflow-y:auto + min-height:0 + padding-bottom:12vh for zoom gap */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);flex:1;overflow-y:auto;min-height:0;padding-bottom:12vh;grid-auto-rows:minmax(112px,1fr)}
+.day-cell{border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:7px;cursor:default;transition:background .12s;position:relative;overflow:hidden}
+.day-cell:nth-child(7n){border-right:none}
+.day-cell:hover{background:var(--t6)}
+.day-cell.today{background:var(--tl)}
+.day-cell.other{background:var(--t5)}
+.day-num{font-size:13px;font-weight:600;color:var(--t2);width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-bottom:4px;flex-shrink:0}
+.day-cell.today .day-num{background:var(--teal);color:#fff}
+.day-cell.other .day-num{color:var(--t4)}
+/* Calendar event bars — border-radius:3px is correct ribbon style (not P-07 status chips) */
+.cal-ev{font-size:10.5px;font-weight:600;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity .12s;display:block}
+.cal-ev:hover{opacity:.8}
+.ev-annual{background:var(--gl);color:var(--grn)}
+.ev-sick{background:var(--bl);color:var(--blue)}
+.ev-casual{background:var(--vl);color:var(--violet)}
+.ev-pending{background:var(--al);color:var(--amber);border:1px dashed #FCD34D}
+.ev-holiday{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}
+.ev-more{font-size:10px;color:var(--teal);font-weight:600;cursor:pointer;margin-top:1px}
+
+/* ─── EVENT TOOLTIP ───────────────────────────────── */
+.ev-tooltip{position:fixed;background:var(--t1);color:#fff;border-radius:var(--r);padding:10px 12px;font-size:12px;pointer-events:none;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.2);min-width:190px;display:none}
+.ev-tooltip.show{display:block}
+.evt-title{font-weight:600;margin-bottom:3px}
+.evt-sub{color:#94A3B8;font-size:11px}
+.evt-badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ─── ICON SIDEBAR ──────────────────────────────── -->
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- ─── TOPBAR ─────────────────────────────────── -->
+  <div class="topbar">
+    <div class="tb-title">Leave Calendar</div>
+    <div class="cal-nav">
+      <div class="nav-btn" onclick="changeMonth(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+      <div class="cal-month" id="cal-month-lbl">March 2026</div>
+      <div class="nav-btn" onclick="changeMonth(1)"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <button class="btn" style="font-size:12px" onclick="goToday()">Today</button>
+    <div class="tb-sp"></div>
+    <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Raise Leave Request</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- ─── TOOLBAR ───────────────────────────────── -->
+  <div class="cal-toolbar">
+    <div class="view-tog">
+      <div class="vt on" onclick="setView(this)">Month</div>
+      <div class="vt" onclick="setView(this)">Week</div>
+      <div class="vt" onclick="setView(this)">Day</div>
+    </div>
+    <div class="ct-sep"></div>
+    <div class="fp fp-annual" data-filter="annual" onclick="toggleFilter(this)">● Annual</div>
+    <div class="fp fp-sick"   data-filter="sick"   onclick="toggleFilter(this)">● Sick</div>
+    <div class="fp fp-casual" data-filter="casual" onclick="toggleFilter(this)">● Casual</div>
+    <div class="fp fp-pending" data-filter="pending" onclick="toggleFilter(this)">● Pending</div>
+    <div class="fp fp-holiday" data-filter="holiday" onclick="toggleFilter(this)">● Holidays</div>
+    <div class="ct-sp"></div>
+    <!-- BG-013: department filter is client-side only — no dept param on GET /leave/requests -->
+    <select class="sel-sel" id="dept-sel" onchange="renderCal()">
+      <option value="all">All Departments</option>
+      <option value="engineering">Engineering</option>
+      <option value="sales">Sales</option>
+      <option value="marketing">Marketing</option>
+      <option value="finance">Finance</option>
+      <option value="hr">HR &amp; Ops</option>
+    </select>
+  </div>
+
+  <div class="cal-area">
+
+    <!-- ─── CALENDAR SIDEBAR ───────────────────── -->
+    <div class="cal-sidebar">
+      <div class="mini-cal-title"><span id="mini-month">Mar 2026</span></div>
+      <div class="mini-grid" id="mini-grid"></div>
+
+      <div class="sidebar-sec-divider"></div>
+
+      <!-- Legend -->
+      <div class="sidebar-sec">
+        <div class="sidebar-sec-t">Leave Types</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--grn2)"></div><div class="legend-lbl">Annual Leave</div><div class="legend-ct">7</div></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue2)"></div><div class="legend-lbl">Sick Leave</div><div class="legend-ct">2</div></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--violet2)"></div><div class="legend-lbl">Casual Leave</div><div class="legend-ct">1</div></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber2)"></div><div class="legend-lbl">Pending</div><div class="legend-ct">2</div></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--t4)"></div><div class="legend-lbl">Public Holiday</div><div class="legend-ct">1</div></div>
+      </div>
+
+      <div class="sidebar-sec-divider"></div>
+
+      <!-- Upcoming -->
+      <div class="sidebar-sec">
+        <div class="sidebar-sec-t">Upcoming</div>
+        <div class="upcoming-item">
+          <div class="upcoming-date">Mar 24 · Today</div>
+          <div class="upcoming-title">A. Kofi — Sick Leave</div>
+          <div class="upcoming-sub">Marketing · Pending approval</div>
+        </div>
+        <div class="upcoming-item">
+          <div class="upcoming-date">Mar 25</div>
+          <div class="upcoming-title">A. Kofi — Sick Leave</div>
+          <div class="upcoming-sub">Marketing · Day 2 · Pending</div>
+        </div>
+        <div class="upcoming-item">
+          <div class="upcoming-date">Mar 29</div>
+          <div class="upcoming-title">D. Patel — Casual Leave</div>
+          <div class="upcoming-sub">Engineering · 1 day</div>
+        </div>
+        <div class="upcoming-item">
+          <div class="upcoming-date">Mar 31</div>
+          <div class="upcoming-title">M. Al Rashid — Annual Leave</div>
+          <div class="upcoming-sub">Finance · 1 day</div>
+        </div>
+        <div class="upcoming-item">
+          <div class="upcoming-date">Apr 1</div>
+          <div class="upcoming-title">Public Holiday</div>
+          <div class="upcoming-sub">UAE — April 2026</div>
+        </div>
+        <div class="upcoming-item">
+          <div class="upcoming-date">Apr 7–10</div>
+          <div class="upcoming-title">T. Nakamura — Annual Leave</div>
+          <div class="upcoming-sub">Sales · Pending approval</div>
+        </div>
+        <div class="upcoming-item">
+          <div class="upcoming-date">Apr 14–17</div>
+          <div class="upcoming-title">R. Hassan — Annual Leave</div>
+          <div class="upcoming-sub">Engineering · Approved</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── MAIN CALENDAR GRID ─────────────────── -->
+    <div class="cal-main">
+      <div class="day-hdrs">
+        <div class="dh">Sun</div><div class="dh">Mon</div><div class="dh">Tue</div>
+        <div class="dh">Wed</div><div class="dh">Thu</div><div class="dh">Fri</div><div class="dh">Sat</div>
+      </div>
+      <!-- P-32: grid scrolls; min-height:0 + padding-bottom:12vh on cal-grid -->
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+  </div><!-- end cal-area -->
+</main>
+</div><!-- end shell -->
+
+<!-- Event tooltip -->
+<div class="ev-tooltip" id="tooltip">
+  <div class="evt-title" id="tt-title"></div>
+  <div class="evt-sub" id="tt-sub"></div>
+  <div id="tt-badge"></div>
+</div>
+
+<script>
+// BG-013: no date-range or dept filter on GET /leave/requests — data mocked client-side
+// BG-014: no holiday calendar endpoint — public holidays hardcoded below
+const EVENTS = {
+  3:  [{t:'S. Chen — Annual Leave',      cls:'ev-annual',  sub:'Engineering · Day 1',    type:'annual',  dept:'engineering', status:'Approved'}],
+  4:  [{t:'S. Chen — Annual Leave',      cls:'ev-annual',  sub:'Engineering · Day 2',    type:'annual',  dept:'engineering', status:'Approved'}],
+  10: [{t:'L. Porter — Sick Leave',      cls:'ev-sick',    sub:'Sales · Day 1',          type:'sick',    dept:'sales',       status:'Approved'}],
+  11: [{t:'L. Porter — Sick Leave',      cls:'ev-sick',    sub:'Sales · Day 2',          type:'sick',    dept:'sales',       status:'Approved'}],
+  17: [{t:'L. Osei — Annual Leave',      cls:'ev-annual',  sub:'HR & Ops · Day 1',       type:'annual',  dept:'hr',          status:'Approved'}],
+  18: [{t:'L. Osei — Annual Leave',      cls:'ev-annual',  sub:'HR & Ops · Day 2',       type:'annual',  dept:'hr',          status:'Approved'}],
+  19: [{t:'L. Osei — Annual Leave',      cls:'ev-annual',  sub:'HR & Ops · Day 3',       type:'annual',  dept:'hr',          status:'Approved'}],
+  20: [{t:'L. Osei — Annual Leave',      cls:'ev-annual',  sub:'HR & Ops · Day 4',       type:'annual',  dept:'hr',          status:'Approved'}],
+  21: [{t:'L. Osei — Annual Leave',      cls:'ev-annual',  sub:'HR & Ops · Day 5',       type:'annual',  dept:'hr',          status:'Approved'}],
+  24: [{t:'A. Kofi — Sick Leave',        cls:'ev-pending', sub:'Marketing · Pending',    type:'pending', dept:'marketing',   status:'Pending'}],
+  25: [{t:'A. Kofi — Sick Leave',        cls:'ev-pending', sub:'Marketing · Pending',    type:'pending', dept:'marketing',   status:'Pending'}],
+  29: [{t:'D. Patel — Casual Leave',     cls:'ev-casual',  sub:'Engineering · 1 day',    type:'casual',  dept:'engineering', status:'Approved'}],
+  30: [{t:'Public Holiday',              cls:'ev-holiday', sub:'UAE — April Eve',         type:'holiday', dept:'all',         status:'Holiday'}],
+  31: [{t:'M. Al Rashid — Annual Leave', cls:'ev-annual',  sub:'Finance · 1 day',         type:'annual',  dept:'finance',     status:'Approved'}],
+};
+
+// Active type filters (type key → visible)
+const filters = {annual:true, sick:true, casual:true, pending:true, holiday:true};
+let currentYear = 2026, currentMonth = 2; // 0-indexed: 2 = March
+
+function getActiveDept(){ return document.getElementById('dept-sel').value; }
+
+function eventVisible(ev){
+  const dept = getActiveDept();
+  if(!filters[ev.type]) return false;
+  if(dept !== 'all' && ev.dept !== 'all' && ev.dept !== dept) return false;
+  return true;
+}
+
+function renderMiniCal(){
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('mini-month').textContent = months[currentMonth] + ' ' + currentYear;
+  const days = ['S','M','T','W','T','F','S'];
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const daysInPrev  = new Date(currentYear, currentMonth, 0).getDate();
+  let html = days.map(d=>`<div class="mini-hdr">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++) html += `<div class="mini-day other">${daysInPrev-firstDay+1+i}</div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday = d===24 && currentMonth===2 && currentYear===2026;
+    const hasEv = currentMonth===2 && EVENTS[d] && EVENTS[d].some(e=>eventVisible(e));
+    html += `<div class="mini-day${isToday?' today':''}${hasEv&&!isToday?' has-ev':''}">${d}</div>`;
+  }
+  document.getElementById('mini-grid').innerHTML = html;
+}
+
+function renderCal(){
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-lbl').textContent = months[currentMonth] + ' ' + currentYear;
+  const firstDay   = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const daysInPrev  = new Date(currentYear, currentMonth, 0).getDate();
+  let html = '';
+  // Prev month padding
+  for(let i=firstDay-1;i>=0;i--)
+    html += `<div class="day-cell other"><div class="day-num">${daysInPrev-i}</div></div>`;
+  // This month
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday = d===24 && currentMonth===2 && currentYear===2026;
+    const rawEvs  = currentMonth===2 ? (EVENTS[d]||[]) : [];
+    const evs     = rawEvs.filter(e=>eventVisible(e));
+    const vis = evs.slice(0,3), extra = evs.length-3;
+    html += `<div class="day-cell${isToday?' today':''}">
+      <div class="day-num">${d}</div>
+      ${vis.map(e=>`<span class="cal-ev ${e.cls}" onmouseenter="showTip(event,'${e.t}','${e.sub}','${e.status}')" onmouseleave="hideTip()">${e.t}</span>`).join('')}
+      ${extra>0?`<div class="ev-more">+${extra} more</div>`:''}
+    </div>`;
+  }
+  // Next month padding
+  const totalCells = Math.ceil((firstDay+daysInMonth)/7)*7;
+  const nextCells  = totalCells - firstDay - daysInMonth;
+  for(let i=1;i<=nextCells;i++)
+    html += `<div class="day-cell other"><div class="day-num">${i}</div></div>`;
+  document.getElementById('cal-grid').innerHTML = html;
+  renderMiniCal();
+}
+
+function changeMonth(dir){
+  currentMonth += dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  renderCal();
+}
+function goToday(){ currentMonth=2; currentYear=2026; renderCal(); }
+function setView(el){ document.querySelectorAll('.vt').forEach(t=>t.classList.remove('on')); el.classList.add('on'); }
+
+function toggleFilter(el){
+  el.classList.toggle('off');
+  const key = el.dataset.filter;
+  filters[key] = !el.classList.contains('off');
+  renderCal();
+}
+
+// Status chip colours for tooltip
+const statusStyle = {
+  Approved:'background:#DCFCE7;color:#15803D',
+  Pending: 'background:#FEF3C7;color:#B45309',
+  Holiday: 'background:#F1F4F8;color:#64748B',
+};
+function showTip(e,title,sub,status){
+  const tt=document.getElementById('tooltip');
+  document.getElementById('tt-title').textContent=title;
+  document.getElementById('tt-sub').textContent=sub;
+  const badge=document.getElementById('tt-badge');
+  badge.innerHTML=`<span class="evt-badge" style="${statusStyle[status]||''}">${status}</span>`;
+  tt.classList.add('show');
+  tt.style.left=(e.clientX+14)+'px';
+  tt.style.top=(e.clientY-12)+'px';
+}
+function hideTip(){ document.getElementById('tooltip').classList.remove('show'); }
+
+document.querySelectorAll('.si').forEach(el=>el.addEventListener('click',function(){
+  document.querySelectorAll('.si').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+
+renderCal();
+</script>
+</body>
+</html>

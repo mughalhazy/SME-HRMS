@@ -1,0 +1,108 @@
+﻿{
+  "_meta": {
+    "id": "h04-create-department",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Create Department",
+    "variant": "Simple (single scroll)",
+    "surface": "admin",
+    "primary_actor": "HR Admin",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Departments", "Create Department"],
+      "actions": [
+        { "label": "Cancel",            "style": "secondary", "leads_to": "H02 Departments" },
+        { "label": "Create Department", "style": "primary",   "action": "POST /api/v1/departments" }
+      ]
+    },
+
+    "PAGE_TITLE_BAR": {
+      "title": "Create Department",
+      "subtitle": "Define a new organisational unit. Employees can be assigned after creation."
+    },
+
+    "FORM_SECTIONS": {
+      "basic_information": {
+        "fields": [
+          { "id": "name",   "label": "Department Name", "type": "text",   "required": true,  "maps_to": "Department.name" },
+          { "id": "code",   "label": "Department Code", "type": "text",   "required": true,  "maps_to": "Department.code", "note": "Uppercase, used in reports and integrations" },
+          { "id": "status", "label": "Initial Status",  "type": "select", "required": false, "enum_ref": "employee.model.DEPARTMENT_STATUSES", "values": ["Proposed","Active","Inactive","Archived"], "default": "Proposed", "maps_to": "Department.status" }
+        ]
+      },
+
+      "description": {
+        "fields": [
+          { "id": "description", "label": "Department Description", "type": "textarea", "required": false, "maps_to": "Department.description" }
+        ]
+      },
+
+      "department_head": {
+        "fields": [
+          { "id": "head_employee_id", "label": "Department Head", "type": "select", "required": false, "source": "GET /api/v1/employees?status=Active", "maps_to": "Department.head_employee_id" }
+        ]
+      },
+
+      "visual_identity": {
+        "fields": [
+          { "id": "icon_colour", "label": "Icon Colour", "type": "colour_picker", "required": false, "maps_to": "UI-only — no backend field for colour", "note": "Visual identity only; colour stored in UI config or extended model" }
+        ]
+      }
+    },
+
+    "FORM_RAIL": {
+      "live_preview": {
+        "description": "Department card preview updates as user types — shows icon initial, name, code, description"
+      },
+      "form_summary": {
+        "fields": ["name","code","status","head_employee_id"]
+      },
+      "next_steps_panel": {
+        "steps": [
+          "Department record created with status: Proposed",
+          "Set status to Active to enable employee assignment",
+          "Assign employees via Edit Employee or bulk transfer",
+          "Add cost centre and budget links via Organisation Settings"
+        ]
+      }
+    },
+
+    "FORM_FOOTER": {
+      "left_info": "Submits POST /api/v1/departments — employee-service",
+      "right": [
+        { "label": "Cancel",            "style": "secondary" },
+        { "label": "Create Department", "style": "primary", "action": "POST /api/v1/departments" }
+      ]
+    }
+  },
+
+  "submit_flow": {
+    "method": "POST",
+    "endpoint": "/api/v1/departments",
+    "service": "employee-service",
+    "body": {
+      "name": "string (required)",
+      "code": "string (required, uppercase)",
+      "status": "DepartmentStatus (default: Proposed)",
+      "description": "string (optional)",
+      "head_employee_id": "string (optional)"
+    },
+    "on_success": { "redirect": "H03 Department Detail" }
+  },
+
+  "data_sources": [
+    { "slot": "head_employee_id", "endpoint": "GET /api/v1/employees?status=Active", "service": "employee-service" }
+  ],
+
+  "known_gaps": [],
+
+  "patterns_applied": ["P-07", "P-31", "P-32"],
+
+  "mock_persona": null,
+
+  "notes": "Icon colour is UI-only; Department model has no colour field. Could be stored in a UI preferences service or as an extension to the Department model in a future update."
+}

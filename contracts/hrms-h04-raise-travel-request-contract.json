@@ -1,0 +1,82 @@
+﻿{
+  "_meta": {
+    "id": "h04-raise-travel-request",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Raise Travel Request",
+    "variant": "Simple",
+    "surface": "employee self-service",
+    "primary_actor": "Employee",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Travel Requests", "Raise Travel Request"],
+      "actions": [
+        { "label": "Cancel", "style": "secondary" },
+        { "label": "Submit Request", "style": "primary", "action": "POST /api/v1/travel-requests" }
+      ]
+    },
+    "FORM_SECTIONS": {
+      "trip_type": {
+        "component": "pill_selector",
+        "required": true,
+        "enum_ref": "travel_service.TRIP_TYPES",
+        "values": ["RoundTrip","OneWay","MultiCity"],
+        "maps_to": "TravelRequest.trip_type"
+      },
+      "route_dates": {
+        "fields": [
+          { "id": "origin_city",       "type": "text", "required": true,  "maps_to": "TravelRequest.origin_city" },
+          { "id": "destination_city",  "type": "text", "required": true,  "maps_to": "TravelRequest.destination_city" },
+          { "id": "start_date",        "type": "date", "required": true,  "maps_to": "TravelRequest.start_date" },
+          { "id": "end_date",          "type": "date", "required": false, "maps_to": "TravelRequest.end_date" }
+        ]
+      },
+      "purpose_cost": {
+        "fields": [
+          { "id": "purpose",         "type": "textarea", "required": true,  "maps_to": "TravelRequest.purpose" },
+          { "id": "estimated_cost",  "type": "number",   "required": true,  "maps_to": "TravelRequest.estimated_cost" },
+          { "id": "currency",        "type": "select",   "required": true,  "maps_to": "TravelRequest.currency" },
+          { "id": "notes",           "type": "textarea", "required": false, "maps_to": "TravelRequest.notes" }
+        ]
+      },
+      "approval": {
+        "fields": [
+          { "id": "manager_employee_id", "type": "select", "required": true, "source": "GET /api/v1/employees?status=Active", "maps_to": "TravelRequest.manager_employee_id" }
+        ]
+      }
+    },
+    "FORM_RAIL": {
+      "trip_summary": { "fields": ["employee","trip_type","origin","destination","departure","return","estimated_cost","approver"] },
+      "info_panel": { "note": "Itinerary segments added by HR/admin after approval" }
+    },
+    "FORM_FOOTER": {
+      "right": [
+        { "label": "Cancel",         "style": "secondary" },
+        { "label": "Submit Request", "style": "primary",  "action": "POST /api/v1/travel-requests" }
+      ]
+    }
+  },
+  "submit_flow": {
+    "method": "POST",
+    "endpoint": "/api/v1/travel-requests",
+    "service": "travel_service",
+    "body": {
+      "purpose": "string (required)",
+      "trip_type": "TRIP_TYPE (required): OneWay | RoundTrip | MultiCity",
+      "origin_city": "string (required)",
+      "destination_city": "string (required)",
+      "start_date": "date (required)",
+      "end_date": "date (required)",
+      "estimated_cost": "float (required)",
+      "currency": "string (required)",
+      "notes": "string (optional)"
+    },
+    "on_success": { "redirect": "H03 Travel Request Detail (future page)" }
+  },
+  "known_gaps": [],
+  "patterns_applied": ["P-07", "P-31", "P-32"]
+}

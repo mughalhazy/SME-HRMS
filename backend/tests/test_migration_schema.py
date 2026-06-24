@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CORE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '001_core_schema.sql').read_text()
+WORKFLOW_SCHEMA = (ROOT / 'deployment' / 'migrations' / '002_workflow_schema.sql').read_text()
+PERSISTENCE_SCHEMA = (ROOT / 'deployment' / 'migrations' / '004_persistence_normalization.sql').read_text()
+TENANT_FOUNDATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '005_tenant_foundation.sql').read_text()
+NOTIFICATION_SCHEMA = (ROOT / 'deployment' / 'migrations' / '006_notification_service.sql').read_text()
+EVENT_OUTBOX_SCHEMA = (ROOT / 'deployment' / 'migrations' / '007_event_outbox.sql').read_text()
+ADDON_DOMAIN_SCHEMA = (ROOT / 'deployment' / 'migrations' / '011_addon_domains.sql').read_text()
+RUN_MIGRATIONS_SCRIPT = (ROOT / 'deployment' / 'scripts' / 'run-migrations.sh').read_text()
+FULL_SCHEMA = f"{CORE_SCHEMA}\n{WORKFLOW_SCHEMA}\n{PERSISTENCE_SCHEMA}\n{TENANT_FOUNDATION_SCHEMA}\n{NOTIFICATION_SCHEMA}\n{EVENT_OUTBOX_SCHEMA}"
+
+
+def test_core_schema_matches_canonical_employee_tables() -> None:
+    assert 'tenant_id VARCHAR(80) NOT NULL' in CORE_SCHEMA
+    assert 'description TEXT' in CORE_SCHEMA
+    assert 'parent_department_id UUID' in CORE_SCHEMA
+    assert 'head_employee_id UUID' in CORE_SCHEMA
+    assert 'first_name VARCHAR(100) NOT NULL' in CORE_SCHEMA
+    assert 'last_name VARCHAR(100) NOT NULL' in CORE_SCHEMA
+    assert 'hire_date DATE NOT NULL' in CORE_SCHEMA
+    assert 'employment_type VARCHAR(20) NOT NULL' in CORE_SCHEMA
+    assert 'manager_employee_id UUID' in CORE_SCHEMA
+    assert 'fk_departments_parent_department' in CORE_SCHEMA
+    assert 'fk_departments_head_employee' in CORE_SCHEMA
+
+
+def test_workflow_schema_matches_canonical_operational_tables() -> None:
+    expected_fragments = [
+        'tenant_id VARCHAR(80) NOT NULL',
+        'check_in_time TIMESTAMPTZ',
+        'check_out_time TIMESTAMPTZ',
+        'leave_type VARCHAR(20) NOT NULL',
+        'approver_employee_id UUID',
+        'base_salary NUMERIC(12,2) NOT NULL',
+        'gross_pay NUMERIC(12,2) NOT NULL',
+        'currency CHAR(3) NOT NULL',
+        'employment_type VARCHAR(20) NOT NULL',
+        'openings_count INTEGER NOT NULL CHECK (openings_count >= 1)',
+        'first_name VARCHAR(100) NOT NULL',
+        'last_name VARCHAR(100) NOT NULL',
+        'source_candidate_id VARCHAR(120)',
+        'CREATE TABLE IF NOT EXISTS candidate_stage_transitions',
+        'changed_by VARCHAR(120)',
+        'CREATE TABLE IF NOT EXISTS interviews',
+        'interviewer_employee_ids UUID[]',
+        'CREATE TABLE IF NOT EXISTS attendance_rules',
+        'workdays VARCHAR(20)[] NOT NULL',
+        'CREATE TABLE IF NOT EXISTS leave_policies',
+        'carry_forward_limit_days NUMERIC(5,2) NOT NULL',
+        'CREATE TABLE IF NOT EXISTS payroll_settings',
+        'approval_chain TEXT[] NOT NULL',
+        'CREATE TABLE IF NOT EXISTS performance_review_cycles',
+        'CREATE TABLE IF NOT EXISTS performance_goals',
+        'CREATE TABLE IF NOT EXISTS performance_feedback',
+        'CREATE TABLE IF NOT EXISTS performance_calibrations',
+        'CREATE TABLE IF NOT EXISTS performance_pip_plans',
+        'CREATE TABLE IF NOT EXISTS performance_pip_milestones',
+        "record_state VARCHAR(20) NOT NULL DEFAULT 'Captured'",
+        'CREATE TABLE IF NOT EXISTS user_accounts',
+        'CREATE TABLE IF NOT EXISTS sessions',
+        'CREATE TABLE IF NOT EXISTS refresh_tokens',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in FULL_SCHEMA
+
+
+def test_workflow_schema_enforces_referential_integrity() -> None:
+    foreign_keys = [
+        'REFERENCES employees (tenant_id, employee_id)',
+        'REFERENCES departments (tenant_id, department_id)',
+        'REFERENCES roles (tenant_id, role_id)',
+        'REFERENCES job_postings (tenant_id, job_posting_id)',
+        'REFERENCES candidates (tenant_id, candidate_id)',
+        'ON UPDATE CASCADE',
+    ]
+
+    for fragment in foreign_keys:
+        assert fragment in CORE_SCHEMA or fragment in WORKFLOW_SCHEMA
+
+
+def test_all_tables_include_tenant_id() -> None:
+    create_table_blocks = re.findall(r'CREATE TABLE IF NOT EXISTS\s+\w+\s*\((.*?)\);', FULL_SCHEMA, re.S)
+    assert create_table_blocks
+    for block in create_table_blocks:
+        assert 'tenant_id VARCHAR(80) NOT NULL' in block
+
+
+def test_persistence_normalization_schema_adds_auth_and_attendance_persistence() -> None:
+    expected_fragments = [
+        'ALTER TABLE attendance_records',
+        "ADD COLUMN IF NOT EXISTS record_state VARCHAR(20) NOT NULL DEFAULT 'Captured'",
+        'ADD COLUMN IF NOT EXISTS correction_note TEXT',
+        'CREATE TABLE IF NOT EXISTS user_accounts',
+        'CREATE TABLE IF NOT EXISTS role_bindings',
+        'CREATE TABLE IF NOT EXISTS permission_policies',
+        'CREATE TABLE IF NOT EXISTS sessions',
+        'CREATE TABLE IF NOT EXISTS refresh_tokens',
+        'REFERENCES user_accounts (tenant_id, user_id)',
+        'REFERENCES sessions (tenant_id, session_id)',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in PERSISTENCE_SCHEMA
+
+
+
+
+def test_notification_schema_adds_canonical_notification_tables() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS notification_templates',
+        'topic_code VARCHAR(100) NOT NULL',
+        "status VARCHAR(20) NOT NULL DEFAULT 'Active'",
+        'CREATE TABLE IF NOT EXISTS notification_messages',
+        'recipient VARCHAR(100) NOT NULL',
+        'delivered_at TIMESTAMPTZ',
+        'failed_at TIMESTAMPTZ',
+        'retry_count INTEGER NOT NULL DEFAULT 0',
+        'CREATE TABLE IF NOT EXISTS delivery_attempts',
+        "outcome VARCHAR(20) NOT NULL CHECK (outcome IN ('Sent', 'Failed', 'Deferred', 'Suppressed'))",
+        'CREATE TABLE IF NOT EXISTS notification_preferences',
+        'CONSTRAINT uq_notification_preferences_subject_topic UNIQUE (tenant_id, subject_type, subject_id, topic_code)',
+        'REFERENCES notification_templates (template_id)',
+        'REFERENCES notification_messages (message_id)',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in NOTIFICATION_SCHEMA
+
+def test_tenant_foundation_schema_adds_tenant_registry_and_config_store() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS tenants',
+        'tenant_id VARCHAR(80) NOT NULL PRIMARY KEY',
+        'slug VARCHAR(120) NOT NULL UNIQUE',
+        'CREATE TABLE IF NOT EXISTS tenant_configs',
+        'feature_flags JSONB NOT NULL DEFAULT',
+        'leave_policy_refs JSONB NOT NULL DEFAULT',
+        'payroll_rule_refs JSONB NOT NULL DEFAULT',
+        'enabled_locations JSONB NOT NULL DEFAULT',
+        'REFERENCES tenants (tenant_id)',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in TENANT_FOUNDATION_SCHEMA
+
+
+def test_event_outbox_schema_adds_dispatch_and_consumer_dedupe_tables() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS service_outbox',
+        'source_service VARCHAR(80) NOT NULL',
+        'event_payload JSONB NOT NULL',
+        "status VARCHAR(20) NOT NULL DEFAULT 'Pending'",
+        'CREATE TABLE IF NOT EXISTS processed_events',
+        'consumer_name VARCHAR(120) NOT NULL',
+        'metadata JSONB NOT NULL DEFAULT',
+    ]
+
+    for fragment in expected_fragments:
+        assert fragment in EVENT_OUTBOX_SCHEMA
+
+
+def test_addon_domain_schema_covers_helpdesk_workforce_intelligence_learning_and_cost_planning() -> None:
+    expected_fragments = [
+        'CREATE TABLE IF NOT EXISTS helpdesk_tickets',
+        'CREATE TABLE IF NOT EXISTS helpdesk_ticket_sla_events',
+        'CREATE TABLE IF NOT EXISTS workforce_intelligence_snapshots',
+        'CREATE TABLE IF NOT EXISTS learning_paths',
+        'CREATE TABLE IF NOT EXISTS workforce_cost_plans',
+        'headcount_target INTEGER NOT NULL CHECK (headcount_target >= 0)',
+        'salary_forecast NUMERIC(14,2) NOT NULL DEFAULT 0',
+    ]
+    for fragment in expected_fragments:
+        assert fragment in ADDON_DOMAIN_SCHEMA
+
+
+def test_run_migrations_script_applies_deterministic_sorted_order() -> None:
+    assert "find \"$MIGRATIONS_DIR\" -maxdepth 1 -type f -name '*.sql' | sort -V" in RUN_MIGRATIONS_SCRIPT
+    assert 'Duplicate migration prefixes detected' in RUN_MIGRATIONS_SCRIPT

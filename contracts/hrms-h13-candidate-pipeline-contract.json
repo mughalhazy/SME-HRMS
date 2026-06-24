@@ -1,0 +1,225 @@
+﻿{
+  "id": "hrms-h13-candidate-pipeline-contract",
+  "version": "1.0",
+  "last_updated": "2026-03-30",
+  "archetype_ref": "hrms-schema-template.json",
+  "seed_page_ref": "frontend/seeds/p13-pipeline.html",
+
+  "page": {
+    "title": "Candidate Pipeline",
+    "route": "/hiring/pipeline",
+    "archetype": "Candidate Pipeline (Kanban)",
+    "primary_service": "hiring_service",
+    "base_path": "/api/v1/hiring"
+  },
+
+  "renderer_schema": {
+    "dsl_version": "1.0",
+    "layout": "kanban-board",
+    "scroll_model": "board-wrap horizontal-scroll; col-body vertical per-column",
+    "panels": ["slide-panel-candidate-detail"]
+  },
+
+  "endpoints": [
+    {
+      "id": "ep-01",
+      "label": "Get pipeline candidates",
+      "method": "GET",
+      "path": "/api/v1/hiring/pipeline",
+      "query_params": {
+        "pipeline_stage": "ref:api-contracts#Hiring.pipeline.stage | null",
+        "department_id": "uuid | null",
+        "job_posting_id": "uuid | null"
+      },
+      "service_call": "hiring_service › HiringService.list_candidate_pipeline_view(pipeline_stage, department_id, job_posting_id)",
+      "used_by": ["kanban columns", "stat-strip total count (BG-033 workaround)"],
+      "response_shape": {
+        "candidates": "Candidate[]",
+        "total": "int"
+      },
+      "notes": "Returns all pipeline candidates grouped by stage. BG-033: no summary endpoint — stats aggregated client-side."
+    },
+    {
+      "id": "ep-02",
+      "label": "Get job postings (role filter tabs)",
+      "method": "GET",
+      "path": "/api/v1/hiring/job-postings",
+      "query_params": {
+        "status": "ref:api-contracts#Hiring.job.status | null",
+        "department_id": "uuid | null"
+      },
+      "service_call": "hiring_service › HiringService.get_job_postings(status, department_id)",
+      "used_by": ["toolbar role tabs"],
+      "response_shape": {
+        "job_postings": "JobPosting[]",
+        "total": "int"
+      }
+    },
+    {
+      "id": "ep-03",
+      "label": "Get single candidate",
+      "method": "GET",
+      "path": "/api/v1/hiring/candidates/{candidate_id}",
+      "service_call": "hiring_service › HiringService.get_candidate(candidate_id)",
+      "used_by": ["slide panel detail view"],
+      "response_shape": {
+        "candidate": "Candidate"
+      }
+    },
+    {
+      "id": "ep-04",
+      "label": "Advance candidate stage",
+      "method": "PATCH",
+      "path": "/api/v1/hiring/candidates/{candidate_id}",
+      "body": {
+        "status": "ref:api-contracts#Hiring.candidate.status"
+      },
+      "service_call": "hiring_service › HiringService.update_candidate(candidate_id, payload)",
+      "used_by": ["card 'Move to Screening' / 'Schedule Interview' / 'Send Offer' / 'Mark Hired' actions", "slide panel primary action button"],
+      "notes": "BG-034: 'Advance to Final Round' is UI-only column move. No PATCH issued for interview→final transition."
+    },
+    {
+      "id": "ep-05",
+      "label": "Reject candidate",
+      "method": "PATCH",
+      "path": "/api/v1/hiring/candidates/{candidate_id}",
+      "body": {
+        "status": "Rejected"
+      },
+      "service_call": "hiring_service › HiringService.update_candidate(candidate_id, {status:'Rejected'})",
+      "used_by": ["card Reject button", "slide panel Reject button"]
+    },
+    {
+      "id": "ep-06",
+      "label": "Mark candidate hired",
+      "method": "POST",
+      "path": "/api/v1/hiring/candidates/{candidate_id}/hire",
+      "body": {
+        "hire_date": "date",
+        "department_id": "uuid",
+        "role_id": "uuid | null",
+        "employment_type": "ref:api-contracts#Hiring.employment.type"
+      },
+      "service_call": "hiring_service › HiringService.mark_candidate_hired(candidate_id, body)",
+      "used_by": ["slide panel 'Mark as Hired' action (Offer stage only)"]
+    },
+    {
+      "id": "ep-07",
+      "label": "Get interviews for candidate",
+      "method": "GET",
+      "path": "/api/v1/hiring/interviews",
+      "query_params": {
+        "candidate_id": "uuid"
+      },
+      "service_call": "hiring_service › HiringService.get_interviews(candidate_id)",
+      "used_by": ["slide panel interviewer avatars", "slide panel timeline"],
+      "response_shape": {
+        "interviews": "Interview[]"
+      }
+    },
+    {
+      "id": "ep-08",
+      "label": "Schedule interview",
+      "method": "POST",
+      "path": "/api/v1/hiring/interviews",
+      "body": {
+        "candidate_id": "uuid",
+        "interview_type": "ref:api-contracts#Hiring.interview.type",
+        "scheduled_start": "datetime",
+        "scheduled_end": "datetime",
+        "interviewer_employee_ids": "uuid[]",
+        "location_or_link": "string | null"
+      },
+      "service_call": "hiring_service › HiringService.create_interview(payload)",
+      "used_by": ["slide panel 'Schedule' button"]
+    },
+    {
+      "id": "ep-09",
+      "label": "Add candidate (import from LinkedIn)",
+      "method": "POST",
+      "path": "/api/v1/hiring/candidates/import/linkedin",
+      "body": {
+        "job_posting_id": "uuid",
+        "profile_url": "string",
+        "source": "LinkedIn"
+      },
+      "service_call": "hiring_service › HiringService.import_candidate_from_linkedin(payload)",
+      "used_by": ["topbar 'Add Candidate' button (LinkedIn import path)"]
+    },
+    {
+      "id": "ep-10",
+      "label": "Add candidate (manual)",
+      "method": "POST",
+      "path": "/api/v1/hiring/candidates",
+      "body": {
+        "job_posting_id": "uuid",
+        "first_name": "string",
+        "last_name": "string",
+        "email": "string",
+        "phone": "string | null",
+        "source": "ref:api-contracts#Hiring.candidate.source",
+        "resume_url": "string | null"
+      },
+      "service_call": "hiring_service › HiringService.create_candidate(payload)",
+      "used_by": ["topbar 'Add Candidate' button (manual path)"]
+    }
+  ],
+
+  "chrome": [
+    {
+      "id": "ch-01",
+      "element": "Stat strip — Avg Time-to-Hire, Offer Accept Rate, Interviews This Week",
+      "gap_ref": "BG-033",
+      "treatment": "Mocked static values client-side — no summary endpoint in hiring_service"
+    },
+    {
+      "id": "ch-02",
+      "element": "Final Round kanban column + 'Advance to Final' card action",
+      "gap_ref": "BG-034",
+      "treatment": "UI-only column; candidates stored as status=Interviewing with is_final_round flag; no PATCH issued for interview→final move"
+    },
+    {
+      "id": "ch-03",
+      "element": "Search / filter bar",
+      "gap_ref": null,
+      "treatment": "Client-side filter over loaded CANDIDATES array; real implementation would use GET /pipeline?search= query param"
+    },
+    {
+      "id": "ch-04",
+      "element": "Sort select (Days in stage / AI match / Name)",
+      "gap_ref": null,
+      "treatment": "Client-side sort; real implementation would use GET /pipeline?sort= query param"
+    },
+    {
+      "id": "ch-05",
+      "element": "AI match score bar + signals",
+      "gap_ref": null,
+      "treatment": "AI match score field on Candidate model; signals are mock strings; real signals would come from AI scoring service not yet modelled in hiring_service"
+    }
+  ],
+
+  "data_model": {
+    "Candidate": {
+      "candidate_id": "hiring_service › Candidate.candidate_id",
+      "job_posting_id": "hiring_service › Candidate.job_posting_id",
+      "first_name": "hiring_service › Candidate.first_name",
+      "last_name": "hiring_service › Candidate.last_name",
+      "email": "hiring_service › Candidate.email",
+      "phone": "hiring_service › Candidate.phone",
+      "source": "hiring_service › Candidate.source · ref:api-contracts#Hiring.candidate.source",
+      "application_date": "hiring_service › Candidate.application_date",
+      "status": "hiring_service › Candidate.status · ref:api-contracts#Hiring.candidate.status",
+      "pipeline_template_id": "hiring_service › Candidate.pipeline_template_id"
+    },
+    "Interview": {
+      "interview_id": "hiring_service › Interview.interview_id",
+      "candidate_id": "hiring_service › Interview.candidate_id",
+      "interview_type": "hiring_service › Interview.interview_type · ref:api-contracts#Hiring.interview.type",
+      "scheduled_start": "hiring_service › Interview.scheduled_start",
+      "scheduled_end": "hiring_service › Interview.scheduled_end",
+      "interviewer_employee_ids": "hiring_service › Interview.interviewer_employee_ids",
+      "recommendation": "hiring_service › Interview.recommendation · ref:api-contracts#Hiring.recommendation",
+      "status": "hiring_service › Interview.status · ref:api-contracts#Hiring.interview.status"
+    }
+  }
+}

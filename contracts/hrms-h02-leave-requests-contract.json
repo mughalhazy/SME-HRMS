@@ -1,0 +1,73 @@
+﻿{
+  "_meta": {
+    "id": "h02-leave-requests", "archetype": "H02 List", "page": "Leave Requests", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "HR Manager",
+    "leads_to": ["H05 Approval Inbox", "H03 Leave Request Detail"],
+    "actions": { "primary": "Export", "secondary": [] }
+  },
+  "api_contract": {
+    "services": ["leave_service"],
+    "endpoints": {
+      "list":    "GET /api/v1/leave/requests?status=&employee_id=&leave_type=&limit=&offset=",
+      "summary": "BG-005: no aggregate — pending/approved counts require client-side grouping"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Leave Requests", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Leave Requests", "subtitle": "{{total_employees}} employees · {{active_count}} active requests",
+        "actions": [{ "label": "Export", "type": "secondary", "icon": "download" }]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 4, "gap_ref": "BG-005",
+        "items": [
+          { "key": "pending",       "label": "Pending Approval", "source": "BG-005 mock" },
+          { "key": "approved_mtd",  "label": "Approved (MTD)",   "source": "BG-005 mock" },
+          { "key": "rejected",      "label": "Rejected",         "source": "BG-005 mock" },
+          { "key": "avg_duration",  "label": "Avg Duration",     "source": "BG-005 mock", "format": "days" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",       "filter": null },
+          { "label": "Submitted", "filter": "status=Submitted" },
+          { "label": "Approved",  "filter": "status=Approved" },
+          { "label": "Rejected",  "filter": "status=Rejected" },
+          { "label": "Cancelled", "filter": "status=Cancelled" }
+        ],
+        "filters": [
+          { "key": "leave_type",    "label": "Leave Type",  "type": "select", "enum_ref": "ref:api-contracts#Leave.type" },
+          { "key": "department_id", "label": "Department",  "type": "select", "source": "employee-service › Department" }
+        ],
+        "search": { "placeholder": "Search employees…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "leave_service › LeaveRequest (paginated)",
+        "row_action": "navigate → H03 Leave Request Detail",
+        "columns": [
+          { "key": "employee",      "label": "Employee",   "width_pct": 22, "component": "avatar_name_id" },
+          { "key": "leave_type",    "label": "Leave Type", "width_pct": 14, "enum_ref": "ref:api-contracts#Leave.type" },
+          { "key": "start_date",    "label": "From",       "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "end_date",      "label": "To",         "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "total_days",    "label": "Days",       "width_pct": 8,  "font": "mono" },
+          { "key": "status",        "label": "Status",     "width_pct": 12, "component": "chip", "enum_ref": "ref:api-contracts#Leave.status" },
+          { "key": "submitted_at",  "label": "Submitted",  "width_pct": 14, "format": "date_short", "font": "mono" },
+          { "key": "actions",       "label": "",           "width_pct": 6,  "component": "row_actions" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

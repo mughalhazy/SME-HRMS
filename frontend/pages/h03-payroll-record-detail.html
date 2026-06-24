@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Payroll Record Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;--grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;--blue:#1D4ED8;--bl:#DBEAFE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.page{flex:1;overflow-y:auto;min-height:0}
+.prof-head{background:var(--w);border-bottom:1px solid var(--bd);padding:22px 26px 0;position:sticky;top:0;z-index:10}
+.ph-row{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px}
+.ph-av{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px var(--w),0 0 0 5px var(--bd)}
+.ph-info{flex:1}.ph-name{font-size:20px;font-weight:700;color:var(--t1);letter-spacing:-0.025em;margin-bottom:3px}
+.ph-role{font-size:13px;color:var(--t3);margin-bottom:10px}
+.ph-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.tab-scroll{display:block;padding:22px 26px 12vh}
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct2{font-size:13px;font-weight:700;color:var(--t1)}
+.cb2{padding:16px 17px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{background:var(--bg);border-radius:var(--r);padding:9px 12px}
+.fl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.fv{font-size:13px;font-weight:500;color:var(--t1)}.fv.mono{font-family:var(--mono);font-size:12.5px}
+.pay-line{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--t5)}
+.pay-line:last-child{border-bottom:none}
+.pay-lbl{font-size:12.5px;color:var(--t3)}
+.pay-val{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--t1)}
+.pay-val.pos{color:var(--grn)}.pay-val.neg{color:var(--red)}
+.pay-total{display:flex;justify-content:space-between;align-items:center;padding:12px 17px;background:var(--t5);border-top:2px solid var(--bd)}
+.pay-total-lbl{font-size:13px;font-weight:700;color:var(--t1)}
+.pay-total-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--teal)}
+.detail-grid{display:grid;grid-template-columns:1fr 292px;gap:16px;align-items:start}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>Payroll Records</a><span class="sep">›</span><span class="cur">PR-2025-0228-0127</span></div>
+    <div class="tbi"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tb-vd"></div>
+    <button class="btn btn-sm"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Payslip</button>
+    <div class="tav">AW</div>
+  </div>
+  <div class="page">
+    <div class="prof-head">
+      <div class="ph-row">
+        <div class="ph-av">PS</div>
+        <div class="ph-info">
+          <div class="ph-name">Feb 2025 Payslip</div>
+          <div class="ph-role">Priya Subramaniam · People Operations</div>
+          <div class="ph-chips">
+            <!-- PayrollStatus: Draft/Processed/Paid/Cancelled — payroll_service.py -->
+            <span class="chip cg">Paid</span>
+            <span class="chip cn" style="font-family:var(--mono);text-transform:none;letter-spacing:0">Feb 01 – Feb 28, 2025</span>
+            <span class="chip cn" style="font-family:var(--mono);text-transform:none;letter-spacing:0">AED</span>
+            <span class="chip cn" style="font-family:var(--mono);text-transform:none;letter-spacing:0">PR-2025-0228-0127</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-scroll">
+      <div class="detail-grid">
+        <div>
+          <!-- Earnings — payroll_service: PayrollRecord fields -->
+          <div class="card">
+            <div class="ch"><div class="ct2">Earnings</div></div>
+            <div style="padding:4px 17px 0">
+              <div class="pay-line"><span class="pay-lbl">Base Salary</span><span class="pay-val pos">AED 22,000.00</span></div>
+              <div class="pay-line"><span class="pay-lbl">Housing Allowance</span><span class="pay-val pos">AED 2,000.00</span></div>
+              <div class="pay-line"><span class="pay-lbl">Transport Allowance</span><span class="pay-val pos">AED 1,000.00</span></div>
+              <div class="pay-line"><span class="pay-lbl">Communication Allowance</span><span class="pay-val pos">AED 500.00</span></div>
+              <div class="pay-line"><span class="pay-lbl">Overtime Pay</span><span class="pay-val pos">AED 0.00</span></div>
+            </div>
+            <div class="pay-total"><span class="pay-total-lbl">Gross Pay</span><span style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--grn)">AED 25,500.00</span></div>
+          </div>
+          <!-- Deductions -->
+          <div class="card">
+            <div class="ch"><div class="ct2">Deductions</div></div>
+            <div style="padding:4px 17px 0">
+              <div class="pay-line"><span class="pay-lbl">DEWS (Retirement)</span><span class="pay-val neg">− AED 1,833.33</span></div>
+              <div class="pay-line"><span class="pay-lbl">Health Insurance Premium</span><span class="pay-val neg">− AED 800.00</span></div>
+              <div class="pay-line"><span class="pay-lbl">Life Insurance Premium</span><span class="pay-val neg">− AED 200.00</span></div>
+            </div>
+            <div class="pay-total"><span class="pay-total-lbl">Total Deductions</span><span style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--red)">− AED 2,833.33</span></div>
+          </div>
+        </div>
+        <!-- Right column: summary -->
+        <div>
+          <div class="card">
+            <div class="ch"><div class="ct2">Net Pay</div></div>
+            <div style="padding:20px 17px;text-align:center">
+              <div style="font-size:11px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Take-Home Pay</div>
+              <div style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--teal)">AED 22,666.67</div>
+              <div style="font-size:11.5px;color:var(--t3);margin-top:6px">Paid on Feb 28, 2025</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><div class="ct2">Record Details</div></div>
+            <div style="padding:6px 17px 14px">
+              <div class="pay-line" style="padding:7px 0"><span style="font-size:12.5px;color:var(--t3)">Period</span><span style="font-family:var(--mono);font-size:12px;color:var(--t1)">Feb 01–28, 2025</span></div>
+              <div class="pay-line" style="padding:7px 0"><span style="font-size:12.5px;color:var(--t3)">Payment Date</span><span style="font-family:var(--mono);font-size:12px;color:var(--t1)">Feb 28, 2025</span></div>
+              <div class="pay-line" style="padding:7px 0"><span style="font-size:12.5px;color:var(--t3)">Currency</span><span style="font-family:var(--mono);font-size:12px;color:var(--t1)">AED</span></div>
+              <div class="pay-line" style="padding:7px 0"><span style="font-size:12.5px;color:var(--t3)">Status</span><span class="chip cg">Paid</span></div>
+              <div class="pay-line" style="padding:7px 0;border-bottom:none"><span style="font-size:12.5px;color:var(--t3)">Record ID</span><span style="font-family:var(--mono);font-size:11px;color:var(--t3)">PR-2025-0228-0127</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+<script>document.querySelectorAll('.si').forEach(el=>el.addEventListener('click',function(){document.querySelectorAll('.si').forEach(x=>x.classList.remove('on'));this.classList.add('on')}));</script>
+</body>
+</html>

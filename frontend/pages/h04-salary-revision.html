@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Salary Revision</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4)}
+.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer}.crumb a:hover{color:var(--teal)}.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+/* Employee context bar */
+.emp-bar{background:var(--w);border-bottom:1px solid var(--bd);padding:13px 24px;flex-shrink:0;display:flex;align-items:center;gap:12px}
+.emp-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.emp-name{font-size:14px;font-weight:700;color:var(--t1)}
+.emp-meta{font-size:12px;color:var(--t3);margin-top:2px}
+.emp-current-sal{margin-left:auto;text-align:right}
+.ecs-lbl{font-size:11px;color:var(--t4);margin-bottom:2px}
+.ecs-val{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--t1)}
+.page-title-bar{background:var(--w);border-bottom:1px solid var(--bd);padding:14px 24px;flex-shrink:0}
+.pt-title{font-size:17px;font-weight:700;color:var(--t1)}
+.pt-sub{font-size:12.5px;color:var(--t3);margin-top:3px}
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+.section{margin-bottom:22px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:18px 0}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg3{grid-template-columns:1fr 1fr 1fr}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:72px}
+.fhint{font-size:11px;color:var(--t4)}
+.field-mono input{font-family:var(--mono);font-size:13px}
+/* Change indicators */
+.change-card{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.cc-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+.cc-compare{display:flex;align-items:center;gap:12px}
+.cc-from{flex:1;text-align:center}
+.cc-to{flex:1;text-align:center}
+.cc-arrow{color:var(--t4);font-size:20px;flex-shrink:0}
+.cc-lbl{font-size:11px;color:var(--t4);margin-bottom:3px}
+.cc-val{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--t1)}
+.cc-val.new{color:var(--grn)}
+.cc-diff{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:11.5px;font-weight:700;background:var(--gl);color:var(--grn);margin-top:6px}
+/* Reason badges */
+.reason-group{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.reason-opt{padding:5px 11px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid var(--bd);cursor:pointer;transition:all .12s;color:var(--t2);user-select:none}
+.reason-opt:hover{border-color:var(--tb);background:var(--tl)}
+.reason-opt.on{border-color:var(--teal);background:var(--tl);color:var(--teal)}
+/* History table */
+.hist-table{width:100%;border-collapse:collapse}
+.hist-table th{font-size:11px;font-weight:700;color:var(--t3);text-align:left;padding:5px 8px;border-bottom:2px solid var(--bd)}
+.hist-table td{padding:7px 8px;border-bottom:1px solid var(--t5);font-size:12.5px}
+.hist-table td.mono{font-family:var(--mono);font-size:12px}
+/* Rail */
+.rail-sec{margin-bottom:16px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3)}.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb">
+      <a>Employees</a><span class="sep">›</span>
+      <a>Priya Subramaniam</a><span class="sep">›</span>
+      <span class="cur">Salary Revision</span>
+    </div>
+    <div class="tb-vd"></div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Apply Revision</button>
+    <div class="tav">AW</div>
+  </div>
+  <!-- Employee context -->
+  <div class="emp-bar">
+    <div class="emp-av">PS</div>
+    <div>
+      <div class="emp-name">Priya Subramaniam</div>
+      <div class="emp-meta">Senior HR Business Partner · People Operations · EMP-0087</div>
+    </div>
+    <div class="emp-current-sal">
+      <div class="ecs-lbl">Current Base Salary</div>
+      <div class="ecs-val" id="current-sal-disp">AED 195,000</div>
+    </div>
+  </div>
+  <div class="form-wrap">
+    <div class="form-main">
+
+      <div class="section">
+        <div class="sec-title">New Salary</div>
+        <div class="change-card">
+          <div class="cc-title">Salary Change Preview</div>
+          <div class="cc-compare">
+            <div class="cc-from">
+              <div class="cc-lbl">Current</div>
+              <div class="cc-val">AED 195,000</div>
+            </div>
+            <div class="cc-arrow">→</div>
+            <div class="cc-to">
+              <div class="cc-lbl">New</div>
+              <div class="cc-val new" id="prev-new-sal">AED 215,500</div>
+            </div>
+          </div>
+          <div style="text-align:center;margin-top:6px">
+            <span class="cc-diff" id="prev-diff">▲ +10.5% · +AED 20,500</span>
+          </div>
+        </div>
+        <div class="fg">
+          <div class="fgroup field-mono">
+            <label>New Base Salary <span class="req">*</span></label>
+            <input type="number" id="new-sal" value="215500" min="0" step="100" oninput="updatePreview()">
+          </div>
+          <div class="fgroup">
+            <label>Currency <span class="req">*</span></label>
+            <select id="currency">
+              <option selected>AED</option><option>USD</option><option>EUR</option><option>GBP</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>Effective From <span class="req">*</span></label>
+            <input type="date" id="eff-from" value="2026-04-01" oninput="updateSummary()">
+            <span class="fhint">First payroll cycle the new salary applies to</span>
+          </div>
+          <div class="fgroup">
+            <label>Effective To</label>
+            <input type="date" id="eff-to">
+            <span class="fhint">Leave blank for open-ended (current) salary</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Revision Reason <span style="color:var(--red)">*</span></div>
+        <div class="reason-group" id="reason-group">
+          <div class="reason-opt on" onclick="selReason(this,'Annual Review')">Annual Review</div>
+          <div class="reason-opt" onclick="selReason(this,'Promotion')">Promotion</div>
+          <div class="reason-opt" onclick="selReason(this,'Market Adjustment')">Market Adjustment</div>
+          <div class="reason-opt" onclick="selReason(this,'Performance Bonus')">Performance Bonus</div>
+          <div class="reason-opt" onclick="selReason(this,'Retention')">Retention</div>
+          <div class="reason-opt" onclick="selReason(this,'Other')">Other</div>
+        </div>
+        <div class="fgroup" style="margin-top:12px">
+          <label>Additional Notes</label>
+          <textarea rows="2" placeholder="Optional — add context for the revision record.">Annual performance review cycle 2025/26. Priya's rating: Exceeds Expectations. Revision approved by CHRO.</textarea>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Compensation Band</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>Compensation Band</label>
+            <select>
+              <option value="">— Optional —</option>
+              <option value="cb-5" selected>GB-5 Senior · AED 180,000 – 240,000</option>
+              <option value="cb-6">GB-6 Lead · AED 220,000 – 310,000</option>
+              <option value="cb-7">GB-7 Manager · AED 280,000 – 400,000</option>
+            </select>
+            <span class="fhint">Links this revision to a grade band for reporting</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Revision History</div>
+        <table class="hist-table">
+          <thead>
+            <tr><th>Effective</th><th>Base Salary</th><th>Currency</th><th>Reason</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 Apr 2025</td>
+              <td class="mono">195,000</td>
+              <td>AED</td>
+              <td>Annual Review 2024/25</td>
+              <td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--gl);color:var(--grn);text-transform:uppercase;letter-spacing:.04em">Approved</span></td>
+            </tr>
+            <tr>
+              <td>1 Apr 2024</td>
+              <td class="mono">175,000</td>
+              <td>AED</td>
+              <td>Annual Review 2023/24</td>
+              <td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--t5);color:var(--t3);text-transform:uppercase;letter-spacing:.04em">Superseded</span></td>
+            </tr>
+            <tr>
+              <td>15 Mar 2021</td>
+              <td class="mono">155,000</td>
+              <td>AED</td>
+              <td>Hire</td>
+              <td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--t5);color:var(--t3);text-transform:uppercase;letter-spacing:.04em">Superseded</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+    <div class="form-rail">
+      <div class="rail-sec">
+        <div class="rail-lbl">Revision Summary</div>
+        <div class="sum-row"><span class="sum-l">Employee</span><span class="sum-v">Priya Subramaniam</span></div>
+        <div class="sum-row"><span class="sum-l">Current</span><span class="sum-v" style="font-family:var(--mono)">AED 195,000</span></div>
+        <div class="sum-row"><span class="sum-l">New</span><span class="sum-v" id="sum-new" style="font-family:var(--mono);color:var(--grn)">AED 215,500</span></div>
+        <div class="sum-row"><span class="sum-l">Change</span><span class="sum-v" id="sum-change" style="color:var(--grn)">+10.5%</span></div>
+        <div class="sum-row"><span class="sum-l">Effective</span><span class="sum-v" id="sum-eff">1 Apr 2026</span></div>
+        <div class="sum-row"><span class="sum-l">Reason</span><span class="sum-v" id="sum-reason">Annual Review</span></div>
+      </div>
+      <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+      <div class="rail-sec">
+        <div class="rail-lbl">Band Check</div>
+        <div style="padding:10px 12px;background:var(--gl);border:1px solid #86EFAC;border-radius:var(--r)">
+          <div style="font-size:11px;font-weight:700;color:var(--grn);margin-bottom:3px">✓ Within Band</div>
+          <div style="font-size:12px;color:var(--t2)">GB-5 Senior: AED 180,000 – 240,000</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:3px" id="band-pos">AED 215,500 · 53% of band</div>
+        </div>
+      </div>
+      <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+      <div class="rail-sec">
+        <div class="rail-lbl">Important</div>
+        <div style="font-size:12px;color:var(--t2);line-height:1.6">
+          Applying this revision will:<br>
+          · Create a new <code>SalaryRevision</code> record with status <strong>Approved</strong><br>
+          · Supersede the current revision (Apr 2025)<br>
+          · Take effect in the next payroll cycle after <span id="note-eff">1 Apr 2026</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <div class="ff-info">Submits <code>POST /api/v1/compensation/employees/:id/salary-revisions</code> — employee-service</div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Apply Revision</button>
+  </div>
+</main>
+</div>
+<script>
+let selectedReason = 'Annual Review';
+const CURRENT = 195000;
+
+function selReason(el, r) {
+  document.querySelectorAll('.reason-opt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on');
+  selectedReason = r;
+  document.getElementById('sum-reason').textContent = r;
+}
+
+function updatePreview() {
+  const newSal = parseFloat(document.getElementById('new-sal').value) || 0;
+  const diff = newSal - CURRENT;
+  const pct = ((diff / CURRENT) * 100).toFixed(1);
+  const curr = document.getElementById('currency').value;
+  const fmt = curr + ' ' + newSal.toLocaleString();
+  document.getElementById('prev-new-sal').textContent = fmt;
+  document.getElementById('sum-new').textContent = fmt;
+
+  const sign = diff >= 0 ? '▲ +' : '▼ ';
+  const diffText = sign + Math.abs(pct) + '% · ' + (diff >= 0 ? '+' : '-') + curr + ' ' + Math.abs(diff).toLocaleString();
+  document.getElementById('prev-diff').textContent = diffText;
+  document.getElementById('prev-diff').style.background = diff >= 0 ? 'var(--gl)' : 'var(--rl)';
+  document.getElementById('prev-diff').style.color = diff >= 0 ? 'var(--grn)' : 'var(--red)';
+
+  const chgText = (diff >= 0 ? '+' : '') + pct + '%';
+  document.getElementById('sum-change').textContent = chgText;
+  document.getElementById('sum-change').style.color = diff >= 0 ? 'var(--grn)' : 'var(--red)';
+
+  // Band position (mock band 180k–240k)
+  const bandMin = 180000, bandMax = 240000;
+  const bandPct = Math.round(((newSal - bandMin) / (bandMax - bandMin)) * 100);
+  document.getElementById('band-pos').textContent = curr + ' ' + newSal.toLocaleString() + ' · ' + Math.max(0,Math.min(100,bandPct)) + '% of band';
+}
+
+function updateSummary() {
+  const d = document.getElementById('eff-from').value;
+  if (d) {
+    const formatted = new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    document.getElementById('sum-eff').textContent = formatted;
+    document.getElementById('note-eff').textContent = formatted;
+  }
+}
+
+function submitForm() {
+  const newSal = document.getElementById('new-sal').value;
+  const effFrom = document.getElementById('eff-from').value;
+  if (!newSal || !effFrom) { alert('New salary and effective date are required.'); return; }
+  const payload = {
+    employee_id: 'emp-0087',
+    base_salary: newSal,
+    currency: document.getElementById('currency').value,
+    effective_from: effFrom,
+    effective_to: document.getElementById('eff-to').value || undefined,
+    reason: selectedReason,
+    status: 'Approved'
+  };
+  alert('POST /api/v1/compensation/employees/emp-0087/salary-revisions\n\n' + JSON.stringify(payload, null, 2));
+}
+</script>
+</body>
+</html>

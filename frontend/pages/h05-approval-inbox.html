@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Approval Inbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;--violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─────────────────────────────────────── */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s;position:relative}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* ─── MAIN ────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1;letter-spacing:-0.01em}
+.tb-sub{font-size:12px;font-weight:400;color:var(--t4);margin-left:8px}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-r{background:var(--rl);color:var(--red);border-color:#FECACA}.btn-r:hover{background:#FEE2E2}
+
+/* ─── SPLIT LAYOUT ────────────────────────────────── */
+/* P-32: grid children need min-height:0 to allow overflow-y:auto within a constrained grid */
+.wf-body{flex:1;overflow:hidden;display:grid;grid-template-columns:380px 1fr}
+
+/* ─── LIST COLUMN ─────────────────────────────────── */
+/* P-32: min-height:0 + padding-bottom:12vh for zoom compensation */
+.list-col{border-right:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column;min-height:0;padding-bottom:12vh}
+.list-head{position:sticky;top:0;z-index:2;background:var(--w);border-bottom:1px solid var(--bd);padding:0 16px;flex-shrink:0}
+.lh-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px}
+.lh-title{font-size:13.5px;font-weight:700;color:var(--t1)}
+.lh-sub{font-size:11.5px;color:var(--t4)}
+/* Filter tabs */
+.ftabs{display:flex;gap:0}
+.ftab{padding:7px 12px;font-size:12.5px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none;white-space:nowrap}
+.ftab:hover{color:var(--t1)}.ftab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+.ftab-ct{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:4px}
+/* Approval cards */
+.appr{border-bottom:1px solid var(--bd);padding:14px 16px;cursor:pointer;transition:background .12s}
+.appr:hover{background:var(--bg)}.appr.sel{background:var(--tl);border-left:3px solid var(--teal)}
+.ap-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.ap-av{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.ap-info{flex:1}
+.ap-name{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:1px}
+.ap-type{font-size:12px;color:var(--t3)}
+.ap-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:7px}
+.ap-dates{font-size:11.5px;color:var(--t3);margin-bottom:8px}
+.ap-dates span{font-family:var(--mono);color:var(--t2);margin-left:3px}
+.sla-txt{font-size:11px;font-family:var(--mono)}
+.sla-over{color:var(--red);font-weight:700}.sla-warn{color:var(--amber);font-weight:600}.sla-ok{color:var(--t4)}
+.ap-acts{display:flex;gap:6px;flex-wrap:wrap}
+.ab{font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--r);cursor:pointer;border:1px solid;font-family:'Inter',sans-serif;transition:all .12s;white-space:nowrap}
+.ab-ap{background:var(--teal);color:#fff;border-color:var(--teal)}.ab-ap:hover{background:#0C9E92}
+.ab-rj{background:var(--rl);color:var(--red);border-color:#FECACA}.ab-rj:hover{background:#FEE2E2}
+.ab-n{background:var(--w);color:var(--t2);border-color:var(--bd)}.ab-n:hover{background:var(--bg)}
+/* Chips — P-07 */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.ctl{background:var(--tl);color:var(--teal)}.ctl::before{background:var(--teal)}
+
+/* ─── DETAIL COLUMN ───────────────────────────────── */
+/* P-32 H05 pattern: detail-col is NOT the scroll container — dp-sects scrolls inside it */
+.detail-col{display:flex;flex-direction:column;overflow:hidden;min-height:0;background:var(--w)}
+.dp-head{padding:18px 22px 14px;background:var(--bg);border-bottom:1px solid var(--bd);flex-shrink:0}
+.dp-title{font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.015em;margin-bottom:4px}
+.dp-sub{font-size:12px;color:var(--t3);display:flex;align-items:center;gap:7px}
+/* Scrollable middle — P-32: min-height:0 + padding-bottom:12vh */
+.dp-sects{flex:1;overflow-y:auto;min-height:0;padding-bottom:12vh}
+.dp-sec{padding:14px 22px;border-bottom:1px solid var(--bd)}
+.dp-sec-t{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:10px}
+.dp-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--t5)}
+.dp-row:last-child{border-bottom:none}
+.dp-l{font-size:12.5px;color:var(--t3);flex-shrink:0;padding-right:16px}
+.dp-v{font-size:12.5px;font-weight:600;color:var(--t1);text-align:right}
+.dp-v.mono{font-family:var(--mono);font-size:12px}
+.dp-v.red{color:var(--red)}.dp-v.grn{color:var(--grn)}.dp-v.amb{color:var(--amber)}
+/* Policy box */
+.policy-box{background:var(--bg);border-radius:var(--r);padding:11px 13px;margin-top:8px}
+.pb-title{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:6px}
+.pb-row{display:flex;justify-content:space-between;font-size:12px;color:var(--t3);margin-bottom:3px}
+.pb-row span:last-child{font-weight:600;color:var(--t1)}
+.pb-total{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;color:var(--t1);margin-top:7px;padding-top:7px;border-top:1px solid var(--bd)}
+.pb-total span:last-child{color:var(--teal)}
+/* AI Assessment — P-12 */
+.ai-box{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);padding:11px 13px;margin-top:10px;position:relative}
+.ai-lbl{font-size:9.5px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.10em;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0;animation:aidot 2s ease-in-out infinite}
+@keyframes aidot{0%,100%{box-shadow:0 0 0 0 rgba(10,143,132,.4)}50%{box-shadow:0 0 0 4px rgba(10,143,132,0)}}
+.ai-txt{font-size:12px;color:var(--t2);line-height:1.55}
+.ai-conf{font-size:11px;font-weight:600;color:var(--teal);margin-top:6px;font-family:var(--mono)}
+.ai-dismiss{position:absolute;top:8px;right:10px;font-size:16px;line-height:1;color:var(--t4);cursor:pointer;padding:2px 4px}
+.ai-dismiss:hover{color:var(--t2)}
+/* History */
+.hist-item{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--t5)}
+.hist-item:last-child{border-bottom:none}
+.hist-av{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;margin-top:1px}
+.hist-body{flex:1}
+.hist-txt{font-size:12px;color:var(--t2);line-height:1.5}
+.hist-time{font-size:10.5px;color:var(--t4);font-family:var(--mono);margin-top:2px}
+/* Comment */
+.dp-comment{padding:14px 22px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.dp-comment-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:6px}
+.dp-textarea{width:100%;border:1px solid var(--bd);border-radius:var(--r);padding:9px 11px;font-size:12.5px;color:var(--t1);font-family:'Inter',sans-serif;resize:none;height:64px;background:var(--bg);outline:none;transition:all .14s}
+.dp-textarea:focus{border-color:var(--teal);background:var(--w);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.dp-textarea::placeholder{color:var(--t4)}
+/* Action bar — always visible (flex-shrink:0, not margin-top:auto) */
+.dp-actions{padding:14px 22px;flex-shrink:0;background:var(--w);border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:7px}
+.dp-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.btn-full{width:100%;justify-content:center}
+.btn-lg{padding:8px 13px;font-size:13px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ─── SIDEBAR ──────────────────────────────────────── -->
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- ─── TOPBAR ─────────────────────────────────────── -->
+  <div class="topbar">
+    <div class="tb-t">Approval Inbox<span class="tb-sub">5 pending · 1 SLA breached · 1 due today</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>Filter</button>
+    <button class="btn btn-p">Approve All Eligible</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <div class="wf-body">
+
+    <!-- ─── LEFT: Approval List ──────────────────────── -->
+    <div class="list-col">
+
+      <div class="list-head">
+        <div class="lh-row">
+          <div class="lh-title">Pending Approvals</div>
+          <span class="lh-sub">Sorted by urgency</span>
+        </div>
+        <div class="ftabs">
+          <div class="ftab on" onclick="setTab(this,'all')">All<span class="ftab-ct" style="background:var(--t5);color:var(--t3)">5</span></div>
+          <div class="ftab" onclick="setTab(this,'leave')">Leave<span class="ftab-ct" style="background:var(--al);color:var(--amber)">2</span></div>
+          <div class="ftab" onclick="setTab(this,'expense')">Expense<span class="ftab-ct" style="background:var(--bl);color:var(--blue)">2</span></div>
+          <div class="ftab" onclick="setTab(this,'travel')">Travel<span class="ftab-ct" style="background:var(--gl);color:var(--grn)">1</span></div>
+        </div>
+      </div>
+
+      <!-- Card 1 — leave_request · SLA breached · selected -->
+      <div class="appr sel" data-type="leave" onclick="selCard(this)">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#B45309">TN</div>
+          <div class="ap-info"><div class="ap-name">Tom Nakamura</div><div class="ap-type">Annual Leave · 4 working days</div></div>
+          <span class="chip cr">8d overdue</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Sales · EMEA</span><span class="sla-txt sla-over">⚑ SLA breached (PT48H)</span></div>
+        <div class="ap-dates">Period:<span>Apr 7–10, 2026</span> &nbsp; Submitted:<span>Mar 13</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Approve</button><button class="ab ab-rj">✕ Reject</button><button class="ab ab-n">Delegate</button></div>
+      </div>
+
+      <!-- Card 2 — expense_claim · due today -->
+      <div class="appr" data-type="expense" onclick="selCard(this)">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#1D4ED8">SM</div>
+          <div class="ap-info"><div class="ap-name">Sarah Mensah</div><div class="ap-type">Expense Claim · Client Dinner · $340.00</div></div>
+          <span class="chip ca">Due today</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Finance · FP&amp;A</span><span class="sla-txt sla-warn">⚑ SLA expires in 6 hrs</span></div>
+        <div class="ap-dates">Category:<span>Client Entertainment</span> &nbsp; Submitted:<span>Mar 21</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Approve</button><button class="ab ab-rj">✕ Reject</button><button class="ab ab-n">Query</button></div>
+      </div>
+
+      <!-- Card 3 — travel_request · due in 1 day -->
+      <div class="appr" data-type="travel" onclick="selCard(this)">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#059669">DP</div>
+          <div class="ap-info"><div class="ap-name">Dev Patel</div><div class="ap-type">Travel Request · Singapore · 3 nights</div></div>
+          <span class="chip ca">Due in 1d</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Engineering · Platform</span><span class="sla-txt sla-warn">⚑ 24 hrs remaining</span></div>
+        <div class="ap-dates">Departure:<span>Mar 28, 2026</span> &nbsp; Submitted:<span>Mar 22</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Approve</button><button class="ab ab-rj">✕ Reject</button><button class="ab ab-n">Delegate</button></div>
+      </div>
+
+      <!-- Card 4 — leave_request · within SLA -->
+      <div class="appr" data-type="leave" onclick="selCard(this)">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#7C3AED">AK</div>
+          <div class="ap-info"><div class="ap-name">Amara Kofi</div><div class="ap-type">Sick Leave · 2 working days</div></div>
+          <span class="chip cg">Low risk</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Marketing · Remote</span><span class="sla-txt sla-ok">2 days remaining</span></div>
+        <div class="ap-dates">Period:<span>Mar 24–25, 2026</span> &nbsp; Submitted:<span>Mar 23</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Approve</button><button class="ab ab-n">View History</button></div>
+      </div>
+
+      <!-- Card 5 — expense_claim · within SLA -->
+      <div class="appr" data-type="expense" onclick="selCard(this)">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#0284C7">MH</div>
+          <div class="ap-info"><div class="ap-name">Marcus Hill</div><div class="ap-type">Expense Claim · Team Offsite · $1,240.00</div></div>
+          <span class="chip cn">Pending</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Engineering · Remote</span><span class="sla-txt sla-ok">3 days remaining</span></div>
+        <div class="ap-dates">Category:<span>Team Events</span> &nbsp; Submitted:<span>Mar 22</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Approve</button><button class="ab ab-rj">✕ Reject</button><button class="ab ab-n">Query</button></div>
+      </div>
+
+    </div><!-- end list-col -->
+
+    <!-- ─── RIGHT: Detail Panel ──────────────────────── -->
+    <div class="detail-col">
+
+      <div class="dp-head">
+        <div class="dp-title">Tom Nakamura — Annual Leave Request</div>
+        <div class="dp-sub">Annual Leave · 4 working days · Apr 7–10, 2026 <span class="chip cr">SLA Breached</span></div>
+      </div>
+
+      <!-- Scrollable sections — P-32: this element scrolls, not detail-col -->
+      <div class="dp-sects">
+
+        <!-- Request Details -->
+        <div class="dp-sec">
+          <div class="dp-sec-t">Request Details</div>
+          <div class="dp-row"><span class="dp-l">Employee</span><span class="dp-v">Tom Nakamura (EMP-0339)</span></div>
+          <div class="dp-row"><span class="dp-l">Department</span><span class="dp-v">Sales · Enterprise EMEA</span></div>
+          <div class="dp-row"><span class="dp-l">Leave Type</span><span class="dp-v">Annual Leave</span></div>
+          <div class="dp-row"><span class="dp-l">Period</span><span class="dp-v mono">Apr 7 – Apr 10, 2026</span></div>
+          <div class="dp-row"><span class="dp-l">Duration</span><span class="dp-v">4 working days</span></div>
+          <div class="dp-row"><span class="dp-l">Reason</span><span class="dp-v">Personal / family event</span></div>
+          <div class="dp-row"><span class="dp-l">Submitted</span><span class="dp-v mono">Mar 13, 2026 · 10 days ago</span></div>
+          <div class="dp-row"><span class="dp-l">Workflow</span><span class="dp-v mono" style="font-size:11px;color:var(--t3)">leave_request · step 1/1 · pending</span></div>
+          <div class="dp-row"><span class="dp-l">SLA</span><span class="dp-v red">⚑ Breached — PT48H · 8 days overdue</span></div>
+        </div>
+
+        <!-- Leave Balance -->
+        <div class="dp-sec">
+          <div class="dp-sec-t">Leave Balance · 2026</div>
+          <div class="policy-box">
+            <div class="pb-title">Tom Nakamura — Annual Leave</div>
+            <div class="pb-row"><span>Annual Entitlement</span><span>25 days</span></div>
+            <div class="pb-row"><span>Used YTD</span><span>3 days</span></div>
+            <div class="pb-row"><span>This Request</span><span>4 days</span></div>
+            <div class="pb-total"><span>Remaining After Approval</span><span>18 days</span></div>
+          </div>
+          <!-- BG-006: no per-employee leave balance API endpoint — mocked above -->
+        </div>
+
+        <!-- Team Coverage -->
+        <div class="dp-sec">
+          <div class="dp-sec-t">Team Coverage</div>
+          <div class="dp-row"><span class="dp-l">Team size</span><span class="dp-v">8 Sales reps · EMEA</span></div>
+          <div class="dp-row"><span class="dp-l">Others on leave</span><span class="dp-v amb">1 — L. Barnes (partial overlap)</span></div>
+          <div class="dp-row"><span class="dp-l">Coverage confirmed</span><span class="dp-v grn">Yes — R. Osei covering</span></div>
+          <div class="dp-row"><span class="dp-l">Open pipeline</span><span class="dp-v">No critical deadlines</span></div>
+        </div>
+
+        <!-- AI Assessment — P-12 -->
+        <div class="dp-sec">
+          <div class="dp-sec-t">AI Assessment</div>
+          <div class="ai-box">
+            <div class="ai-lbl"><span class="ai-dot"></span>AI Risk Assessment</div>
+            <div class="ai-txt">Low risk approval. Coverage confirmed and leave balance is adequate (18 days remaining after approval). No leave abuse pattern detected in 12-month history. Recommend approval to resolve SLA breach — further delay may impact employee experience metrics.</div>
+            <div class="ai-conf">Confidence: 87%</div>
+            <span class="ai-dismiss" onclick="this.closest('.ai-box').style.display='none'">×</span>
+          </div>
+        </div>
+
+        <!-- Approval History -->
+        <div class="dp-sec">
+          <div class="dp-sec-t">Approval History</div>
+          <div class="hist-item">
+            <div class="hist-av" style="background:#4F46E5">AW</div>
+            <div class="hist-body"><div class="hist-txt">Alex Wang opened request for review</div><div class="hist-time">Mar 23, 2026 · just now</div></div>
+          </div>
+          <div class="hist-item">
+            <div class="hist-av" style="background:var(--teal)">AI</div>
+            <div class="hist-body"><div class="hist-txt">AI risk assessment completed — Low risk, recommend approval (87% confidence)</div><div class="hist-time">Mar 23, 2026 · 09:14</div></div>
+          </div>
+          <div class="hist-item">
+            <div class="hist-av" style="background:#B45309">TN</div>
+            <div class="hist-body"><div class="hist-txt">Tom Nakamura submitted leave request</div><div class="hist-time">Mar 13, 2026 · 11:32</div></div>
+          </div>
+        </div>
+
+      </div><!-- end dp-sects -->
+
+      <!-- Decision Comment -->
+      <div class="dp-comment">
+        <div class="dp-comment-lbl">Decision Comment</div>
+        <textarea class="dp-textarea" placeholder="Add a comment (optional — visible to employee)…"></textarea>
+      </div>
+
+      <!-- Action Bar — always visible (flex-shrink:0) -->
+      <div class="dp-actions">
+        <button class="btn btn-p btn-full btn-lg">✓ Approve</button>
+        <div class="dp-btn-row">
+          <button class="btn btn-r btn-lg" style="justify-content:center">✕ Reject</button>
+          <button class="btn btn-lg" style="justify-content:center">↗ Delegate</button>
+        </div>
+      </div>
+
+    </div><!-- end detail-col -->
+
+  </div><!-- end wf-body -->
+</main>
+</div>
+
+<script>
+function selCard(el){
+  document.querySelectorAll('.appr').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function setTab(el,type){
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.appr').forEach(c=>{
+    c.style.display=(type==='all'||c.dataset.type===type)?'':'none';
+  });
+}
+</script>
+</body>
+</html>

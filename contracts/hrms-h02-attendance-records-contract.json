@@ -1,0 +1,75 @@
+﻿{
+  "_meta": {
+    "id": "h02-attendance-records", "archetype": "H02 List", "page": "Attendance Records", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "HR Administrator",
+    "leads_to": ["H03 Attendance Detail (correction)"],
+    "actions": { "primary": "Export", "secondary": [] }
+  },
+  "api_contract": {
+    "services": ["attendance_service"],
+    "endpoints": {
+      "list":    "GET /api/v1/attendance/records?status=&employee_id=&department_id=&source=&date_from=&date_to=&limit=&offset=",
+      "summary": "BG-005: no aggregate — present/absent counts require client-side grouping"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Attendance Records", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Attendance Records", "subtitle": "{{date_label}} · {{employee_count}} employees",
+        "actions": [{ "label": "Export", "type": "secondary", "icon": "download" }]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 5, "gap_ref": "BG-005",
+        "items": [
+          { "key": "present",          "label": "Present",          "source": "BG-005 mock" },
+          { "key": "absent",           "label": "Absent",           "source": "BG-005 mock" },
+          { "key": "late",             "label": "Late",             "source": "BG-005 mock" },
+          { "key": "on_leave",         "label": "On Leave",         "source": "BG-005 mock" },
+          { "key": "attendance_rate",  "label": "Attendance Rate",  "source": "BG-005 mock", "format": "percentage" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",      "filter": null },
+          { "label": "Present",  "filter": "status=Present" },
+          { "label": "Late",     "filter": "status=Late" },
+          { "label": "Absent",   "filter": "status=Absent" },
+          { "label": "On Leave", "filter": "status=OnLeave" }
+        ],
+        "filters": [
+          { "key": "department_id", "label": "Department", "type": "select", "source": "employee-service › Department" },
+          { "key": "source",        "label": "Source",     "type": "select", "enum_ref": "ref:api-contracts#Attendance.source" }
+        ],
+        "search": { "placeholder": "Search employees…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "attendance_service › AttendanceRecord (paginated)",
+        "row_action": "navigate → H03 Attendance Detail",
+        "columns": [
+          { "key": "employee",         "label": "Employee",      "width_pct": 20, "component": "avatar_name_id" },
+          { "key": "attendance_date",  "label": "Date",          "width_pct": 10, "format": "date_short", "font": "mono" },
+          { "key": "attendance_status","label": "Status",        "width_pct": 10, "component": "chip", "enum_ref": "ref:api-contracts#Attendance.status" },
+          { "key": "check_in_time",    "label": "Check-in",      "width_pct": 12, "format": "time", "font": "mono" },
+          { "key": "check_out_time",   "label": "Check-out",     "width_pct": 12, "format": "time", "font": "mono" },
+          { "key": "total_hours",      "label": "Hours",         "width_pct": 8,  "font": "mono" },
+          { "key": "source",           "label": "Source",        "width_pct": 10, "enum_ref": "ref:api-contracts#Attendance.source" },
+          { "key": "lifecycle_state",  "label": "Record State",  "width_pct": 12, "enum_ref": "ref:api-contracts#Attendance.record_state" },
+          { "key": "actions",          "label": "",              "width_pct": 6,  "component": "row_actions" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 25, "options": [25, 50, 100] }
+    }
+  }
+}

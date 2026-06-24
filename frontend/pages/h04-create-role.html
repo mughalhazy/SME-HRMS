@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Create Role</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --violet:#7C3AED;--vl:#EDE9FE;--blue:#1D4ED8;--bl:#EFF6FF;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--vl);color:var(--violet)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--violet);color:#fff;border-color:var(--violet)}.btn-p:hover{background:#6D28D9}
+
+/* Page title bar */
+.page-title-bar{background:var(--w);border-bottom:1px solid var(--bd);padding:16px 24px;flex-shrink:0}
+.pt-title{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.pt-sub{font-size:12.5px;color:var(--t3);margin-top:3px}
+
+/* Form layout */
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+
+/* Sections */
+.section{margin-bottom:24px}
+.sec-heading{margin-bottom:14px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1)}
+.sec-sub{font-size:12px;color:var(--t3);margin-top:3px}
+.sec-div{height:1px;background:var(--bd);margin:20px 0}
+
+/* Field grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);
+  font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);
+  transition:border-color .14s,box-shadow .14s;line-height:1.5
+}
+input:focus,select:focus,textarea:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:80px}
+.fhint{font-size:11px;color:var(--t4)}
+
+/* Employment category cards */
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cat-card{padding:11px 13px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;user-select:none}
+.cat-card:hover{border-color:#C4B5FD;background:var(--vl)}
+.cat-card.on{border-color:var(--violet);background:var(--vl)}
+.cat-card-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.cat-card.on .cat-card-title{color:var(--violet)}
+.cat-card-desc{font-size:11.5px;color:var(--t3);line-height:1.4}
+
+/* Permissions tags */
+.perm-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.perm-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;background:var(--t5);color:var(--t2);cursor:pointer;border:1px solid var(--bd);transition:all .12s;user-select:none}
+.perm-tag:hover{border-color:#C4B5FD;background:var(--vl);color:var(--violet)}
+.perm-tag.on{background:var(--vl);color:var(--violet);border-color:#C4B5FD}
+.perm-tag .pt-dot{width:6px;height:6px;border-radius:50%;background:var(--bd);flex-shrink:0}
+.perm-tag.on .pt-dot{background:var(--violet)}
+
+/* Rail */
+.rail-sec{margin-bottom:18px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3);flex-shrink:0}
+.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.sum-empty{color:var(--t4);font-style:italic;font-weight:400}
+
+/* Role preview */
+.role-preview{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:13px;margin-bottom:14px}
+.rp-icon{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#5B21B6,var(--violet));display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.rp-icon svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.rp-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.rp-cat{font-size:11px;font-weight:600;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.rp-level{font-family:var(--mono);font-size:11px;color:var(--t3)}
+
+/* Footer */
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="crumb">
+      <a>Roles</a><span class="sep">›</span>
+      <span class="cur">Create Role</span>
+    </div>
+    <div class="tb-vd"></div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      Create Role
+    </button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- Page title -->
+  <div class="page-title-bar">
+    <div class="pt-title">Create Role</div>
+    <div class="pt-sub">Define a new role. Roles are assigned to employees and drive access and reporting.</div>
+  </div>
+
+  <!-- Form body -->
+  <div class="form-wrap">
+
+    <!-- Main -->
+    <div class="form-main">
+
+      <div class="section">
+        <div class="sec-heading">
+          <div class="sec-title">Role Identity</div>
+        </div>
+        <div class="fg">
+          <div class="fgroup span2">
+            <label>Role Title <span class="req">*</span></label>
+            <input type="text" id="role-title" placeholder="e.g. Senior Data Engineer" oninput="updatePreview()">
+            <span class="fhint">Displayed on employee profiles, org chart, and documents</span>
+          </div>
+          <div class="fgroup">
+            <label>Level / Band</label>
+            <input type="text" id="role-level" placeholder="e.g. L5 · Senior" oninput="updatePreview()">
+            <span class="fhint">Internal level code or band reference</span>
+          </div>
+          <div class="fgroup">
+            <label>Initial Status</label>
+            <select id="role-status" onchange="updateSummary()">
+              <option value="Draft" selected>Draft</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Archived">Archived</option>
+            </select>
+          </div>
+          <div class="fgroup span2">
+            <label>Description</label>
+            <textarea id="role-desc" placeholder="Describe the role's responsibilities, scope, and context." rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-heading">
+          <div class="sec-title">Employment Category <span class="req">*</span></div>
+          <div class="sec-sub">Determines how this role is classified across payroll, compliance, and access.</div>
+        </div>
+        <div class="cat-grid" id="cat-grid">
+          <div class="cat-card on" onclick="selCat(this,'Staff')">
+            <div class="cat-card-title">Staff</div>
+            <div class="cat-card-desc">Individual contributors and team members. Standard employment terms.</div>
+          </div>
+          <div class="cat-card" onclick="selCat(this,'Manager')">
+            <div class="cat-card-title">Manager</div>
+            <div class="cat-card-desc">People managers with direct reports. Approval authority enabled.</div>
+          </div>
+          <div class="cat-card" onclick="selCat(this,'Executive')">
+            <div class="cat-card-title">Executive</div>
+            <div class="cat-card-desc">Senior leadership. Extended permissions and executive reporting access.</div>
+          </div>
+          <div class="cat-card" onclick="selCat(this,'Contractor')">
+            <div class="cat-card-title">Contractor</div>
+            <div class="cat-card-desc">External or contingent workers. Limited access, time-boxed.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-heading">
+          <div class="sec-title">System Permissions</div>
+          <div class="sec-sub">Select the access permissions associated with this role. Toggle each permission on or off.</div>
+        </div>
+        <div class="perm-wrap">
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>View Employee Records</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Edit Employee Records</div>
+          <div class="perm-tag on" onclick="togglePerm(this)"><div class="pt-dot"></div>View Own Profile</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Submit Leave Requests</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Approve Leave Requests</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>View Payroll Records</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Process Payroll</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>View Performance Reviews</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Conduct Performance Reviews</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Submit Expense Claims</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Approve Expense Claims</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Manage Job Postings</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>View Analytics</div>
+          <div class="perm-tag" onclick="togglePerm(this)"><div class="pt-dot"></div>Manage Org Settings</div>
+        </div>
+        <div style="margin-top:10px;font-size:11.5px;color:var(--t3)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Permissions shown here are UI-level indicators. Backend enforcement is via <code>auth-service</code> permission policies (BG-007).
+        </div>
+      </div>
+
+    </div><!-- /form-main -->
+
+    <!-- Rail -->
+    <div class="form-rail">
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Preview</div>
+        <div class="role-preview">
+          <div class="rp-icon">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div class="rp-title" id="prev-title" style="color:var(--t4);font-style:italic">Role Title</div>
+          <div class="rp-cat" id="prev-cat">Staff</div>
+          <div class="rp-level" id="prev-level" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Form Summary</div>
+        <div class="sum-row"><span class="sum-l">Title</span><span class="sum-v" id="sum-title"><span class="sum-empty">—</span></span></div>
+        <div class="sum-row"><span class="sum-l">Category</span><span class="sum-v" id="sum-cat">Staff</span></div>
+        <div class="sum-row"><span class="sum-l">Level</span><span class="sum-v" id="sum-level"><span class="sum-empty">—</span></span></div>
+        <div class="sum-row"><span class="sum-l">Status</span><span class="sum-v" id="sum-status">Draft</span></div>
+        <div class="sum-row"><span class="sum-l">Permissions</span><span class="sum-v" id="sum-perms">1 selected</span></div>
+      </div>
+
+      <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">About role statuses</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="font-size:12px;color:var(--t2)"><strong>Draft</strong> — created but not yet assigned to any employees</div>
+          <div style="font-size:12px;color:var(--t2)"><strong>Active</strong> — available for employee assignment</div>
+          <div style="font-size:12px;color:var(--t2)"><strong>Inactive</strong> — hidden from assignment dropdowns but retained</div>
+          <div style="font-size:12px;color:var(--t2)"><strong>Archived</strong> — retired; employees reassigned before archiving</div>
+        </div>
+      </div>
+
+    </div><!-- /form-rail -->
+  </div><!-- /form-wrap -->
+
+  <!-- Footer -->
+  <div class="form-footer">
+    <div class="ff-info">Submits <code>POST /api/v1/roles</code> — employee-service</div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Create Role</button>
+  </div>
+
+</main>
+</div>
+
+<script>
+let selectedCat = 'Staff';
+let permCount = 1;
+
+function selCat(el, cat) {
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  selectedCat = cat;
+  document.getElementById('prev-cat').textContent = cat;
+  document.getElementById('sum-cat').textContent = cat;
+}
+
+function togglePerm(el) {
+  el.classList.toggle('on');
+  permCount = document.querySelectorAll('.perm-tag.on').length;
+  document.getElementById('sum-perms').textContent = permCount + ' selected';
+}
+
+function updatePreview() {
+  const title = document.getElementById('role-title').value.trim();
+  const level = document.getElementById('role-level').value.trim();
+
+  const prevTitle = document.getElementById('prev-title');
+  if (title) {
+    prevTitle.textContent = title;
+    prevTitle.style.color = 'var(--t1)';
+    prevTitle.style.fontStyle = 'normal';
+  } else {
+    prevTitle.textContent = 'Role Title';
+    prevTitle.style.color = 'var(--t4)';
+    prevTitle.style.fontStyle = 'italic';
+  }
+
+  const levelEl = document.getElementById('prev-level');
+  if (level) {
+    levelEl.textContent = level;
+    levelEl.style.display = 'block';
+  } else {
+    levelEl.style.display = 'none';
+  }
+
+  document.getElementById('sum-title').innerHTML = title
+    ? `<span>${title}</span>`
+    : '<span class="sum-empty">—</span>';
+  document.getElementById('sum-level').innerHTML = level
+    ? `<span style="font-family:var(--mono);font-size:11px">${level}</span>`
+    : '<span class="sum-empty">—</span>';
+}
+
+function updateSummary() {
+  document.getElementById('sum-status').textContent = document.getElementById('role-status').value;
+}
+
+function submitForm() {
+  const title = document.getElementById('role-title').value.trim();
+  if (!title) {
+    alert('Role title is required.');
+    return;
+  }
+  const perms = Array.from(document.querySelectorAll('.perm-tag.on')).map(el => el.textContent.trim());
+  const payload = {
+    title,
+    level: document.getElementById('role-level').value.trim() || undefined,
+    description: document.getElementById('role-desc').value.trim() || undefined,
+    employment_category: selectedCat,
+    status: document.getElementById('role-status').value
+  };
+  alert('POST /api/v1/roles\n\n' + JSON.stringify(payload, null, 2) + '\n\nPermissions (UI-only, BG-007):\n' + perms.join(', '));
+}
+</script>
+</body>
+</html>

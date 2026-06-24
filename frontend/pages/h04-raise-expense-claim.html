@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Raise Expense Claim</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4)}
+.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer}.crumb a:hover{color:var(--teal)}.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+/* Step header */
+.step-header{background:var(--w);border-bottom:1px solid var(--bd);padding:0 24px;flex-shrink:0}
+.step-top{display:flex;align-items:center;justify-content:space-between;padding:16px 0 12px}
+.step-title{font-size:17px;font-weight:700;color:var(--t1)}
+.step-sub{font-size:12.5px;color:var(--t3);margin-top:2px}
+.steps-row{display:flex;align-items:center}
+.step{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.step.done{color:var(--grn)}.step.active{border-bottom-color:var(--teal)}.step.pending{color:var(--t4)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.step.done .step-num{background:var(--gl);color:var(--grn)}
+.step.active .step-num{background:var(--teal);color:#fff}
+.step.pending .step-num{background:var(--t5);color:var(--t4)}
+.step-lbl{font-size:12.5px;font-weight:600}
+.step.active .step-lbl{color:var(--teal)}.step.done .step-lbl{color:var(--grn)}.step.pending .step-lbl{color:var(--t4)}
+.step-arr{color:var(--bd);margin:0 2px;font-size:13px}
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+.section{margin-bottom:22px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:18px 0}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:72px}
+.fhint{font-size:11px;color:var(--t4)}
+/* Line items table */
+.li-table{width:100%;border-collapse:collapse;margin-bottom:12px}
+.li-table th{font-size:11px;font-weight:700;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:2px solid var(--bd);background:var(--bg)}
+.li-table td{padding:7px 8px;border-bottom:1px solid var(--t5);font-size:12.5px;vertical-align:middle}
+.li-table .td-amount{font-family:var(--mono);font-weight:600;text-align:right}
+.li-del{padding:2px 6px;border-radius:4px;background:var(--rl);color:var(--red);font-size:11px;cursor:pointer;border:none;font-family:'Inter',sans-serif;font-weight:600}
+/* Total row */
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--t5);border-radius:var(--r);margin-top:4px}
+.total-lbl{font-size:13px;font-weight:700;color:var(--t1)}
+.total-val{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--teal)}
+/* Upload drop zone */
+.upload-zone{border:2px dashed var(--bd);border-radius:var(--r2);padding:24px;text-align:center;cursor:pointer;transition:all .14s;margin-bottom:12px}
+.upload-zone:hover{border-color:var(--teal);background:var(--tl)}
+.upload-zone svg{color:var(--t4);margin-bottom:8px}
+.upload-zone .uz-title{font-size:13px;font-weight:600;color:var(--t2);margin-bottom:3px}
+.upload-zone .uz-sub{font-size:11.5px;color:var(--t4)}
+/* File list */
+.file-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:6px}
+.file-icon{width:28px;height:28px;border-radius:5px;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-icon svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.file-name{flex:1;font-size:12.5px;font-weight:600;color:var(--t1)}
+.file-size{font-size:11px;color:var(--t4)}
+.file-del{color:var(--t4);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px}
+.file-del:hover{color:var(--red)}
+/* Review success */
+.success-banner{background:var(--gl);border:1px solid #86EFAC;border-radius:var(--r);padding:13px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sb-icon{width:30px;height:30px;border-radius:50%;background:var(--grn);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-icon svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.sb-text strong{font-size:13.5px;font-weight:700;color:var(--grn);display:block;margin-bottom:1px}
+.sb-text span{font-size:12px;color:var(--t2)}
+/* Rail */
+.rail-sec{margin-bottom:16px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3)}.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.sum-total{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--teal)}
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+.step-content{display:none}.step-content.active{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+  <div class="sb-av">PS</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>Expense Claims</a><span class="sep">›</span><span class="cur">Raise Expense Claim</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn" id="btn-back" onclick="navigateStep(-1)" style="opacity:.4">Back</button>
+    <button class="btn">Save Draft</button>
+    <button class="btn btn-p" id="btn-next" onclick="navigateStep(1)">Next <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+    <div class="tav">PS</div>
+  </div>
+  <div class="step-header">
+    <div class="step-top">
+      <div><div class="step-title">Raise Expense Claim</div><div class="step-sub">Log your expense details, attach receipts, and submit for approval.</div></div>
+    </div>
+    <div class="steps-row" id="steps-row">
+      <div class="step active" onclick="goStep(1)"><div class="step-num">1</div><div class="step-lbl">Claim Details</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(2)"><div class="step-num">2</div><div class="step-lbl">Line Items</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(3)"><div class="step-num">3</div><div class="step-lbl">Attachments</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(4)"><div class="step-num">4</div><div class="step-lbl">Review & Submit</div></div>
+    </div>
+  </div>
+  <div class="form-wrap">
+    <div class="form-main">
+
+      <!-- STEP 1 -->
+      <div class="step-content active" id="sc-1">
+        <div class="section">
+          <div class="sec-title">Claim Information</div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Expense Category <span class="req">*</span></label>
+              <select id="cat" onchange="updateSummary()">
+                <option value="">— Select category —</option>
+                <option value="travel" selected>Travel — Flights &amp; Transport</option>
+                <option value="hotel">Travel — Hotel &amp; Accommodation</option>
+                <option value="meals">Meals &amp; Entertainment</option>
+                <option value="supplies">Office Supplies</option>
+                <option value="software">Software &amp; Subscriptions</option>
+                <option value="training">Training &amp; Conferences</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Expense Date <span class="req">*</span></label>
+              <input type="date" id="exp-date" value="2026-03-20" oninput="updateSummary()">
+            </div>
+            <div class="fgroup">
+              <label>Amount <span class="req">*</span></label>
+              <input type="number" id="amount" placeholder="0.00" value="1250.00" min="0" step="0.01" oninput="updateTotal()">
+            </div>
+            <div class="fgroup">
+              <label>Currency <span class="req">*</span></label>
+              <select id="currency" onchange="updateSummary()">
+                <option selected>AED</option><option>USD</option><option>EUR</option><option>GBP</option>
+              </select>
+            </div>
+            <div class="fgroup span2">
+              <label>Description <span class="req">*</span></label>
+              <textarea id="desc" rows="2">Emirates flight EK004 DXB-LHR, Business class. Purpose: Client meeting at Meridian London HQ.</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Business Justification</div>
+          <div class="fgroup">
+            <label>Project / Cost Centre</label>
+            <select>
+              <option selected>CC-HR-001 · People Operations</option>
+              <option>CC-CORP-001 · Corporate</option>
+              <option>CC-TECH-001 · Technology</option>
+            </select>
+          </div>
+          <div class="fgroup" style="margin-top:12px">
+            <label>Approver Override</label>
+            <select>
+              <option>— Default manager (Aisha Al-Rashidi) —</option>
+              <option>James Okonkwo · CHRO</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: LINE ITEMS -->
+      <div class="step-content" id="sc-2">
+        <div class="section">
+          <div class="sec-title">Line Items</div>
+          <table class="li-table" id="li-table">
+            <thead>
+              <tr>
+                <th>Date</th><th>Description</th><th>Category</th><th style="text-align:right">Amount</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="li-body">
+              <tr>
+                <td>20 Mar 2026</td>
+                <td>Emirates EK004 DXB→LHR</td>
+                <td>Travel</td>
+                <td class="td-amount">AED 1,250.00</td>
+                <td><button class="li-del" onclick="this.closest('tr').remove();recalcTotal()">×</button></td>
+              </tr>
+              <tr>
+                <td>20 Mar 2026</td>
+                <td>Airport transfer · Careem</td>
+                <td>Travel</td>
+                <td class="td-amount">AED 85.00</td>
+                <td><button class="li-del" onclick="this.closest('tr').remove();recalcTotal()">×</button></td>
+              </tr>
+              <tr>
+                <td>21 Mar 2026</td>
+                <td>Client lunch · Cafe Royal</td>
+                <td>Meals</td>
+                <td class="td-amount">AED 320.00</td>
+                <td><button class="li-del" onclick="this.closest('tr').remove();recalcTotal()">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="total-row">
+            <span class="total-lbl">Total</span>
+            <span class="total-val" id="grand-total">AED 1,655.00</span>
+          </div>
+          <button class="btn btn-sm" style="margin-top:12px" onclick="addLineItem()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Line Item
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: ATTACHMENTS -->
+      <div class="step-content" id="sc-3">
+        <div class="section">
+          <div class="sec-title">Receipts &amp; Attachments</div>
+          <div class="upload-zone" onclick="alert('File upload: mock — no backend endpoint for file upload in this prototype')">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="uz-title">Click to upload or drag &amp; drop</div>
+            <div class="uz-sub">PNG, JPG, PDF up to 10MB per file</div>
+          </div>
+          <div class="file-item">
+            <div class="file-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div class="file-name">emirates_eticket_ek004.pdf</div>
+            <div class="file-size">248 KB</div>
+            <span class="file-del" onclick="this.closest('.file-item').remove()">×</span>
+          </div>
+          <div class="file-item">
+            <div class="file-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+            <div class="file-name">careem_receipt_mar20.jpg</div>
+            <div class="file-size">89 KB</div>
+            <span class="file-del" onclick="this.closest('.file-item').remove()">×</span>
+          </div>
+          <div class="file-item">
+            <div class="file-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+            <div class="file-name">cafe_royal_receipt.jpg</div>
+            <div class="file-size">112 KB</div>
+            <span class="file-del" onclick="this.closest('.file-item').remove()">×</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: REVIEW -->
+      <div class="step-content" id="sc-4">
+        <div class="success-banner">
+          <div class="sb-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="sb-text">
+            <strong>Ready to submit</strong>
+            <span>Review your claim details below, then click Submit.</span>
+          </div>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Claim Summary</div>
+          <div class="sum-row"><span class="sum-l">Employee</span><span class="sum-v">Priya Subramaniam</span></div>
+          <div class="sum-row"><span class="sum-l">Category</span><span class="sum-v">Travel — Flights &amp; Transport</span></div>
+          <div class="sum-row"><span class="sum-l">Expense date</span><span class="sum-v">20 Mar 2026</span></div>
+          <div class="sum-row"><span class="sum-l">Line items</span><span class="sum-v">3 items</span></div>
+          <div class="sum-row"><span class="sum-l">Attachments</span><span class="sum-v">3 files</span></div>
+          <div class="sum-row"><span class="sum-l">Approver</span><span class="sum-v">Aisha Al-Rashidi</span></div>
+          <div class="sum-row" style="border-top:1px solid var(--bd);margin-top:4px;padding-top:10px"><span class="sum-l" style="font-weight:700;color:var(--t1)">Total Amount</span><span class="sum-total">AED 1,655.00</span></div>
+        </div>
+        <div style="font-size:12.5px;color:var(--t3);padding:10px 13px;background:var(--al);border:1px solid #FCD34D;border-radius:var(--r)">
+          <strong>Note:</strong> Submitting this claim will trigger the approval workflow. You will be notified when your manager reviews it.
+        </div>
+      </div>
+
+    </div>
+    <div class="form-rail">
+      <div class="rail-sec">
+        <div class="rail-lbl">Claim Summary</div>
+        <div class="sum-row"><span class="sum-l">Category</span><span class="sum-v" id="sum-cat">Travel</span></div>
+        <div class="sum-row"><span class="sum-l">Date</span><span class="sum-v" id="sum-date">20 Mar 2026</span></div>
+        <div class="sum-row"><span class="sum-l">Currency</span><span class="sum-v" id="sum-curr">AED</span></div>
+        <div class="sum-row"><span class="sum-l">Total</span><span class="sum-v sum-total" id="sum-total">AED 1,655.00</span></div>
+      </div>
+      <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+      <div class="rail-sec">
+        <div class="rail-lbl">Steps</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px" id="sp-1"><div style="width:16px;height:16px;border-radius:50%;background:var(--teal);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>Claim Details</div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t4)" id="sp-2"><div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t4);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>Line Items</div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t4)" id="sp-3"><div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t4);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>Attachments</div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t4)" id="sp-4"><div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t4);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>Review &amp; Submit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <div class="ff-info">Submits <code>POST /api/v1/expense-claims</code> — expense_service</div>
+    <button class="btn" id="footer-back" onclick="navigateStep(-1)" style="display:none">Back</button>
+    <button class="btn">Save Draft</button>
+    <button class="btn btn-p" id="footer-next" onclick="navigateStep(1)">Next <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div>
+</main>
+</div>
+<script>
+let currentStep = 1;
+const labels = ['Claim Details','Line Items','Attachments','Review & Submit'];
+function goStep(n) {
+  document.getElementById('sc-' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('sc-' + currentStep).classList.add('active');
+  updateUI();
+}
+function navigateStep(dir) {
+  const next = currentStep + dir;
+  if (next < 1 || next > 4) return;
+  goStep(next);
+}
+function updateUI() {
+  const stepsEl = document.querySelectorAll('#steps-row .step');
+  stepsEl.forEach((s, i) => {
+    s.className = 'step';
+    if (i + 1 < currentStep) s.classList.add('done');
+    else if (i + 1 === currentStep) s.classList.add('active');
+    else s.classList.add('pending');
+    const n = s.querySelector('.step-num');
+    n.textContent = i + 1 < currentStep ? '✓' : i + 1;
+  });
+  const fb = document.getElementById('footer-back');
+  const fn = document.getElementById('footer-next');
+  const bb = document.getElementById('btn-back');
+  fb.style.display = currentStep > 1 ? '' : 'none';
+  bb.style.opacity = currentStep > 1 ? '1' : '0.4';
+  if (currentStep === 4) {
+    fn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Submit Claim';
+    fn.onclick = document.getElementById('btn-next').onclick = submitForm;
+  } else {
+    fn.innerHTML = 'Next <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+    fn.onclick = document.getElementById('btn-next').onclick = () => navigateStep(1);
+  }
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('sp-' + i);
+    const dot = el.querySelector('div');
+    if (i < currentStep) {
+      dot.style.background = 'var(--gl)';dot.style.color = 'var(--grn)';dot.textContent = '✓';el.style.color = 'var(--grn)';
+    } else if (i === currentStep) {
+      dot.style.background = 'var(--teal)';dot.style.color = '#fff';dot.textContent = i;el.style.color = 'var(--t1)';
+    } else {
+      dot.style.background = 'var(--t5)';dot.style.color = 'var(--t4)';dot.textContent = i;el.style.color = 'var(--t4)';
+    }
+  }
+}
+function updateSummary() {
+  const cat = document.getElementById('cat');
+  document.getElementById('sum-cat').textContent = cat.options[cat.selectedIndex].text.split(' — ')[0];
+  const d = document.getElementById('exp-date').value;
+  if (d) document.getElementById('sum-date').textContent = new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('sum-curr').textContent = document.getElementById('currency').value;
+}
+function updateTotal() {
+  const a = parseFloat(document.getElementById('amount').value) || 0;
+  document.getElementById('grand-total').textContent = 'AED ' + a.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function recalcTotal() {
+  let t = 0;
+  document.querySelectorAll('#li-body .td-amount').forEach(el => {
+    t += parseFloat(el.textContent.replace(/[^0-9.]/g,'')) || 0;
+  });
+  document.getElementById('grand-total').textContent = 'AED ' + t.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('sum-total').textContent = 'AED ' + t.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function addLineItem() {
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>23 Mar 2026</td><td>New expense item</td><td>Other</td><td class="td-amount">AED 0.00</td><td><button class="li-del" onclick="this.closest('tr').remove();recalcTotal()">×</button></td>`;
+  document.getElementById('li-body').appendChild(row);
+}
+function submitForm() {
+  alert('POST /api/v1/expense-claims\n\n{"employee_id":"emp-0087","category_id":"travel","amount":1655.00,"currency":"AED","expense_date":"2026-03-20","description":"London client trip","status":"Submitted"}');
+}
+</script>
+</body>
+</html>

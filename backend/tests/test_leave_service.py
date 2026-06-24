@@ -1,0 +1,281 @@
+from datetime import date
+
+import pytest
+
+from audit_service.service import get_audit_service
+from leave_service import EmployeeStatus, LeaveService, LeaveServiceError
+
+
+def test_employee_create_submit_and_manager_approve_updates_balance_and_status():
+    svc = LeaveService()
+    code, created = svc.create_request(
+        actor_role="Employee",
+        actor_employee_id="emp-001",
+        employee_id="emp-001",
+        leave_type="Annual",
+        start_date=date(2026, 1, 10),
+        end_date=date(2026, 1, 12),
+        reason="Vacation",
+    )
+    assert code == 201
+    assert created["leave_balance"]["remaining_days"] == 18.0
+
+    code, submitted = svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+    assert code == 200
+    assert submitted["status"] == "Submitted"
+    assert submitted["leave_balance"]["reserved_days"] == 3.0
+    assert submitted["leave_balance"]["remaining_days"] == 15.0
+
+    code, approved = svc.decide_request("approve", "Manager", "emp-manager", created["leave_request_id"])
+    assert code == 200
+    assert approved["status"] == "Approved"
+    assert approved["leave_balance"]["reserved_days"] == 0.0
+    assert approved["leave_balance"]["approved_days"] == 3.0
+    assert approved["leave_balance"]["remaining_days"] == 15.0
+
+
+def test_overlap_blocked_after_submission():
+    svc = LeaveService()
+    _, first = svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 2, 1), date(2026, 2, 3))
+    svc.submit_request("Employee", "emp-001", first["leave_request_id"])
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 2, 2), date(2026, 2, 4))
+    assert ex.value.status_code == 409
+    assert ex.value.payload["error"]["code"] == "LEAVE_OVERLAP"
+
+
+def test_employee_cannot_approve():
+    svc = LeaveService()
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Sick", date(2026, 3, 1), date(2026, 3, 1))
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.decide_request("approve", "Employee", "emp-001", created["leave_request_id"])
+    assert ex.value.status_code == 403
+    assert ex.value.payload["error"]["code"] == "FORBIDDEN"
+
+
+def test_leave_observability_captures_metrics_and_audit_logs():
+    svc = LeaveService()
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 4, 1), date(2026, 4, 2), trace_id="trace-create")
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"], trace_id="trace-submit")
+    svc.decide_request("approve", "Manager", "emp-manager", created["leave_request_id"], trace_id="trace-approve")
+
+    metrics = svc.observability.metrics.snapshot()
+    assert metrics["request_count"] >= 3
+    assert metrics["error_rate"] == 0.0
+    assert any(record["trace_id"] == "trace-approve" and record["message"] == "leave_request_approve" for record in svc.observability.logger.records)
+    assert svc.health_snapshot()["status"] == "ok"
+
+
+def test_reject_releases_reserved_balance_and_blocks_broken_transition():
+    svc = LeaveService()
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Casual", date(2026, 5, 5), date(2026, 5, 6))
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+
+    code, rejected = svc.decide_request("reject", "Manager", "emp-manager", created["leave_request_id"], reason="Coverage gap")
+    assert code == 200
+    assert rejected["status"] == "Rejected"
+    assert rejected["leave_balance"]["reserved_days"] == 0.0
+    assert rejected["leave_balance"]["approved_days"] == 0.0
+    assert rejected["leave_balance"]["remaining_days"] == 7.0
+    assert "[Rejection] Coverage gap" in rejected["reason"]
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+    assert ex.value.status_code == 409
+    assert ex.value.payload["error"]["code"] == "INVALID_TRANSITION"
+
+
+def test_cancel_approved_future_leave_restores_balance_and_employee_status(monkeypatch: pytest.MonkeyPatch):
+    svc = LeaveService()
+    monkeypatch.setattr(svc, "_today", lambda: date(2026, 6, 1))
+
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 6, 2), date(2026, 6, 4))
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+    _, approved = svc.decide_request("approve", "Manager", "emp-manager", created["leave_request_id"])
+    assert approved["leave_balance"]["approved_days"] == 3.0
+    assert svc.employees["emp-001"].status == EmployeeStatus.ACTIVE
+
+    code, cancelled = svc.patch_request("Employee", "emp-001", created["leave_request_id"], {"status": "Cancelled"})
+    assert code == 200
+    assert cancelled["status"] == "Cancelled"
+    assert cancelled["leave_balance"]["approved_days"] == 0.0
+    assert cancelled["leave_balance"]["remaining_days"] == 18.0
+    assert svc.employees["emp-001"].status == EmployeeStatus.ACTIVE
+
+
+def test_request_leave_fails_when_balance_is_exhausted():
+    svc = LeaveService()
+
+    _, first = svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 7, 1), date(2026, 7, 18))
+    svc.submit_request("Employee", "emp-001", first["leave_request_id"])
+    svc.decide_request("approve", "Manager", "emp-manager", first["leave_request_id"])
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 8, 1), date(2026, 8, 2))
+    assert ex.value.status_code == 409
+    assert ex.value.payload["error"]["code"] == "INSUFFICIENT_LEAVE_BALANCE"
+
+
+def test_list_requests_returns_balances_for_employee_scope():
+    svc = LeaveService()
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Sick", date(2026, 9, 8), date(2026, 9, 8))
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+
+    code, payload = svc.list_requests("Employee", "emp-001", employee_id="emp-001", status="Submitted")
+    assert code == 200
+    assert len(payload["data"]) == 1
+    assert any(balance["leave_type"] == "Sick" and balance["reserved_days"] == 1.0 for balance in payload["leave_balances"])
+
+
+def test_approved_leave_includes_attendance_impacts_and_employee_detail():
+    svc = LeaveService()
+    _, created = svc.create_request("Employee", "emp-001", "emp-001", "Annual", date(2026, 10, 10), date(2026, 10, 12))
+    svc.submit_request("Employee", "emp-001", created["leave_request_id"])
+    _, approved = svc.decide_request("approve", "Manager", "emp-manager", created["leave_request_id"])
+
+    assert len(approved["attendance_impacts"]) == 3
+    assert approved["attendance_impacts"][0]["attendance_status"] == "Absent"
+    detail = svc.get_employee_detail("emp-001")
+    assert detail["employee"]["employee_id"] == "emp-001"
+    assert len(detail["attendance_impacts"]) == 3
+    assert any(item["leave_request_id"] == created["leave_request_id"] for item in detail["attendance_impacts"])
+
+
+def test_cross_tenant_request_access_is_denied():
+    svc = LeaveService()
+    _, created = svc.create_request(
+        'Employee',
+        'emp-001',
+        'emp-001',
+        'Annual',
+        date(2026, 11, 1),
+        date(2026, 11, 2),
+        tenant_id='tenant-default',
+    )
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.get_request('Admin', 'emp-admin', created['leave_request_id'], tenant_id='tenant-other')
+
+    assert ex.value.status_code == 403
+    assert ex.value.payload['error']['code'] == 'TENANT_SCOPE_VIOLATION'
+
+
+def test_leave_events_include_tenant_context():
+    svc = LeaveService()
+    _, created = svc.create_request(
+        'Employee',
+        'emp-001',
+        'emp-001',
+        'Annual',
+        date(2026, 12, 10),
+        date(2026, 12, 11),
+        tenant_id='tenant-default',
+    )
+    svc.submit_request('Employee', 'emp-001', created['leave_request_id'], tenant_id='tenant-default')
+
+    assert svc.events[-1]['tenant_id'] == 'tenant-default'
+    assert svc.events[-1]['data']['tenant_id'] == 'tenant-default'
+
+
+def test_partial_day_and_holiday_calendar_are_policy_driven():
+    svc = LeaveService()
+    svc.upsert_holiday_calendar(
+        'US-NY',
+        {
+            'name': 'US-NY Calendar',
+            'holidays': {
+                '2026-12-24': 'Founders Day',
+            },
+        },
+        trace_id='trace-holiday',
+    )
+
+    _, leave = svc.create_request(
+        'Employee',
+        'emp-001',
+        'emp-001',
+        'Annual',
+        date(2026, 12, 25),
+        date(2026, 12, 25),
+        partial_day_portion=0.5,
+    )
+
+    assert leave['total_days'] == 0.5
+    assert leave['partial_day_portion'] == 0.5
+    assert leave['holiday_dates'] == []
+
+    with pytest.raises(LeaveServiceError) as ex:
+        svc.create_request(
+            'Employee',
+            'emp-001',
+            'emp-001',
+            'Annual',
+            date(2026, 12, 24),
+            date(2026, 12, 24),
+        )
+    assert ex.value.status_code == 422
+    assert ex.value.payload['error']['code'] == 'VALIDATION_ERROR'
+
+
+def test_unpaid_policy_uses_workflow_engine_even_when_auto_approved():
+    svc = LeaveService()
+    _, created = svc.create_request('Employee', 'emp-001', 'emp-001', 'Unpaid', date(2026, 8, 20), date(2026, 8, 21))
+
+    code, submitted = svc.submit_request('Employee', 'emp-001', created['leave_request_id'])
+    assert code == 200
+    assert submitted['status'] == 'Approved'
+    assert submitted['workflow']['metadata']['terminal_result'] == 'approved'
+    assert submitted['workflow']['status'] == 'completed'
+    assert any(item['action'] == 'step_approved' for item in submitted['workflow']['history'])
+
+
+def test_accrual_carry_forward_and_ledger_entries_are_recorded():
+    svc = LeaveService()
+    accrual_policy = svc.create_or_update_policy(
+        {
+            'code': 'ANNUAL-NY-G7',
+            'name': 'Annual NY G7',
+            'leave_type': 'Annual',
+            'location_codes': ['US-NY'],
+            'grade_codes': ['G7'],
+            'annual_entitlement_days': 0.0,
+            'accrual_frequency': 'Monthly',
+            'accrual_rate_days': 1.5,
+            'carry_forward_limit_days': 4.0,
+            'requires_approval': True,
+            'allow_negative_balance': False,
+            'allow_partial_days': True,
+            'status': 'Active',
+        },
+        trace_id='trace-policy',
+    )
+    svc.assign_policy_to_employee('emp-001', 'Annual', accrual_policy['leave_policy_id'], trace_id='trace-assign')
+
+    accrual = svc.accrue_balances(as_of=date(2026, 4, 1), employee_id='emp-001', trace_id='trace-accrual')
+    assert any(item['leave_type'] == 'Annual' and item['accrued_days'] > 0 for item in accrual['items'])
+
+    carry = svc.apply_carry_forward(year=2027, employee_id='emp-001', trace_id='trace-carry')
+    assert any(item['leave_type'] == 'Annual' for item in carry['items'])
+
+    ledger = svc.get_leave_ledger('emp-001', leave_type='Annual')
+    entry_types = {entry['entry_type'] for entry in ledger}
+    assert 'accrual' in entry_types
+    assert 'carry_forward' in entry_types
+
+    records, _ = get_audit_service().list_records(tenant_id='tenant-default', entity='LeaveBalanceLedger', limit=100)
+    assert any(record['action'] == 'leave_balance_ledger_recorded' for record in records)
+
+
+def test_recompute_employee_balance_rebuilds_reserved_and_approved_totals():
+    svc = LeaveService()
+    _, created = svc.create_request('Employee', 'emp-001', 'emp-001', 'Annual', date(2026, 1, 10), date(2026, 1, 11))
+    svc.submit_request('Employee', 'emp-001', created['leave_request_id'])
+    svc.decide_request('approve', 'Manager', 'emp-manager', created['leave_request_id'])
+
+    result = svc.recompute_employee_balance('emp-001', trace_id='trace-recompute')
+    annual = next(balance for balance in result['leave_balances'] if balance['leave_type'] == 'Annual')
+    assert annual['approved_days'] == 2.0
+    assert annual['reserved_days'] == 0.0

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Leave Request Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;--grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;--blue:#1D4ED8;--bl:#DBEAFE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-d{background:var(--rl);color:var(--red);border-color:var(--red)}.btn-sm{padding:4px 10px;font-size:12px}
+.page{flex:1;overflow-y:auto;min-height:0}
+.prof-head{background:var(--w);border-bottom:1px solid var(--bd);padding:22px 26px 0;position:sticky;top:0;z-index:10}
+.ph-row{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px}
+.ph-av{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px var(--w),0 0 0 5px var(--bd)}
+.ph-info{flex:1}.ph-name{font-size:20px;font-weight:700;color:var(--t1);letter-spacing:-0.025em;margin-bottom:3px}
+.ph-role{font-size:13px;color:var(--t3);margin-bottom:10px}
+.ph-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.tab-scroll{display:block;padding:22px 26px 12vh}
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct2{font-size:13px;font-weight:700;color:var(--t1)}
+.cb2{padding:16px 17px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.field{background:var(--bg);border-radius:var(--r);padding:9px 12px}
+.fl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.fv{font-size:13px;font-weight:500;color:var(--t1)}
+.fv.mono{font-family:var(--mono);font-size:12.5px}
+.dr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--t5)}
+.dr:last-child{border-bottom:none}
+.dl{font-size:12.5px;color:var(--t3)}.dv{font-size:12.5px;font-weight:600;color:var(--t1)}
+.dv.mono{font-family:var(--mono)}
+/* AI assessment */
+.ai-card{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r2);padding:14px;margin-bottom:14px}
+.ai-head{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+.ai-lbl{font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.10em}
+.ai-body{font-size:12px;color:var(--t2);line-height:1.5}
+/* Timeline */
+.tl-item{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--t5)}
+.tl-item:last-child{border-bottom:none}
+.tl-left{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:3px}
+.tl-line{width:1px;flex:1;background:var(--bd);min-height:14px}
+.tl-item:last-child .tl-line{display:none}
+.tl-ti{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:1px}
+.tl-su{font-size:12px;color:var(--t3)}.tl-dt{font-size:10.5px;color:var(--t4);font-family:var(--mono);margin-top:2px}
+/* Leave balance bars */
+.lv-item{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px}
+.lv-type{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.lv-nums{display:flex;align-items:baseline;gap:4px}
+.lv-used{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--t1)}
+.lv-tot{font-family:var(--mono);font-size:11px;color:var(--t4)}
+.lv-bar{height:3px;background:var(--t5);border-radius:99px;overflow:hidden;margin-top:7px}
+.lv-fill{height:100%;border-radius:99px}
+/* Two-col layout */
+.detail-grid{display:grid;grid-template-columns:1fr 292px;gap:16px;align-items:start}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>Leave Requests</a><span class="sep">›</span><span class="cur">LVR-2025-0312</span></div>
+    <div class="tbi"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tb-vd"></div>
+    <!-- H05 Workflow actions — P-08: primary=Approve, danger=Reject -->
+    <button class="btn btn-sm btn-d"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Reject</button>
+    <button class="btn btn-sm btn-p"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Approve</button>
+    <div class="tav">AW</div>
+  </div>
+  <div class="page">
+    <div class="prof-head">
+      <div class="ph-row">
+        <div class="ph-av">PS</div>
+        <div class="ph-info">
+          <div class="ph-name">Annual Leave — 5 Days</div>
+          <div class="ph-role">Priya Subramaniam · People Operations</div>
+          <div class="ph-chips">
+            <!-- LeaveStatus: Draft/Submitted/Approved/Rejected/Cancelled -->
+            <span class="chip ca">Pending</span>
+            <span class="chip cn">Annual Leave</span>
+            <span class="chip cn" style="font-family:var(--mono);text-transform:none;letter-spacing:0">Apr 7 – Apr 11, 2025</span>
+            <span class="chip cn" style="font-family:var(--mono);text-transform:none;letter-spacing:0">LVR-2025-0312</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-scroll">
+      <div class="detail-grid">
+        <div>
+          <!-- Request Details — leave_service: GET /api/v1/leave/requests/:id (LeaveRequest) -->
+          <div class="card">
+            <div class="ch"><div class="ct2">Request Details</div></div>
+            <div class="cb2">
+              <div class="fg3">
+                <div class="field"><div class="fl">Leave Type</div><div class="fv">Annual</div></div>
+                <div class="field"><div class="fl">From</div><div class="fv mono">Apr 07, 2025</div></div>
+                <div class="field"><div class="fl">To</div><div class="fv mono">Apr 11, 2025</div></div>
+                <div class="field"><div class="fl">Days Requested</div><div class="fv mono">5</div></div>
+                <div class="field"><div class="fl">Status</div><div class="fv"><span class="chip ca">Pending</span></div></div>
+                <div class="field"><div class="fl">Submitted</div><div class="fv mono">Mar 21, 2025</div></div>
+              </div>
+              <div style="margin-top:12px;background:var(--bg);border-radius:var(--r);padding:9px 12px">
+                <div class="fl">Reason</div>
+                <div class="fv" style="margin-top:4px;line-height:1.55;font-weight:400">Family travel — planned trip to India for Eid Al-Fitr. Coverage arranged with Rachel Müller for urgent matters.</div>
+              </div>
+            </div>
+          </div>
+          <!-- AI Assessment — P-12: teal=informational -->
+          <div class="ai-card">
+            <div class="ai-head"><div class="ai-dot"></div><div class="ai-lbl">AI Assessment</div></div>
+            <div class="ai-body">No scheduling conflicts detected. Priya's team coverage is confirmed and no critical deliverables are due during the requested period. Leave balance is sufficient (4 remaining days after this request). Recommended for approval.</div>
+          </div>
+          <!-- Approval History -->
+          <div class="card">
+            <div class="ch"><div class="ct2">Approval History</div></div>
+            <div style="padding:6px 17px 14px">
+              <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--amber)"></div><div class="tl-line"></div></div><div><div class="tl-ti">Awaiting Approval</div><div class="tl-su">Assigned to James Kolawole</div><div class="tl-dt">Mar 21, 2025 · 09:14</div></div></div>
+              <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--teal)"></div></div><div><div class="tl-ti">Submitted by Employee</div><div class="tl-su">Priya Subramaniam · via Self-Service Portal</div><div class="tl-dt">Mar 21, 2025 · 09:12</div></div></div>
+            </div>
+          </div>
+        </div>
+        <!-- Right column: leave balance -->
+        <div>
+          <!-- BG-006 mock: leave balance -->
+          <div class="card">
+            <div class="ch"><div class="ct2">Leave Balance</div></div>
+            <div class="cb2" style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+              <div class="lv-item"><div class="lv-type">Annual</div><div class="lv-nums"><div class="lv-used">14</div><div class="lv-tot">/ 18d</div></div><div class="lv-bar"><div class="lv-fill" style="width:78%;background:var(--teal)"></div></div></div>
+              <div class="lv-item"><div class="lv-type">Sick</div><div class="lv-nums"><div class="lv-used">7</div><div class="lv-tot">/ 10d</div></div><div class="lv-bar"><div class="lv-fill" style="width:70%;background:#16A34A"></div></div></div>
+              <div class="lv-item"><div class="lv-type">Casual</div><div class="lv-nums"><div class="lv-used">4</div><div class="lv-tot">/ 7d</div></div><div class="lv-bar"><div class="lv-fill" style="width:57%;background:#3B82F6"></div></div></div>
+              <div class="lv-item"><div class="lv-type">Unpaid</div><div class="lv-nums"><div class="lv-used">0</div><div class="lv-tot">/ —</div></div><div class="lv-bar"><div class="lv-fill" style="width:0%"></div></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><div class="ct2">After Approval</div></div>
+            <div style="padding:6px 17px 14px">
+              <div class="dr"><span class="dl">Annual Remaining</span><span class="dv mono" style="color:var(--amber)">9d → 4d</span></div>
+              <div class="dr"><span class="dl">Days Deducted</span><span class="dv mono">5</span></div>
+              <div class="dr"><span class="dl">Balance Sufficient</span><span class="dv" style="color:var(--grn)">Yes ✓</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+<script>document.querySelectorAll('.si').forEach(el=>el.addEventListener('click',function(){document.querySelectorAll('.si').forEach(x=>x.classList.remove('on'));this.classList.add('on')}));</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+﻿{
+  "_meta": {
+    "id": "h04-raise-leave-request",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Raise Leave Request",
+    "variant": "Simple",
+    "surface": "employee self-service",
+    "primary_actor": "Employee",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["My Leave", "Raise Leave Request"],
+      "actions": [
+        { "label": "Cancel", "style": "secondary" },
+        { "label": "Submit Request", "style": "primary", "action": "POST /api/v1/leave/requests" }
+      ]
+    },
+    "FORM_SECTIONS": {
+      "leave_type": {
+        "component": "card_selector",
+        "required": true,
+        "enum_ref": "leave_service.LeaveType",
+        "values": ["Annual","Sick","Casual","Unpaid"],
+        "maps_to": "LeaveRequest.leave_type",
+        "note": "Balance shown per card. BG-006: balances from mock data — no GET /api/v1/leave/employees/:id/balances endpoint."
+      },
+      "dates": {
+        "fields": [
+          { "id": "start_date", "label": "Start Date", "type": "date",   "required": true,  "maps_to": "LeaveRequest.start_date" },
+          { "id": "end_date",   "label": "End Date",   "type": "date",   "required": true,  "maps_to": "LeaveRequest.end_date" },
+          { "id": "half_day",   "label": "Half Day",   "type": "toggle", "required": false, "maps_to": "LeaveRequest.partial_day_portion (0.5 if true, 1.0 if false)" }
+        ],
+        "computed": "total_days — calculated client-side from start_date/end_date excluding weekends"
+      },
+      "details": {
+        "fields": [
+          { "id": "reason",               "label": "Reason",    "type": "textarea", "required": false, "maps_to": "LeaveRequest.reason" },
+          { "id": "approver_employee_id", "label": "Approver",  "type": "select",   "required": false, "maps_to": "LeaveRequest.approver_employee_id", "source": "GET /api/v1/employees?status=Active" }
+        ]
+      }
+    },
+    "FORM_RAIL": {
+      "request_summary": { "fields": ["employee","leave_type","duration","start_date","end_date","approver"] },
+      "balance_bars": { "note": "BG-006 mock — Annual/Sick/Casual balances shown as progress bars" }
+    },
+    "FORM_FOOTER": {
+      "right": [
+        { "label": "Cancel",         "style": "secondary" },
+        { "label": "Submit Request", "style": "primary",  "action": "POST /api/v1/leave/requests" }
+      ]
+    }
+  },
+  "submit_flow": {
+    "method": "POST",
+    "endpoint": "/api/v1/leave/requests",
+    "service": "leave_service",
+    "body": {
+      "leave_type": "LeaveType (required)",
+      "start_date": "date (required)",
+      "end_date": "date (required)",
+      "reason": "string (optional)",
+      "approver_employee_id": "string (optional)",
+      "partial_day_portion": "float (1.0 default, 0.5 for half day)"
+    },
+    "on_success": { "redirect": "H02 Leave Requests" }
+  },
+  "known_gaps": ["BG-006"],
+  "patterns_applied": ["P-07", "P-31", "P-32"]
+}

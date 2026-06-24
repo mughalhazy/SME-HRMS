@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report Builder — Meridian HCM</title>
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#0A8F84;--teal-d:#077a70;--teal-lt:#E6F4F3;
+  --grey-50:#F8FAFC;--grey-100:#F1F5F9;--grey-200:#E2E8F0;
+  --grey-300:#CBD5E1;--grey-400:#94A3B8;--grey-500:#64748B;
+  --grey-700:#334155;--grey-900:#0F172A;
+  --amber:#D97706;--amber-lt:#FFFBEB;
+  --red:#DC2626;--green:#16A34A;--blue:#2563EB;
+  --font:'Inter',system-ui,sans-serif;
+  --radius:6px;--radius-lg:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+}
+body{font-family:var(--font);font-size:13px;color:var(--grey-900);background:var(--grey-100);display:flex;height:100vh;overflow:hidden}
+
+/* ── Sidebar ── */
+.sb{width:56px;background:#0F172A;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0;z-index:100}
+.sb-logo{width:32px;height:32px;background:var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.sb-logo svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2}
+.sb-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748B;cursor:default;transition:background .15s,color .15s}
+.sb-ico:hover{background:rgba(255,255,255,.08);color:#94A3B8}
+.sb-ico.on{background:rgba(10,143,132,.2);color:var(--teal)}
+.sb-ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:rgba(255,255,255,.08);margin:6px 0}
+
+/* ── Main shell ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── Topbar ── */
+.topbar{height:52px;background:#fff;border-bottom:1px solid var(--grey-200);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:50}
+.tb-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.tb-bc{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--grey-500);white-space:nowrap}
+.tb-bc .cur{color:var(--grey-900);font-weight:600;font-size:13px}
+.tb-sep{color:var(--grey-300)}
+.tb-name{font-weight:600;color:var(--grey-900);font-size:13px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-center{display:flex;align-items:center;gap:4px}
+.tb-right{display:flex;align-items:center;gap:8px}
+.zoom-btn{width:28px;height:28px;border:1px solid var(--grey-200);border-radius:var(--radius);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--grey-500);font-size:15px;line-height:1;font-weight:500;transition:background .15s}
+.zoom-btn:hover{background:var(--grey-50)}
+.zoom-val{font-size:12px;font-weight:500;color:var(--grey-500);min-width:38px;text-align:center;user-select:none}
+.btn{height:32px;padding:0 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:none;transition:background .15s}
+.btn-ghost{background:transparent;color:var(--grey-700);border:1px solid var(--grey-200)}
+.btn-ghost:hover{background:var(--grey-50)}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:var(--teal-d)}
+.version-badge{font-size:11px;font-weight:500;color:var(--grey-400);padding:2px 6px;border:1px solid var(--grey-200);border-radius:4px}
+
+/* ── Chips ── */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip-green{background:#DCFCE7;color:#15803D}
+.chip-amber{background:#FEF3C7;color:#92400E}
+.chip-blue{background:#DBEAFE;color:#1D4ED8}
+.chip-grey{background:var(--grey-100);color:var(--grey-500)}
+.chip-teal{background:var(--teal-lt);color:var(--teal)}
+.chip-red{background:#FEE2E2;color:#B91C1C}
+
+/* ── Builder 3-panel layout (P-32) ── */
+.builder{flex:1;overflow:hidden;display:grid;grid-template-columns:256px 1fr 272px;min-height:0}
+
+/* ── Palette ── */
+.palette{background:#fff;border-right:1px solid var(--grey-200);display:flex;flex-direction:column;overflow:hidden}
+.pal-header{padding:10px 10px 8px;border-bottom:1px solid var(--grey-200);flex-shrink:0}
+.pal-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--grey-400);margin-bottom:7px;padding:0 2px}
+.pal-search{width:100%;height:30px;border:1px solid var(--grey-200);border-radius:var(--radius);padding:0 8px 0 28px;font-size:12px;color:var(--grey-700);background:var(--grey-50) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 8px center;outline:none;font-family:var(--font)}
+.pal-search:focus{border-color:var(--teal);background:#fff}
+.pal-body{overflow-y:auto;min-height:0;padding:10px 10px 12vh}
+.pal-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--grey-400);padding:8px 4px 5px}
+.pal-comp{padding:9px 10px;border-radius:var(--radius);border:1px solid var(--grey-200);background:#fff;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;margin-bottom:5px;display:flex;align-items:flex-start;gap:8px}
+.pal-comp:hover{border-color:var(--teal);background:var(--teal-lt)}
+.pal-comp.active{border-color:var(--teal);background:var(--teal-lt);box-shadow:0 0 0 2px rgba(10,143,132,.12)}
+.pal-comp-chrome{opacity:.6}
+.pal-comp-chrome:hover{border-color:var(--grey-300);background:var(--grey-50);opacity:.75}
+.pal-ico{width:28px;height:28px;border-radius:6px;background:var(--grey-100);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.pal-ico svg{width:14px;height:14px;stroke:var(--grey-500);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.pal-comp.active .pal-ico{background:rgba(10,143,132,.12)}
+.pal-comp.active .pal-ico svg{stroke:var(--teal)}
+.pal-txt{flex:1;min-width:0}
+.pal-name{font-size:12px;font-weight:600;color:var(--grey-900);line-height:1.3}
+.pal-desc{font-size:11px;color:var(--grey-500);margin-top:2px;line-height:1.4}
+.pal-key{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--grey-400);margin-top:3px}
+
+/* ── Canvas area ── */
+.canvas-area{background:var(--grey-100);overflow:auto;min-height:0;padding:24px 24px 12vh}
+.canvas{width:100%;max-width:660px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+
+/* canvas header */
+.c-header{background:#fff;border-radius:var(--radius-lg);padding:14px 18px;border:1px solid var(--grey-200);display:flex;align-items:flex-start;gap:14px;box-shadow:var(--shadow)}
+.c-header-icon{width:40px;height:40px;border-radius:10px;background:var(--teal-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.c-header-icon svg{width:20px;height:20px;stroke:var(--teal);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.c-header-body{flex:1;min-width:0}
+.c-title{font-size:16px;font-weight:700;color:var(--grey-900);margin-bottom:5px}
+.c-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.c-id{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--grey-400)}
+
+/* report cards */
+.rpt-card{background:#fff;border:2px solid var(--grey-200);border-radius:var(--radius-lg);cursor:pointer;transition:border-color .15s,box-shadow .15s;overflow:hidden}
+.rpt-card:hover{border-color:var(--grey-300);box-shadow:var(--shadow)}
+.rpt-card.sel{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.1)}
+.rpt-card.chrome-card{opacity:.65}
+.rpt-card.chrome-card .card-head{background:var(--grey-50)}
+.card-head{padding:10px 14px;border-bottom:1px solid var(--grey-100);display:flex;align-items:center;gap:9px}
+.card-head-ico{width:28px;height:28px;border-radius:6px;background:var(--teal-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-head-ico svg{width:14px;height:14px;stroke:var(--teal);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.chrome-card .card-head-ico{background:var(--grey-100)}
+.chrome-card .card-head-ico svg{stroke:var(--grey-400)}
+.card-head-title{font-size:11px;font-weight:700;color:var(--grey-700);text-transform:uppercase;letter-spacing:.05em;flex:1}
+.chrome-tag{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-400);padding:1px 5px;border:1px solid var(--grey-200);border-radius:3px;background:var(--grey-50)}
+.card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.card-row{display:flex;gap:14px;flex-wrap:wrap}
+.c-field{display:flex;flex-direction:column;gap:2px;min-width:100px}
+.c-field-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-400)}
+.c-field-val{font-size:12px;color:var(--grey-900);font-weight:500}
+.c-field-mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--grey-700)}
+.metric-strip{display:flex;overflow:hidden;border-radius:var(--radius);border:1px solid var(--grey-200);margin-top:2px}
+.metric-cell{flex:1;text-align:center;padding:8px 6px;background:#fff;border-right:1px solid var(--grey-200)}
+.metric-cell:last-child{border-right:none}
+.metric-val{font-size:18px;font-weight:700;color:var(--grey-900);line-height:1.2}
+.metric-key{font-size:10px;color:var(--grey-400);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.sched-row{display:flex;align-items:center;gap:8px;padding:2px 0}
+.sched-row svg{width:13px;height:13px;stroke:var(--grey-400);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sched-text{font-size:12px;color:var(--grey-700)}
+.sched-text strong{font-weight:600;color:var(--grey-900)}
+
+/* drop zone */
+.drop-zone{border:2px dashed var(--grey-200);border-radius:var(--radius-lg);padding:16px;text-align:center;color:var(--grey-400);font-size:12px;margin-top:2px;transition:border-color .15s,background .15s}
+.drop-zone:hover{border-color:var(--grey-300);background:rgba(255,255,255,.5)}
+.drop-zone svg{width:18px;height:18px;stroke:var(--grey-300);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block;margin:0 auto 6px}
+
+/* ── Properties panel ── */
+.props-panel{background:#fff;border-left:1px solid var(--grey-200);display:flex;flex-direction:column;overflow:hidden}
+.props-head{padding:10px 14px;border-bottom:1px solid var(--grey-200);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--grey-500);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.props-tag{font-size:10px;font-weight:500;color:var(--grey-400);text-transform:none;letter-spacing:0;font-family:'JetBrains Mono',monospace}
+.props-body{overflow-y:auto;min-height:0;padding-bottom:12vh}
+.props-empty{padding:32px 14px;text-align:center;color:var(--grey-400);font-size:12px;line-height:1.7}
+.props-empty svg{width:22px;height:22px;stroke:var(--grey-200);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block;margin:0 auto 10px}
+.p-sec{padding:12px 14px;border-bottom:1px solid var(--grey-100)}
+.p-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--grey-500);margin-bottom:4px}
+.p-lbl.mt{margin-top:10px}
+.p-input{width:100%;height:28px;border:1px solid var(--grey-200);border-radius:var(--radius);padding:0 8px;font-size:12px;font-family:var(--font);color:var(--grey-900);outline:none;background:#fff}
+.p-input:focus{border-color:var(--teal);box-shadow:0 0 0 2px rgba(10,143,132,.08)}
+.p-input[type="date"]{color:var(--grey-700)}
+.p-select{width:100%;height:28px;border:1px solid var(--grey-200);border-radius:var(--radius);padding:0 8px;font-size:12px;font-family:var(--font);color:var(--grey-900);outline:none;background:#fff;cursor:pointer}
+.p-select:focus{border-color:var(--teal)}
+.p-select:disabled{background:var(--grey-50);color:var(--grey-400);cursor:not-allowed}
+.p-textarea{width:100%;min-height:54px;border:1px solid var(--grey-200);border-radius:var(--radius);padding:5px 8px;font-size:12px;font-family:var(--font);color:var(--grey-900);outline:none;resize:vertical;line-height:1.4;background:#fff}
+.p-textarea:focus{border-color:var(--teal)}
+.p-hint{font-size:11px;color:var(--grey-400);line-height:1.4;margin-top:4px}
+.p-hint.warn{color:var(--amber)}
+.sw-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+.sw{padding:3px 9px;border:1px solid var(--grey-200);border-radius:var(--radius);font-size:11px;font-weight:500;color:var(--grey-500);cursor:pointer;transition:all .15s}
+.sw:hover{border-color:var(--teal);color:var(--teal)}
+.sw.on{border-color:var(--teal);background:var(--teal-lt);color:var(--teal);font-weight:600}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.toggle-lbl{font-size:12px;color:var(--grey-700)}
+.tog{width:32px;height:17px;border-radius:9px;background:var(--grey-300);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog::after{content:'';width:13px;height:13px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tog.on{background:var(--teal)}
+.tog.on::after{left:17px}
+.chrome-banner{background:var(--grey-50);border:1px solid var(--grey-200);border-radius:var(--radius);padding:7px 9px;font-size:11px;color:var(--grey-500);line-height:1.5;margin-bottom:8px}
+.chrome-banner strong{color:var(--grey-700);font-weight:600}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--grey-200);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--grey-300)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<nav class="sb">
+  <div class="sb-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+  </div>
+  <div class="sb-ico" title="Dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+  </div>
+  <div class="sb-ico" title="Employees">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  </div>
+  <div class="sb-ico" title="Leave">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+  </div>
+  <div class="sb-ico" title="Payroll">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+  </div>
+  <div class="sb-ico" title="Attendance">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  </div>
+  <div class="sb-ico" title="Performance">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-ico" title="Analytics">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+  </div>
+  <div class="sb-ico" title="Helpdesk">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-ico on" title="Builder">
+    <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+  </div>
+  <div class="sb-ico" title="Settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </div>
+</nav>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<div class="main">
+
+  <!-- ── Topbar ── -->
+  <header class="topbar">
+    <div class="tb-left">
+      <div class="tb-bc">
+        <span>Builders</span>
+        <span class="tb-sep">/</span>
+        <span class="cur">Report Builder</span>
+        <span class="tb-sep">/</span>
+      </div>
+      <span class="tb-name" id="topbar-name">Q1 Workforce Overview</span>
+      <span class="chip chip-amber" style="margin-left:2px">Draft</span>
+      <span class="version-badge">v1.0</span>
+    </div>
+    <div class="tb-center">
+      <button class="zoom-btn" onclick="zoom(-10)">−</button>
+      <span class="zoom-val" id="zoom-val">100%</span>
+      <button class="zoom-btn" onclick="zoom(10)">+</button>
+      <button class="zoom-btn" style="margin-left:4px;font-size:11px;font-weight:600" onclick="zoom(0,true)" title="Fit canvas">⊡</button>
+    </div>
+    <div class="tb-right">
+      <button class="btn btn-ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        Run Report
+      </button>
+      <button class="btn btn-ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+      <button class="btn btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Report
+      </button>
+    </div>
+  </header>
+
+  <!-- ── 3-panel builder (P-32) ── -->
+  <div class="builder">
+
+    <!-- ── Panel 1: Palette ── -->
+    <aside class="palette">
+      <div class="pal-header">
+        <div class="pal-title">Report Types</div>
+        <input class="pal-search" type="search" placeholder="Search report types…" oninput="filterPalette(this.value)" id="pal-search">
+      </div>
+      <div class="pal-body" id="pal-body">
+
+        <!-- GROUP: Hiring -->
+        <div class="pal-group-label">Hiring</div>
+
+        <div class="pal-comp active" id="pc-hiring.pipeline.summary" onclick="selPaletteType(this,'hiring.pipeline.summary')" title="hiring.pipeline.summary">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Pipeline Summary</div>
+            <div class="pal-desc">Candidate counts by funnel stage</div>
+            <div class="pal-key">hiring.pipeline.summary</div>
+          </div>
+        </div>
+
+        <div class="pal-comp" id="pc-hiring.funnel.summary" onclick="selPaletteType(this,'hiring.funnel.summary')" title="hiring.funnel.summary">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Funnel Summary</div>
+            <div class="pal-desc">Stage conversion rates end-to-end</div>
+            <div class="pal-key">hiring.funnel.summary</div>
+          </div>
+        </div>
+
+        <div class="pal-comp" id="pc-hiring.source.effectiveness" onclick="selPaletteType(this,'hiring.source.effectiveness')" title="hiring.source.effectiveness">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Source Effectiveness</div>
+            <div class="pal-desc">Applications and hires by source</div>
+            <div class="pal-key">hiring.source.effectiveness</div>
+          </div>
+        </div>
+
+        <div class="pal-comp" id="pc-hiring.time_to_hire" onclick="selPaletteType(this,'hiring.time_to_hire')" title="hiring.time_to_hire">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Time to Hire</div>
+            <div class="pal-desc">Avg days from application to hire</div>
+            <div class="pal-key">hiring.time_to_hire</div>
+          </div>
+        </div>
+
+        <!-- GROUP: Workforce -->
+        <div class="pal-group-label">Workforce</div>
+
+        <div class="pal-comp" id="pc-workforce.attrition.summary" onclick="selPaletteType(this,'workforce.attrition.summary')" title="workforce.attrition.summary">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Attrition Summary</div>
+            <div class="pal-desc">Headcount, terminations, attrition rate</div>
+            <div class="pal-key">workforce.attrition.summary</div>
+          </div>
+        </div>
+
+        <div class="pal-comp" id="pc-workforce.attendance.trend" onclick="selPaletteType(this,'workforce.attendance.trend')" title="workforce.attendance.trend">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Attendance Trend</div>
+            <div class="pal-desc">Daily attendance rates by department</div>
+            <div class="pal-key">workforce.attendance.trend</div>
+          </div>
+        </div>
+
+        <div class="pal-comp" id="pc-workforce.dashboard.summary" onclick="selPaletteType(this,'workforce.dashboard.summary')" title="workforce.dashboard.summary">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Dashboard Summary</div>
+            <div class="pal-desc">Combined headcount, hiring, attendance KPIs</div>
+            <div class="pal-key">workforce.dashboard.summary</div>
+          </div>
+        </div>
+
+        <!-- GROUP: Organization -->
+        <div class="pal-group-label">Organization</div>
+
+        <div class="pal-comp" id="pc-organization.manager.span" onclick="selPaletteType(this,'organization.manager.span')" title="organization.manager.span">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="12" y1="11" x2="6" y2="15"/><line x1="12" y1="11" x2="18" y2="15"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Manager Span</div>
+            <div class="pal-desc">Direct and matrix report counts per manager</div>
+            <div class="pal-key">organization.manager.span</div>
+          </div>
+        </div>
+
+        <!-- Chrome: Visualization & Delivery -->
+        <div class="pal-group-label">Configuration</div>
+
+        <div class="pal-comp pal-comp-chrome" title="Visualization config — no backend schema · BG-031">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Visualization Config</div>
+            <div class="pal-desc">Column layout, sort, chart type</div>
+            <div class="pal-key">Chrome · BG-031</div>
+          </div>
+        </div>
+
+        <div class="pal-comp pal-comp-chrome" title="Delivery destination — no schema in backend · BG-031">
+          <div class="pal-ico">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
+          </div>
+          <div class="pal-txt">
+            <div class="pal-name">Delivery Destination</div>
+            <div class="pal-desc">Email, webhook, SFTP delivery</div>
+            <div class="pal-key">Chrome · BG-031</div>
+          </div>
+        </div>
+
+      </div><!-- /pal-body -->
+    </aside>
+
+    <!-- ── Panel 2: Canvas ── -->
+    <main class="canvas-area">
+      <div class="canvas" id="canvas" style="transform-origin:top center">
+
+        <!-- Canvas header -->
+        <div class="c-header">
+          <div class="c-header-icon">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="c-header-body">
+            <div class="c-title" id="canvas-report-name">Q1 Workforce Overview</div>
+            <div class="c-meta">
+              <span class="chip chip-amber">Draft</span>
+              <span class="chip chip-teal" id="canvas-type-chip" style="text-transform:none;font-size:10px;font-family:'JetBrains Mono',monospace">hiring.pipeline.summary</span>
+              <span class="c-id">rpt-a1b2c3d4</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- S0: Report Identity -->
+        <div class="rpt-card sel" id="s0" onclick="selSection(this,'s0')">
+          <div class="card-head">
+            <div class="card-head-ico">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <span class="card-head-title">Report Identity</span>
+            <span class="chip chip-green" style="font-size:10px">Real · E01–E03</span>
+          </div>
+          <div class="card-body">
+            <div class="card-row">
+              <div class="c-field" style="min-width:160px;flex:2">
+                <span class="c-field-lbl">Name</span>
+                <span class="c-field-val">Q1 Workforce Overview</span>
+              </div>
+              <div class="c-field">
+                <span class="c-field-lbl">Report Type</span>
+                <span class="c-field-val c-field-mono" id="s0-type-val">hiring.pipeline.summary</span>
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="c-field" style="flex:1">
+                <span class="c-field-lbl">Description</span>
+                <span class="c-field-val" style="color:var(--grey-500);font-style:italic">Consolidated workforce KPIs for Q1 2026</span>
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="c-field">
+                <span class="c-field-lbl">Created</span>
+                <span class="c-field-val">2026-03-28</span>
+              </div>
+              <div class="c-field">
+                <span class="c-field-lbl">Last Run</span>
+                <span class="c-field-val">Never</span>
+              </div>
+              <div class="c-field">
+                <span class="c-field-lbl">Status</span>
+                <span class="chip chip-amber">Draft</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- S1: Filters -->
+        <div class="rpt-card" id="s1" onclick="selSection(this,'s1')">
+          <div class="card-head">
+            <div class="card-head-ico">
+              <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            </div>
+            <span class="card-head-title">Data &amp; Filters</span>
+            <span class="chip chip-green" style="font-size:10px">Real · E01</span>
+          </div>
+          <div class="card-body">
+            <div class="card-row">
+              <div class="c-field">
+                <span class="c-field-lbl">Aggregate Type</span>
+                <span class="c-field-val c-field-mono">hiring.pipeline.summary</span>
+              </div>
+              <div class="c-field">
+                <span class="c-field-lbl">Dimension Key</span>
+                <span class="c-field-val c-field-mono">tenant</span>
+              </div>
+              <div class="c-field">
+                <span class="c-field-lbl">Dimension Value</span>
+                <span class="c-field-val c-field-mono">all</span>
+              </div>
+            </div>
+            <div class="metric-strip" style="margin-top:6px">
+              <div class="metric-cell">
+                <div class="metric-val">124</div>
+                <div class="metric-key">Applications</div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-val">48</div>
+                <div class="metric-key">Screening</div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-val">22</div>
+                <div class="metric-key">Interview</div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-val">9</div>
+                <div class="metric-key">Offer</div>
+              </div>
+              <div class="metric-cell">
+                <div class="metric-val">6</div>
+                <div class="metric-key">Hired</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- S2: Schedule -->
+        <div class="rpt-card" id="s2" onclick="selSection(this,'s2')">
+          <div class="card-head">
+            <div class="card-head-ico">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </div>
+            <span class="card-head-title">Schedule</span>
+            <span class="chip chip-green" style="font-size:10px">Real · E07–E08</span>
+          </div>
+          <div class="card-body">
+            <div class="sched-row">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span class="sched-text">Cadence: <strong>Monthly</strong></span>
+            </div>
+            <div class="sched-row">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="sched-text">Format: <strong>CSV</strong></span>
+            </div>
+            <div class="sched-row">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span class="sched-text">Next run: <strong>2026-04-01</strong></span>
+            </div>
+            <div class="sched-row">
+              <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span class="sched-text">Status: <strong>Active</strong></span>
+              <span class="chip chip-green" style="font-size:10px;margin-left:4px">Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- S3: Delivery (chrome) -->
+        <div class="rpt-card chrome-card" id="s3" onclick="selSection(this,'s3')" title="Delivery destination — no backend schema · BG-031">
+          <div class="card-head">
+            <div class="card-head-ico">
+              <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
+            </div>
+            <span class="card-head-title">Delivery &amp; Distribution</span>
+            <span class="chrome-tag">Chrome · BG-031</span>
+          </div>
+          <div class="card-body">
+            <div class="card-row">
+              <div class="c-field">
+                <span class="c-field-lbl">Method</span>
+                <span class="c-field-val" style="color:var(--grey-400)">—</span>
+              </div>
+              <div class="c-field">
+                <span class="c-field-lbl">Recipients</span>
+                <span class="c-field-val" style="color:var(--grey-400)">—</span>
+              </div>
+              <div class="c-field">
+                <span class="c-field-lbl">Format</span>
+                <span class="c-field-val" style="color:var(--grey-400)">—</span>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--grey-400);padding:4px 0">Delivery schema not defined in backend. Configure once BG-031 is resolved.</div>
+          </div>
+        </div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Select a report type from the palette to change data source
+        </div>
+
+      </div><!-- /canvas -->
+    </main>
+
+    <!-- ── Panel 3: Properties ── -->
+    <aside class="props-panel">
+      <div class="props-head">
+        Properties
+        <span class="props-tag" id="props-tag">s0 · Report Identity</span>
+      </div>
+      <div class="props-body" id="props-body">
+        <!-- injected by selSection() -->
+      </div>
+    </aside>
+
+  </div><!-- /builder -->
+</div><!-- /main -->
+
+<script>
+/* ─── Property panel templates ─── */
+const PROP_PANELS = {
+  s0: `
+    <div class="p-sec">
+      <div class="p-lbl">Report Name</div>
+      <input class="p-input" value="Q1 Workforce Overview" oninput="document.getElementById('topbar-name').textContent=this.value;document.getElementById('canvas-report-name').textContent=this.value">
+      <div class="p-lbl mt">Report Type</div>
+      <div id="pp-type-chip" style="margin-top:2px">
+        <span class="chip chip-teal" style="text-transform:none;font-size:10px;font-family:'JetBrains Mono',monospace">hiring.pipeline.summary</span>
+      </div>
+      <div class="p-hint">Set by selecting a report type in the palette</div>
+      <div class="p-lbl mt">Description</div>
+      <textarea class="p-textarea">Consolidated workforce KPIs for Q1 2026</textarea>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Status</div>
+      <select class="p-select">
+        <option selected>Draft</option>
+        <option>Active</option>
+      </select>
+      <div class="p-lbl mt">Report ID</div>
+      <input class="p-input" value="rpt-a1b2c3d4" style="font-family:'JetBrains Mono',monospace;font-size:11px" readonly>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Endpoint</div>
+      <div class="p-hint" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--grey-700)">POST /api/v1/reporting/reports</div>
+      <div class="p-hint">GET /api/v1/reporting/reports</div>
+    </div>`,
+
+  s1: `
+    <div class="p-sec">
+      <div class="p-lbl">Aggregate Type</div>
+      <select class="p-select">
+        <option selected>hiring.pipeline.summary</option>
+        <option>hiring.funnel.summary</option>
+        <option>hiring.source.effectiveness</option>
+        <option>hiring.time_to_hire</option>
+        <option>workforce.attrition.summary</option>
+        <option>workforce.attendance.trend</option>
+        <option>workforce.dashboard.summary</option>
+        <option>organization.manager.span</option>
+      </select>
+      <div class="p-hint">Must match selected report type from palette</div>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Dimension Key</div>
+      <select class="p-select">
+        <option selected>tenant</option>
+        <option>department_id</option>
+        <option>attendance_date</option>
+        <option>manager_employee_id</option>
+      </select>
+      <div class="p-lbl mt">Dimension Value</div>
+      <input class="p-input" value="all" placeholder="Filter value or 'all'">
+      <div class="p-hint">Use 'all' to include all dimension values. Passed as filters.dimension_value.</div>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Endpoint</div>
+      <div class="p-hint" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--grey-700)">GET /api/v1/reporting/aggregates</div>
+      <div class="p-hint" style="margin-top:2px">POST /api/v1/reporting/reports/{id}/run</div>
+    </div>`,
+
+  s2: `
+    <div class="p-sec">
+      <div class="p-lbl">Cadence</div>
+      <div class="sw-row">
+        <div class="sw" onclick="setSwatch(this)">Daily</div>
+        <div class="sw" onclick="setSwatch(this)">Weekly</div>
+        <div class="sw on" onclick="setSwatch(this)">Monthly</div>
+      </div>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Export Format</div>
+      <select class="p-select">
+        <option selected>csv</option>
+        <option>json</option>
+      </select>
+      <div class="p-lbl mt">Next Run At</div>
+      <input class="p-input" type="date" value="2026-04-01">
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Schedule Active</div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Active</span>
+        <div class="tog on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="p-hint warn">Schedule toggle requires PATCH /schedules/{id} · BG-031. Set active=true at creation only.</div>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Endpoints</div>
+      <div class="p-hint" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--grey-700)">POST /api/v1/reporting/schedules</div>
+      <div class="p-hint" style="margin-top:2px">GET /api/v1/reporting/schedules</div>
+    </div>`,
+
+  s3: `
+    <div class="p-sec">
+      <div class="chrome-banner"><strong>Chrome · BG-031</strong><br>The <code style="font-size:10px">delivery</code> field in ReportDefinition is an untyped dict — no schema. Delivery destination, recipient, and format config is chrome until BG-031 is resolved.</div>
+      <div class="p-lbl">Delivery Method</div>
+      <select class="p-select" disabled>
+        <option>Email</option>
+        <option>Webhook</option>
+        <option>SFTP</option>
+      </select>
+      <div class="p-lbl mt">Recipients</div>
+      <input class="p-input" placeholder="email@company.com" disabled>
+      <div class="p-lbl mt">Subject Template</div>
+      <input class="p-input" placeholder="Report: {{report_name}}" disabled>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">Webhook URL</div>
+      <input class="p-input" placeholder="https://…" disabled>
+      <div class="p-hint warn">BG-031 · delivery schema undefined in reporting_analytics service</div>
+    </div>`
+};
+
+/* ─── State ─── */
+let zoomPct = 100;
+let currentType = 'hiring.pipeline.summary';
+
+/* ─── selSection ─── */
+function selSection(el, key) {
+  document.querySelectorAll('.rpt-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  const labels = { s0: 'Report Identity', s1: 'Data & Filters', s2: 'Schedule', s3: 'Delivery' };
+  document.getElementById('props-tag').textContent = key + ' · ' + (labels[key] || key);
+  const pb = document.getElementById('props-body');
+  pb.innerHTML = PROP_PANELS[key] || '<div class="props-empty">No properties</div>';
+  pb.scrollTop = 0;
+  /* keep pp-type-chip in sync */
+  if (key === 's0') {
+    const ch = document.getElementById('pp-type-chip');
+    if (ch) ch.innerHTML = '<span class="chip chip-teal" style="text-transform:none;font-size:10px;font-family:\'JetBrains Mono\',monospace">' + currentType + '</span>';
+  }
+}
+
+/* ─── selPaletteType ─── */
+function selPaletteType(el, typeKey) {
+  document.querySelectorAll('.pal-comp').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentType = typeKey;
+  /* update canvas type chip and s0 field */
+  const tc = document.getElementById('canvas-type-chip');
+  if (tc) tc.textContent = typeKey;
+  const sv = document.getElementById('s0-type-val');
+  if (sv) sv.textContent = typeKey;
+  /* select s0 to show the type change */
+  selSection(document.getElementById('s0'), 's0');
+}
+
+/* ─── setSwatch ─── */
+function setSwatch(el) {
+  el.closest('.sw-row').querySelectorAll('.sw').forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+}
+
+/* ─── zoom ─── */
+function zoom(delta, fit) {
+  if (fit) { zoomPct = 100; }
+  else { zoomPct = Math.min(150, Math.max(50, zoomPct + delta)); }
+  document.getElementById('canvas').style.transform = 'scale(' + (zoomPct / 100) + ')';
+  document.getElementById('zoom-val').textContent = zoomPct + '%';
+}
+
+/* ─── filterPalette ─── */
+function filterPalette(q) {
+  const lq = q.toLowerCase();
+  document.querySelectorAll('#pal-body .pal-comp').forEach(el => {
+    const text = el.textContent.toLowerCase();
+    el.style.display = (!lq || text.includes(lq)) ? '' : 'none';
+  });
+  document.querySelectorAll('#pal-body .pal-group-label').forEach(lbl => {
+    let next = lbl.nextElementSibling;
+    let anyVisible = false;
+    while (next && !next.classList.contains('pal-group-label')) {
+      if (next.style.display !== 'none') anyVisible = true;
+      next = next.nextElementSibling;
+    }
+    lbl.style.display = anyVisible ? '' : 'none';
+  });
+}
+
+/* ─── Init: show s0 properties on load ─── */
+selSection(document.getElementById('s0'), 's0');
+</script>
+</body>
+</html>

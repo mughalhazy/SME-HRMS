@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Create Job Posting</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#EFF6FF;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--bl);color:var(--blue)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-p:hover{background:#1E40AF}
+.btn-sec{background:var(--w);color:var(--t2);border-color:var(--bd)}
+
+/* Step header */
+.step-header{background:var(--w);border-bottom:1px solid var(--bd);padding:0 24px;flex-shrink:0}
+.step-top{display:flex;align-items:center;justify-content:space-between;padding:16px 0 12px}
+.step-title{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.step-sub{font-size:12.5px;color:var(--t3);margin-top:2px}
+.steps-row{display:flex;align-items:center;gap:0}
+.step{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.step.done{color:var(--grn)}.step.active{border-bottom-color:var(--blue)}.step.pending{color:var(--t4)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.step.done .step-num{background:var(--gl);color:var(--grn)}
+.step.active .step-num{background:var(--blue);color:#fff}
+.step.pending .step-num{background:var(--t5);color:var(--t4)}
+.step-lbl{font-size:12.5px;font-weight:600}
+.step.active .step-lbl{color:var(--blue)}.step.done .step-lbl{color:var(--grn)}.step.pending .step-lbl{color:var(--t4)}
+.step-arr{color:var(--bd);margin:0 2px;font-size:13px}
+
+/* Form layout */
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+
+/* Sections */
+.section{margin-bottom:24px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:14px}
+.sec-sub{font-size:12px;color:var(--t3);margin-top:-10px;margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:20px 0}
+
+/* Field grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg3{grid-template-columns:1fr 1fr 1fr}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);
+  font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);
+  transition:border-color .14s,box-shadow .14s;line-height:1.5
+}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(29,78,216,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:80px}
+.fhint{font-size:11px;color:var(--t4)}
+
+/* Radio */
+.radio-group{display:flex;gap:7px;flex-wrap:wrap}
+.ropt{display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;font-size:12.5px;color:var(--t2);user-select:none}
+.ropt:hover{border-color:#93C5FD;background:var(--bl)}
+.ropt.on{border-color:var(--blue);background:var(--bl);color:var(--blue);font-weight:600}
+.rdot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.ropt.on .rdot{border-color:var(--blue);background:var(--blue)}
+.ropt.on .rdot::after{content:'';width:5px;height:5px;border-radius:50%;background:#fff}
+
+/* Requirements tags */
+.req-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.req-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:12px;background:var(--bl);color:var(--blue);font-weight:500;border:1px solid #BFDBFE}
+.req-tag .rt-x{color:#93C5FD;cursor:pointer;font-size:11px;transition:color .12s}
+.req-tag .rt-x:hover{color:var(--red)}
+.req-input-row{display:flex;gap:6px;margin-top:6px}
+.req-input-row input{flex:1}
+.req-input-row .btn{flex-shrink:0}
+
+/* Pipeline template cards */
+.pipeline-cards{display:flex;flex-direction:column;gap:8px}
+.pl-card{padding:12px 14px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;user-select:none}
+.pl-card:hover{border-color:#93C5FD;background:var(--bl)}
+.pl-card.on{border-color:var(--blue);background:var(--bl)}
+.pl-card-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.pl-card.on .pl-card-title{color:var(--blue)}
+.pl-card-stages{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.pl-stage{padding:2px 8px;background:var(--t5);border-radius:99px;font-size:10.5px;font-weight:600;color:var(--t2)}
+.pl-card.on .pl-stage{background:rgba(29,78,216,.1);color:var(--blue)}
+
+/* Review cards */
+.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.review-card{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:13px}
+.rc-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.rc-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--t5);gap:8px}
+.rc-row:last-child{border-bottom:none}
+.rc-l{font-size:12px;color:var(--t3)}.rc-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+
+/* Success banner */
+.success-banner{background:var(--gl);border:1px solid #86EFAC;border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.sb-icon{width:34px;height:34px;border-radius:50%;background:var(--grn);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-icon svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.sb-text strong{font-size:14px;font-weight:700;color:var(--grn);display:block;margin-bottom:2px}
+.sb-text span{font-size:12.5px;color:var(--t2)}
+
+/* Rail */
+.rail-sec{margin-bottom:18px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3);flex-shrink:0}
+.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.sum-empty{color:var(--t4);font-style:italic;font-weight:400}
+
+/* Footer */
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+.ff-info strong{color:var(--t2);font-weight:600}
+
+/* Hidden steps */
+.step-content{display:none}.step-content.active{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="crumb">
+      <a>Job Postings</a><span class="sep">›</span>
+      <span class="cur">Create Job Posting</span>
+    </div>
+    <div class="tb-vd"></div>
+    <button class="btn" id="btn-back" onclick="navigateStep(-1)">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <button class="btn" onclick="saveDraft()">Save Draft</button>
+    <button class="btn btn-p" id="btn-next" onclick="navigateStep(1)">
+      Next
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- Step header -->
+  <div class="step-header">
+    <div class="step-top">
+      <div>
+        <div class="step-title">Create Job Posting</div>
+        <div class="step-sub">Define the role, set requirements, choose a pipeline, and publish.</div>
+      </div>
+      <span style="font-size:11.5px;color:var(--t4)"><span style="color:var(--red)">*</span> Required fields</span>
+    </div>
+    <div class="steps-row" id="steps-row">
+      <div class="step active"  onclick="goStep(1)"><div class="step-num">1</div><div class="step-lbl">Job Details</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(2)"><div class="step-num">2</div><div class="step-lbl">Requirements</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(3)"><div class="step-num">3</div><div class="step-lbl">Pipeline Template</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(4)"><div class="step-num">4</div><div class="step-lbl">Review & Publish</div></div>
+    </div>
+  </div>
+
+  <!-- Form body -->
+  <div class="form-wrap">
+
+    <!-- Main -->
+    <div class="form-main">
+
+      <!-- STEP 1: JOB DETAILS -->
+      <div class="step-content active" id="sc-1">
+        <div class="section">
+          <div class="sec-title">Job Information</div>
+          <div class="fg">
+            <div class="fgroup span2">
+              <label>Job Title <span class="req">*</span></label>
+              <input type="text" id="job-title" placeholder="e.g. Senior Data Engineer" oninput="syncSummary()">
+            </div>
+            <div class="fgroup">
+              <label>Department <span class="req">*</span></label>
+              <select id="job-dept" onchange="syncSummary()">
+                <option value="">— Select department —</option>
+                <option value="engineering" selected>Engineering</option>
+                <option value="people-ops">People Operations</option>
+                <option value="finance">Finance</option>
+                <option value="product">Product</option>
+                <option value="sales">Sales</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Linked Role</label>
+              <select id="job-role">
+                <option value="">— Optional —</option>
+                <option value="data-eng">Senior Data Engineer</option>
+                <option value="backend-eng">Backend Engineer</option>
+                <option value="frontend-eng">Frontend Engineer</option>
+                <option value="product-mgr">Product Manager</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Location</label>
+              <input type="text" id="job-location" placeholder="e.g. Dubai HQ · Remote" oninput="syncSummary()">
+            </div>
+            <div class="fgroup">
+              <label>Number of Openings <span class="req">*</span></label>
+              <input type="number" id="job-openings" value="1" min="1" max="99" oninput="syncSummary()">
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-title">Employment Type <span class="req">*</span></div>
+          <div class="radio-group" id="emp-type-group">
+            <div class="ropt on" onclick="selEmpType(this,'FullTime')"><div class="rdot"></div>Full Time</div>
+            <div class="ropt" onclick="selEmpType(this,'PartTime')"><div class="rdot"></div>Part Time</div>
+            <div class="ropt" onclick="selEmpType(this,'Contract')"><div class="rdot"></div>Contract</div>
+            <div class="ropt" onclick="selEmpType(this,'Intern')"><div class="rdot"></div>Intern</div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-title">Timeline</div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Posting Date <span class="req">*</span></label>
+              <input type="date" id="job-post-date" value="2026-03-24" oninput="syncSummary()">
+            </div>
+            <div class="fgroup">
+              <label>Closing Date</label>
+              <input type="date" id="job-close-date" value="2026-04-30" oninput="syncSummary()">
+              <span class="fhint">Leave blank for open-ended postings</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-title">Hiring Team</div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Hiring Manager</label>
+              <select id="job-hm">
+                <option value="">— Assign later —</option>
+                <option value="dev-patel" selected>Dev Patel · Director Engineering</option>
+                <option value="james-okonkwo">James Okonkwo · CHRO</option>
+                <option value="aisha">Aisha Al-Rashidi · VP People</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Lead Recruiter</label>
+              <select>
+                <option value="">— Assign later —</option>
+                <option value="priya" selected>Priya Subramaniam · Sr HRBP</option>
+                <option value="sara">Sara Mendez · Talent Acquisition</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /sc-1 -->
+
+      <!-- STEP 2: REQUIREMENTS -->
+      <div class="step-content" id="sc-2">
+        <div class="section">
+          <div class="sec-title">Job Description <span class="req">*</span></div>
+          <textarea id="job-desc" rows="6" placeholder="Describe the role, team context, and day-to-day responsibilities.">We are looking for a Senior Data Engineer to join our growing Engineering team in Dubai. You will design and maintain scalable data pipelines, work closely with analytics and product teams, and help shape our data infrastructure strategy.</textarea>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-title">Required Skills</div>
+          <div class="sec-sub" style="margin-top:0;margin-bottom:12px">Add skills that are required for this role.</div>
+          <div class="req-wrap" id="req-skills">
+            <div class="req-tag">Python<span class="rt-x" onclick="removeTag(this)">×</span></div>
+            <div class="req-tag">SQL<span class="rt-x" onclick="removeTag(this)">×</span></div>
+            <div class="req-tag">Apache Spark<span class="rt-x" onclick="removeTag(this)">×</span></div>
+            <div class="req-tag">dbt<span class="rt-x" onclick="removeTag(this)">×</span></div>
+            <div class="req-tag">Cloud (AWS/GCP)<span class="rt-x" onclick="removeTag(this)">×</span></div>
+          </div>
+          <div class="req-input-row">
+            <input type="text" id="skill-input" placeholder="Add a skill and press Enter" onkeydown="if(event.key==='Enter'){addSkill();event.preventDefault()}">
+            <button class="btn btn-sm" onclick="addSkill()">Add</button>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-title">Qualifications</div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Minimum Experience</label>
+              <select>
+                <option>Any</option>
+                <option>1+ years</option>
+                <option>3+ years</option>
+                <option value="5" selected>5+ years</option>
+                <option>8+ years</option>
+                <option>10+ years</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Education Level</label>
+              <select>
+                <option>Any</option>
+                <option>High School</option>
+                <option selected>Bachelor's degree</option>
+                <option>Master's degree</option>
+                <option>PhD</option>
+              </select>
+            </div>
+            <div class="fgroup span2">
+              <label>Additional Requirements</label>
+              <textarea rows="2" placeholder="Any certifications, clearances, or other requirements..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-title">Compensation Range</div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Salary Min (Annual)</label>
+              <input type="number" placeholder="e.g. 120000" value="130000">
+            </div>
+            <div class="fgroup">
+              <label>Salary Max (Annual)</label>
+              <input type="number" placeholder="e.g. 180000" value="180000">
+            </div>
+            <div class="fgroup">
+              <label>Currency</label>
+              <select>
+                <option selected>AED</option><option>USD</option><option>EUR</option><option>GBP</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Salary Visibility</label>
+              <select>
+                <option>Show range to candidates</option>
+                <option selected>Internal only</option>
+                <option>Hidden</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /sc-2 -->
+
+      <!-- STEP 3: PIPELINE TEMPLATE -->
+      <div class="step-content" id="sc-3">
+        <div class="section">
+          <div class="sec-title">Choose a Pipeline Template <span class="req">*</span></div>
+          <div class="sec-sub" style="margin-top:0;margin-bottom:16px">The pipeline defines the stages candidates move through. Choose a template or customise after posting.</div>
+          <div class="pipeline-cards" id="pipeline-cards">
+            <div class="pl-card on" onclick="selPipeline(this,'standard')">
+              <div class="pl-card-title">Standard Engineering Pipeline</div>
+              <div class="pl-card-stages">
+                <div class="pl-stage">Applied</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Screening</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Technical Interview</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Cultural Fit</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Offer</div>
+              </div>
+            </div>
+            <div class="pl-card" onclick="selPipeline(this,'fast-track')">
+              <div class="pl-card-title">Fast Track — Senior Roles</div>
+              <div class="pl-card-stages">
+                <div class="pl-stage">Applied</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Screening</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Panel Interview</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Offer</div>
+              </div>
+            </div>
+            <div class="pl-card" onclick="selPipeline(this,'executive')">
+              <div class="pl-card-title">Executive Pipeline</div>
+              <div class="pl-card-stages">
+                <div class="pl-stage">Applied</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Screening</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">First Interview</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Assessment Centre</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Board Interview</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Offer</div>
+              </div>
+            </div>
+            <div class="pl-card" onclick="selPipeline(this,'intern')">
+              <div class="pl-card-title">Intern / Graduate Pipeline</div>
+              <div class="pl-card-stages">
+                <div class="pl-stage">Applied</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Screening</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Interview</div>
+                <span style="color:var(--bd);font-size:11px">›</span>
+                <div class="pl-stage">Offer</div>
+              </div>
+            </div>
+            <div class="pl-card" onclick="selPipeline(this,'custom')">
+              <div class="pl-card-title">Custom Pipeline</div>
+              <div style="font-size:12px;color:var(--t3);margin-top:4px">Build your own pipeline by adding and reordering stages after creation.</div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /sc-3 -->
+
+      <!-- STEP 4: REVIEW & PUBLISH -->
+      <div class="step-content" id="sc-4">
+        <div class="success-banner">
+          <div class="sb-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="sb-text">
+            <strong>Ready to publish</strong>
+            <span>Review the details below, then choose to publish immediately or save as a draft.</span>
+          </div>
+        </div>
+
+        <div class="review-grid">
+          <div class="review-card">
+            <div class="rc-title">Job Details</div>
+            <div class="rc-row"><span class="rc-l">Title</span><span class="rc-v" id="rv-title">Senior Data Engineer</span></div>
+            <div class="rc-row"><span class="rc-l">Department</span><span class="rc-v" id="rv-dept">Engineering</span></div>
+            <div class="rc-row"><span class="rc-l">Location</span><span class="rc-v" id="rv-loc">Dubai HQ</span></div>
+            <div class="rc-row"><span class="rc-l">Openings</span><span class="rc-v" id="rv-open">1</span></div>
+            <div class="rc-row"><span class="rc-l">Type</span><span class="rc-v" id="rv-type">Full Time</span></div>
+          </div>
+          <div class="review-card">
+            <div class="rc-title">Timeline</div>
+            <div class="rc-row"><span class="rc-l">Posting date</span><span class="rc-v" id="rv-post">24 Mar 2026</span></div>
+            <div class="rc-row"><span class="rc-l">Closing date</span><span class="rc-v" id="rv-close">30 Apr 2026</span></div>
+            <div class="rc-row"><span class="rc-l">Pipeline</span><span class="rc-v" id="rv-pipeline">Standard Engineering</span></div>
+          </div>
+          <div class="review-card">
+            <div class="rc-title">Hiring Team</div>
+            <div class="rc-row"><span class="rc-l">Hiring manager</span><span class="rc-v">Dev Patel</span></div>
+            <div class="rc-row"><span class="rc-l">Recruiter</span><span class="rc-v">Priya Subramaniam</span></div>
+          </div>
+          <div class="review-card">
+            <div class="rc-title">Compensation</div>
+            <div class="rc-row"><span class="rc-l">Range</span><span class="rc-v">AED 130,000 – 180,000</span></div>
+            <div class="rc-row"><span class="rc-l">Visibility</span><span class="rc-v">Internal only</span></div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-title">Publish Settings</div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Initial Status</label>
+              <select id="pub-status">
+                <option value="Open" selected>Open — Publish immediately</option>
+                <option value="Draft">Draft — Save without publishing</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /sc-4 -->
+
+    </div><!-- /form-main -->
+
+    <!-- Rail -->
+    <div class="form-rail">
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Posting Summary</div>
+        <div class="sum-row"><span class="sum-l">Title</span><span class="sum-v" id="sum-title"><span class="sum-empty">—</span></span></div>
+        <div class="sum-row"><span class="sum-l">Dept</span><span class="sum-v" id="sum-dept">Engineering</span></div>
+        <div class="sum-row"><span class="sum-l">Location</span><span class="sum-v" id="sum-loc"><span class="sum-empty">—</span></span></div>
+        <div class="sum-row"><span class="sum-l">Openings</span><span class="sum-v" id="sum-open">1</span></div>
+        <div class="sum-row"><span class="sum-l">Type</span><span class="sum-v" id="sum-type">Full Time</span></div>
+        <div class="sum-row"><span class="sum-l">Pipeline</span><span class="sum-v" id="sum-pipeline">Standard Engineering</span></div>
+        <div class="sum-row"><span class="sum-l">Post date</span><span class="sum-v" id="sum-postdate">24 Mar 2026</span></div>
+      </div>
+
+      <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Steps</div>
+        <div style="display:flex;flex-direction:column;gap:6px" id="step-progress">
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px" id="sp-1"><div style="width:16px;height:16px;border-radius:50%;background:var(--blue);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><span>Job Details</span></div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t4)" id="sp-2"><div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t4);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div><span>Requirements</span></div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t4)" id="sp-3"><div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t4);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div><span>Pipeline Template</span></div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t4)" id="sp-4"><div style="width:16px;height:16px;border-radius:50%;background:var(--t5);color:var(--t4);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div><span>Review &amp; Publish</span></div>
+        </div>
+      </div>
+
+    </div><!-- /form-rail -->
+  </div><!-- /form-wrap -->
+
+  <!-- Footer -->
+  <div class="form-footer">
+    <div class="ff-info" id="footer-info">Step <strong id="footer-step">1</strong> of 4 · Job Details</div>
+    <button class="btn" id="footer-back" onclick="navigateStep(-1)" style="display:none">Back</button>
+    <button class="btn" onclick="saveDraft()">Save Draft</button>
+    <button class="btn btn-p" id="footer-next" onclick="navigateStep(1)">
+      Next
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+
+</main>
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+let empType = 'FullTime';
+let pipelineSelected = 'standard';
+
+const stepLabels = ['Job Details','Requirements','Pipeline Template','Review & Publish'];
+const pipelineLabels = {
+  standard: 'Standard Engineering',
+  'fast-track': 'Fast Track',
+  executive: 'Executive',
+  intern: 'Intern / Graduate',
+  custom: 'Custom'
+};
+
+function goStep(n) {
+  if (n < 1 || n > totalSteps) return;
+  document.getElementById('sc-' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('sc-' + currentStep).classList.add('active');
+  updateStepUI();
+  if (n === 4) populateReview();
+}
+
+function navigateStep(dir) {
+  goStep(currentStep + dir);
+}
+
+function updateStepUI() {
+  const steps = document.querySelectorAll('#steps-row .step');
+  steps.forEach((s, i) => {
+    s.className = 'step';
+    if (i + 1 < currentStep) s.classList.add('done');
+    else if (i + 1 === currentStep) s.classList.add('active');
+    else s.classList.add('pending');
+    const num = s.querySelector('.step-num');
+    if (i + 1 < currentStep) num.textContent = '✓';
+    else num.textContent = i + 1;
+  });
+
+  // Footer buttons
+  const backBtn = document.getElementById('footer-back');
+  const nextBtn = document.getElementById('footer-next');
+  const topBack = document.getElementById('btn-back');
+  const topNext = document.getElementById('btn-next');
+  backBtn.style.display = currentStep > 1 ? '' : 'none';
+  topBack.style.opacity = currentStep > 1 ? '1' : '0.4';
+
+  if (currentStep === totalSteps) {
+    nextBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Publish';
+    topNext.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Publish';
+    nextBtn.onclick = topNext.onclick = submitForm;
+  } else {
+    nextBtn.innerHTML = 'Next <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+    topNext.innerHTML = 'Next <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+    nextBtn.onclick = topNext.onclick = () => navigateStep(1);
+  }
+
+  document.getElementById('footer-step').textContent = currentStep;
+  document.getElementById('footer-info').innerHTML = `Step <strong id="footer-step">${currentStep}</strong> of ${totalSteps} · ${stepLabels[currentStep-1]}`;
+
+  // Side step progress
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('sp-' + i);
+    const dot = el.querySelector('div');
+    if (i < currentStep) {
+      dot.style.background = 'var(--gl)';
+      dot.style.color = 'var(--grn)';
+      dot.textContent = '✓';
+      el.style.color = 'var(--grn)';
+    } else if (i === currentStep) {
+      dot.style.background = 'var(--blue)';
+      dot.style.color = '#fff';
+      dot.textContent = i;
+      el.style.color = 'var(--t1)';
+    } else {
+      dot.style.background = 'var(--t5)';
+      dot.style.color = 'var(--t4)';
+      dot.textContent = i;
+      el.style.color = 'var(--t4)';
+    }
+  }
+}
+
+function selEmpType(el, val) {
+  document.querySelectorAll('#emp-type-group .ropt').forEach(r => r.classList.remove('on'));
+  el.classList.add('on');
+  empType = val;
+  document.getElementById('sum-type').textContent = {'FullTime':'Full Time','PartTime':'Part Time','Contract':'Contract','Intern':'Intern'}[val];
+  document.getElementById('rv-type').textContent = document.getElementById('sum-type').textContent;
+}
+
+function selPipeline(el, key) {
+  document.querySelectorAll('.pl-card').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  pipelineSelected = key;
+  const lbl = pipelineLabels[key] || key;
+  document.getElementById('sum-pipeline').textContent = lbl;
+  document.getElementById('rv-pipeline').textContent = lbl;
+}
+
+function syncSummary() {
+  const title = document.getElementById('job-title').value.trim();
+  const deptEl = document.getElementById('job-dept');
+  const deptText = deptEl.options[deptEl.selectedIndex].text;
+  const loc = document.getElementById('job-location').value.trim();
+  const open = document.getElementById('job-openings').value;
+  const postDate = document.getElementById('job-post-date').value;
+
+  document.getElementById('sum-title').innerHTML = title ? `<span>${title}</span>` : '<span class="sum-empty">—</span>';
+  document.getElementById('sum-dept').textContent = deptEl.value ? deptText : '—';
+  document.getElementById('sum-loc').innerHTML = loc ? `<span>${loc}</span>` : '<span class="sum-empty">—</span>';
+  document.getElementById('sum-open').textContent = open || '1';
+  if (postDate) {
+    const d = new Date(postDate);
+    document.getElementById('sum-postdate').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  }
+}
+
+function addSkill() {
+  const input = document.getElementById('skill-input');
+  const val = input.value.trim();
+  if (!val) return;
+  const wrap = document.getElementById('req-skills');
+  const tag = document.createElement('div');
+  tag.className = 'req-tag';
+  tag.innerHTML = `${val}<span class="rt-x" onclick="removeTag(this)">×</span>`;
+  wrap.appendChild(tag);
+  input.value = '';
+  input.focus();
+}
+
+function removeTag(el) {
+  el.parentElement.remove();
+}
+
+function populateReview() {
+  const title = document.getElementById('job-title').value.trim() || 'Senior Data Engineer';
+  const deptEl = document.getElementById('job-dept');
+  const dept = deptEl.value ? deptEl.options[deptEl.selectedIndex].text : 'Engineering';
+  const loc = document.getElementById('job-location').value.trim() || 'Dubai HQ';
+  const open = document.getElementById('job-openings').value || '1';
+  const postDate = document.getElementById('job-post-date').value;
+  const closeDate = document.getElementById('job-close-date').value;
+
+  document.getElementById('rv-title').textContent = title;
+  document.getElementById('rv-dept').textContent = dept;
+  document.getElementById('rv-loc').textContent = loc || '—';
+  document.getElementById('rv-open').textContent = open;
+  if (postDate) {
+    const d = new Date(postDate);
+    document.getElementById('rv-post').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  }
+  if (closeDate) {
+    const d = new Date(closeDate);
+    document.getElementById('rv-close').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  }
+}
+
+function saveDraft() {
+  alert('Draft saved — POST /api/v1/job-postings with status: Draft');
+}
+
+function submitForm() {
+  const status = document.getElementById('pub-status') ? document.getElementById('pub-status').value : 'Open';
+  const title = document.getElementById('job-title').value.trim();
+  if (!title) { alert('Job title is required.'); goStep(1); return; }
+  const payload = {
+    title,
+    department_id: document.getElementById('job-dept').value || 'engineering',
+    employment_type: empType,
+    location: document.getElementById('job-location').value.trim() || undefined,
+    description: document.getElementById('job-desc').value.trim(),
+    openings_count: parseInt(document.getElementById('job-openings').value) || 1,
+    posting_date: document.getElementById('job-post-date').value,
+    closing_date: document.getElementById('job-close-date').value || undefined,
+    status,
+    pipeline_template_id: pipelineSelected,
+    hiring_manager_id: document.getElementById('job-hm').value || undefined
+  };
+  alert('POST /api/v1/job-postings\n\n' + JSON.stringify(payload, null, 2));
+}
+</script>
+</body>
+</html>

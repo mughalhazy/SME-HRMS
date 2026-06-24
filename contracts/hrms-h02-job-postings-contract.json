@@ -1,0 +1,76 @@
+﻿{
+  "_meta": {
+    "id": "h02-job-postings", "archetype": "H02 List", "page": "Job Postings", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005", "CG-001"]
+  },
+  "workflow": {
+    "primary_actor": "Talent Acquisition Lead",
+    "leads_to": ["H03 Job Posting Detail", "H13 Candidate Pipeline", "H04 Create Job Posting"],
+    "actions": { "primary": "New Job Posting", "secondary": ["Export"] }
+  },
+  "api_contract": {
+    "services": ["hiring_service"],
+    "endpoints": {
+      "list":    "GET /api/v1/hiring/job-postings?status=&department_id=&limit=&offset=",
+      "summary": "BG-005: no aggregate — candidate count per posting requires join",
+      "create":  "POST /api/v1/hiring/job-postings"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Job Postings", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Job Postings", "subtitle": "{{open_count}} open roles · {{candidate_count}} active candidates",
+        "actions": [
+          { "label": "Export",          "type": "secondary", "icon": "download" },
+          { "label": "New Job Posting", "type": "primary",   "icon": "plus" }
+        ]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 5, "gap_ref": "BG-005",
+        "items": [
+          { "key": "total",       "label": "Total",      "source": "BG-005 mock" },
+          { "key": "open",        "label": "Open",       "source": "BG-005 mock" },
+          { "key": "draft",       "label": "Draft",      "source": "BG-005 mock" },
+          { "key": "on_hold",     "label": "On Hold",    "source": "BG-005 mock" },
+          { "key": "candidates",  "label": "Candidates", "source": "BG-005 mock" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",    "filter": null },
+          { "label": "Open",   "filter": "status=Open" },
+          { "label": "Draft",  "filter": "status=Draft" },
+          { "label": "OnHold", "filter": "status=OnHold" }
+        ],
+        "filters": [
+          { "key": "department_id", "label": "Department", "type": "select", "source": "employee-service › Department" }
+        ],
+        "search": { "placeholder": "Search job titles…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "hiring_service › JobPosting (paginated)",
+        "row_action": "navigate → H03 Job Posting Detail",
+        "columns": [
+          { "key": "title",           "label": "Job Title",   "width_pct": 26 },
+          { "key": "department_name", "label": "Department",  "width_pct": 14 },
+          { "key": "employment_type", "label": "Type",        "width_pct": 10 },
+          { "key": "applicant_count", "label": "Applicants",  "width_pct": 10, "font": "mono", "sortable": true },
+          { "key": "status",          "label": "Status",      "width_pct": 10, "component": "chip",
+            "enum_ref": "ref:api-contracts#Hiring.job.status", "gap_ref": "CG-001" },
+          { "key": "posting_date",    "label": "Posted",      "width_pct": 15, "format": "date_short", "font": "mono" },
+          { "key": "closing_date",    "label": "Closing",     "width_pct": 15, "format": "date_short", "font": "mono" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

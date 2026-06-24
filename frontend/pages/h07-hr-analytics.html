@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics &amp; Reports — Meridian HCM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+  <script>
+    function showTab(el, id) {
+      var tabs   = document.querySelectorAll('.rn-tab');
+      var panels = document.querySelectorAll('.tab-panel');
+      tabs.forEach(function(t)  { t.classList.remove('on'); });
+      panels.forEach(function(p){ p.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('tab-' + id).classList.add('on');
+      document.getElementById('mainPage').scrollTop = 0;
+    }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{zoom:1.1}
+    html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;color:#374151;background:#F5F7FA}
+    :root{
+      --teal:#0A8F84;--grn:#15803D;--amber:#B45309;--red:#B91C1C;--blue:#1D4ED8;
+      --t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;
+      --w:#FFFFFF;--bd:#E4E7EC;--bg:#F5F7FA;--bg2:#F1F4F8;
+      --dur:120ms
+    }
+
+    /* layout */
+    .shell{display:flex;height:100vh;overflow:hidden}
+    .sb{width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+    .sb-logo{width:34px;height:34px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+    .sb-logo svg{fill:white;width:18px;height:18px}
+    .sb-nav{display:flex;flex-direction:column;gap:4px;align-items:center;width:100%;flex:1}
+    .sb-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:background var(--dur),color var(--dur);text-decoration:none}
+    .sb-ico:hover{background:var(--bg2);color:var(--t2)}
+    .sb-ico.on{background:#EDFAF8;color:var(--teal)}
+    .sb-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+    .sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0C9E92);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;margin-top:auto;flex-shrink:0}
+
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+    /* topbar */
+    .topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+    .bc{flex:1;font-size:13px;color:var(--t3)}
+    .bc b{color:var(--t1);font-weight:600}
+    .btn{padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:background var(--dur)}
+    .btn.sm{padding:4px 10px}
+    .btn.pri{background:var(--teal);color:#fff}.btn.pri:hover{background:#0C9E92}
+    .btn.sec{background:var(--w);border:1px solid var(--bd);color:var(--t2)}.btn.sec:hover{background:var(--bg2)}
+
+    /* report-nav */
+    .report-nav{background:var(--w);border-bottom:1px solid var(--bd);display:flex;padding:0 20px;flex-shrink:0;overflow-x:auto}
+    .rn-tab{padding:13px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:color var(--dur),border-color var(--dur)}
+    .rn-tab:hover{color:var(--t2)}
+    .rn-tab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+
+    /* filter bar */
+    .fbar{background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:10px 20px;gap:10px;flex-shrink:0;flex-wrap:wrap}
+    .flbl{font-size:12px;font-weight:500;color:var(--t3)}
+    .fsel{padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;color:var(--t2);background:var(--w);cursor:pointer;outline:none;font-family:inherit}
+    .fsel:focus{border-color:var(--teal)}
+    .fsep{width:1px;height:20px;background:var(--bd);margin:0 2px}
+    .factions{margin-left:auto;display:flex;gap:8px}
+
+    /* P-32 scroll */
+    .page{flex:1;overflow-y:auto;min-height:0}
+    .content{padding:22px 22px 12vh}
+
+    /* tab panels */
+    .tab-panel{display:none}
+    .tab-panel.on{display:block}
+
+    /* section */
+    .sect{margin-bottom:22px}
+    .sect-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px}
+    .sect-title{font-size:15px;font-weight:600;color:var(--t1)}
+    .sect-sub{font-size:12px;color:var(--t3);margin-top:2px}
+
+    /* KPI grid */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+    .kpi{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:16px 18px;transition:transform var(--dur),box-shadow var(--dur)}
+    .kpi:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .kpi-dot{width:8px;height:8px;border-radius:50%;margin-bottom:10px}
+    .kpi-dot.tl{background:var(--teal)}.kpi-dot.gn{background:var(--grn)}.kpi-dot.am{background:var(--amber)}.kpi-dot.bl{background:var(--blue)}.kpi-dot.re{background:var(--red)}.kpi-dot.vi{background:#5B21B6}
+    .kpi-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--t1);line-height:1.1}
+    .kpi-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t4);margin-top:4px}
+    .kpi-tr{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;margin-top:8px;padding:2px 6px;border-radius:4px}
+    .kpi-tr.up{background:#DCFCE7;color:var(--grn)}
+    .kpi-tr.dn{background:#FEE2E2;color:var(--red)}
+    .kpi-tr.nt{background:var(--bg2);color:var(--t3)}
+
+    /* chart cards */
+    .cc{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:18px}
+    .cc-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px}
+    .cc-sub{font-size:11px;color:var(--t3);margin-bottom:14px}
+    .cg21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:22px}
+    .cg11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+
+    /* bar chart SVG */
+    .bar-svg{width:100%;height:160px;overflow:visible}
+
+    /* donut */
+    .donut-wrap{display:flex;align-items:center;gap:20px;height:160px}
+    .dleg{display:flex;flex-direction:column;gap:8px;flex:1}
+    .dleg-row{display:flex;align-items:center;gap:8px;font-size:12px}
+    .dleg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .dleg-lbl{color:var(--t2);flex:1}
+    .dleg-val{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--t1)}
+
+    /* inline bars */
+    .ibars{display:flex;flex-direction:column;gap:10px}
+    .ibar{display:flex;align-items:center;gap:10px}
+    .ibar-lbl{font-size:12px;color:var(--t2);width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ibar-tr{flex:1;height:8px;background:var(--bg2);border-radius:99px;overflow:hidden}
+    .ibar-fi{height:100%;border-radius:99px}
+    .ibar-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t1);width:42px;text-align:right;flex-shrink:0}
+
+    /* line SVG */
+    .lsvg{width:100%;height:140px}
+
+    /* P-11 table */
+    .twrap{background:var(--w);border:1px solid var(--bd);border-radius:11px;overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);white-space:nowrap}
+    tbody tr td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--t2);transition:background .12s}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--bg2)}
+    .tn{font-weight:600;color:var(--t1)}
+    .tnum{font-family:'JetBrains Mono',monospace;font-weight:500}
+    .tup{color:var(--grn)}.tdn{color:var(--red)}
+
+    /* P-07 chips */
+    .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+    .cg{background:#DCFCE7;color:var(--grn)}
+    .ca{background:#FEF3C7;color:var(--amber)}
+    .cr{background:#FEE2E2;color:var(--red)}
+    .cb{background:#DBEAFE;color:var(--blue)}
+    .ct{background:#EDFAF8;color:var(--teal)}
+    .cgy{background:var(--bg2);color:var(--t3)}
+    .cvi{background:#EDE9FE;color:#5B21B6}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sb">
+    <div class="sb-logo"><svg viewBox="0 0 18 18"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="10" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="10" width="6" height="6" rx="1.5"/><rect x="10" y="10" width="6" height="6" rx="1.5"/></svg></div>
+    <div class="sb-nav">
+      <a class="sb-ico" href="h01-hr-manager-dashboard.html" target="_blank" title="Dashboard"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></a>
+      <a class="sb-ico" href="h02-employees.html" target="_blank" title="Employees"><svg viewBox="0 0 20 20"><circle cx="8" cy="6" r="3"/><path d="M2 17c0-3.314 2.686-6 6-6s6 2.686 6 6"/><circle cx="15" cy="7" r="2"/><path d="M15 12c1.657 0 3 1.343 3 3"/></svg></a>
+      <a class="sb-ico" href="h06-leave-calendar.html" target="_blank" title="Leave"><svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4M13 2v4M3 9h14"/></svg></a>
+      <a class="sb-ico" href="h01-payroll-admin-dashboard.html" target="_blank" title="Payroll"><svg viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M2 9h16M6 13h2M10 13h4"/></svg></a>
+      <a class="sb-ico" href="h05-approval-inbox.html" target="_blank" title="Approvals"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="3"/><path d="M6 10l3 3 5-6"/></svg></a>
+      <a class="sb-ico on" href="h07-hr-analytics.html" title="Analytics"><svg viewBox="0 0 20 20"><path d="M2 16l4-5 3 3 4-6 5 4" stroke-width="1.8"/><circle cx="6" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+    </div>
+    <div class="sb-av">AK</div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="bc">Analytics &rsaquo; <b>HR Analytics</b></div>
+      <button class="btn sec sm">Export PDF</button>
+      <button class="btn sec sm">Schedule Report</button>
+      <button class="btn pri sm">+ New Report</button>
+    </div>
+
+    <!-- Report Nav -->
+    <div class="report-nav" id="reportNav">
+      <div class="rn-tab on" onclick="showTab(this,'workforce')">&#128101;&nbsp; Workforce</div>
+      <div class="rn-tab" onclick="showTab(this,'payroll')">&#128181;&nbsp; Payroll</div>
+      <div class="rn-tab" onclick="showTab(this,'attendance')">&#128197;&nbsp; Attendance &amp; Leave</div>
+      <div class="rn-tab" onclick="showTab(this,'recruiting')">&#127919;&nbsp; Recruiting</div>
+      <div class="rn-tab" onclick="showTab(this,'performance')">&#11088;&nbsp; Performance</div>
+      <div class="rn-tab" onclick="showTab(this,'saved')">&#128190;&nbsp; Saved Reports</div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="fbar">
+      <span class="flbl">Period</span>
+      <select class="fsel">
+        <option selected>Q1 2026 (Jan–Mar)</option>
+        <option>Q4 2025 (Oct–Dec)</option>
+        <option>Q3 2025 (Jul–Sep)</option>
+        <option>Q2 2025 (Apr–Jun)</option>
+        <option>Last 12 Months</option>
+        <option>Year to Date</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Department</span>
+      <select class="fsel">
+        <option>All Departments</option>
+        <option>Engineering</option>
+        <option>Sales</option>
+        <option>Operations</option>
+        <option>HR</option>
+        <option>Finance</option>
+        <option>Marketing</option>
+        <option>Product</option>
+        <option>Customer Success</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Location</span>
+      <select class="fsel">
+        <option>All Locations</option>
+        <option>London</option>
+        <option>Manchester</option>
+        <option>Birmingham</option>
+        <option>Remote</option>
+      </select>
+      <div class="factions">
+        <button class="btn sec sm">Reset</button>
+        <button class="btn pri sm">Apply</button>
+      </div>
+    </div>
+
+    <!-- Page -->
+    <div class="page" id="mainPage">
+      <div class="content">
+
+
+        <!-- ── WORKFORCE ──────────────────────────────────────────── -->
+        <div class="tab-panel on" id="tab-workforce">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">1,247</div><div class="kpi-lbl">Total Headcount</div><div class="kpi-tr up">&#9650; +52 this quarter</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">8.3%</div><div class="kpi-lbl">Attrition Rate</div><div class="kpi-tr dn">&#9660; 1.2% vs last Q</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">3.2 yrs</div><div class="kpi-lbl">Avg Tenure</div><div class="kpi-tr up">&#9650; +0.3 yrs vs last yr</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">+4.1%</div><div class="kpi-lbl">Headcount Growth</div><div class="kpi-tr up">&#9650; vs +2.8% last Q</div></div>
+          </div>
+
+          <div class="cg21">
+            <!-- Bar chart — headcount by dept -->
+            <div class="cc">
+              <div class="cc-title">Headcount by Department</div>
+              <div class="cc-sub">Q1 2026 · active employees only</div>
+              <svg class="bar-svg" viewBox="0 0 460 160" preserveAspectRatio="none">
+                <!-- grid lines -->
+                <line x1="0" y1="0"   x2="460" y2="0"   stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="40"  x2="460" y2="40"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="80"  x2="460" y2="80"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="120" x2="460" y2="120" stroke="#F1F4F8" stroke-width="1"/>
+                <!-- bars: max=312. scale=160/312=0.513 -->
+                <!-- Eng 312 → 160 -->
+                <rect x="4"   y="0"   width="44" height="160" rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- Ops 241 → 124 -->
+                <rect x="60"  y="36"  width="44" height="124" rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- Sales 198 → 102 -->
+                <rect x="116" y="58"  width="44" height="102" rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- Prod 156 → 80 -->
+                <rect x="172" y="80"  width="44" height="80"  rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- Mktg 112 → 57 -->
+                <rect x="228" y="103" width="44" height="57"  rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- Fin 89 → 46 -->
+                <rect x="284" y="114" width="44" height="46"  rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- CS 72 → 37 -->
+                <rect x="340" y="123" width="44" height="37"  rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- HR 67 → 34 -->
+                <rect x="396" y="126" width="44" height="34"  rx="3" fill="#0A8F84" opacity=".9"/>
+                <!-- value labels -->
+                <text x="26"  y="-5" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">312</text>
+                <text x="82"  y="31" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">241</text>
+                <text x="138" y="53" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">198</text>
+                <text x="194" y="75" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">156</text>
+                <text x="250" y="98" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">112</text>
+                <text x="306" y="109" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">89</text>
+                <text x="362" y="118" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">72</text>
+                <text x="418" y="121" text-anchor="middle" font-size="10" fill="#374151" font-family="JetBrains Mono">67</text>
+              </svg>
+              <!-- x labels -->
+              <div style="display:flex;gap:0;margin-top:6px">
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">Eng</div>
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">Ops</div>
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">Sales</div>
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">Prod</div>
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">Mktg</div>
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">Fin</div>
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">CS</div>
+                <div style="flex:1;text-align:center;font-size:10px;color:#94A3B8">HR</div>
+              </div>
+            </div>
+            <!-- Employment type donut -->
+            <div class="cc">
+              <div class="cc-title">Employment Type</div>
+              <div class="cc-sub">Distribution across all staff</div>
+              <div class="donut-wrap">
+                <svg width="110" height="110" viewBox="0 0 110 110" style="flex-shrink:0">
+                  <circle cx="55" cy="55" r="40" fill="none" stroke="#F1F4F8" stroke-width="20"/>
+                  <circle cx="55" cy="55" r="40" fill="none" stroke="#0A8F84" stroke-width="20" stroke-dasharray="170.9 80.4" stroke-dashoffset="0" transform="rotate(-90 55 55)"/>
+                  <circle cx="55" cy="55" r="40" fill="none" stroke="#93C5FD" stroke-width="20" stroke-dasharray="45.2 206.1" stroke-dashoffset="-170.9" transform="rotate(-90 55 55)"/>
+                  <circle cx="55" cy="55" r="40" fill="none" stroke="#FCD34D" stroke-width="20" stroke-dasharray="25.1 226.2" stroke-dashoffset="-216.1" transform="rotate(-90 55 55)"/>
+                  <circle cx="55" cy="55" r="40" fill="none" stroke="#E4E7EC" stroke-width="20" stroke-dasharray="10.1 241.2" stroke-dashoffset="-241.2" transform="rotate(-90 55 55)"/>
+                  <text x="55" y="50" text-anchor="middle" font-size="16" font-weight="700" fill="#0F1623" font-family="JetBrains Mono,monospace">68%</text>
+                  <text x="55" y="64" text-anchor="middle" font-size="9" fill="#94A3B8" font-family="Inter,sans-serif">Full-time</text>
+                </svg>
+                <div class="dleg">
+                  <div class="dleg-row"><div class="dleg-dot" style="background:#0A8F84"></div><span class="dleg-lbl">Full-time</span><span class="dleg-val">848</span></div>
+                  <div class="dleg-row"><div class="dleg-dot" style="background:#93C5FD"></div><span class="dleg-lbl">Part-time</span><span class="dleg-val">224</span></div>
+                  <div class="dleg-row"><div class="dleg-dot" style="background:#FCD34D"></div><span class="dleg-lbl">Contract</span><span class="dleg-val">125</span></div>
+                  <div class="dleg-row"><div class="dleg-dot" style="background:#E4E7EC"></div><span class="dleg-lbl">Other</span><span class="dleg-val">50</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cg11">
+            <!-- Attrition by dept -->
+            <div class="cc">
+              <div class="cc-title">Attrition by Department</div>
+              <div class="cc-sub">Q1 2026 · % of headcount who left</div>
+              <div class="ibars" style="margin-top:12px">
+                <div class="ibar"><span class="ibar-lbl">Customer Success</span><div class="ibar-tr"><div class="ibar-fi" style="width:91%;background:#B91C1C"></div></div><span class="ibar-val">18.2%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Sales</span><div class="ibar-tr"><div class="ibar-fi" style="width:61%;background:#B45309"></div></div><span class="ibar-val">12.1%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Marketing</span><div class="ibar-tr"><div class="ibar-fi" style="width:57%;background:#B45309"></div></div><span class="ibar-val">11.3%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Finance</span><div class="ibar-tr"><div class="ibar-fi" style="width:47%;background:#B45309"></div></div><span class="ibar-val">9.4%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Operations</span><div class="ibar-tr"><div class="ibar-fi" style="width:39%;background:#15803D"></div></div><span class="ibar-val">7.8%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Engineering</span><div class="ibar-tr"><div class="ibar-fi" style="width:31%;background:#15803D"></div></div><span class="ibar-val">6.2%</span></div>
+                <div class="ibar"><span class="ibar-lbl">HR</span><div class="ibar-tr"><div class="ibar-fi" style="width:26%;background:#15803D"></div></div><span class="ibar-val">5.2%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Product</span><div class="ibar-tr"><div class="ibar-fi" style="width:24%;background:#15803D"></div></div><span class="ibar-val">4.8%</span></div>
+              </div>
+            </div>
+            <!-- Headcount growth line -->
+            <div class="cc">
+              <div class="cc-title">Headcount Growth</div>
+              <div class="cc-sub">Last 8 quarters</div>
+              <svg class="lsvg" viewBox="0 0 320 130" preserveAspectRatio="none">
+                <defs><linearGradient id="lg1" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#0A8F84" stop-opacity=".18"/><stop offset="100%" stop-color="#0A8F84" stop-opacity="0"/></linearGradient></defs>
+                <line x1="0" y1="15" x2="320" y2="15" stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="55" x2="320" y2="55" stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="95" x2="320" y2="95" stroke="#F1F4F8" stroke-width="1"/>
+                <path d="M0,104 L46,93 L91,88 L137,82 L183,74 L228,65 L274,50 L320,34 L320,130 L0,130Z" fill="url(#lg1)"/>
+                <polyline points="0,104 46,93 91,88 137,82 183,74 228,65 274,50 320,34" fill="none" stroke="#0A8F84" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="0"   cy="104" r="3.5" fill="#0A8F84"/>
+                <circle cx="46"  cy="93"  r="3.5" fill="#0A8F84"/>
+                <circle cx="91"  cy="88"  r="3.5" fill="#0A8F84"/>
+                <circle cx="137" cy="82"  r="3.5" fill="#0A8F84"/>
+                <circle cx="183" cy="74"  r="3.5" fill="#0A8F84"/>
+                <circle cx="228" cy="65"  r="3.5" fill="#0A8F84"/>
+                <circle cx="274" cy="50"  r="3.5" fill="#0A8F84"/>
+                <circle cx="320" cy="34"  r="4"   fill="#fff" stroke="#0A8F84" stroke-width="2.5"/>
+                <text x="0"   y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q2'24</text>
+                <text x="46"  y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q3'24</text>
+                <text x="91"  y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q4'24</text>
+                <text x="137" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q1'25</text>
+                <text x="183" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q2'25</text>
+                <text x="228" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q3'25</text>
+                <text x="274" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q4'25</text>
+                <text x="320" y="124" font-size="9" fill="#0A8F84" font-weight="600" font-family="Inter" text-anchor="middle">Q1'26</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Dept breakdown table -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Department Breakdown</div><div class="sect-sub">Headcount, attrition, and health score · Q1 2026</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Employees</th><th>Attrition</th><th>HC Change</th><th>Avg Tenure</th><th>Health</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Engineering</td><td class="tnum">312</td><td class="tnum">6.2%</td><td class="tnum tup">+12</td><td class="tnum">2.8 yrs</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">198</td><td class="tnum">12.1%</td><td class="tnum tdn">−4</td><td class="tnum">1.9 yrs</td><td><span class="chip ca">At Risk</span></td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">241</td><td class="tnum">7.8%</td><td class="tnum tup">+8</td><td class="tnum">4.1 yrs</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">67</td><td class="tnum">5.2%</td><td class="tnum tup">+2</td><td class="tnum">5.3 yrs</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">Finance</td><td class="tnum">89</td><td class="tnum">9.4%</td><td class="tnum tdn">−1</td><td class="tnum">3.7 yrs</td><td><span class="chip ca">At Risk</span></td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">112</td><td class="tnum">11.3%</td><td class="tnum tup">+3</td><td class="tnum">2.1 yrs</td><td><span class="chip ca">At Risk</span></td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">156</td><td class="tnum">4.8%</td><td class="tnum tup">+7</td><td class="tnum">3.5 yrs</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">Customer Success</td><td class="tnum">72</td><td class="tnum">18.2%</td><td class="tnum tdn">−8</td><td class="tnum">1.4 yrs</td><td><span class="chip cr">Critical</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /workforce -->
+
+
+        <!-- ── PAYROLL ─────────────────────────────────────────────── -->
+        <div class="tab-panel" id="tab-payroll">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">£4.82M</div><div class="kpi-lbl">Total Payroll Q1</div><div class="kpi-tr up">&#9650; +2.1% vs Q4 2025</div></div>
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">£3,867</div><div class="kpi-lbl">Avg Gross Pay</div><div class="kpi-tr up">&#9650; +£84 vs last Q</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">3</div><div class="kpi-lbl">Pay Anomalies</div><div class="kpi-tr nt">Flagged for review</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">98.6%</div><div class="kpi-lbl">On-Time Processing</div><div class="kpi-tr up">&#9650; 0.4% vs last Q</div></div>
+          </div>
+
+          <div class="cg11">
+            <!-- Payroll cost by dept -->
+            <div class="cc">
+              <div class="cc-title">Payroll Cost by Department</div>
+              <div class="cc-sub">Q1 2026 · £ thousands</div>
+              <div class="ibars" style="margin-top:14px">
+                <div class="ibar"><span class="ibar-lbl">Engineering</span><div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#0A8F84"></div></div><span class="ibar-val">£1,841k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Operations</span><div class="ibar-tr"><div class="ibar-fi" style="width:68%;background:#0A8F84"></div></div><span class="ibar-val">£1,252k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Sales</span><div class="ibar-tr"><div class="ibar-fi" style="width:54%;background:#1D4ED8"></div></div><span class="ibar-val">£994k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Product</span><div class="ibar-tr"><div class="ibar-fi" style="width:46%;background:#1D4ED8"></div></div><span class="ibar-val">£847k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Finance</span><div class="ibar-tr"><div class="ibar-fi" style="width:28%;background:#94A3B8"></div></div><span class="ibar-val">£515k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Marketing</span><div class="ibar-tr"><div class="ibar-fi" style="width:24%;background:#94A3B8"></div></div><span class="ibar-val">£441k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Customer Success</span><div class="ibar-tr"><div class="ibar-fi" style="width:16%;background:#94A3B8"></div></div><span class="ibar-val">£294k</span></div>
+                <div class="ibar"><span class="ibar-lbl">HR</span><div class="ibar-tr"><div class="ibar-fi" style="width:12%;background:#94A3B8"></div></div><span class="ibar-val">£221k</span></div>
+              </div>
+            </div>
+            <!-- Monthly payroll trend -->
+            <div class="cc">
+              <div class="cc-title">Monthly Payroll Trend</div>
+              <div class="cc-sub">Last 6 months · total gross pay</div>
+              <svg class="lsvg" viewBox="0 0 320 130" preserveAspectRatio="none">
+                <defs><linearGradient id="lg2" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#15803D" stop-opacity=".15"/><stop offset="100%" stop-color="#15803D" stop-opacity="0"/></linearGradient></defs>
+                <line x1="0" y1="20" x2="320" y2="20" stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="65" x2="320" y2="65" stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="110" x2="320" y2="110" stroke="#F1F4F8" stroke-width="1"/>
+                <path d="M0,95 L64,88 L128,80 L192,72 L256,58 L320,44 L320,130 L0,130Z" fill="url(#lg2)"/>
+                <polyline points="0,95 64,88 128,80 192,72 256,58 320,44" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="0"   cy="95" r="3.5" fill="#15803D"/>
+                <circle cx="64"  cy="88" r="3.5" fill="#15803D"/>
+                <circle cx="128" cy="80" r="3.5" fill="#15803D"/>
+                <circle cx="192" cy="72" r="3.5" fill="#15803D"/>
+                <circle cx="256" cy="58" r="3.5" fill="#15803D"/>
+                <circle cx="320" cy="44" r="4"   fill="#fff" stroke="#15803D" stroke-width="2.5"/>
+                <text x="0"   y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Oct</text>
+                <text x="64"  y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Nov</text>
+                <text x="128" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Dec</text>
+                <text x="192" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Jan</text>
+                <text x="256" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Feb</text>
+                <text x="320" y="124" font-size="9" fill="#15803D" font-weight="600" font-family="Inter" text-anchor="middle">Mar</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Payroll summary table -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Payroll Summary by Department</div><div class="sect-sub">Q1 2026 · gross pay, deductions, net pay</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Headcount</th><th>Total Gross</th><th>Deductions</th><th>Total Net</th><th>Avg Gross</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Engineering</td><td class="tnum">312</td><td class="tnum">£1,841,200</td><td class="tnum">£414,270</td><td class="tnum">£1,426,930</td><td class="tnum">£5,901</td><td><span class="chip cg">Processed</span></td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">241</td><td class="tnum">£1,251,880</td><td class="tnum">£281,673</td><td class="tnum">£970,207</td><td class="tnum">£5,194</td><td><span class="chip cg">Processed</span></td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">198</td><td class="tnum">£993,960</td><td class="tnum">£223,641</td><td class="tnum">£770,319</td><td class="tnum">£5,020</td><td><span class="chip cg">Processed</span></td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">156</td><td class="tnum">£847,200</td><td class="tnum">£190,620</td><td class="tnum">£656,580</td><td class="tnum">£5,431</td><td><span class="chip cg">Processed</span></td></tr>
+                  <tr><td class="tn">Finance</td><td class="tnum">89</td><td class="tnum">£515,420</td><td class="tnum">£115,969</td><td class="tnum">£399,451</td><td class="tnum">£5,791</td><td><span class="chip ca">Review</span></td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">112</td><td class="tnum">£440,720</td><td class="tnum">£99,162</td><td class="tnum">£341,558</td><td class="tnum">£3,935</td><td><span class="chip cg">Processed</span></td></tr>
+                  <tr><td class="tn">Customer Success</td><td class="tnum">72</td><td class="tnum">£294,480</td><td class="tnum">£66,258</td><td class="tnum">£228,222</td><td class="tnum">£4,090</td><td><span class="chip cg">Processed</span></td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">67</td><td class="tnum">£221,440</td><td class="tnum">£49,824</td><td class="tnum">£171,616</td><td class="tnum">£3,305</td><td><span class="chip cg">Processed</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /payroll -->
+
+
+        <!-- ── ATTENDANCE & LEAVE ──────────────────────────────────── -->
+        <div class="tab-panel" id="tab-attendance">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">94.2%</div><div class="kpi-lbl">Avg Attendance Rate</div><div class="kpi-tr up">&#9650; 1.1% vs last Q</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">2.8 days</div><div class="kpi-lbl">Avg Absence / Employee</div><div class="kpi-tr up">&#9650; 0.4d improvement</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">142</div><div class="kpi-lbl">On Leave Today</div><div class="kpi-tr nt">11.4% of workforce</div></div>
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">1,847</div><div class="kpi-lbl">Leave Days Taken</div><div class="kpi-tr nt">Q1 2026 total</div></div>
+          </div>
+
+          <div class="cg11">
+            <div class="cc">
+              <div class="cc-title">Weekly Attendance Rate</div>
+              <div class="cc-sub">Last 12 weeks · % of workforce present</div>
+              <svg class="lsvg" viewBox="0 0 320 130" preserveAspectRatio="none" style="margin-top:8px">
+                <line x1="0" y1="20" x2="320" y2="20" stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="65" x2="320" y2="65" stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="110" x2="320" y2="110" stroke="#F1F4F8" stroke-width="1"/>
+                <polyline points="0,78 29,70 58,84 87,62 116,72 145,58 174,64 203,54 232,48 261,43 290,38 320,32" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <text x="0"   y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">W1</text>
+                <text x="87"  y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">W4</text>
+                <text x="174" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">W7</text>
+                <text x="261" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">W10</text>
+                <text x="320" y="124" font-size="9" fill="#15803D" font-weight="600" font-family="Inter" text-anchor="middle">W12</text>
+              </svg>
+            </div>
+            <div class="cc">
+              <div class="cc-title">Leave Type Distribution</div>
+              <div class="cc-sub">Q1 2026 · days taken by type</div>
+              <div class="ibars" style="margin-top:16px">
+                <div class="ibar"><span class="ibar-lbl">Annual Leave</span><div class="ibar-tr"><div class="ibar-fi" style="width:78%;background:#0A8F84"></div></div><span class="ibar-val">1,441</span></div>
+                <div class="ibar"><span class="ibar-lbl">Sick Leave</span><div class="ibar-tr"><div class="ibar-fi" style="width:22%;background:#B45309"></div></div><span class="ibar-val">406</span></div>
+                <div class="ibar"><span class="ibar-lbl">Casual Leave</span><div class="ibar-tr"><div class="ibar-fi" style="width:8%;background:#1D4ED8"></div></div><span class="ibar-val">148</span></div>
+                <div class="ibar"><span class="ibar-lbl">Unpaid Leave</span><div class="ibar-tr"><div class="ibar-fi" style="width:3%;background:#94A3B8"></div></div><span class="ibar-val">52</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance by dept table -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Attendance Summary by Department</div><div class="sect-sub">Q1 2026</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Attendance Rate</th><th>Avg Absent Days</th><th>Late Arrivals</th><th>On Leave Today</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Engineering</td><td class="tnum">96.4%</td><td class="tnum">1.9</td><td class="tnum">28</td><td class="tnum">18</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">95.1%</td><td class="tnum">2.3</td><td class="tnum">41</td><td class="tnum">22</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">91.8%</td><td class="tnum">3.7</td><td class="tnum">54</td><td class="tnum">19</td><td><span class="chip ca">At Risk</span></td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">97.2%</td><td class="tnum">1.4</td><td class="tnum">12</td><td class="tnum">14</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">98.1%</td><td class="tnum">1.1</td><td class="tnum">4</td><td class="tnum">6</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">Finance</td><td class="tnum">94.3%</td><td class="tnum">2.7</td><td class="tnum">18</td><td class="tnum">9</td><td><span class="chip cg">Healthy</span></td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">93.2%</td><td class="tnum">3.1</td><td class="tnum">22</td><td class="tnum">11</td><td><span class="chip ca">At Risk</span></td></tr>
+                  <tr><td class="tn">Customer Success</td><td class="tnum">88.4%</td><td class="tnum">5.1</td><td class="tnum">63</td><td class="tnum">23</td><td><span class="chip cr">Critical</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /attendance -->
+
+
+        <!-- ── RECRUITING ──────────────────────────────────────────── -->
+        <div class="tab-panel" id="tab-recruiting">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">38</div><div class="kpi-lbl">Open Roles</div><div class="kpi-tr nt">Across 6 departments</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">412</div><div class="kpi-lbl">Active Candidates</div><div class="kpi-tr up">&#9650; +47 this week</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">24.6d</div><div class="kpi-lbl">Avg Time-to-Hire</div><div class="kpi-tr up">&#9650; 3.2d faster vs last Q</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">73.4%</div><div class="kpi-lbl">Offer Accept Rate</div><div class="kpi-tr dn">&#9660; 4.1% vs last Q</div></div>
+          </div>
+
+          <div class="cg11">
+            <div class="cc">
+              <div class="cc-title">Hiring Funnel</div>
+              <div class="cc-sub">Q1 2026 · candidates at each stage</div>
+              <div class="ibars" style="margin-top:16px">
+                <div class="ibar"><span class="ibar-lbl">Applied</span><div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#0A8F84"></div></div><span class="ibar-val">1,240</span></div>
+                <div class="ibar"><span class="ibar-lbl">Screening</span><div class="ibar-tr"><div class="ibar-fi" style="width:62%;background:#0A8F84"></div></div><span class="ibar-val">769</span></div>
+                <div class="ibar"><span class="ibar-lbl">Interview</span><div class="ibar-tr"><div class="ibar-fi" style="width:31%;background:#1D4ED8"></div></div><span class="ibar-val">384</span></div>
+                <div class="ibar"><span class="ibar-lbl">Offered</span><div class="ibar-tr"><div class="ibar-fi" style="width:11%;background:#B45309"></div></div><span class="ibar-val">136</span></div>
+                <div class="ibar"><span class="ibar-lbl">Hired</span><div class="ibar-tr"><div class="ibar-fi" style="width:8%;background:#15803D"></div></div><span class="ibar-val">100</span></div>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-title">Source Effectiveness</div>
+              <div class="cc-sub">Q1 2026 · hire rate by candidate source</div>
+              <div class="ibars" style="margin-top:16px">
+                <div class="ibar"><span class="ibar-lbl">Employee Referral</span><div class="ibar-tr"><div class="ibar-fi" style="width:84%;background:#15803D"></div></div><span class="ibar-val">42%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Direct Apply</span><div class="ibar-tr"><div class="ibar-fi" style="width:48%;background:#0A8F84"></div></div><span class="ibar-val">24%</span></div>
+                <div class="ibar"><span class="ibar-lbl">LinkedIn</span><div class="ibar-tr"><div class="ibar-fi" style="width:36%;background:#1D4ED8"></div></div><span class="ibar-val">18%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Job Boards</span><div class="ibar-tr"><div class="ibar-fi" style="width:24%;background:#94A3B8"></div></div><span class="ibar-val">12%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Agencies</span><div class="ibar-tr"><div class="ibar-fi" style="width:8%;background:#94A3B8"></div></div><span class="ibar-val">4%</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Time to hire by dept -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Time-to-Hire by Department</div><div class="sect-sub">Q1 2026 · days from application to hire</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Hires (Q1)</th><th>Avg Days</th><th>Min Days</th><th>Max Days</th><th>vs Last Q</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Engineering</td><td class="tnum">24</td><td class="tnum">28.4</td><td class="tnum">12</td><td class="tnum">64</td><td class="tnum tup">&#9650; 2.1d faster</td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">18</td><td class="tnum">19.2</td><td class="tnum">8</td><td class="tnum">41</td><td class="tnum tup">&#9650; 4.8d faster</td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">22</td><td class="tnum">22.7</td><td class="tnum">9</td><td class="tnum">48</td><td class="tnum tdn">&#9660; 1.3d slower</td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">16</td><td class="tnum">31.1</td><td class="tnum">18</td><td class="tnum">72</td><td class="tnum tup">&#9650; 5.2d faster</td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">11</td><td class="tnum">17.8</td><td class="tnum">7</td><td class="tnum">35</td><td class="tnum tup">&#9650; 3.0d faster</td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">9</td><td class="tnum">14.3</td><td class="tnum">6</td><td class="tnum">28</td><td class="tnum tdn">&#9660; 0.7d slower</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /recruiting -->
+
+
+        <!-- ── PERFORMANCE ─────────────────────────────────────────── -->
+        <div class="tab-panel" id="tab-performance">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">3.8 / 5</div><div class="kpi-lbl">Avg Performance Score</div><div class="kpi-tr up">&#9650; +0.2 vs last cycle</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">78.4%</div><div class="kpi-lbl">Review Completion</div><div class="kpi-tr up">&#9650; 6.2% vs last cycle</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">62.1%</div><div class="kpi-lbl">Goal Attainment</div><div class="kpi-tr dn">&#9660; 3.8% vs last cycle</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">14</div><div class="kpi-lbl">High Performers</div><div class="kpi-tr nt">Top 1.1% of workforce</div></div>
+          </div>
+
+          <div class="cg11">
+            <div class="cc">
+              <div class="cc-title">Score Distribution</div>
+              <div class="cc-sub">Q1 2026 cycle · % of employees at each band</div>
+              <div class="ibars" style="margin-top:16px">
+                <div class="ibar"><span class="ibar-lbl">Exceptional (5)</span><div class="ibar-tr"><div class="ibar-fi" style="width:11%;background:#0A8F84"></div></div><span class="ibar-val">1.1%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Exceeds (4–5)</span><div class="ibar-tr"><div class="ibar-fi" style="width:64%;background:#15803D"></div></div><span class="ibar-val">24.3%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Meets (3–4)</span><div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#1D4ED8"></div></div><span class="ibar-val">58.7%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Below (2–3)</span><div class="ibar-tr"><div class="ibar-fi" style="width:28%;background:#B45309"></div></div><span class="ibar-val">13.1%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Unsatisfactory (&lt;2)</span><div class="ibar-tr"><div class="ibar-fi" style="width:7%;background:#B91C1C"></div></div><span class="ibar-val">2.8%</span></div>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-title">Goal Attainment by Department</div>
+              <div class="cc-sub">Q1 2026 cycle · % of goals marked complete</div>
+              <div class="ibars" style="margin-top:16px">
+                <div class="ibar"><span class="ibar-lbl">Product</span><div class="ibar-tr"><div class="ibar-fi" style="width:80%;background:#15803D"></div></div><span class="ibar-val">80%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Engineering</span><div class="ibar-tr"><div class="ibar-fi" style="width:75%;background:#15803D"></div></div><span class="ibar-val">75%</span></div>
+                <div class="ibar"><span class="ibar-lbl">HR</span><div class="ibar-tr"><div class="ibar-fi" style="width:72%;background:#15803D"></div></div><span class="ibar-val">72%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Finance</span><div class="ibar-tr"><div class="ibar-fi" style="width:66%;background:#0A8F84"></div></div><span class="ibar-val">66%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Operations</span><div class="ibar-tr"><div class="ibar-fi" style="width:60%;background:#B45309"></div></div><span class="ibar-val">60%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Marketing</span><div class="ibar-tr"><div class="ibar-fi" style="width:54%;background:#B45309"></div></div><span class="ibar-val">54%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Sales</span><div class="ibar-tr"><div class="ibar-fi" style="width:48%;background:#B45309"></div></div><span class="ibar-val">48%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Customer Success</span><div class="ibar-tr"><div class="ibar-fi" style="width:38%;background:#B91C1C"></div></div><span class="ibar-val">38%</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance review table -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Review Completion by Department</div><div class="sect-sub">Q1 2026 cycle</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Total Staff</th><th>Reviewed</th><th>Pending</th><th>Completion</th><th>Avg Score</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Engineering</td><td class="tnum">312</td><td class="tnum">296</td><td class="tnum">16</td><td class="tnum">94.9%</td><td class="tnum">4.1</td><td><span class="chip cg">On Track</span></td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">156</td><td class="tnum">149</td><td class="tnum">7</td><td class="tnum">95.5%</td><td class="tnum">4.2</td><td><span class="chip cg">On Track</span></td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">67</td><td class="tnum">67</td><td class="tnum">0</td><td class="tnum">100%</td><td class="tnum">4.0</td><td><span class="chip ct">Complete</span></td></tr>
+                  <tr><td class="tn">Finance</td><td class="tnum">89</td><td class="tnum">81</td><td class="tnum">8</td><td class="tnum">91.0%</td><td class="tnum">3.8</td><td><span class="chip cg">On Track</span></td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">241</td><td class="tnum">194</td><td class="tnum">47</td><td class="tnum">80.5%</td><td class="tnum">3.6</td><td><span class="chip ca">Behind</span></td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">112</td><td class="tnum">84</td><td class="tnum">28</td><td class="tnum">75.0%</td><td class="tnum">3.5</td><td><span class="chip ca">Behind</span></td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">198</td><td class="tnum">132</td><td class="tnum">66</td><td class="tnum">66.7%</td><td class="tnum">3.3</td><td><span class="chip cr">At Risk</span></td></tr>
+                  <tr><td class="tn">Customer Success</td><td class="tnum">72</td><td class="tnum">44</td><td class="tnum">28</td><td class="tnum">61.1%</td><td class="tnum">3.1</td><td><span class="chip cr">At Risk</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /performance -->
+
+
+        <!-- ── SAVED REPORTS ───────────────────────────────────────── -->
+        <div class="tab-panel" id="tab-saved">
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">Saved Reports</div><div class="sect-sub">Scheduled and custom report definitions</div></div>
+              <button class="btn pri sm">+ New Report</button>
+            </div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Report Name</th><th>Type</th><th>Schedule</th><th>Last Run</th><th>Format</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Monthly Workforce Summary</td><td>Workforce</td><td>Monthly · 1st</td><td class="tnum">01 Mar 2026</td><td><span class="chip ct">PDF</span></td><td><span class="chip cg">Active</span></td></tr>
+                  <tr><td class="tn">Q1 Attrition Deep Dive</td><td>Workforce</td><td>Quarterly</td><td class="tnum">01 Jan 2026</td><td><span class="chip cb">CSV</span></td><td><span class="chip cg">Active</span></td></tr>
+                  <tr><td class="tn">Hiring Pipeline Weekly</td><td>Recruiting</td><td>Weekly · Mon</td><td class="tnum">24 Mar 2026</td><td><span class="chip ct">PDF</span></td><td><span class="chip cg">Active</span></td></tr>
+                  <tr><td class="tn">Payroll Cost by Dept</td><td>Payroll</td><td>Monthly · 5th</td><td class="tnum">05 Mar 2026</td><td><span class="chip cb">CSV</span></td><td><span class="chip cg">Active</span></td></tr>
+                  <tr><td class="tn">Attendance Trend Report</td><td>Attendance</td><td>Weekly · Fri</td><td class="tnum">21 Mar 2026</td><td><span class="chip cb">CSV</span></td><td><span class="chip ca">Paused</span></td></tr>
+                  <tr><td class="tn">Performance Review Completion</td><td>Performance</td><td>Quarterly</td><td class="tnum">01 Jan 2026</td><td><span class="chip ct">PDF</span></td><td><span class="chip cg">Active</span></td></tr>
+                  <tr><td class="tn">Source Effectiveness Monthly</td><td>Recruiting</td><td>Monthly · 5th</td><td class="tnum">05 Mar 2026</td><td><span class="chip ct">PDF</span></td><td><span class="chip cg">Active</span></td></tr>
+                  <tr><td class="tn">Compliance Audit Export</td><td>Compliance</td><td>On Demand</td><td class="tnum">15 Mar 2026</td><td><span class="chip cb">CSV</span></td><td><span class="chip cgy">Draft</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /saved -->
+
+
+      </div><!-- /content -->
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+</body>
+</html>

@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Candidate Pipeline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--bd2:#CBD5E1;
+  --t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+  --font:'Inter',sans-serif;
+}
+body{font-family:var(--font);font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
+.shell{display:flex;height:calc(100vh/1.1);overflow:hidden}
+
+/* ── SIDEBAR ──────────────────────────────────────── */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sb-ico{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:background .12s,color .12s}
+.sb-ico:hover{background:var(--bg);color:var(--t2)}.sb-ico.on{background:var(--tl);color:var(--teal)}
+.sb-ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* ── MAIN ─────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── TOPBAR ───────────────────────────────────────── */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+.tb-title{font-size:14px;font-weight:700;color:var(--t1);white-space:nowrap;flex-shrink:0}
+.tb-role{font-size:12.5px;color:var(--t4);background:var(--t5);border:1px solid var(--bd);border-radius:99px;padding:3px 10px;cursor:pointer;user-select:none;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:all .12s;flex-shrink:0}
+.tb-role:hover{border-color:var(--teal);color:var(--teal);background:var(--tl)}
+.tb-role svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tsp{flex:1}
+.tb-vd{width:1px;height:18px;background:var(--bd);flex-shrink:0}
+.search-inp{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 10px;transition:all .14s;flex-shrink:0}
+.search-inp:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.search-inp input{background:none;border:none;outline:none;font-size:12.5px;color:var(--t1);width:100%;font-family:var(--font)}
+.search-inp input::placeholder{color:var(--t4)}
+.search-inp svg{width:13px;height:13px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sel{background:var(--w);border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;font-size:12.5px;color:var(--t2);font-family:var(--font);cursor:pointer;outline:none;flex-shrink:0}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;flex-shrink:0}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb);flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:var(--font);transition:all .13s;white-space:nowrap;flex-shrink:0}
+.btn:hover{background:var(--bg);border-color:var(--bd2)}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:#0C9E92}
+
+/* ── STAT STRIP ───────────────────────────────────── */
+.stat-strip{display:flex;background:var(--w);border-bottom:1px solid var(--bd);flex-shrink:0}
+.stat-cell{flex:1;padding:10px 18px;border-right:1px solid var(--bd);cursor:default}
+.stat-cell:last-child{border-right:none}
+.s-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.s-val{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--t1);line-height:1}
+.s-note{font-size:11px;color:var(--t4);margin-top:3px}
+.badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:var(--mono);display:inline-block}
+.bg{background:var(--gl);color:var(--grn)}.ba{background:var(--al);color:var(--amber)}.br{background:var(--rl);color:var(--red)}.bn{background:var(--t5);color:var(--t3)}
+
+/* ── TOOLBAR ──────────────────────────────────────── */
+.toolbar{background:var(--w);border-bottom:1px solid var(--bd);padding:9px 18px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tabs-pill{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:3px;flex-shrink:0}
+.tp{padding:4px 12px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--t3);cursor:pointer;transition:all .12s;user-select:none;white-space:nowrap}
+.tp:hover{color:var(--t1)}.tp.on{background:var(--w);color:var(--t1);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+
+/* ── KANBAN BOARD ─────────────────────────────────── */
+.board-wrap{flex:1;overflow-x:auto;overflow-y:hidden;padding:16px 18px;display:flex;gap:14px;align-items:stretch;min-height:0}
+.board-wrap::-webkit-scrollbar{height:5px}
+
+/* Column */
+.col{width:268px;min-width:268px;display:flex;flex-direction:column;min-height:0}
+.col-head{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--w);border:1px solid var(--bd);border-radius:var(--r2) var(--r2) 0 0;border-bottom:none;flex-shrink:0}
+.col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.col-name{font-size:12.5px;font-weight:700;color:var(--t1);flex:1}
+.col-ct{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.col-add{width:22px;height:22px;border-radius:5px;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);font-size:14px;transition:all .12s;flex-shrink:0}
+.col-add:hover{background:var(--bg);color:var(--teal);border-color:var(--teal)}
+.col-body{flex:1;overflow-y:auto;min-height:0;padding:0 0 12px;background:transparent;display:flex;flex-direction:column;gap:8px}
+.col-body::-webkit-scrollbar{width:3px}
+
+/* Stage accent colours */
+.stage-applied   .col-head{border-top:3px solid #94A3B8}
+.stage-screening .col-head{border-top:3px solid var(--blue2)}
+.stage-interview .col-head{border-top:3px solid var(--violet2)}
+.stage-final     .col-head{border-top:3px solid var(--amber2)}
+.stage-offer     .col-head{border-top:3px solid var(--grn2)}
+
+/* Candidate card */
+.ccard{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:13px 14px;cursor:pointer;transition:box-shadow .14s,transform .14s,border-color .14s;position:relative}
+.ccard:hover{box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px);border-color:var(--bd2)}
+.ccard.urgent{border-left:3px solid var(--red2)}
+.ccard.sla-warn{border-left:3px solid var(--amber2)}
+.cc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.cc-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.cc-info{flex:1;min-width:0}
+.cc-name{font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.cc-role{font-size:11.5px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-star{font-size:13px;cursor:pointer;flex-shrink:0;opacity:.5;transition:opacity .12s}
+.cc-star:hover{opacity:1}.cc-star.on{opacity:1}
+
+/* AI match bar */
+.ai-match{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.ai-match-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;width:36px;flex-shrink:0}
+.ai-match-track{flex:1;height:4px;background:var(--t5);border-radius:99px;overflow:hidden}
+.ai-match-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.ai-match-pct{font-family:var(--mono);font-size:11px;font-weight:700;width:28px;text-align:right;flex-shrink:0}
+
+/* Meta row */
+.cc-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:var(--grn2)}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber2)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:var(--red2)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:var(--blue2)}
+.cv{background:var(--vl);color:var(--violet)}.cv::before{background:var(--violet2)}
+.ct{background:var(--tl);color:var(--teal)}.ct::before{background:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+
+/* Days in stage */
+.days-badge{font-size:10.5px;font-family:var(--mono);font-weight:700;padding:2px 6px;border-radius:3px}
+.days-ok{background:var(--t5);color:var(--t4)}
+.days-warn{background:var(--al);color:var(--amber)}
+.days-over{background:var(--rl);color:var(--red2);animation:pulse-red .5s ease infinite alternate}
+@keyframes pulse-red{from{opacity:1}to{opacity:.7}}
+
+/* Interviewer avatars */
+.cc-interviewers{display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.int-lbl{font-size:10.5px;color:var(--t4)}
+.int-avs{display:flex}
+.int-av{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:700;color:#fff;border:1.5px solid var(--w);margin-left:-5px}
+.int-av:first-child{margin-left:0}
+
+/* Card actions */
+.cc-acts{display:flex;gap:5px;opacity:0;transition:opacity .12s}
+.ccard:hover .cc-acts{opacity:1}
+.ca-btn{flex:1;font-size:11px;font-weight:600;padding:5px 8px;border-radius:5px;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:var(--font);transition:all .12s;text-align:center}
+.ca-btn:hover{background:var(--bg);border-color:var(--bd2)}
+.ca-btn.move{background:var(--teal);color:#fff;border-color:var(--teal)}.ca-btn.move:hover{background:#0C9E92}
+.ca-btn.rej{color:var(--red2);border-color:#FECACA}.ca-btn.rej:hover{background:var(--rl)}
+
+/* Source tag */
+.source-tag{font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;background:var(--t5);color:var(--t4);border:1px solid var(--bd)}
+
+/* Add card placeholder */
+.add-card{border:2px dashed var(--bd);border-radius:var(--r2);padding:11px 14px;cursor:pointer;transition:all .14s;display:flex;align-items:center;justify-content:center;gap:7px;color:var(--t4);font-size:12.5px;font-weight:500}
+.add-card:hover{border-color:var(--teal);color:var(--teal);background:var(--tl)}
+.add-card svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── SLIDE PANEL ──────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:40;opacity:0;pointer-events:none;transition:opacity .22s}
+.overlay.show{opacity:1;pointer-events:all}
+.slide-panel{position:fixed;top:0;right:0;width:480px;height:100%;background:var(--w);z-index:50;transform:translateX(100%);transition:transform .24s cubic-bezier(.25,.8,.25,1);display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.12)}
+.slide-panel.show{transform:translateX(0)}
+.sp-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;gap:14px;flex-shrink:0}
+.sp-av{width:52px;height:52px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff}
+.sp-info{flex:1;min-width:0}
+.sp-name{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.015em;margin-bottom:3px}
+.sp-role{font-size:13px;color:var(--t3);margin-bottom:8px}
+.sp-chips{display:flex;gap:6px;flex-wrap:wrap}
+.sp-close{width:30px;height:30px;border-radius:var(--r);border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);font-size:16px;transition:all .12s;flex-shrink:0}
+.sp-close:hover{background:var(--bg);color:var(--t1)}
+.sp-body{flex:1;overflow-y:auto;padding:0;min-height:0}
+.sp-sec{padding:16px 22px;border-bottom:1px solid var(--bd)}
+.sp-sec:last-child{border-bottom:none;padding-bottom:24px}
+.sp-sec-t{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:12px}
+.sp-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--t5)}
+.sp-row:last-child{border-bottom:none}
+.sp-l{font-size:12.5px;color:var(--t3)}.sp-v{font-size:12.5px;font-weight:600;color:var(--t1)}
+.sp-v.mono{font-family:var(--mono);font-size:12px}
+.sp-v.teal{color:var(--teal)}
+
+/* AI match big */
+.ai-big{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r2);padding:14px}
+.ai-big-head{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,143,132,.4)}50%{box-shadow:0 0 0 5px rgba(10,143,132,0)}}
+.ai-big-lbl{font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.10em}
+.ai-big-score{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--teal);margin-bottom:4px;line-height:1}
+.ai-big-label{font-size:12px;color:var(--teal);margin-bottom:10px}
+.ai-big-track{height:5px;background:rgba(10,143,132,.12);border-radius:99px;overflow:hidden;margin-bottom:12px}
+.ai-big-fill{height:100%;background:var(--teal);border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.ai-signals{display:flex;flex-direction:column;gap:6px}
+.ai-signal{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2)}
+.signal-icon{font-size:13px;flex-shrink:0}
+.signal-pos{color:var(--grn2)}.signal-neu{color:var(--t4)}.signal-neg{color:var(--red2)}
+
+/* Interview feedback */
+.feedback-item{padding:10px 0;border-bottom:1px solid var(--t5)}
+.feedback-item:last-child{border-bottom:none}
+.fi-head{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.fi-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
+.fi-name{flex:1;font-size:12.5px;font-weight:600;color:var(--t1)}
+.fi-verdict{font-size:11px;font-weight:700;padding:2px 7px;border-radius:3px}
+.v-sh{background:var(--gl);color:var(--grn)}.v-hi{background:var(--gl);color:var(--grn)}.v-mx{background:var(--al);color:var(--amber)}.v-no{background:var(--rl);color:var(--red)}
+.fi-comment{font-size:12px;color:var(--t3);line-height:1.5;padding-left:33px}
+.stars{font-size:13px;letter-spacing:1px}
+
+/* Timeline */
+.tl-item{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--t5)}
+.tl-item:last-child{border-bottom:none}
+.tl-body{flex:1}
+.tl-action{font-size:12.5px;color:var(--t2)}.tl-action strong{font-weight:600;color:var(--t1)}
+.tl-time{font-size:10.5px;color:var(--t4);font-family:var(--mono);margin-top:2px}
+
+/* Panel actions */
+.sp-actions{padding:14px 22px;border-top:1px solid var(--bd);flex-shrink:0;display:flex;flex-direction:column;gap:7px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ── SIDEBAR ──────────────────────────────────────── -->
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-ico on"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- ── TOPBAR ──────────────────────────────────────── -->
+  <div class="topbar">
+    <div class="tb-title">Candidate Pipeline</div>
+    <div class="tb-role">
+      Staff Engineer, Platform
+      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="tb-role">All Departments <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="tsp"></div>
+    <button class="btn">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <button class="btn btn-p">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Candidate
+    </button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- ── STAT STRIP ─────────────────────────────────── -->
+  <!-- BG-033: stats mocked client-side; no summary endpoint in hiring_service -->
+  <div class="stat-strip">
+    <div class="stat-cell">
+      <div class="s-lbl">Total Candidates</div>
+      <div class="s-val" id="stat-total">—</div>
+      <div class="s-note">4 open roles</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">Avg Time-to-Hire</div>
+      <div class="s-val">34d</div>
+      <div class="s-note"><span class="badge bg">−9d</span> vs benchmark</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">Offer Accept Rate</div>
+      <div class="s-val">84%</div>
+      <div class="s-note"><span class="badge bg">+6%</span> this quarter</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">Interviews This Week</div>
+      <div class="s-val">14</div>
+      <div class="s-note">3 pending feedback</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">SLA at Risk</div>
+      <div class="s-val" id="stat-sla">—</div>
+      <div class="s-note"><span class="badge br">Action needed</span></div>
+    </div>
+  </div>
+
+  <!-- ── TOOLBAR ────────────────────────────────────── -->
+  <div class="toolbar">
+    <div class="tabs-pill">
+      <div class="tp on" onclick="setTP(this)">All Roles <span style="font-family:var(--mono);font-size:10px;background:var(--t5);padding:0 4px;border-radius:3px;margin-left:3px" id="pill-all">0</span></div>
+      <div class="tp" onclick="setTP(this)">Staff Eng, Platform <span style="font-family:var(--mono);font-size:10px;background:var(--vl);color:var(--violet);padding:0 4px;border-radius:3px;margin-left:3px">8</span></div>
+      <div class="tp" onclick="setTP(this)">Snr SWE II <span style="font-family:var(--mono);font-size:10px;background:var(--bl);color:var(--blue);padding:0 4px;border-radius:3px;margin-left:3px">5</span></div>
+      <div class="tp" onclick="setTP(this)">Product Manager <span style="font-family:var(--mono);font-size:10px;background:var(--gl);color:var(--grn);padding:0 4px;border-radius:3px;margin-left:3px">3</span></div>
+    </div>
+    <div class="tsp"></div>
+    <div class="search-inp" style="width:190px">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search candidates…" oninput="filterCandidates(this.value)">
+    </div>
+    <div class="tbi" title="Filter"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+    <select class="sel" onchange="renderBoard()">
+      <option value="days">Sort: Days in stage ↑</option>
+      <option value="match">Sort: AI match ↓</option>
+      <option value="name">Sort: Name A–Z</option>
+    </select>
+    <div class="tb-vd"></div>
+    <span style="font-size:12px;color:var(--t4);white-space:nowrap">AI match:</span>
+    <select class="sel" id="match-filter" style="font-size:12.5px;padding:5px 8px" onchange="renderBoard()">
+      <option value="0">Show all</option>
+      <option value="70">70%+</option>
+      <option value="80">80%+</option>
+      <option value="90">90%+</option>
+    </select>
+    <div class="tb-vd"></div>
+    <div style="display:flex;gap:3px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:3px">
+      <div class="tp on" style="padding:4px 10px;font-size:12px" onclick="setBoard(this)">Board</div>
+      <div class="tp" style="padding:4px 10px;font-size:12px" onclick="setBoard(this)">List</div>
+    </div>
+  </div>
+
+  <!-- ── KANBAN BOARD ──────────────────────────────── -->
+  <div class="board-wrap" id="board"></div>
+
+</main>
+</div>
+
+<!-- ── SLIDE PANEL ──────────────────────────────────── -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="slide-panel" id="slide-panel">
+  <div class="sp-head" id="sp-head"></div>
+  <div class="sp-body" id="sp-body"></div>
+  <div class="sp-actions" id="sp-actions"></div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────
+// Source: hiring_service · GET /api/v1/hiring/pipeline
+// Enums: ref:api-contracts#Hiring.pipeline.stage · Hiring.candidate.status · Hiring.candidate.source
+
+const STAGES = [
+  { id:'applied',   label:'Applied',      dot:'#94A3B8', ctCls:'background:var(--t5);color:var(--t4)' },
+  { id:'screening', label:'Screening',    dot:'#3B82F6', ctCls:'background:var(--bl);color:var(--blue)' },
+  { id:'interview', label:'Interview',    dot:'#7C3AED', ctCls:'background:var(--vl);color:var(--violet)' },
+  // BG-034: FinalRound is UI-only; no backend stage equivalent — maps to status=Interviewing with is_final_round flag
+  { id:'final',     label:'Final Round',  dot:'#D97706', ctCls:'background:var(--al);color:var(--amber)' },
+  { id:'offer',     label:'Offer Sent',   dot:'#16A34A', ctCls:'background:var(--gl);color:var(--grn)' },
+];
+
+const CANDIDATES = [
+  // ── Applied (status: "Applied") ───────────────────
+  {
+    id:'c1', stage:'applied',
+    name:'Priya Anand', initials:'PA', color:'#7C3AED',
+    role:'Staff Engineer, Platform', source:'LinkedIn',
+    match:91,
+    days:2, daysClass:'days-ok',
+    chips:[{cls:'cv',label:'Strong Match'}],
+    interviewers:[], starred:true,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'7 years distributed systems experience'},
+      {icon:'✅',cls:'signal-pos',txt:'Previous Staff-level title confirmed'},
+      {icon:'✅',cls:'signal-pos',txt:'Strong Go + Kubernetes skill overlap'},
+      {icon:'⚠️',cls:'signal-neu',txt:'No open-source contributions on record'},
+    ],
+    meta:{Location:'Bangalore (Remote OK)',Applied:'Mar 17, 2026',Source:'LinkedIn',Referral:'R. Sharma'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong> via LinkedIn',time:'Mar 17, 2026'},
+      {dot:'var(--grn2)',action:'AI match score calculated: <strong>91%</strong>',time:'Mar 17, 2026'},
+    ],
+    feedback:[]
+  },
+  {
+    id:'c2', stage:'applied',
+    name:'Kofi Mensah', initials:'KM', color:'#059669',
+    role:'Staff Engineer, Platform', source:'Referral',
+    match:78,
+    days:3, daysClass:'days-ok',
+    chips:[{cls:'cb',label:'Referral'}],
+    interviewers:[], starred:false,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'Referral from Ravi Sharma (VP Eng)'},
+      {icon:'✅',cls:'signal-pos',txt:'8 yrs backend, 3 yrs at Staff level'},
+      {icon:'⚠️',cls:'signal-neu',txt:'Limited Kubernetes experience listed'},
+    ],
+    meta:{Location:'Amsterdam (Remote)',Applied:'Mar 16, 2026',Source:'Employee Referral',Referral:'Ravi Sharma'},
+    timeline:[{dot:'var(--teal)',action:'<strong>Applied</strong> via employee referral',time:'Mar 16, 2026'}],
+    feedback:[]
+  },
+  {
+    id:'c3', stage:'applied',
+    name:'Sara Chen', initials:'SC', color:'#EC4899',
+    role:'Snr SWE II', source:'JobBoard',
+    match:65,
+    days:1, daysClass:'days-ok',
+    chips:[{cls:'cn',label:'Under review'}],
+    interviewers:[], starred:false,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'Strong Python + ML background'},
+      {icon:'⚠️',cls:'signal-neu',txt:'4 yrs exp — slightly below IC4 threshold'},
+      {icon:'❌',cls:'signal-neg',txt:'No distributed systems experience'},
+    ],
+    meta:{Location:'Singapore',Applied:'Mar 18, 2026',Source:'Indeed'},
+    timeline:[{dot:'var(--teal)',action:'<strong>Applied</strong> via Indeed',time:'Mar 18, 2026'}],
+    feedback:[]
+  },
+
+  // ── Screening (status: "Screening") ──────────────
+  {
+    id:'c4', stage:'screening',
+    name:'Ji-ho Lim', initials:'JL', color:'#4F46E5',
+    role:'Staff Engineer, Platform', source:'LinkedIn',
+    match:94,
+    days:4, daysClass:'days-ok',
+    chips:[{cls:'cg',label:'Top Candidate'}],
+    interviewers:[{initials:'RK',color:'#059669'},{initials:'SM',color:'#7C3AED'}],
+    starred:true,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'Ex-Google Staff SWE, distributed infra'},
+      {icon:'✅',cls:'signal-pos',txt:'Published papers on consensus protocols'},
+      {icon:'✅',cls:'signal-pos',txt:'Strong culture-add signals from call notes'},
+    ],
+    meta:{Location:'Seoul → SF Relocation',Applied:'Mar 14, 2026',Source:'LinkedIn',Recruiter:'Ravi Kumar'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong> via LinkedIn',time:'Mar 14, 2026'},
+      {dot:'var(--blue2)',action:'Screening call with <strong>Ravi Kumar</strong>',time:'Mar 16, 2026'},
+      {dot:'var(--grn2)',action:'Advanced to Screening stage',time:'Mar 16, 2026'},
+    ],
+    feedback:[
+      {initials:'RK',color:'#059669',name:'Ravi Kumar',role:'Recruiter',verdict:'v-sh',vLabel:'Strong Hire',stars:'★★★★★',comment:'Outstanding background. Exactly the depth we need for platform infra.'}
+    ]
+  },
+  {
+    id:'c5', stage:'screening', urgent:true,
+    name:'Amira Hassan', initials:'AH', color:'#B45309',
+    role:'Snr SWE II', source:'Agency',
+    match:72,
+    days:9, daysClass:'days-over',
+    chips:[{cls:'cr',label:'SLA breached'}],
+    interviewers:[{initials:'SM',color:'#7C3AED'}],
+    starred:false,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'5 yrs backend, Golang & AWS'},
+      {icon:'⚠️',cls:'signal-neu',txt:'Screening call pending rescheduling'},
+      {icon:'❌',cls:'signal-neg',txt:'Stage SLA exceeded — 9 days in screening'},
+    ],
+    meta:{Location:'London',Applied:'Mar 9, 2026',Source:'Agency — TechTalent UK'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong> via TechTalent UK',time:'Mar 9, 2026'},
+      {dot:'var(--amber2)',action:'Screening call missed — rescheduling',time:'Mar 13, 2026'},
+      {dot:'var(--red2)',action:'SLA breached — 7 days without progression',time:'Mar 16, 2026'},
+    ],
+    feedback:[]
+  },
+
+  // ── Interview (status: "Interviewing") ──────────
+  {
+    id:'c6', stage:'interview',
+    name:'Marcus T. Webb', initials:'MW', color:'#0284C7',
+    role:'Staff Engineer, Platform', source:'LinkedIn',
+    match:88,
+    days:6, daysClass:'days-warn',
+    chips:[{cls:'cv',label:'Strong signals'}],
+    interviewers:[{initials:'RS',color:'#16A34A'},{initials:'DC',color:'#6D28D9'},{initials:'LB',color:'#B45309'}],
+    starred:true,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'Led platform migration at 200-person startup'},
+      {icon:'✅',cls:'signal-pos',txt:'Kubernetes CKA certified'},
+      {icon:'⚠️',cls:'signal-neu',txt:'System design round still pending'},
+    ],
+    meta:{Location:'New York',Applied:'Mar 12, 2026',Source:'LinkedIn'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong> via LinkedIn',time:'Mar 12, 2026'},
+      {dot:'var(--blue2)',action:'Screening call — <strong>positive</strong>',time:'Mar 14, 2026'},
+      {dot:'var(--violet2)',action:'Advanced to Interview stage',time:'Mar 14, 2026'},
+      {dot:'var(--grn2)',action:'Technical round 1 — <strong>passed</strong>',time:'Mar 16, 2026'},
+    ],
+    feedback:[
+      {initials:'RS',color:'#16A34A',name:'Ravi Sharma',role:'VP Engineering',verdict:'v-sh',vLabel:'Strong Hire',stars:'★★★★★',comment:'Technical depth is exceptional. Nailed the distributed systems design questions.'},
+      {initials:'DC',color:'#6D28D9',name:'David Chen',role:'VP Product',verdict:'v-mx',vLabel:'Maybe',stars:'★★★☆☆',comment:'Strong technically, but want to probe more on cross-functional communication style.'},
+    ]
+  },
+  {
+    id:'c7', stage:'interview',
+    name:'Yuki Nakashima', initials:'YN', color:'#D97706',
+    role:'Staff Engineer, Platform', source:'Referral',
+    match:81,
+    days:5, daysClass:'days-warn',
+    chips:[{cls:'cb',label:'Referral'}],
+    interviewers:[{initials:'RS',color:'#16A34A'},{initials:'AW',color:'#4F46E5'}],
+    starred:false,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'10 yrs experience, previous Staff at Stripe'},
+      {icon:'✅',cls:'signal-pos',txt:'Very strong OSS contributions (CNCF)'},
+      {icon:'⚠️',cls:'signal-neu',txt:'Expects relocation package — TBD'},
+    ],
+    meta:{Location:'Tokyo → Remote',Applied:'Mar 13, 2026',Source:'Referral by D. Chen'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong> via referral (D. Chen)',time:'Mar 13, 2026'},
+      {dot:'var(--blue2)',action:'Screening call completed',time:'Mar 15, 2026'},
+      {dot:'var(--violet2)',action:'Advanced to Interview stage',time:'Mar 15, 2026'},
+    ],
+    feedback:[
+      {initials:'RS',color:'#16A34A',name:'Ravi Sharma',role:'VP Engineering',verdict:'v-hi',vLabel:'Hire',stars:'★★★★☆',comment:'Strong background, great open source work. Need to confirm remote arrangement details.'},
+    ]
+  },
+
+  // ── Final Round (UI-only: status "Interviewing", is_final_round:true — BG-034) ──
+  {
+    id:'c8', stage:'final', is_final_round:true,
+    name:'Ji-ho Lim', initials:'JL', color:'#4F46E5',
+    role:'Staff Engineer, Platform', source:'LinkedIn',
+    match:94,
+    days:3, daysClass:'days-ok',
+    chips:[{cls:'cg',label:'Unanimously Strong Hire'}],
+    interviewers:[{initials:'RS',color:'#16A34A'},{initials:'DC',color:'#6D28D9'},{initials:'SM',color:'#7C3AED'},{initials:'CEO',color:'#0F1623'}],
+    starred:true,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'4 of 4 interviewers: Strong Hire'},
+      {icon:'✅',cls:'signal-pos',txt:'System design: scored 9.2 / 10'},
+      {icon:'✅',cls:'signal-pos',txt:'References: outstanding from Google'},
+      {icon:'✅',cls:'signal-pos',txt:'Compensation aligned — $220K range'},
+    ],
+    meta:{Location:'Seoul → SF Relocation',Applied:'Mar 14, 2026',Source:'LinkedIn'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong>',time:'Mar 14, 2026'},
+      {dot:'var(--blue2)',action:'Screening completed',time:'Mar 16, 2026'},
+      {dot:'var(--violet2)',action:'Interview loop — 4 sessions',time:'Mar 17–18, 2026'},
+      {dot:'var(--grn2)',action:'Advanced to Final Round',time:'Mar 18, 2026'},
+    ],
+    feedback:[
+      {initials:'RS',color:'#16A34A',name:'Ravi Sharma',role:'VP Engineering',verdict:'v-sh',vLabel:'Strong Hire',stars:'★★★★★',comment:'Best technical candidate I have interviewed in 3 years. Hire immediately.'},
+      {initials:'DC',color:'#6D28D9',name:'David Chen',role:'VP Product',verdict:'v-sh',vLabel:'Strong Hire',stars:'★★★★★',comment:'Exceptional communication. Thinks in systems, great cross-functional instincts.'},
+      {initials:'SM',color:'#7C3AED',name:'Sarah Mitchell',role:'Eng Manager',verdict:'v-sh',vLabel:'Strong Hire',stars:'★★★★★',comment:'Would be delighted to have Ji-ho on the team. No reservations.'},
+    ]
+  },
+
+  // ── Offer Sent (status: "Offered") ──────────────
+  {
+    id:'c9', stage:'offer',
+    name:'Tom Nakamura', initials:'TN', color:'#B45309',
+    role:'Account Executive, EMEA', source:'LinkedIn',
+    match:87,
+    days:2, daysClass:'days-ok',
+    chips:[{cls:'cg',label:'Offer Accepted'}],
+    interviewers:[{initials:'LB',color:'#B45309'},{initials:'CM',color:'#F59E0B'}],
+    starred:false,
+    signals:[
+      {icon:'✅',cls:'signal-pos',txt:'Offer signed — start date Mar 24'},
+      {icon:'✅',cls:'signal-pos',txt:'Compensation agreed: $134K + 10% bonus'},
+      {icon:'✅',cls:'signal-pos',txt:'Background check in progress'},
+    ],
+    meta:{Location:'New York',Applied:'Mar 1, 2026',Source:'LinkedIn',StartDate:'Mar 24, 2026'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong>',time:'Mar 1, 2026'},
+      {dot:'var(--blue2)',action:'Full interview loop completed',time:'Mar 8–10, 2026'},
+      {dot:'var(--grn2)',action:'<strong>Offer extended</strong> — $134,000 + 10%',time:'Mar 17, 2026'},
+      {dot:'var(--grn2)',action:'<strong>Offer accepted</strong> — start Mar 24',time:'Mar 18, 2026'},
+    ],
+    feedback:[
+      {initials:'LB',color:'#B45309',name:'Laura Barnes',role:'Sales Manager',verdict:'v-sh',vLabel:'Strong Hire',stars:'★★★★★',comment:'Tom exceeded expectations in every round. Strong pipeline management skills.'},
+    ]
+  },
+  {
+    id:'c10', stage:'offer', urgent:true,
+    name:'Olu Adeyemi', initials:'OA', color:'#DC2626',
+    role:'Staff Engineer, Platform', source:'Agency',
+    match:90,
+    days:5, daysClass:'days-warn',
+    chips:[{cls:'ca',label:'Offer pending — competing bids'}],
+    interviewers:[{initials:'RS',color:'#16A34A'},{initials:'DC',color:'#6D28D9'}],
+    starred:true,
+    signals:[
+      {icon:'⚠️',cls:'signal-neu',txt:'Candidate has 2 competing offers'},
+      {icon:'⚠️',cls:'signal-neu',txt:'Offer expires Mar 22 — 3 days left'},
+      {icon:'✅',cls:'signal-pos',txt:'All 3 interviewers: Strong Hire'},
+      {icon:'✅',cls:'signal-pos',txt:'Compensation aligned at $215K'},
+    ],
+    meta:{Location:'Lagos → Remote',Applied:'Mar 6, 2026',Source:'Agency',OfferExpiry:'Mar 22, 2026'},
+    timeline:[
+      {dot:'var(--teal)',action:'<strong>Applied</strong> via agency',time:'Mar 6, 2026'},
+      {dot:'var(--violet2)',action:'Interview loop — 3 sessions',time:'Mar 12–14, 2026'},
+      {dot:'var(--amber2)',action:'<strong>Offer extended</strong> — awaiting decision',time:'Mar 17, 2026'},
+      {dot:'var(--red2)',action:'Candidate flagged 2 competing offers',time:'Mar 18, 2026'},
+    ],
+    feedback:[
+      {initials:'RS',color:'#16A34A',name:'Ravi Sharma',role:'VP Engineering',verdict:'v-sh',vLabel:'Strong Hire',stars:'★★★★★',comment:'Exactly what we need. Move fast — this person will not wait.'},
+    ]
+  },
+];
+
+// ── COMPUTED STATS ────────────────────────────────────
+// BG-033: aggregated client-side; no summary endpoint available
+function updateStats() {
+  document.getElementById('stat-total').textContent = CANDIDATES.length;
+  document.getElementById('pill-all').textContent = CANDIDATES.length;
+  const sla = CANDIDATES.filter(c => c.daysClass === 'days-over').length;
+  document.getElementById('stat-sla').textContent = sla;
+}
+
+// ── RENDER BOARD ─────────────────────────────────────
+let searchTerm = '';
+
+function filterCandidates(val) {
+  searchTerm = val.toLowerCase();
+  renderBoard();
+}
+
+function renderBoard() {
+  const sortSel = document.querySelector('.toolbar select');
+  const sort = sortSel ? sortSel.value : 'days';
+  const minMatch = parseInt(document.getElementById('match-filter').value) || 0;
+
+  let candidates = CANDIDATES.filter(c => {
+    if (minMatch > 0 && c.match < minMatch) return false;
+    if (searchTerm && !c.name.toLowerCase().includes(searchTerm) && !c.role.toLowerCase().includes(searchTerm)) return false;
+    return true;
+  });
+
+  if (sort === 'match') candidates = [...candidates].sort((a,b) => b.match - a.match);
+  else if (sort === 'name') candidates = [...candidates].sort((a,b) => a.name.localeCompare(b.name));
+  else candidates = [...candidates].sort((a,b) => b.days - a.days);
+
+  const board = document.getElementById('board');
+  board.innerHTML = STAGES.map(stage => {
+    const cards = candidates.filter(c => c.stage === stage.id);
+    return `
+      <div class="col stage-${stage.id}">
+        <div class="col-head">
+          <div class="col-dot" style="background:${stage.dot}"></div>
+          <div class="col-name">${stage.label}</div>
+          <div class="col-ct" style="${stage.ctCls}">${cards.length}</div>
+          <div class="col-add" title="Add candidate to ${stage.label}">+</div>
+        </div>
+        <div class="col-body">
+          ${cards.map(c => renderCard(c)).join('')}
+          <div class="add-card">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add candidate
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  board.querySelectorAll('.ccard').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('cc-star')) return;
+      openPanel(el.dataset.id);
+    });
+  });
+  board.querySelectorAll('.cc-star').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      el.classList.toggle('on');
+      el.textContent = el.classList.contains('on') ? '★' : '☆';
+    });
+  });
+}
+
+function matchColor(pct) {
+  return pct >= 85 ? 'var(--teal)' : pct >= 70 ? 'var(--blue2)' : 'var(--amber2)';
+}
+
+function renderCard(c) {
+  const mc = matchColor(c.match);
+  const chipHtml = c.chips.map(ch => `<span class="chip ${ch.cls}">${ch.label}</span>`).join('');
+  const sourceTag = `<span class="source-tag">${c.source}</span>`;
+  const intHtml = c.interviewers.length ? `
+    <div class="cc-interviewers">
+      <span class="int-lbl">${c.interviewers.length} interviewer${c.interviewers.length>1?'s':''}</span>
+      <div class="int-avs">${c.interviewers.map(i=>`<div class="int-av" style="background:${i.color}">${i.initials}</div>`).join('')}</div>
+    </div>` : '';
+  const nextAction = {
+    applied:'Move to Screening',
+    screening:'Schedule Interview',
+    interview:'Advance to Final',
+    // BG-034: "Advance to Final" is UI-only column move; no PATCH made
+    final:'Send Offer',
+    offer:'Mark Hired'
+  };
+  return `
+    <div class="ccard${c.urgent?' urgent':c.daysClass==='days-warn'?' sla-warn':''}" data-id="${c.id}">
+      <div class="cc-top">
+        <div class="cc-av" style="background:${c.color}">${c.initials}</div>
+        <div class="cc-info">
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-role">${c.role}</div>
+        </div>
+        <div class="cc-star${c.starred?' on':''}">${c.starred?'★':'☆'}</div>
+      </div>
+      <div class="ai-match">
+        <span class="ai-match-lbl">AI</span>
+        <div class="ai-match-track"><div class="ai-match-fill" style="width:${c.match}%;background:${mc}"></div></div>
+        <span class="ai-match-pct" style="color:${mc}">${c.match}%</span>
+      </div>
+      <div class="cc-meta">
+        ${chipHtml}
+        ${sourceTag}
+        <span class="days-badge ${c.daysClass}">${c.days}d in stage</span>
+      </div>
+      ${intHtml}
+      <div class="cc-acts">
+        <div class="ca-btn move" onclick="event.stopPropagation()">${nextAction[c.stage]} →</div>
+        <div class="ca-btn rej" onclick="event.stopPropagation()">Reject</div>
+      </div>
+    </div>`;
+}
+
+// ── SLIDE PANEL ──────────────────────────────────────
+function openPanel(id) {
+  const c = CANDIDATES.find(x => x.id === id);
+  if (!c) return;
+  const mc = matchColor(c.match);
+  const stageLabel = STAGES.find(s => s.id === c.stage)?.label || c.stage;
+
+  document.getElementById('sp-head').innerHTML = `
+    <div class="sp-av" style="background:${c.color}">${c.initials}</div>
+    <div class="sp-info">
+      <div class="sp-name">${c.name}</div>
+      <div class="sp-role">${c.role}</div>
+      <div class="sp-chips">
+        <span class="chip cv">${stageLabel}</span>
+        ${c.chips.map(ch=>`<span class="chip ${ch.cls}">${ch.label}</span>`).join('')}
+        <span class="days-badge ${c.daysClass}">${c.days}d in stage</span>
+      </div>
+    </div>
+    <div class="sp-close" onclick="closePanel()">✕</div>`;
+
+  const feedbackHtml = c.feedback.length ? c.feedback.map(f => `
+    <div class="feedback-item">
+      <div class="fi-head">
+        <div class="fi-av" style="background:${f.color}">${f.initials}</div>
+        <div class="fi-name">${f.name} <span style="font-weight:400;color:var(--t4)">${f.role}</span></div>
+        <span class="fi-verdict ${f.verdict}">${f.vLabel}</span>
+      </div>
+      <div class="fi-comment"><div class="stars" style="color:#F59E0B;margin-bottom:4px">${f.stars}</div>${f.comment}</div>
+    </div>`).join('') : '<div style="font-size:12.5px;color:var(--t4);padding:4px 0">No feedback yet.</div>';
+
+  const timelineHtml = c.timeline.map(t => `
+    <div class="tl-item">
+      <div style="width:8px;height:8px;border-radius:50%;background:${t.dot};margin-top:5px;flex-shrink:0"></div>
+      <div class="tl-body">
+        <div class="tl-action">${t.action}</div>
+        <div class="tl-time">${t.time}</div>
+      </div>
+    </div>`).join('');
+
+  const metaHtml = Object.entries(c.meta).map(([k,v]) => `
+    <div class="sp-row"><span class="sp-l">${k}</span><span class="sp-v">${v}</span></div>`).join('');
+
+  document.getElementById('sp-body').innerHTML = `
+    <div class="sp-sec">
+      <div class="sp-sec-t">AI Match Score</div>
+      <div class="ai-big">
+        <div class="ai-big-head"><div class="ai-dot"></div><div class="ai-big-lbl">Meridian AI</div></div>
+        <div class="ai-big-score" style="color:${mc}">${c.match}%</div>
+        <div class="ai-big-label" style="color:${mc}">match for ${c.role}</div>
+        <div class="ai-big-track"><div class="ai-big-fill" style="width:${c.match}%;background:${mc}"></div></div>
+        <div class="ai-signals">${c.signals.map(s=>`
+          <div class="ai-signal">
+            <span class="signal-icon">${s.icon}</span>
+            <span class="${s.cls}">${s.txt}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="sp-sec">
+      <div class="sp-sec-t">Application Details</div>
+      ${metaHtml}
+    </div>
+    <div class="sp-sec">
+      <div class="sp-sec-t">Interviewer Feedback (${c.feedback.length})</div>
+      ${feedbackHtml}
+    </div>
+    <div class="sp-sec">
+      <div class="sp-sec-t">Timeline</div>
+      ${timelineHtml}
+    </div>`;
+
+  const nextAction = {
+    applied:'Move to Screening',
+    screening:'Schedule Interview',
+    interview:'Advance to Final Round',
+    final:'Send Offer',
+    offer:'Mark as Hired'
+  };
+  document.getElementById('sp-actions').innerHTML = `
+    <button class="btn btn-p" style="width:100%;justify-content:center;padding:9px">${nextAction[c.stage] || 'Advance'}</button>
+    <div style="display:flex;gap:7px">
+      <button class="btn" style="flex:1;justify-content:center">
+        <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Message
+      </button>
+      <button class="btn" style="flex:1;justify-content:center">
+        <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        Schedule
+      </button>
+      <button class="btn" style="flex:1;justify-content:center;color:var(--red2);border-color:#FECACA">Reject</button>
+    </div>`;
+
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('slide-panel').classList.add('show');
+}
+
+function closePanel() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('slide-panel').classList.remove('show');
+}
+
+function setTP(el) {
+  document.querySelectorAll('.tabs-pill .tp').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+}
+function setBoard(el) {
+  el.parentElement.querySelectorAll('.tp').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+}
+
+updateStats();
+renderBoard();
+</script>
+</body>
+</html>

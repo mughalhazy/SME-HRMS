@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Inbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s;position:relative}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.si .badge-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--red2);border:1.5px solid var(--w)}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1;display:flex;align-items:center;gap:8px}
+.unread-ct{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--red2);color:#fff;padding:2px 7px;border-radius:99px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+
+/* Three-panel: nav tabs | message list | message detail */
+.inbox-body{flex:1;overflow:hidden;display:grid;grid-template-columns:200px 340px 1fr}
+
+/* Nav panel */
+.inbox-nav{background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.nav-head{padding:14px 14px 10px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.nav-head-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:10px}
+.nav-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;transition:all .14s}
+.nav-srch:focus-within{border-color:var(--teal);background:var(--w)}
+.nav-srch input{background:none;border:none;outline:none;font-size:12px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.nav-srch input::placeholder{color:var(--t4)}
+.nav-srch svg{width:12px;height:12px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nav-items{padding:8px;overflow-y:auto;flex:1}
+.nav-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:8px 6px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;transition:all .12s;margin-bottom:1px;user-select:none}
+.nav-item:hover{background:var(--bg)}.nav-item.on{background:var(--tl);color:var(--teal)}
+.nav-item svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nav-item:not(.on) svg{stroke:var(--t4)}.nav-item.on svg{stroke:var(--teal)}
+.nav-item-label{flex:1;font-size:12.5px;font-weight:500;color:var(--t2)}
+.nav-item.on .nav-item-label{font-weight:600;color:var(--teal)}
+.nav-badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:99px;flex-shrink:0}
+.nb-r{background:var(--rl);color:var(--red)}.nb-g{background:var(--gl);color:var(--grn)}.nb-a{background:var(--al);color:var(--amber)}.nb-n{background:var(--t5);color:var(--t4)}
+.nav-div{height:1px;background:var(--bd);margin:6px 8px}
+
+/* Message list */
+.msg-list{border-right:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column}
+.ml-head{position:sticky;top:0;z-index:2;background:var(--w);border-bottom:1px solid var(--bd);padding:10px 14px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.ml-title{font-size:13px;font-weight:700;color:var(--t1)}
+.ml-actions{display:flex;gap:5px}
+.ml-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.ml-icon:hover{background:var(--bg);color:var(--t2)}
+.ml-icon svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* Message row */
+.msg{padding:12px 14px;border-bottom:1px solid var(--t5);cursor:pointer;transition:background .09s;position:relative}
+.msg:hover{background:var(--bg)}.msg.sel{background:var(--tl)}
+.msg.unread{background:#F8FAFC}
+.msg.unread::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:26px;background:var(--teal);border-radius:0 3px 3px 0}
+.msg-top{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.msg-av{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff}
+.msg-from{font-size:13px;font-weight:600;color:var(--t1);flex:1}
+.msg-time{font-size:10.5px;color:var(--t4);font-family:var(--mono);flex-shrink:0}
+.msg-subject{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:3px}
+.msg-preview{font-size:11.5px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
+.msg-chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:var(--grn2)}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber2)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:var(--red2)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:var(--blue2)}
+.ct{background:var(--tl);color:var(--teal)}.ct::before{background:var(--teal)}
+.cv{background:var(--vl);color:var(--violet)}.cv::before{background:var(--violet2)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+
+/* Message detail */
+.msg-detail{display:flex;flex-direction:column;overflow:hidden}
+.detail-head{padding:16px 22px;border-bottom:1px solid var(--bd);background:var(--w);flex-shrink:0}
+.dh-subject{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.015em;margin-bottom:12px}
+.dh-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dh-from{display:flex;align-items:center;gap:10px;flex:1}
+.dh-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.dh-name{font-size:13.5px;font-weight:600;color:var(--t1)}
+.dh-email{font-size:12px;color:var(--t3)}
+.dh-time{font-size:12px;color:var(--t4);font-family:var(--mono)}
+.dh-acts{display:flex;gap:6px}
+.detail-body{flex:1;overflow-y:auto;padding:22px}
+.msg-body-txt{font-size:13.5px;color:var(--t2);line-height:1.8}
+.msg-body-txt p{margin-bottom:14px}.msg-body-txt p:last-child{margin-bottom:0}
+.msg-body-txt strong{font-weight:600;color:var(--t1)}
+/* Thread */
+.thread-item{border-top:1px solid var(--bd);padding:18px 0 0;margin-top:18px}
+.ti-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ti-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.ti-name{font-size:13px;font-weight:600;color:var(--t1);flex:1}
+.ti-time{font-size:11px;color:var(--t4);font-family:var(--mono)}
+.ti-txt{font-size:13px;color:var(--t2);line-height:1.7;padding-left:38px}
+/* Reply box */
+.reply-area{border-top:1px solid var(--bd);padding:14px 22px;background:var(--w);flex-shrink:0}
+.reply-tabs{display:flex;gap:10px;margin-bottom:10px}
+.rtab{font-size:12px;font-weight:600;color:var(--t4);cursor:pointer;padding-bottom:4px;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.rtab.on{color:var(--teal);border-bottom-color:var(--teal)}
+.reply-inp{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--bg);resize:none;height:80px;transition:all .14s;line-height:1.6}
+.reply-inp:focus{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.reply-inp::placeholder{color:var(--t4)}
+.reply-acts{display:flex;align-items:center;gap:7px;margin-top:10px}
+.reply-sp{flex:1}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><div class="badge-dot"></div></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="tb-t">Inbox <span class="unread-ct">12</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Compose</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <div class="inbox-body">
+
+    <!-- Nav panel -->
+    <div class="inbox-nav">
+      <div class="nav-head">
+        <div class="nav-head-title">Messages</div>
+        <div class="nav-srch">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input placeholder="Search…">
+        </div>
+      </div>
+      <div class="nav-items">
+        <div class="nav-sec">Inbox</div>
+        <div class="nav-item on" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.63a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+          <span class="nav-item-label">All Messages</span>
+          <span class="nav-badge nb-r">12</span>
+        </div>
+        <div class="nav-item" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span class="nav-item-label">Approvals</span>
+          <span class="nav-badge nb-a">5</span>
+        </div>
+        <div class="nav-item" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span class="nav-item-label">AI Alerts</span>
+          <span class="nav-badge nb-r">3</span>
+        </div>
+        <div class="nav-item" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span class="nav-item-label">Email</span>
+          <span class="nav-badge nb-r">4</span>
+        </div>
+        <div class="nav-item" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+          <span class="nav-item-label">Leave Requests</span>
+          <span class="nav-badge nb-a">4</span>
+        </div>
+        <div class="nav-sec">Saved</div>
+        <div class="nav-item" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="nav-item-label">Starred</span>
+          <span class="nav-badge nb-n">7</span>
+        </div>
+        <div class="nav-div"></div>
+        <div class="nav-item" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>
+          <span class="nav-item-label">Sent</span>
+        </div>
+        <div class="nav-item" onclick="setNav(this)">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          <span class="nav-item-label">Archive</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message list -->
+    <div class="msg-list">
+      <div class="ml-head">
+        <div class="ml-title">All Messages</div>
+        <div class="ml-actions">
+          <div class="ml-icon" title="Mark all read"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ml-icon" title="Filter"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+          <div class="ml-icon" title="Sort"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+        </div>
+      </div>
+
+      <div class="msg sel" onclick="selMsg(this,'eva')">
+        <div class="msg-top"><div class="msg-av" style="background:#DC2626">EF</div><div class="msg-from">Eva Fischer</div><div class="msg-time">09:42</div></div>
+        <div class="msg-subject">Salary discrepancy — March payroll</div>
+        <div class="msg-preview">Hi Alex, I noticed the March summary shows $113,000 but my contract states…</div>
+        <div class="msg-chips"><span class="chip cr">Urgent</span><span class="chip cn">Payroll</span></div>
+      </div>
+
+      <div class="msg unread" onclick="selMsg(this,'ai-attrition')">
+        <div class="msg-top"><div class="msg-av" style="background:#0A8F84">AI</div><div class="msg-from">AI — Attrition Alert</div><div class="msg-time">08:17</div></div>
+        <div class="msg-subject">Flight risk: 3 employees flagged in Engineering</div>
+        <div class="msg-preview">Confidence: 83%. Engagement decline + manager friction over 14 days detected…</div>
+        <div class="msg-chips"><span class="chip ct">AI Alert</span><span class="chip cn">Engineering</span></div>
+      </div>
+
+      <div class="msg unread" onclick="selMsg(this,'tom-leave')">
+        <div class="msg-top"><div class="msg-av" style="background:#B45309">TN</div><div class="msg-from">Tom Nakamura</div><div class="msg-time">Yesterday</div></div>
+        <div class="msg-subject">Leave request — Apr 7–10 (Annual Leave)</div>
+        <div class="msg-preview">Hi, I'd like to request 4 days of annual leave for a family event. Coverage confirmed with L. Barnes…</div>
+        <div class="msg-chips"><span class="chip cb">Leave Request</span></div>
+      </div>
+
+      <div class="msg" onclick="selMsg(this,'laura')">
+        <div class="msg-top"><div class="msg-av" style="background:#7C3AED">LB</div><div class="msg-from">Laura Barnes (Manager)</div><div class="msg-time">Yesterday</div></div>
+        <div class="msg-subject">Tom Nakamura coverage confirmed — Apr 7–10</div>
+        <div class="msg-preview">Happy to confirm I can cover Tom's accounts during his leave. No concerns…</div>
+        <div class="msg-chips"><span class="chip cg">Coverage Confirmed</span></div>
+      </div>
+
+      <div class="msg unread" onclick="selMsg(this,'recruiting')">
+        <div class="msg-top"><div class="msg-av" style="background:#059669">RK</div><div class="msg-from">Ravi Kumar (Recruiting)</div><div class="msg-time">Mon</div></div>
+        <div class="msg-subject">Ji-ho Lim — Final round decision needed</div>
+        <div class="msg-preview">3 Strong Hire votes from panel. Waiting on go/no-go before extending offer for Staff Engineer…</div>
+        <div class="msg-chips"><span class="chip cv">Hiring</span><span class="chip ca">Action Needed</span></div>
+      </div>
+
+      <div class="msg" onclick="selMsg(this,'james')">
+        <div class="msg-top"><div class="msg-av" style="background:#4F46E5">JO</div><div class="msg-from">James Okafor (New Hire)</div><div class="msg-time">Mon</div></div>
+        <div class="msg-subject">MacBook Pro — still marked as pending</div>
+        <div class="msg-preview">Quick follow-up on my equipment order. Day 9 and it's still showing pending in the IT portal…</div>
+        <div class="msg-chips"><span class="chip cb">Onboarding</span></div>
+      </div>
+
+      <div class="msg" onclick="selMsg(this,'gdpr')">
+        <div class="msg-top"><div class="msg-av" style="background:#475569">⚖</div><div class="msg-from">Legal — GDPR Request</div><div class="msg-time">Fri</div></div>
+        <div class="msg-subject">Data subject access request received</div>
+        <div class="msg-preview">Former employee has submitted a SAR. 30-day response deadline begins from receipt…</div>
+        <div class="msg-chips"><span class="chip cr">Compliance</span><span class="chip ca">30d deadline</span></div>
+      </div>
+
+      <div class="msg" onclick="selMsg(this,'payroll-run')">
+        <div class="msg-top"><div class="msg-av" style="background:#0D9488">AI</div><div class="msg-from">Payroll System</div><div class="msg-time">Thu</div></div>
+        <div class="msg-subject">March 2026 payroll — 3 anomalies need review</div>
+        <div class="msg-preview">Pre-run check complete. 3 records require human approval before processing on Apr 1…</div>
+        <div class="msg-chips"><span class="chip cr">Payroll</span><span class="chip ca">Review Required</span></div>
+      </div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="msg-detail">
+      <div class="detail-head" id="detail-head">
+        <div class="dh-subject">Salary discrepancy — March payroll</div>
+        <div class="dh-meta">
+          <div class="dh-from">
+            <div class="dh-av" style="background:#DC2626">EF</div>
+            <div><div class="dh-name">Eva Fischer</div><div class="dh-email">e.fischer@acme.com</div></div>
+          </div>
+          <div class="dh-time">Today, 09:42</div>
+          <div class="dh-acts">
+            <button class="btn btn-sm"><svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>Reply</button>
+            <button class="btn btn-sm">Forward</button>
+            <button class="btn btn-sm" style="color:var(--t4)">Archive</button>
+          </div>
+        </div>
+      </div>
+      <div class="detail-body" id="detail-body">
+        <div class="msg-body-txt">
+          <p>Hi Alex,</p>
+          <p>I hope you're well. I wanted to flag something before payroll is processed. When I checked the March 2026 payroll summary, it shows my base salary as <strong>$113,000</strong>. However, my employment contract, signed in January 2026, states <strong>$105,000</strong>.</p>
+          <p>I want to make sure this isn't an unintended change — it may just be a data entry error on the system side, but since it was also flagged in the AI anomaly report I figured it was best to raise it directly with you.</p>
+          <p>Happy to jump on a quick call if easier, or provide a copy of my contract for reference.</p>
+          <p>Thanks so much,<br><strong>Eva Fischer</strong><br>Financial Analyst · Finance · FP&A<br>Acme Corp · London</p>
+        </div>
+        <div class="thread-item">
+          <div class="ti-head">
+            <div class="ti-av" style="background:#4F46E5">AW</div>
+            <div class="ti-name">You (Alex Wang)</div>
+            <div class="ti-time">Yesterday, 17:14</div>
+          </div>
+          <div class="ti-txt">Hi Eva, thanks for reaching out — I've picked this up and am looking into it now. I'll come back to you by tomorrow morning with a confirmed answer. The payroll team has been notified.</div>
+        </div>
+        <div class="thread-item">
+          <div class="ti-head">
+            <div class="ti-av" style="background:#DC2626">EF</div>
+            <div class="ti-name">Eva Fischer</div>
+            <div class="ti-time">Yesterday, 15:02</div>
+          </div>
+          <div class="ti-txt">Hi Alex, I noticed the payroll summary shows an unexpected figure. Wanted to flag it before the April run. Could you look into this when you get a moment? Thank you.</div>
+        </div>
+      </div>
+      <div class="reply-area">
+        <div class="reply-tabs">
+          <div class="rtab on" onclick="setReplyTab(this)">Reply</div>
+          <div class="rtab" onclick="setReplyTab(this)">Reply All</div>
+          <div class="rtab" onclick="setReplyTab(this)">Forward</div>
+        </div>
+        <textarea class="reply-inp" placeholder="Hi Eva, I've confirmed the discrepancy — this was a data entry error on our side. I'm reverting your March salary to $105,000 and the payroll team has been updated. Apologies for the confusion…"></textarea>
+        <div class="reply-acts">
+          <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Reply</button>
+          <button class="btn">View Payroll Record</button>
+          <button class="btn">Raise HR Ticket</button>
+          <div class="reply-sp"></div>
+          <button class="btn" style="color:var(--t4)">Discard</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<script>
+const messages = {
+  'eva': {
+    subject:'Salary discrepancy — March payroll',
+    from:'Eva Fischer', email:'e.fischer@acme.com', av:'EF', c:'#DC2626', time:'Today, 09:42',
+    body:`<p>Hi Alex,</p><p>I hope you're well. I wanted to flag something before payroll is processed. When I checked the March 2026 payroll summary, it shows my base salary as <strong>$113,000</strong>. However, my employment contract, signed in January 2026, states <strong>$105,000</strong>.</p><p>I want to make sure this isn't an unintended change — it may just be a data entry error on the system side, but since it was also flagged in the AI anomaly report I figured it was best to raise it directly with you.</p><p>Thanks,<br><strong>Eva Fischer</strong></p>`,
+    thread:[{av:'AW',c:'#4F46E5',n:'You (Alex Wang)',t:'Yesterday, 17:14',txt:"Hi Eva, thanks for reaching out — I've picked this up and am looking into it now. I'll come back to you by tomorrow morning with a confirmed answer."},{av:'EF',c:'#DC2626',n:'Eva Fischer',t:'Yesterday, 15:02',txt:'Hi Alex, I noticed the payroll summary shows an unexpected figure. Wanted to flag it before the April run. Could you look into this?'}],
+    placeholder:"Hi Eva, I've confirmed the discrepancy — this was a data entry error. I'm reverting your March salary to $105,000 and the payroll team has been updated. Apologies for the confusion…"
+  },
+  'ai-attrition': {
+    subject:'Flight risk: 3 employees flagged in Engineering',
+    from:'AI — Attrition Alert', email:'system@meridian.ai', av:'AI', c:'#0A8F84', time:'Today, 08:17',
+    body:`<p>Hi Alex,</p><p>The Meridian AI system has detected elevated attrition risk in the <strong>Engineering — Backend Platform</strong> team.</p><p><strong>3 employees</strong> have shown a combination of declining engagement scores, reduced participation in team events, and friction signals in manager feedback over the past 14 days. This pattern matches pre-departure behaviour observed in similar historical profiles with <strong>83% confidence</strong>.</p><p><strong>Recommended actions:</strong><br>• Schedule 1:1 check-ins with flagged employees this week<br>• Review recent manager feedback for any unresolved conflicts<br>• Consider proactive retention conversation with relevant managers</p><p>View the full analysis in AI Insights.</p>`,
+    thread:[],
+    placeholder:"Thanks for the alert. I'll schedule check-ins with the flagged employees and loop in Sarah Mitchell for the Engineering team review…"
+  },
+  'tom-leave': {
+    subject:'Leave request — Apr 7–10 (Annual Leave)',
+    from:'Tom Nakamura', email:'t.nakamura@acme.com', av:'TN', c:'#B45309', time:'Yesterday, 14:22',
+    body:`<p>Hi Alex,</p><p>I'd like to request 4 days of annual leave from <strong>April 7–10, 2026</strong> for a family event.</p><p>I've confirmed coverage with <strong>Laura Barnes</strong>, who will handle my key accounts during the period. There are no client meetings or major deliverables scheduled in that window.</p><p>Please let me know if there's anything else you need from my side.</p><p>Thanks,<br><strong>Tom Nakamura</strong><br>Account Executive · Sales · Enterprise EMEA</p>`,
+    thread:[],
+    placeholder:"Hi Tom, I've reviewed your leave request. Coverage confirmed with Laura. Approved — you'll get a system confirmation shortly…"
+  },
+  'laura': {
+    subject:'Tom Nakamura coverage confirmed — Apr 7–10',
+    from:'Laura Barnes', email:'l.barnes@acme.com', av:'LB', c:'#7C3AED', time:'Yesterday, 14:45',
+    body:`<p>Hi Alex,</p><p>Happy to confirm I can cover Tom's accounts during Apr 7–10. No concerns on the team side — it's a quiet week and I'm across his active deals.</p><p>Let me know if there's anything specific you'd like me to watch for.</p><p>Cheers,<br><strong>Laura Barnes</strong><br>Sales Manager · Enterprise EMEA</p>`,
+    thread:[],
+    placeholder:"Great, thanks Laura. I'll approve Tom's request now. Much appreciated…"
+  },
+  'recruiting': {
+    subject:'Ji-ho Lim — Final round decision needed',
+    from:'Ravi Kumar', email:'r.kumar@acme.com', av:'RK', c:'#059669', time:'Mon, 16:30',
+    body:`<p>Hi Alex,</p><p>Quick update on <strong>Ji-ho Lim</strong> for the Staff Engineer, Platform role.</p><p>All three interviewers have submitted Strong Hire votes. Sarah Mitchell called it "the best candidate for this role in years." Ji-ho passed the system design round with outstanding scores.</p><p>We're holding on extending the offer pending your final approval. Ji-ho has indicated they're considering two other offers so I'd recommend moving fast.</p><p>Let me know and I'll get the offer letter out today.</p><p>Thanks,<br><strong>Ravi Kumar</strong><br>Head of Recruiting</p>`,
+    thread:[],
+    placeholder:"Hi Ravi, approved — please extend the offer today. $220K base + IC5 equity package as discussed. Let me know when it's sent…"
+  },
+  'james': {
+    subject:'MacBook Pro — still marked as pending',
+    from:'James Okafor', email:'j.okafor@acme.com', av:'JO', c:'#4F46E5', time:'Mon, 10:08',
+    body:`<p>Hi Alex,</p><p>Hope onboarding is going well so far! Quick question — I checked the IT portal this morning and my MacBook Pro M3 order is still showing as <strong>Pending</strong>. Today is Day 9 and I still don't have the machine, which is blocking my dev environment setup and access to the secure repos.</p><p>Could you check what's happening on the IT side? I don't want to be a nuisance but it's starting to affect my onboarding progress.</p><p>Thanks so much,<br><strong>James Okafor</strong><br>Senior SWE II · Engineering · Backend Platform</p>`,
+    thread:[],
+    placeholder:"Hi James, I apologise for the delay — I'm escalating this to IT right now. Should have a resolution for you by end of day today…"
+  },
+  'gdpr': {
+    subject:'Data subject access request received',
+    from:'Legal Team', email:'legal@acme.com', av:'⚖', c:'#475569', time:'Fri, 09:00',
+    body:`<p>Hi Alex,</p><p>We've received a <strong>Subject Access Request (SAR)</strong> from a former employee under GDPR Article 15. The 30-day response deadline begins from today, <strong>Friday 15 March 2026</strong>, meaning we must respond by <strong>14 April 2026</strong>.</p><p>Please ensure all HR records relating to this individual are collated and reviewed before legal processes the response. We'll need payroll history, leave records, performance reviews, and any disciplinary correspondence.</p><p>Please acknowledge receipt and assign this to a case owner as soon as possible.</p><p>Regards,<br><strong>Legal Department</strong></p>`,
+    thread:[],
+    placeholder:"Acknowledged. I'll assign this to myself and have all relevant HR records collated and sent to legal by March 22. Can we schedule a 30-minute call to align on scope?…"
+  },
+  'payroll-run': {
+    subject:'March 2026 payroll — 3 anomalies need review',
+    from:'Payroll System', email:'payroll@meridian.ai', av:'AI', c:'#0D9488', time:'Thu, 18:00',
+    body:`<p>Hi Alex,</p><p>The automated pre-run check for <strong>March 2026 payroll</strong> is complete. Before processing can proceed on April 1st, the following 3 records require human review:</p><p><strong>1. Marcus Hill (EMP-0336)</strong> — OT claim of 48hrs with no prior OT history. Net pay variance: +31%.<br><strong>2. Eva Fischer (EMP-0337)</strong> — Base salary shows $113,000 vs contract $105,000. Variance: +$8,000.<br><strong>3. Amara Kofi (EMP-0338)</strong> — Benefits deduction dropped by $940 vs prior cycle. Possible sync failure.</p><p>Please review and approve or reject these records before 11:59 PM March 31 to avoid a delayed payroll run.</p>`,
+    thread:[],
+    placeholder:"Reviewing now. Eva's salary is a data error and will be corrected. Marcus's OT needs manager confirmation from Sarah Mitchell. Amara's deduction needs a benefits sync check…"
+  },
+};
+
+function selMsg(el, key) {
+  document.querySelectorAll('.msg').forEach(m => m.classList.remove('sel'));
+  el.classList.remove('unread');
+  el.classList.add('sel');
+  loadMsg(key);
+}
+
+function loadMsg(key) {
+  const m = messages[key];
+  if (!m) return;
+  document.getElementById('detail-head').innerHTML = `
+    <div class="dh-subject">${m.subject}</div>
+    <div class="dh-meta">
+      <div class="dh-from">
+        <div class="dh-av" style="background:${m.c}">${m.av}</div>
+        <div><div class="dh-name">${m.from}</div><div class="dh-email">${m.email}</div></div>
+      </div>
+      <div class="dh-time">${m.time}</div>
+      <div class="dh-acts">
+        <button class="btn btn-sm"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>Reply</button>
+        <button class="btn btn-sm">Forward</button>
+        <button class="btn btn-sm" style="color:var(--t4)">Archive</button>
+      </div>
+    </div>`;
+  const threadHtml = m.thread.map(t => `
+    <div class="thread-item">
+      <div class="ti-head">
+        <div class="ti-av" style="background:${t.c}">${t.av}</div>
+        <div class="ti-name">${t.n}</div>
+        <div class="ti-time">${t.t}</div>
+      </div>
+      <div class="ti-txt">${t.txt}</div>
+    </div>`).join('');
+  document.getElementById('detail-body').innerHTML = `<div class="msg-body-txt">${m.body}</div>${threadHtml}`;
+  document.querySelector('.reply-inp').placeholder = m.placeholder;
+}
+
+function setNav(el) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('on'));
+  el.classList.add('on');
+}
+function setReplyTab(el) {
+  document.querySelectorAll('.rtab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+}
+document.querySelectorAll('.si').forEach(el => el.addEventListener('click', function() { document.querySelectorAll('.si').forEach(x => x.classList.remove('on')); this.classList.add('on'); }));
+</script>
+</body>
+</html>

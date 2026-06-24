@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Recruitment Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;
+  --amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;
+  --violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─────────────────────────────── */
+.sb{width:216px;min-width:216px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-logo{padding:18px 14px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-name{font-size:14px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.logo-sub{font-size:9.5px;color:var(--t4);text-transform:uppercase;letter-spacing:.07em}
+.sb-nav{flex:1;padding:8px 8px 4px}
+.sb-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:10px 8px 3px;display:block}
+.sb-a{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);color:var(--t3);font-size:13px;font-weight:450;cursor:pointer;transition:all .12s;margin-bottom:1px;user-select:none;position:relative}
+.sb-a:hover{background:var(--bg);color:var(--t1)}
+.sb-a.on{background:var(--tl);color:var(--teal);font-weight:600}
+.sb-a.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--teal);border-radius:0 3px 3px 0}
+.sb-ic{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sb-ic svg{width:14px;height:14px;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-a:not(.on) .sb-ic svg{stroke:var(--t4)}.sb-a.on .sb-ic svg{stroke:var(--teal)}
+.sb-badge{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:99px;font-family:var(--mono)}
+.b-g{background:var(--gl);color:var(--grn)}.b-a{background:var(--al);color:var(--amber)}.b-v{background:var(--vl);color:var(--violet)}
+.sb-div{height:1px;background:var(--bd);margin:6px 10px}
+.sb-foot{margin-top:auto;padding:8px;border-top:1px solid var(--bd)}
+.sb-user{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;transition:background .12s}
+.sb-user:hover{background:var(--bg)}
+.u-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.u-name{font-size:12px;font-weight:600;color:var(--t1)}.u-role{font-size:10.5px;color:var(--t4)}
+.u-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;margin-left:auto;flex-shrink:0}
+
+/* ─── MAIN ─────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1;letter-spacing:-0.01em}
+.tb-d{font-size:12px;color:var(--t4);margin-left:7px;font-weight:400}
+.tb-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 11px;width:208px;transition:all .14s}
+.tb-srch:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.tb-srch input{background:none;border:none;outline:none;font-size:12.5px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.tb-srch input::placeholder{color:var(--t4)}
+.tb-srch svg{width:13px;height:13px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;position:relative}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.tbi.bell::after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#EF4444;border:1.5px solid var(--w)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:#0C9E92}
+
+/* ─── PAGE ────────────────────────────────── */
+.page{flex:1;overflow-y:auto;min-height:0;padding:24px 24px 12vh}
+
+/* Chips */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.cb2{background:var(--bl);color:var(--blue)}.cb2::before{background:#3B82F6}
+.ct2{background:var(--tl);color:var(--teal)}.ct2::before{background:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.cv{background:var(--vl);color:var(--violet)}.cv::before{background:#7C3AED}
+
+/* KPI strip */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px;cursor:default;transition:box-shadow .14s,transform .14s}
+.kpi:hover{box-shadow:0 4px 12px rgba(0,0,0,.06);transform:translateY(-1px)}
+.kpi-dot{width:6px;height:6px;border-radius:50%;margin-bottom:10px}
+.kpi-v{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--t1);line-height:1;margin-bottom:5px}
+.kpi-l{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.kpi-f{display:flex;align-items:center;gap:5px}
+.kpi-b{font-size:10.5px;font-weight:600;padding:2px 5px;border-radius:3px;font-family:var(--mono)}
+.ku{background:var(--gl);color:var(--grn)}.kd{background:var(--rl);color:var(--red)}.kn{background:var(--t5);color:var(--t3)}
+.kpi-n{font-size:11px;color:var(--t4)}
+
+/* Layout grids */
+.g3{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.right-col{display:flex;flex-direction:column;gap:14px}
+
+/* Cards */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct{font-size:13px;font-weight:700;color:var(--t1)}
+.cs{font-size:11.5px;color:var(--t4);margin-top:1px}
+.cl{font-size:11.5px;font-weight:600;color:var(--teal);cursor:pointer;flex-shrink:0}.cl:hover{text-decoration:underline}
+.cb-p{padding:15px 17px}
+
+/* Pipeline funnel bars — Candidate.status stages */
+.pipe-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}.pipe-row:last-child{margin-bottom:0}
+.pipe-stage{font-size:12px;font-weight:500;color:var(--t2);width:100px;flex-shrink:0}
+.pipe-track{flex:1;height:8px;background:var(--t5);border-radius:99px;overflow:hidden}
+.pipe-fill{height:100%;border-radius:99px;transition:width .9s cubic-bezier(.25,.8,.25,1)}
+.pipe-count{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--t1);width:32px;text-align:right;flex-shrink:0}
+.pipe-pct{font-family:var(--mono);font-size:11px;color:var(--t4);width:38px;text-align:right;flex-shrink:0}
+
+/* Open roles list */
+.role-row{display:flex;align-items:center;gap:10px;padding:9px 15px;border-bottom:1px solid var(--t5);transition:background .09s;cursor:default}
+.role-row:last-child{border-bottom:none}.role-row:hover{background:var(--bg)}
+.role-body{flex:1;min-width:0}
+.role-title{font-size:12.5px;font-weight:600;color:var(--t1)}
+.role-meta{font-size:11.5px;color:var(--t3);margin-top:1px}
+.role-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.role-count{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--t1)}
+
+/* Activity / recent candidates */
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg);border-bottom:1px solid var(--bd)}
+th{padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--t5);vertical-align:middle;font-size:12.5px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--tl);cursor:pointer}
+.p{display:flex;align-items:center;gap:8px}
+.pav{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.pn{font-weight:600;color:var(--t1)}.ps{font-family:var(--mono);font-size:10.5px;color:var(--t4)}
+
+/* Stat row (offer rate) */
+.stat-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--t5)}
+.stat-row:last-child{border-bottom:none}
+.stat-lbl{font-size:12.5px;color:var(--t3)}
+.stat-val{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t1)}
+
+/* Motion */
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.a1{animation:fu .28s ease both}.a2{animation:fu .28s .06s ease both}
+.a3{animation:fu .28s .12s ease both}.a4{animation:fu .28s .18s ease both}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+    <div><div class="logo-name">Meridian</div><div class="logo-sub">HCM Suite</div></div>
+  </div>
+  <nav class="sb-nav">
+    <span class="sb-sec">Overview</span>
+    <div class="sb-a on"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>Dashboard</div>
+    <span class="sb-sec">Recruiting</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>Job Postings<span class="sb-badge b-g">18</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>Candidates<span class="sb-badge b-v">142</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="18" height="7"/></svg></span>Pipeline View</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>Requisitions</div>
+    <span class="sb-sec">Evaluation</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>Evaluation Forms</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></span>Interview Schedule</div>
+    <div class="sb-div"></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>Analytics</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>Settings</div>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="u-av">SC</div>
+      <div><div class="u-name">Sofia Chen</div><div class="u-role">Talent Acquisition Lead</div></div>
+      <div class="u-dot"></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar a1">
+    <div class="tb-t">Recruitment Dashboard<span class="tb-d">Sun, 22 Mar 2026</span></div>
+    <div class="tb-srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search jobs, candidates…"></div>
+    <div class="tb-vd"></div>
+    <div class="tbi bell"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tb-vd"></div>
+    <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Job Posting</button>
+    <div class="tav">SC</div>
+  </div>
+
+  <div class="page">
+
+    <!-- KPI row — BG-004 mock: no hiring metrics endpoint in hiring_service -->
+    <div class="kpi-row a2" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#7C3AED"></div>
+        <div class="kpi-v">18</div>
+        <div class="kpi-l">Open Positions</div>
+        <!-- hiring_service › JobPosting (count status=Pending) -->
+        <div class="kpi-f"><span class="kpi-b ku">+3</span><span class="kpi-n">this month</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#3B82F6"></div>
+        <div class="kpi-v">142</div>
+        <div class="kpi-l">Active Candidates</div>
+        <!-- hiring_service › Candidate (count status ≠ Completed/NoShow) — BG-004 -->
+        <div class="kpi-f"><span class="kpi-b ku">+24</span><span class="kpi-n">this week</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:var(--teal)"></div>
+        <div class="kpi-v">34d</div>
+        <div class="kpi-l">Avg Time-to-Hire</div>
+        <!-- BG-004: derived from CandidateStageTransition — mock -->
+        <div class="kpi-f"><span class="kpi-b ku">−6d</span><span class="kpi-n">vs last quarter</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#16A34A"></div>
+        <div class="kpi-v">78%</div>
+        <div class="kpi-l">Offer Accept Rate</div>
+        <!-- BG-004: Offered→Completed / Offered total — mock -->
+        <div class="kpi-f"><span class="kpi-b ku">+5%</span><span class="kpi-n">vs last quarter</span></div>
+      </div>
+    </div>
+
+    <!-- Row 1: Pipeline by stage (1.7fr) + Open roles + Hiring stats (1fr) -->
+    <div class="g3 a3">
+      <!-- Pipeline funnel — Candidate.status stages per api-contracts -->
+      <!-- Hiring.candidate.stage: Applied, Interviewing, Offered, NoShow, Completed -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Candidate Pipeline</div><div class="cs">142 active candidates · 18 roles</div></div>
+          <span class="cl">View pipeline →</span>
+        </div>
+        <div class="cb-p" id="pipeline-bars"></div>
+      </div>
+
+      <div class="right-col">
+        <!-- Open roles — hiring_service.JobPosting.status -->
+        <!-- Hiring.job.status: Pending → amber, Draft → grey per api-contracts -->
+        <div class="card">
+          <div class="ch"><div class="ct">Open Roles</div><span class="cl">All →</span></div>
+          <div id="open-roles"></div>
+        </div>
+
+        <!-- Hiring metrics — BG-004 mock -->
+        <div class="card" style="flex:1">
+          <div class="ch"><div class="ct">This Month</div></div>
+          <div class="cb-p">
+            <div class="stat-row"><span class="stat-lbl">Applications received</span><span class="stat-val">47</span></div>
+            <div class="stat-row"><span class="stat-lbl">Interviews scheduled</span><span class="stat-val">28</span></div>
+            <div class="stat-row"><span class="stat-lbl">Offers extended</span><span class="stat-val">9</span></div>
+            <div class="stat-row"><span class="stat-lbl">Offers accepted</span><span class="stat-val">7</span></div>
+            <div class="stat-row"><span class="stat-lbl">Hires completed</span><span class="stat-val">6</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Recent candidates table -->
+    <div class="a4">
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Recent Candidate Activity</div><div class="cs">Showing 5 of 142 active</div></div>
+          <span class="cl">View all →</span>
+        </div>
+        <table>
+          <!-- Candidate fields: first_name, last_name, job_posting_id, application_date, status -->
+          <thead><tr><th>Candidate</th><th>Role</th><th>Department</th><th>Applied</th><th>Stage</th><th>Days in Stage</th></tr></thead>
+          <tbody id="candidate-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<script>
+// Pipeline — Hiring.candidate.stage enum values from api-contracts
+// Applied, Interviewing, Offered, NoShow, Completed
+const stages=[
+  {stage:'Applied',count:68,pct:96,col:'#94A3B8'},
+  {stage:'Interviewing',count:48,pct:68,col:'#3B82F6'},
+  {stage:'Offered',count:18,pct:25,col:'#7C3AED'},
+  {stage:'Completed',count:8,pct:11,col:'#16A34A'}
+];
+document.getElementById('pipeline-bars').innerHTML=stages.map(s=>`
+  <div class="pipe-row">
+    <div class="pipe-stage">${s.stage}</div>
+    <div class="pipe-track"><div class="pipe-fill" style="width:0%;background:${s.col}" data-w="${s.pct}"></div></div>
+    <div class="pipe-count">${s.count}</div>
+    <div class="pipe-pct">${s.pct}%</div>
+  </div>`).join('');
+
+// Open roles — JobPosting.status enum: Pending (amber), Draft (grey) per api-contracts
+const roles=[
+  {title:'Senior Backend Engineer',dept:'Engineering',apps:22,s:'Pending',days:18},
+  {title:'Product Manager — Growth',dept:'Product',apps:14,s:'Pending',days:12},
+  {title:'Account Executive EMEA',dept:'Sales',apps:31,s:'Pending',days:8},
+  {title:'FP&A Analyst',dept:'Finance',apps:9,s:'Draft',days:3}
+];
+const rc={Pending:'ca',Draft:'cn',Scheduled:'cb2',OnHold:'ca',Cancelled:'cr'};
+document.getElementById('open-roles').innerHTML=roles.map(r=>`
+  <div class="role-row">
+    <div class="role-body">
+      <div class="role-title">${r.title}</div>
+      <div class="role-meta">${r.dept} · ${r.days}d open</div>
+    </div>
+    <div class="role-right">
+      <span class="chip ${rc[r.s]}">${r.s}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--t4)">${r.apps} applicants</span>
+    </div>
+  </div>`).join('');
+
+// Candidates — Candidate.status (stage) per api-contracts
+const candidates=[
+  {n:'Tariq Al-Rashid',i:'TA',c:'#4F46E5',role:'Sr Backend Engineer',dept:'Engineering',applied:'Mar 18',s:'Interviewing',days:4},
+  {n:'Nina Volkov',i:'NV',c:'#059669',role:'Product Manager',dept:'Product',applied:'Mar 15',s:'Offered',days:2},
+  {n:'James Okafor',i:'JO',c:'#B45309',role:'AE Enterprise EMEA',dept:'Sales',applied:'Mar 12',s:'Completed',days:0},
+  {n:'Aiko Tanaka',i:'AT',c:'#7C3AED',role:'Sr Backend Engineer',dept:'Engineering',applied:'Mar 10',s:'Applied',days:12},
+  {n:'Lars Bergqvist',i:'LB',c:'#0891B2',role:'FP&A Analyst',dept:'Finance',applied:'Mar 08',s:'Interviewing',days:6}
+];
+// Candidate.stage chip colours per api-contracts: Applied (grey), Interviewing (blue), Offered (violet), Completed (green), NoShow (red)
+const cc={Applied:'cn',Interviewing:'cb2',Offered:'cv',Completed:'cg',NoShow:'cr'};
+document.getElementById('candidate-rows').innerHTML=candidates.map(c=>`
+  <tr>
+    <td><div class="p"><div class="pav" style="background:${c.c}">${c.i}</div><div><div class="pn">${c.n}</div></div></div></td>
+    <td style="color:var(--t2);font-weight:500">${c.role}</td>
+    <td style="color:var(--t3)">${c.dept}</td>
+    <td style="font-family:var(--mono);font-size:12px;color:var(--t3)">${c.applied}</td>
+    <td><span class="chip ${cc[c.s]||'cn'}">${c.s}</span></td>
+    <td style="font-family:var(--mono);font-size:12px;color:var(--t4)">${c.days>0?c.days+'d':'—'}</td>
+  </tr>`).join('');
+
+document.querySelectorAll('.sb-a').forEach(el=>el.addEventListener('click',function(){
+  document.querySelectorAll('.sb-a').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+window.addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('.pipe-fill').forEach(el=>{el.style.width=el.dataset.w+'%'});
+},120));
+</script>
+</body>
+</html>

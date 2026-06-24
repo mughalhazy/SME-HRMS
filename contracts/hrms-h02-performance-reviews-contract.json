@@ -1,0 +1,72 @@
+﻿{
+  "_meta": {
+    "id": "h02-performance-reviews", "archetype": "H02 List", "page": "Performance Reviews", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "HR Administrator / Manager",
+    "leads_to": ["H03 Performance Review Detail"],
+    "actions": { "primary": "Export", "secondary": [] }
+  },
+  "api_contract": {
+    "services": ["performance_service"],
+    "endpoints": {
+      "list":    "GET /api/v1/performance/goals?review_cycle_id=&status=&employee_id=&limit=&offset=",
+      "cycles":  "GET /api/v1/performance/review-cycles",
+      "summary": "BG-005: no aggregate — status counts require client-side grouping"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Performance Reviews", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Performance Reviews", "subtitle": "{{cycle_label}} · {{total_count}} reviews",
+        "actions": [{ "label": "Export", "type": "secondary", "icon": "download" }]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 4, "gap_ref": "BG-005",
+        "items": [
+          { "key": "total",       "label": "Total",      "source": "BG-005 mock" },
+          { "key": "open",        "label": "Open",       "source": "BG-005 mock" },
+          { "key": "submitted",   "label": "Submitted",  "source": "BG-005 mock" },
+          { "key": "finalized",   "label": "Finalized",  "source": "BG-005 mock" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",       "filter": null },
+          { "label": "Open",      "filter": "cycle_status=Open" },
+          { "label": "Submitted", "filter": "cycle_status=PendingApproval" },
+          { "label": "Closed",    "filter": "cycle_status=Closed" }
+        ],
+        "filters": [
+          { "key": "review_cycle_id", "label": "Cycle",      "type": "select", "source": "performance_service › ReviewCycle" },
+          { "key": "department_id",   "label": "Department", "type": "select", "source": "employee-service › Department" }
+        ],
+        "search": { "placeholder": "Search employees…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "performance_service › ReviewCycle + GoalRecord (joined, paginated)",
+        "row_action": "navigate → H03 Performance Review Detail",
+        "columns": [
+          { "key": "employee",       "label": "Employee",      "width_pct": 22, "component": "avatar_name_id" },
+          { "key": "cycle_name",     "label": "Review Cycle",  "width_pct": 14 },
+          { "key": "reviewer_name",  "label": "Reviewer",      "width_pct": 18 },
+          { "key": "cycle_status",   "label": "Status",        "width_pct": 12, "component": "chip", "enum_ref": "ref:api-contracts#Performance.cycle_status" },
+          { "key": "due_date",       "label": "Due Date",      "width_pct": 14, "format": "date_short", "font": "mono" },
+          { "key": "goal_count",     "label": "Goals",         "width_pct": 10, "font": "mono" },
+          { "key": "actions",        "label": "",              "width_pct": 10, "component": "row_actions" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

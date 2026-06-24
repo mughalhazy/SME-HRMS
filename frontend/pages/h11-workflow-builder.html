@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Workflow Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+
+/* Shell */
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sb-ico{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--t4);transition:all .12s}
+.sb-ico:hover{background:var(--bg);color:var(--t2)}.sb-ico.on{background:var(--tl);color:var(--teal)}
+.sb-ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 0 0 18px;gap:0;flex-shrink:0}
+.tb-brand{display:flex;align-items:center;gap:7px;padding-right:18px;border-right:1px solid var(--bd)}
+.tb-brand-name{font-size:13.5px;font-weight:700;color:var(--t1)}
+.tb-brand-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--tl);color:var(--teal);font-family:var(--mono)}
+.tb-meta{display:flex;align-items:center;gap:9px;padding:0 18px;flex:1}
+.tb-name{font-size:13px;font-weight:600;color:var(--t1)}
+.tb-switcher{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r);border:1px solid var(--bd);background:var(--bg);font-size:12px;color:var(--t3);cursor:pointer;transition:all .12s}
+.tb-switcher:hover{border-color:#CBD5E1;background:var(--w)}
+.tb-switcher svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tb-status{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--grn2)}
+.tb-status-dot{width:6px;height:6px;border-radius:50%;background:var(--grn2);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.35)}50%{box-shadow:0 0 0 5px rgba(22,163,74,0)}}
+.tb-vd{width:1px;height:18px;background:var(--bd);flex-shrink:0;margin:0 4px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--t3)}.btn-ghost:hover{background:var(--bg);color:var(--t1);border-color:var(--bd)}
+.tb-actions{display:flex;align-items:center;gap:6px;padding:0 18px}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+
+/* P-07 chip */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.cg{background:var(--gl);color:var(--grn)}
+.ca{background:var(--al);color:var(--amber)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}
+.ct{background:var(--tl);color:var(--teal)}
+
+/* Builder layout — P-32 */
+.builder{flex:1;overflow:hidden;display:grid;grid-template-columns:248px 1fr 272px;min-height:0}
+
+/* ── PALETTE ── */
+.palette{background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.pal-head{padding:12px 14px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.pal-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:9px}
+.pal-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;transition:all .14s}
+.pal-srch:focus-within{border-color:var(--teal);background:var(--w)}
+.pal-srch input{background:none;border:none;outline:none;font-size:12px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.pal-srch input::placeholder{color:var(--t4)}
+.pal-srch svg{width:12px;height:12px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.pal-body{flex:1;overflow-y:auto;min-height:0;padding:10px 10px 12vh}
+.pal-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:8px 6px 5px;display:block}
+.pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px}
+.pal-comp{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:9px 8px;cursor:grab;transition:all .14s;text-align:center;user-select:none}
+.pal-comp:hover{background:var(--tl);border-color:var(--tb);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.pal-comp:active{cursor:grabbing;transform:scale(.97)}
+.pal-comp-icon{font-size:17px;margin-bottom:4px}
+.pal-comp-label{font-size:11px;font-weight:600;color:var(--t2)}
+.pal-comp-sub{font-size:10px;color:var(--t4);margin-top:1px}
+.pal-comp-chrome{opacity:.6}
+
+/* ── CANVAS ── */
+.canvas-wrap{display:flex;flex-direction:column;background:#EEF1F6;overflow:hidden;min-height:0}
+.canvas-toolbar{background:var(--w);border-bottom:1px solid var(--bd);padding:8px 16px;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.ct-sp{flex:1}
+.view-sel{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:3px}
+.vs-btn{padding:4px 12px;border-radius:5px;font-size:12px;font-weight:500;color:var(--t3);cursor:pointer;transition:all .12s;user-select:none}
+.vs-btn:hover{color:var(--t1)}.vs-btn.on{background:var(--w);color:var(--t1);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.zoom-ctrl{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--t3)}
+.zoom-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--t3);transition:all .12s;line-height:1}
+.zoom-btn:hover{background:var(--bg);color:var(--t1)}
+.zoom-val{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t2);padding:0 6px;min-width:36px;text-align:center}
+.canvas-area{flex:1;overflow:auto;min-height:0;padding:24px 24px 12vh}
+.canvas-frame{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);min-height:520px;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden;position:relative;transition:transform .1s}
+
+/* Canvas sections */
+.cs{border-bottom:1px solid var(--bd);padding:16px 20px;cursor:pointer;transition:background .09s;position:relative}
+.cs:last-child{border-bottom:none}
+.cs:hover{background:#FAFBFD}.cs:hover .cs-controls{opacity:1}
+.cs.sel{background:var(--tl);border-left:3px solid var(--teal)}
+.cs-header{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.cs-header-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cs-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:auto;font-family:var(--mono)}
+.cs-controls{position:absolute;top:10px;right:10px;display:flex;gap:4px;opacity:0;transition:opacity .12s;z-index:2}
+.cs-ctrl{width:22px;height:22px;border-radius:4px;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;font-size:11px;font-weight:600;line-height:1}
+.cs-ctrl:hover{background:var(--bg);color:var(--t1)}
+.cs-ctrl.del:hover{background:var(--rl);color:var(--red);border-color:#FECACA}
+
+/* Form fields in canvas */
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cf-full{grid-column:1/-1}
+.cf-group{display:flex;flex-direction:column;gap:4px}
+.cf-label{font-size:11.5px;font-weight:600;color:var(--t2)}
+.cf-req{color:var(--red2);margin-left:2px}
+.cf-input{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12.5px;color:var(--t1);font-family:'Inter',sans-serif;background:var(--w);outline:none;pointer-events:none}
+.cf-select{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12.5px;color:var(--t1);background:var(--w);pointer-events:none}
+.cf-textarea{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12.5px;color:var(--t1);font-family:'Inter',sans-serif;background:var(--w);height:64px;resize:none;pointer-events:none}
+.cf-hint{font-size:10.5px;color:var(--t4);margin-top:2px}
+
+/* Logic blocks */
+.cond-block{background:var(--al);border:1px solid #FCD34D;border-radius:var(--r);padding:12px 14px}
+.cond-lbl{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.cond-rule{font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:5px;padding:6px 10px;background:rgba(255,255,255,.5);border-radius:5px}
+.cond-rule:last-child{margin-bottom:0}
+.cond-rule strong{font-weight:700;color:var(--t1)}
+.action-block{display:flex;align-items:center;gap:10px;background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);padding:11px 13px}
+.action-icon{font-size:18px;flex-shrink:0}
+.action-title{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.action-sub{font-size:11.5px;color:var(--t3)}
+.sla-block{display:flex;align-items:center;gap:10px;background:var(--rl);border:1px solid #FECACA;border-radius:var(--r);padding:11px 13px}
+.ai-block{display:flex;align-items:center;gap:10px;background:var(--gl);border:1px solid #86EFAC;border-radius:var(--r);padding:11px 13px}
+
+/* Drop zone */
+.drop-zone{border:2px dashed var(--bd);border-radius:var(--r2);padding:18px;text-align:center;color:var(--t4);font-size:12.5px;margin:12px 16px 16px;cursor:pointer;transition:all .14s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.drop-zone:hover{border-color:var(--teal);background:var(--tl);color:var(--teal)}
+.drop-zone svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── PROPERTIES ── */
+.props{background:var(--w);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.props-head{padding:13px 16px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.props-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.props-sub{font-size:11.5px;color:var(--t4)}
+.props-body{flex:1;overflow-y:auto;min-height:0;padding-bottom:12vh}
+.prop-sec{padding:13px 16px;border-bottom:1px solid var(--bd)}
+.prop-sec-t{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:10px}
+.prop-row{margin-bottom:10px}.prop-row:last-child{margin-bottom:0}
+.prop-row label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12.5px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s,box-shadow .14s}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:60px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.toggle-row:last-child{margin-bottom:0}
+.toggle-lbl{font-size:12.5px;color:var(--t2)}
+.toggle{width:34px;height:18px;background:var(--bd);border-radius:99px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--teal)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle.on::after{transform:translateX(16px)}
+.swatch-row{display:flex;gap:6px;margin-top:6px}
+.swatch{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .12s}
+.swatch:hover{transform:scale(1.15)}.swatch.on{border-color:var(--t1)}
+.drag-list{display:flex;flex-direction:column;gap:5px}
+.drag-item{display:flex;align-items:center;gap:7px;padding:7px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);cursor:grab;font-size:12.5px;color:var(--t2);user-select:none;transition:all .12s}
+.drag-item:hover{background:var(--tl);border-color:var(--tb)}
+.drag-item.active-drag{background:var(--tl);border-color:var(--teal);font-weight:600;color:var(--teal)}
+.drag-handle{color:var(--t4);font-size:13px;flex-shrink:0}
+.drag-lbl{flex:1}
+.drag-del{color:var(--t4);font-size:14px;cursor:pointer;padding:0 2px;transition:color .12s}
+.drag-del:hover{color:var(--red2)}
+.cond-item{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:9px 11px;margin-bottom:6px}
+.cond-item:last-child{margin-bottom:0}
+.cond-if-lbl{font-size:9.5px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.cond-txt{font-size:12px;color:var(--t2)}
+.prop-hint{font-size:11px;color:var(--t4);margin-top:4px;line-height:1.5}
+
+/* Builder footer */
+.builder-footer{background:var(--w);border-top:1px solid var(--bd);padding:11px 16px;display:flex;align-items:center;gap:9px;flex-shrink:0}
+.bf-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--grn2);font-weight:500}
+.bf-sp{flex:1}
+.bf-meta{font-size:12px;color:var(--t4);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-ico on"><svg viewBox="0 0 24 24"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"/><line x1="3" y1="22" x2="21" y2="22"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="tb-brand">
+      <span class="tb-brand-name">Workflow Builder</span>
+      <span class="tb-brand-badge">v2.1</span>
+    </div>
+    <div class="tb-meta">
+      <span class="tb-name">Leave Approval Flow</span>
+      <div class="tb-switcher" title="BG-028 — no definition list API">
+        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        leave-approval
+      </div>
+      <div class="tb-vd"></div>
+      <div class="tb-status"><div class="tb-status-dot"></div>Auto-saved</div>
+      <div style="font-size:11.5px;color:var(--t4);font-family:var(--mono)">workflow_service · source: leave_service · subject: leave_request</div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn btn-ghost btn-sm"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>Undo</button>
+      <button class="btn btn-ghost btn-sm"><svg viewBox="0 0 24 24"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 014-4h12"/></svg>Redo</button>
+      <div class="tb-vd"></div>
+      <button class="btn btn-sm"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Test Flow</button>
+      <button class="btn btn-sm">Version History</button>
+      <button class="btn btn-sm">Preview</button>
+      <button class="btn btn-p btn-sm"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Publish</button>
+      <div class="tav">AW</div>
+    </div>
+  </div>
+
+  <div class="builder">
+
+    <!-- ── PALETTE ── -->
+    <div class="palette">
+      <div class="pal-head">
+        <div class="pal-title">Components</div>
+        <div class="pal-srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search components…" id="pal-search" oninput="filterPalette(this.value)"></div>
+      </div>
+      <div class="pal-body">
+
+        <span class="pal-sec">Workflow Logic</span>
+        <div class="pal-grid" id="pal-logic">
+          <div class="pal-comp" data-label="Approval" onclick="addSection('approval')">
+            <div class="pal-comp-icon">✋</div>
+            <div class="pal-comp-label">Approval</div>
+            <div class="pal-comp-sub">workflow_service step</div>
+          </div>
+          <div class="pal-comp" data-label="Condition" onclick="addSection('condition')">
+            <div class="pal-comp-icon">🔀</div>
+            <div class="pal-comp-label">Condition</div>
+            <div class="pal-comp-sub">condition_key</div>
+          </div>
+          <div class="pal-comp" data-label="SLA Timer" onclick="addSection('sla')">
+            <div class="pal-comp-icon">⏱️</div>
+            <div class="pal-comp-label">SLA Timer</div>
+            <div class="pal-comp-sub">step.sla (ISO 8601)</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="AI Action" title="BG-029 — not in workflow_service schema">
+            <div class="pal-comp-icon">🤖</div>
+            <div class="pal-comp-label">AI Action</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+        </div>
+
+        <span class="pal-sec">Form Fields <span style="font-size:9px;font-weight:400;color:var(--t4);text-transform:none;letter-spacing:0">— BG-029</span></span>
+        <div class="pal-grid" id="pal-form">
+          <div class="pal-comp pal-comp-chrome" data-label="Text Input" title="BG-029 — no form schema in workflow_service">
+            <div class="pal-comp-icon">📝</div>
+            <div class="pal-comp-label">Text Input</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Text Area" title="BG-029">
+            <div class="pal-comp-icon">📋</div>
+            <div class="pal-comp-label">Text Area</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Date Picker" title="BG-029">
+            <div class="pal-comp-icon">📅</div>
+            <div class="pal-comp-label">Date Picker</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Dropdown" title="BG-029">
+            <div class="pal-comp-icon">🔽</div>
+            <div class="pal-comp-label">Dropdown</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Radio Group" title="BG-029">
+            <div class="pal-comp-icon">⚪</div>
+            <div class="pal-comp-label">Radio Group</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Checkbox" title="BG-029">
+            <div class="pal-comp-icon">☑️</div>
+            <div class="pal-comp-label">Checkbox</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="File Upload" title="BG-029">
+            <div class="pal-comp-icon">📎</div>
+            <div class="pal-comp-label">File Upload</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Rating" title="BG-029">
+            <div class="pal-comp-icon">⭐</div>
+            <div class="pal-comp-label">Rating</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+        </div>
+
+        <span class="pal-sec">Notifications <span style="font-size:9px;font-weight:400;color:var(--t4);text-transform:none;letter-spacing:0">— BG-028</span></span>
+        <div class="pal-grid" id="pal-notif">
+          <div class="pal-comp pal-comp-chrome" data-label="Email" title="BG-028 — no notification step model in workflow_service">
+            <div class="pal-comp-icon">📧</div>
+            <div class="pal-comp-label">Email</div>
+            <div class="pal-comp-sub">Chrome · BG-028</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Slack" title="BG-028">
+            <div class="pal-comp-icon">💬</div>
+            <div class="pal-comp-label">Slack</div>
+            <div class="pal-comp-sub">Chrome · BG-028</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Webhook" title="BG-028">
+            <div class="pal-comp-icon">🔗</div>
+            <div class="pal-comp-label">Webhook</div>
+            <div class="pal-comp-sub">Chrome · BG-028</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="SMS" title="BG-028">
+            <div class="pal-comp-icon">📱</div>
+            <div class="pal-comp-label">SMS</div>
+            <div class="pal-comp-sub">Chrome · BG-028</div>
+          </div>
+        </div>
+
+        <span class="pal-sec">Layout</span>
+        <div class="pal-grid" id="pal-layout">
+          <div class="pal-comp" data-label="Section" onclick="addSection('section')">
+            <div class="pal-comp-icon">📦</div>
+            <div class="pal-comp-label">Section</div>
+            <div class="pal-comp-sub">Group fields</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Divider" title="BG-029">
+            <div class="pal-comp-icon">—</div>
+            <div class="pal-comp-label">Divider</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Info Box" title="BG-029">
+            <div class="pal-comp-icon">ℹ️</div>
+            <div class="pal-comp-label">Info Box</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+          <div class="pal-comp pal-comp-chrome" data-label="Calc Field" title="BG-029">
+            <div class="pal-comp-icon">🔢</div>
+            <div class="pal-comp-label">Calc Field</div>
+            <div class="pal-comp-sub">Chrome · BG-029</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── CANVAS ── -->
+    <div class="canvas-wrap">
+      <div class="canvas-toolbar">
+        <div class="view-sel">
+          <div class="vs-btn on" onclick="setVS(this,'form')">Form</div>
+          <div class="vs-btn" onclick="setVS(this,'flow')">Flow</div>
+          <div class="vs-btn" onclick="setVS(this,'preview')">Preview</div>
+        </div>
+        <div class="ct-sp"></div>
+        <div class="zoom-ctrl">
+          <div class="zoom-btn" onclick="zoom(-10)">−</div>
+          <div class="zoom-val" id="zoom-val">100%</div>
+          <div class="zoom-btn" onclick="zoom(10)">+</div>
+        </div>
+        <div class="tb-vd"></div>
+        <button class="btn btn-ghost btn-sm"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Grid</button>
+        <button class="btn btn-ghost btn-sm" onclick="zoom(0, true)"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Fit</button>
+      </div>
+      <div class="canvas-area">
+        <div class="canvas-frame" id="canvas-frame">
+
+          <!-- Section 1 — Leave Details (form fields — BG-029 chrome) -->
+          <div class="cs sel" id="cs-s1" onclick="selSection(this,'s1')">
+            <div class="cs-controls">
+              <div class="cs-ctrl" title="Move up">↑</div>
+              <div class="cs-ctrl" title="Move down">↓</div>
+              <div class="cs-ctrl" title="Duplicate">⊕</div>
+              <div class="cs-ctrl del" title="Delete">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--teal)"></div>
+              Section 1 — Leave Details
+              <span class="chip ca cs-badge">BG-029 Chrome</span>
+            </div>
+            <div class="cf-grid">
+              <div class="cf-group">
+                <div class="cf-label">Leave Type <span class="cf-req">*</span></div>
+                <select class="cf-select"><option>Annual Leave</option><option>Sick Leave</option><option>Casual Leave</option><option>Unpaid Leave</option><option>Parental Leave</option></select>
+                <div class="cf-hint">LeavePolicyType from settings-service</div>
+              </div>
+              <div class="cf-group">
+                <div class="cf-label">Duration <span class="cf-req">*</span></div>
+                <select class="cf-select"><option>Half day</option><option>Full day</option><option>Multiple days</option></select>
+              </div>
+              <div class="cf-group">
+                <div class="cf-label">Start Date <span class="cf-req">*</span></div>
+                <input class="cf-input" type="text" value="Apr 7, 2026" readonly>
+              </div>
+              <div class="cf-group">
+                <div class="cf-label">End Date <span class="cf-req">*</span></div>
+                <input class="cf-input" type="text" value="Apr 10, 2026" readonly>
+              </div>
+              <div class="cf-group cf-full">
+                <div class="cf-label">Reason / Notes</div>
+                <textarea class="cf-textarea" readonly placeholder="Optional — reason for leave request…"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2 — Approval Routing (WorkflowDefinition.steps) -->
+          <div class="cs" id="cs-s2" onclick="selSection(this,'s2')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--amber2)"></div>
+              Section 2 — Approval Routing
+              <span class="chip ct cs-badge">steps[] · condition_key</span>
+            </div>
+            <div class="cond-block">
+              <div class="cond-lbl">Condition Logic — workflow_service step.metadata.condition_key</div>
+              <div class="cond-rule"><strong>IF</strong> duration &gt; 5 days → Route to <strong>role:dept-head</strong> AND <strong>role:hr-manager</strong> (parallel)</div>
+              <div class="cond-rule"><strong>ELSE IF</strong> leave_type = Sick → Route to <strong>role:manager</strong> only</div>
+              <div class="cond-rule"><strong>ELSE</strong> → Route to <strong>role:manager</strong> only (sequence 1)</div>
+            </div>
+          </div>
+
+          <!-- Section 3 — Notification (chrome — BG-028) -->
+          <div class="cs" id="cs-s3" onclick="selSection(this,'s3')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--blue2)"></div>
+              Section 3 — Auto Notification
+              <span class="chip ca cs-badge">BG-028 Chrome</span>
+            </div>
+            <div class="action-block">
+              <div class="action-icon">📧</div>
+              <div>
+                <div class="action-title">Notification on submit</div>
+                <div class="action-sub">Email: Employee + Manager · Slack: #hr-leaves · Triggered on WorkflowInstanceCreated event</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4 — SLA & Escalation (step.sla) -->
+          <div class="cs" id="cs-s4" onclick="selSection(this,'s4')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--red2)"></div>
+              Section 4 — SLA & Escalation
+              <span class="chip ct cs-badge">step.sla · ISO 8601</span>
+            </div>
+            <div class="sla-block">
+              <div class="action-icon">⏱️</div>
+              <div>
+                <div class="action-title" style="color:var(--red)">SLA: P5D (5 business days)</div>
+                <div class="action-sub" style="color:var(--red)">workflow_service step.sla = "P5D" · Escalate to escalation_assignee_template: role:hr-director · Auto-flag in Inbox</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5 — AI Pre-check (chrome — BG-029) -->
+          <div class="cs" id="cs-s5" onclick="selSection(this,'s5')">
+            <div class="cs-controls">
+              <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+            </div>
+            <div class="cs-header">
+              <div class="cs-header-dot" style="background:var(--grn2)"></div>
+              Section 5 — AI Pre-check
+              <span class="chip ca cs-badge">BG-029 Chrome</span>
+            </div>
+            <div class="ai-block">
+              <div class="action-icon">🤖</div>
+              <div>
+                <div class="action-title">AI Risk Assessment</div>
+                <div class="action-sub">Check team coverage, leave balance, and abuse patterns before routing to approver · Not modeled in workflow_service step schema</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drop zone -->
+          <div class="drop-zone" onclick="addSection('approval')">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Drop a component here or click to add a step
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROPERTIES ── -->
+    <div class="props">
+      <div class="props-head">
+        <div class="props-title" id="props-title">Section 1 — Leave Details</div>
+        <div class="props-sub" id="props-sub">Form section · 5 fields · Chrome (BG-029)</div>
+      </div>
+      <div class="props-body" id="props-body">
+
+        <!-- Default: s1 properties -->
+        <div class="prop-sec">
+          <div class="prop-sec-t">Section Settings</div>
+          <div class="prop-row"><label>Section Label</label><input type="text" value="Leave Details"></div>
+          <div class="prop-row"><label>Helper Text</label><input type="text" placeholder="Shown below section title…"></div>
+          <div class="toggle-row"><span class="toggle-lbl">Collapsible</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+          <div class="toggle-row"><span class="toggle-lbl">Required to complete</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+
+        <div class="prop-sec">
+          <div class="prop-sec-t">Accent Colour</div>
+          <div class="swatch-row">
+            <div class="swatch on" style="background:var(--teal)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--blue2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--violet2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--amber2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--grn2)" onclick="setSwatch(this)"></div>
+            <div class="swatch" style="background:var(--t4)" onclick="setSwatch(this)"></div>
+          </div>
+        </div>
+
+        <div class="prop-sec">
+          <div class="prop-sec-t">Field Order <span style="font-size:9.5px;font-weight:400;color:var(--t4);text-transform:none;letter-spacing:0">— BG-029 chrome</span></div>
+          <div class="drag-list">
+            <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Leave Type</span><span class="drag-del">✕</span></div>
+            <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Duration</span><span class="drag-del">✕</span></div>
+            <div class="drag-item active-drag"><span class="drag-handle">⠿</span><span class="drag-lbl">Start Date</span><span class="drag-del">✕</span></div>
+            <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">End Date</span><span class="drag-del">✕</span></div>
+            <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Reason / Notes</span><span class="drag-del">✕</span></div>
+          </div>
+        </div>
+
+        <div class="prop-sec">
+          <div class="prop-sec-t">Visibility Rules</div>
+          <div class="cond-item"><div class="cond-if-lbl">Show if</div><div class="cond-txt">Employee type = Full-time OR Fixed-term</div></div>
+          <div class="cond-item"><div class="cond-if-lbl">Hide if</div><div class="cond-txt">Employment status = Contractor</div></div>
+          <button class="btn btn-sm" style="margin-top:8px;width:100%;justify-content:center"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Condition</button>
+        </div>
+
+        <div class="prop-sec">
+          <div class="prop-sec-t">Validation</div>
+          <div class="toggle-row"><span class="toggle-lbl">Min advance notice</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="prop-row" style="margin-top:8px"><label>Minimum days notice</label><input type="number" value="1" min="0"></div>
+          <div class="prop-row"><label>Max days per request</label><input type="number" value="30" min="1"></div>
+        </div>
+
+      </div>
+
+      <div class="builder-footer">
+        <div class="bf-status"><div class="tb-status-dot"></div>All changes saved</div>
+        <div class="bf-sp"></div>
+        <div class="bf-meta" id="footer-meta">5 sections · 7 fields · 3 conditions</div>
+      </div>
+    </div>
+
+  </div><!-- /builder -->
+</main>
+</div>
+
+<script>
+/* ── Section property configs ─────────────────────────── */
+const PROP_PANELS = {
+  s1: {
+    title: 'Section 1 — Leave Details',
+    sub: 'Form section · 5 fields · Chrome (BG-029)',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">Section Settings</div>
+        <div class="prop-row"><label>Section Label</label><input type="text" value="Leave Details"></div>
+        <div class="prop-row"><label>Helper Text</label><input type="text" placeholder="Shown below section title…"></div>
+        <div class="toggle-row"><span class="toggle-lbl">Collapsible</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Required to complete</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Accent Colour</div>
+        <div class="swatch-row">
+          <div class="swatch on" style="background:var(--teal)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--blue2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--violet2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--amber2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--grn2)" onclick="setSwatch(this)"></div>
+          <div class="swatch" style="background:var(--t4)" onclick="setSwatch(this)"></div>
+        </div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Field Order <span style="font-size:9.5px;font-weight:400;color:var(--t4);text-transform:none;letter-spacing:0">— BG-029 chrome</span></div>
+        <div class="drag-list">
+          <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Leave Type</span><span class="drag-del">✕</span></div>
+          <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Duration</span><span class="drag-del">✕</span></div>
+          <div class="drag-item active-drag"><span class="drag-handle">⠿</span><span class="drag-lbl">Start Date</span><span class="drag-del">✕</span></div>
+          <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">End Date</span><span class="drag-del">✕</span></div>
+          <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Reason / Notes</span><span class="drag-del">✕</span></div>
+        </div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Visibility Rules</div>
+        <div class="cond-item"><div class="cond-if-lbl">Show if</div><div class="cond-txt">Employee type = Full-time OR Fixed-term</div></div>
+        <div class="cond-item"><div class="cond-if-lbl">Hide if</div><div class="cond-txt">Employment status = Contractor</div></div>
+        <button class="btn btn-sm" style="margin-top:8px;width:100%;justify-content:center"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Condition</button>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Validation</div>
+        <div class="toggle-row"><span class="toggle-lbl">Min advance notice</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="prop-row" style="margin-top:8px"><label>Minimum days notice</label><input type="number" value="1" min="0"></div>
+        <div class="prop-row"><label>Max days per request</label><input type="number" value="30" min="1"></div>
+      </div>`
+  },
+  s2: {
+    title: 'Section 2 — Approval Routing',
+    sub: 'workflow_service · WorkflowDefinition.steps[] · condition_key',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">Step Settings — workflow_service</div>
+        <div class="prop-row"><label>Step Name</label><input type="text" value="manager-approval"></div>
+        <div class="prop-row">
+          <label>Step Type</label>
+          <select><option selected>approval</option></select>
+          <div class="prop-hint">WorkflowDefinition.steps[].type — only "approval" supported</div>
+        </div>
+        <div class="prop-row">
+          <label>Assignee</label>
+          <input type="text" value="role:manager">
+          <div class="prop-hint">WorkflowDefinition.steps[].assignee — "role:{code}" or "employee:{id}"</div>
+        </div>
+        <div class="prop-row">
+          <label>SLA Duration (ISO 8601)</label>
+          <input type="text" value="P5D">
+          <div class="prop-hint">WorkflowDefinition.steps[].sla — e.g. PT24H (24 hrs) · P5D (5 days)</div>
+        </div>
+        <div class="prop-row">
+          <label>Escalation Assignee</label>
+          <input type="text" value="role:hr-director">
+          <div class="prop-hint">step.metadata.escalation_assignee_template</div>
+        </div>
+        <div class="prop-row">
+          <label>Sequence</label>
+          <input type="number" value="1" min="1">
+          <div class="prop-hint">step.metadata.sequence — order of execution</div>
+        </div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Parallel Group</div>
+        <div class="toggle-row"><span class="toggle-lbl">Enable parallel approval</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="prop-row" style="margin-top:8px"><label>Group ID</label><input type="text" placeholder="e.g. parallel-group-1"><div class="prop-hint">step.metadata.parallel_group</div></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Condition Rules — metadata.condition_key</div>
+        <div class="cond-item"><div class="cond-if-lbl">If</div><div class="cond-txt">duration &gt; 5 → add step: dept-head (parallel)</div></div>
+        <div class="cond-item"><div class="cond-if-lbl">If</div><div class="cond-txt">leave_type = Sick → skip dept-head step</div></div>
+        <button class="btn btn-sm" style="margin-top:8px;width:100%;justify-content:center"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Rule</button>
+      </div>`
+  },
+  s3: {
+    title: 'Section 3 — Auto Notification',
+    sub: 'Notification action · Chrome (BG-028) · triggered on WorkflowInstanceCreated',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">Trigger Event</div>
+        <div class="prop-row">
+          <label>Fire on event</label>
+          <select><option selected>WorkflowInstanceCreated</option><option>WorkflowTaskAssigned</option><option>WorkflowInstanceCompleted</option></select>
+          <div class="prop-hint">workflow_service emits these events to notification_service automatically</div>
+        </div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Channels — Chrome (BG-028)</div>
+        <div class="toggle-row"><span class="toggle-lbl">Email</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Slack</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">In-app</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">SMS</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="prop-hint" style="margin-top:6px">No notification step model in workflow_service — channels are configured in notification_service independently of workflow definitions</div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Recipients</div>
+        <div class="drag-list">
+          <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Employee (submitter)</span><span class="drag-del">✕</span></div>
+          <div class="drag-item"><span class="drag-handle">⠿</span><span class="drag-lbl">Direct Manager</span><span class="drag-del">✕</span></div>
+        </div>
+        <button class="btn btn-sm" style="margin-top:8px;width:100%;justify-content:center"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Recipient</button>
+      </div>`
+  },
+  s4: {
+    title: 'Section 4 — SLA & Escalation',
+    sub: 'workflow_service · step.sla (ISO 8601) · escalation_assignee_template',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">SLA Configuration — workflow_service</div>
+        <div class="prop-row">
+          <label>SLA Duration</label>
+          <input type="text" value="P5D">
+          <div class="prop-hint">ISO 8601 duration · step.sla — PT24H = 24 hrs · P5D = 5 days · P2W = 2 weeks</div>
+        </div>
+        <div class="prop-row">
+          <label>Escalation Assignee</label>
+          <input type="text" value="role:hr-director">
+          <div class="prop-hint">step.metadata.escalation_assignee_template — triggered by escalate_due_workflows()</div>
+        </div>
+        <div class="toggle-row" style="margin-top:8px"><span class="toggle-lbl">Notify employee on SLA breach</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Flag in Approval Inbox</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Escalation Behaviour</div>
+        <div class="prop-row">
+          <label>Escalation Action</label>
+          <select><option selected>Re-assign to escalation_assignee</option><option>Add escalation_assignee as parallel approver</option><option>Auto-approve</option><option>Auto-reject</option></select>
+        </div>
+        <div class="prop-row">
+          <label>Max Escalations</label>
+          <input type="number" value="2" min="1">
+        </div>
+      </div>`
+  },
+  s5: {
+    title: 'Section 5 — AI Pre-check',
+    sub: 'AI action block · Chrome (BG-029) · not in workflow_service step schema',
+    html: `
+      <div class="prop-sec">
+        <div class="prop-sec-t">AI Checks — Chrome (BG-029)</div>
+        <div class="toggle-row"><span class="toggle-lbl">Team coverage check</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Leave balance check</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Abuse pattern detection</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><span class="toggle-lbl">Block if team &lt; 30% available</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="prop-hint" style="margin-top:8px">AI pre-check is not modeled in workflow_service step schema. Needs BG-029 FormSchema or a dedicated AI step type to be implemented.</div>
+      </div>
+      <div class="prop-sec">
+        <div class="prop-sec-t">Risk Threshold</div>
+        <div class="prop-row">
+          <label>Minimum confidence to pass</label>
+          <select><option>60% — Flag most</option><option selected>75% — Balanced</option><option>90% — Block only high-risk</option></select>
+        </div>
+        <div class="prop-row">
+          <label>Action on high risk</label>
+          <select><option selected>Add warning to approver</option><option>Block submission</option><option>Require manager override</option></select>
+        </div>
+      </div>`
+  }
+};
+
+/* ── State ───────────────────────────────────────────── */
+let selectedSection = 's1';
+let zoomLevel = 100;
+let sectionCount = 5;
+
+/* ── Section selection ───────────────────────────────── */
+function selSection(el, key) {
+  document.querySelectorAll('.cs').forEach(s => s.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedSection = key;
+  const cfg = PROP_PANELS[key] || { title:'Properties', sub:'Select a section to edit', html:'' };
+  document.getElementById('props-title').textContent = cfg.title;
+  document.getElementById('props-sub').textContent = cfg.sub;
+  document.getElementById('props-body').innerHTML = cfg.html + `
+    <div class="builder-footer" style="border-top:1px solid var(--bd);padding:11px 16px;display:flex;align-items:center;gap:9px">
+      <div class="bf-status"><div class="tb-status-dot"></div>All changes saved</div>
+      <div class="bf-sp"></div>
+      <div class="bf-meta">${sectionCount} sections · 7 fields · 3 conditions</div>
+    </div>`;
+}
+
+/* ── Add section ─────────────────────────────────────── */
+function addSection(type) {
+  sectionCount++;
+  const frame = document.getElementById('canvas-frame');
+  const dz = frame.querySelector('.drop-zone');
+  const newId = 's' + (Date.now());
+  const labels = { approval:'Approval Step', condition:'Condition Block', sla:'SLA Timer', section:'New Section' };
+  const colors = { approval:'var(--teal)', condition:'var(--amber2)', sla:'var(--red2)', section:'var(--blue2)' };
+  const el = document.createElement('div');
+  el.className = 'cs';
+  el.id = 'cs-' + newId;
+  el.setAttribute('onclick', `selSection(this,'${newId}')`);
+  el.innerHTML = `
+    <div class="cs-controls">
+      <div class="cs-ctrl">↑</div><div class="cs-ctrl">↓</div><div class="cs-ctrl">⊕</div><div class="cs-ctrl del">✕</div>
+    </div>
+    <div class="cs-header">
+      <div class="cs-header-dot" style="background:${colors[type]||'var(--teal)'}"></div>
+      Section ${sectionCount} — ${labels[type]||'New Section'}
+    </div>
+    <div style="padding:10px 0;color:var(--t4);font-size:12.5px">Configure in the Properties panel →</div>`;
+  PROP_PANELS[newId] = { title:`Section ${sectionCount} — ${labels[type]}`, sub:`${type} · workflow_service step`, html:PROP_PANELS['s2'].html };
+  frame.insertBefore(el, dz);
+  selSection(el, newId);
+  document.getElementById('footer-meta').textContent = `${sectionCount} sections · 7 fields · 3 conditions`;
+}
+
+/* ── Zoom ────────────────────────────────────────────── */
+function zoom(delta, fit) {
+  if (fit) { zoomLevel = 100; }
+  else { zoomLevel = Math.max(50, Math.min(200, zoomLevel + delta)); }
+  document.getElementById('zoom-val').textContent = zoomLevel + '%';
+  const frame = document.getElementById('canvas-frame');
+  frame.style.transform = `scale(${zoomLevel/100})`;
+  frame.style.transformOrigin = 'top center';
+}
+
+/* ── View switcher ───────────────────────────────────── */
+function setVS(el) {
+  document.querySelectorAll('.vs-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+}
+
+/* ── Swatch picker ───────────────────────────────────── */
+function setSwatch(el) {
+  el.closest('.swatch-row').querySelectorAll('.swatch').forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+}
+
+/* ── Palette search ──────────────────────────────────── */
+function filterPalette(q) {
+  const lower = q.toLowerCase();
+  document.querySelectorAll('.pal-comp').forEach(c => {
+    const lbl = c.dataset.label || '';
+    c.style.display = (!q || lbl.toLowerCase().includes(lower)) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

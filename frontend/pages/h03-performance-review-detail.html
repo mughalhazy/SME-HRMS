@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Performance Review Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;--grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;--blue:#1D4ED8;--bl:#DBEAFE;--violet:#7C3AED;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.page{flex:1;overflow-y:auto;min-height:0}
+.prof-head{background:var(--w);border-bottom:1px solid var(--bd);padding:22px 26px 0;position:sticky;top:0;z-index:10}
+.ph-row{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px}
+.ph-av{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px var(--w),0 0 0 5px var(--bd)}
+.ph-info{flex:1}.ph-name{font-size:20px;font-weight:700;color:var(--t1);letter-spacing:-0.025em;margin-bottom:3px}
+.ph-role{font-size:13px;color:var(--t3);margin-bottom:10px}
+.ph-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.cv{background:var(--vl);color:var(--violet)}.cv::before{background:var(--violet)}
+.ctl{background:var(--tl);color:var(--teal)}.ctl::before{background:var(--teal)}
+/* tabs */
+.ptabs{display:flex;gap:0;border-bottom:1px solid var(--bd);padding:0 26px;flex-shrink:0}
+.ptab{padding:10px 14px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s;white-space:nowrap}
+.ptab:hover{color:var(--t1)}.ptab.on{color:var(--teal);font-weight:600;border-bottom-color:var(--teal)}
+.tab-panels{display:block}
+.tab-panel{display:none}.tab-panel.on{display:block}
+.tab-scroll{display:block;padding:22px 26px 12vh}
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct2{font-size:13px;font-weight:700;color:var(--t1)}
+.cb2{padding:16px 17px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 20px}
+.field label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block}
+.field .val{font-size:13px;color:var(--t1);font-weight:500}
+.sep-line{height:1px;background:var(--bd);margin:13px 0}
+.detail-grid{display:grid;grid-template-columns:1fr 292px;gap:16px;align-items:start}
+/* kpi strip */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:14px 15px}
+.kpi-val{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-0.02em;margin-bottom:2px}
+.kpi-lbl{font-size:11px;color:var(--t3);font-weight:500}
+/* progress bar */
+.prog-row{margin-bottom:12px}.prog-row:last-child{margin-bottom:0}
+.prog-head{display:flex;justify-content:space-between;margin-bottom:4px}
+.prog-lbl{font-size:12.5px;font-weight:500;color:var(--t2)}
+.prog-pct{font-size:12px;font-weight:600;font-family:var(--mono);color:var(--teal)}
+.prog-bar{height:6px;background:var(--t5);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;background:var(--teal)}
+/* goal row */
+.goal-row{display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid var(--t5)}
+.goal-row:last-child{border-bottom:none}
+.goal-icon{width:32px;height:32px;border-radius:var(--r);background:var(--tl);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.goal-icon svg{width:14px;height:14px;fill:none;stroke:var(--teal);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.goal-body{flex:1}
+.goal-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.goal-desc{font-size:12px;color:var(--t3);margin-bottom:7px;line-height:1.45}
+.goal-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.goal-metric{font-size:11.5px;color:var(--t3)}
+.goal-metric strong{color:var(--teal);font-family:var(--mono);font-size:11px}
+.goal-wt{font-size:11px;color:var(--t4)}
+/* feedback row */
+.fb-row{padding:14px 0;border-bottom:1px solid var(--t5)}
+.fb-row:last-child{border-bottom:none}
+.fb-head{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.fb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.fb-name{font-size:13px;font-weight:600;color:var(--t1);flex:1}
+.fb-date{font-size:11px;color:var(--t3)}
+.fb-role{font-size:11.5px;color:var(--t3);margin-left:40px;margin-bottom:5px}
+.fb-text{font-size:12.5px;color:var(--t2);line-height:1.55;margin-left:40px}
+.rating-row{display:flex;align-items:center;gap:8px;margin-top:7px;margin-left:40px}
+.rating-label{font-size:11px;color:var(--t3);width:90px;flex-shrink:0}
+.rating-stars{display:flex;gap:2px}
+.star{width:11px;height:11px;fill:none;stroke:#D1D5DB;stroke-width:1.5}
+.star.on{fill:#F59E0B;stroke:#F59E0B}
+.rating-val{font-size:11.5px;font-weight:600;font-family:var(--mono);color:var(--t2)}
+/* calibration */
+.calib-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.calib-cell{border:1px solid var(--bd);border-radius:var(--r);padding:12px 13px;cursor:pointer;transition:all .12s}
+.calib-cell:hover{border-color:var(--teal)}
+.calib-cell.sel{border-color:var(--teal);background:var(--tl)}
+.calib-cell-lbl{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.calib-cell-name{font-size:13px;font-weight:600;color:var(--t1)}
+.calib-cell-pct{font-size:11px;color:var(--t3)}
+/* score ring placeholder */
+.score-ring{width:88px;height:88px;border-radius:50%;border:5px solid var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:0 auto 10px}
+.score-ring-val{font-size:24px;font-weight:700;color:var(--teal);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Slim sidebar -->
+  <nav class="sb">
+    <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+    <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg></div>
+    <div class="sb-div"></div>
+    <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+    <div class="sb-av">JK</div>
+  </nav>
+
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="crumb">
+        <a>Performance</a>
+        <span class="sep">›</span>
+        <a>Review Cycles</a>
+        <span class="sep">›</span>
+        <a>Q1 2025</a>
+        <span class="sep">›</span>
+        <span class="cur">Priya Subramaniam</span>
+      </div>
+      <div class="tbi"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+      <div class="tbi"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+      <div class="tb-vd"></div>
+      <button class="btn btn-sm">Export PDF</button>
+      <button class="btn btn-p btn-sm">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit Review
+      </button>
+      <div class="tb-vd"></div>
+      <div class="tav">JK</div>
+    </div>
+
+    <div class="page">
+      <!-- Profile header -->
+      <div class="prof-head">
+        <div class="ph-row">
+          <div class="ph-av">PS</div>
+          <div class="ph-info">
+            <div class="ph-name">Q1 2025 Performance Review</div>
+            <div class="ph-role">Priya Subramaniam · EMP-0127 · Senior HR Business Partner · People Operations</div>
+            <div class="ph-chips">
+              <span class="chip ctl">Open</span>
+              <span class="chip cn">CYCLE-2025-Q1</span>
+              <span class="chip cn">Jan 1 – Mar 31, 2025</span>
+              <span class="chip cn">Owner: James Kolawole</span>
+            </div>
+          </div>
+        </div>
+        <!-- Tabs -->
+        <div class="ptabs">
+          <div class="ptab on" onclick="switchTab(0)">Overview</div>
+          <div class="ptab" onclick="switchTab(1)">Goals</div>
+          <div class="ptab" onclick="switchTab(2)">Feedback &amp; Ratings</div>
+          <div class="ptab" onclick="switchTab(3)">Calibration</div>
+        </div>
+      </div>
+
+      <div class="tab-panels">
+
+        <!-- TAB 0: Overview -->
+        <div class="tab-panel on" id="tp0">
+          <div class="tab-scroll">
+            <!-- KPI strip -->
+            <div class="kpi-strip">
+              <div class="kpi">
+                <div class="kpi-val">5</div>
+                <div class="kpi-lbl">Goals Set</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-val" style="color:var(--grn)">3</div>
+                <div class="kpi-lbl">Goals Approved</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-val" style="color:var(--amber)">1</div>
+                <div class="kpi-lbl">Pending Feedback</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-val" style="color:var(--teal)">74%</div>
+                <div class="kpi-lbl">Avg. Progress</div>
+              </div>
+            </div>
+
+            <div class="detail-grid">
+              <div>
+                <!-- Cycle Details -->
+                <div class="card">
+                  <div class="ch"><span class="ct2">Cycle Details</span></div>
+                  <div class="cb2">
+                    <div class="fg3" style="margin-bottom:13px">
+                      <div class="field"><label>Cycle Code</label><div class="val mono" style="font-size:11.5px">CYCLE-2025-Q1</div></div>
+                      <div class="field"><label>Period</label><div class="val">Jan 1 – Mar 31, 2025</div></div>
+                      <div class="field"><label>Status</label><div style="margin-top:2px"><span class="chip ctl">Open</span></div></div>
+                    </div>
+                    <div class="fg3">
+                      <div class="field"><label>Reviewer</label><div class="val">James Kolawole</div></div>
+                      <div class="field"><label>HR Partner</label><div class="val">Ayesha Nair</div></div>
+                      <div class="field"><label>Workflow</label><div class="val mono" style="font-size:11.5px">WF-PERF-001</div></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Goals Progress -->
+                <div class="card">
+                  <div class="ch">
+                    <span class="ct2">Goals Progress</span>
+                    <span style="font-size:11px;color:var(--t3)">3 Approved · 1 Submitted · 1 Draft</span>
+                  </div>
+                  <div class="cb2">
+                    <div class="prog-row">
+                      <div class="prog-head"><span class="prog-lbl">Implement HRIS data quality framework</span><span class="prog-pct">85%</span></div>
+                      <div class="prog-bar"><div class="prog-fill" style="width:85%"></div></div>
+                    </div>
+                    <div class="prog-row">
+                      <div class="prog-head"><span class="prog-lbl">Reduce time-to-hire by 15%</span><span class="prog-pct">72%</span></div>
+                      <div class="prog-bar"><div class="prog-fill" style="width:72%"></div></div>
+                    </div>
+                    <div class="prog-row">
+                      <div class="prog-head"><span class="prog-lbl">Employee engagement score ≥ 80</span><span class="prog-pct">68%</span></div>
+                      <div class="prog-bar"><div class="prog-fill" style="width:68%"></div></div>
+                    </div>
+                    <div class="prog-row">
+                      <div class="prog-head"><span class="prog-lbl">Deliver 4 HR capability workshops</span><span class="prog-pct">75%</span></div>
+                      <div class="prog-bar"><div class="prog-fill" style="width:75%"></div></div>
+                    </div>
+                    <div class="prog-row" style="margin-bottom:0">
+                      <div class="prog-head"><span class="prog-lbl">Complete SHRM-CP certification</span><span class="prog-pct" style="color:var(--t4)">0%</span></div>
+                      <div class="prog-bar"><div class="prog-fill" style="width:0%;background:var(--t4)"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <!-- Overall Score -->
+                <div class="card">
+                  <div class="ch"><span class="ct2">Overall Score</span></div>
+                  <div class="cb2" style="text-align:center">
+                    <div class="score-ring"><span class="score-ring-val">3.8</span></div>
+                    <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px">Exceeds Expectations</div>
+                    <div style="font-size:11.5px;color:var(--t3)">Manager preliminary score · Q1 2025</div>
+                    <div class="sep-line"></div>
+                    <div class="fg" style="text-align:left">
+                      <div class="field"><label>Self Rating</label><div class="val" style="color:var(--teal);font-family:var(--mono)">4.0</div></div>
+                      <div class="field"><label>Manager</label><div class="val" style="color:var(--teal);font-family:var(--mono)">3.8</div></div>
+                      <div class="field"><label>Peer Avg</label><div class="val" style="color:var(--teal);font-family:var(--mono)">3.7</div></div>
+                      <div class="field"><label>Final</label><div class="val" style="color:var(--t4)">Pending</div></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Review Status -->
+                <div class="card">
+                  <div class="ch"><span class="ct2">Review Progress</span></div>
+                  <div class="cb2">
+                    <div style="display:flex;flex-direction:column;gap:9px">
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:18px;height:18px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        <span style="font-size:12.5px;color:var(--t2)">Self-assessment submitted</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:18px;height:18px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        <span style="font-size:12.5px;color:var(--t2)">Manager review submitted</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:18px;height:18px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        <span style="font-size:12.5px;color:var(--t2)">Peer feedback collected (2/2)</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="width:18px;height:18px;border-radius:50%;background:var(--al);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                        <span style="font-size:12.5px;color:var(--amber)">Calibration pending</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px;opacity:.4">
+                        <div style="width:18px;height:18px;border-radius:50%;background:var(--t5);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                        <span style="font-size:12.5px;color:var(--t3)">Final score published</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 1: Goals -->
+        <div class="tab-panel" id="tp1">
+          <div class="tab-scroll">
+            <div class="card">
+              <div class="ch">
+                <span class="ct2">Goals — Q1 2025</span>
+                <button class="btn btn-sm">
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add Goal
+                </button>
+              </div>
+              <div class="cb2" style="padding:0 17px">
+                <!-- Goal 1 -->
+                <div class="goal-row">
+                  <div class="goal-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                  <div class="goal-body">
+                    <div class="goal-title">Implement HRIS data quality framework</div>
+                    <div class="goal-desc">Establish data validation rules, error-rate dashboards, and remediation SLAs for all HRIS modules.</div>
+                    <div class="goal-meta">
+                      <span class="chip cg">Approved</span>
+                      <span class="goal-metric">Progress: <strong>85%</strong> / 100%</span>
+                      <span class="goal-wt">Weight 30%</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Goal 2 -->
+                <div class="goal-row">
+                  <div class="goal-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                  <div class="goal-body">
+                    <div class="goal-title">Reduce time-to-hire by 15%</div>
+                    <div class="goal-desc">Partner with hiring managers to streamline JD creation, interview scheduling, and offer management.</div>
+                    <div class="goal-meta">
+                      <span class="chip cg">Approved</span>
+                      <span class="goal-metric">Days avg: <strong>24</strong> → target ≤ 21</span>
+                      <span class="goal-wt">Weight 25%</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Goal 3 -->
+                <div class="goal-row">
+                  <div class="goal-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                  <div class="goal-body">
+                    <div class="goal-title">Employee engagement score ≥ 80</div>
+                    <div class="goal-desc">Drive Q1 pulse-survey participation and action plans to improve engagement from 74 → 80.</div>
+                    <div class="goal-meta">
+                      <span class="chip cg">Approved</span>
+                      <span class="goal-metric">Score: <strong>77</strong> / 80</span>
+                      <span class="goal-wt">Weight 25%</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Goal 4 -->
+                <div class="goal-row">
+                  <div class="goal-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                  <div class="goal-body">
+                    <div class="goal-title">Deliver 4 HR capability workshops</div>
+                    <div class="goal-desc">Design and facilitate quarterly workshops covering performance conversations, inclusive hiring, and wellbeing.</div>
+                    <div class="goal-meta">
+                      <span class="chip cb">Submitted</span>
+                      <span class="goal-metric">Delivered: <strong>3</strong> / 4</span>
+                      <span class="goal-wt">Weight 15%</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Goal 5 -->
+                <div class="goal-row" style="border-bottom:none">
+                  <div class="goal-icon" style="background:var(--t5)"><svg viewBox="0 0 24 24" style="stroke:var(--t4)"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                  <div class="goal-body">
+                    <div class="goal-title">Complete SHRM-CP certification</div>
+                    <div class="goal-desc">Enrol in and pass the SHRM Certified Professional exam by end of Q2 2025.</div>
+                    <div class="goal-meta">
+                      <span class="chip cn">Draft</span>
+                      <span class="goal-metric">Progress: <strong>0%</strong></span>
+                      <span class="goal-wt">Weight 5%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Feedback & Ratings -->
+        <div class="tab-panel" id="tp2">
+          <div class="tab-scroll">
+            <div class="detail-grid">
+              <div>
+                <!-- Feedback entries -->
+                <div class="card">
+                  <div class="ch">
+                    <span class="ct2">360° Feedback</span>
+                    <span style="font-size:11px;color:var(--t3)">3 responses</span>
+                  </div>
+                  <div class="cb2" style="padding:0 17px">
+                    <!-- Self -->
+                    <div class="fb-row">
+                      <div class="fb-head">
+                        <div class="fb-av" style="background:linear-gradient(135deg,#7C3AED,#4F46E5)">PS</div>
+                        <span class="fb-name">Priya Subramaniam</span>
+                        <span class="chip cn">Self</span>
+                        <span class="fb-date">Feb 28, 2025</span>
+                      </div>
+                      <div class="fb-role">Senior HR Business Partner · People Operations</div>
+                      <div class="fb-text">"This quarter I successfully led the HRIS data quality initiative, reducing error rates by 23%. I'm on track with time-to-hire improvement — current average is 24 days vs the 21-day target. The certification goal was deprioritised due to workload and will roll forward."</div>
+                      <div class="rating-row">
+                        <span class="rating-label">Overall</span>
+                        <div class="rating-stars">
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <span class="rating-val">4.0 / 5</span>
+                      </div>
+                    </div>
+                    <!-- Manager -->
+                    <div class="fb-row">
+                      <div class="fb-head">
+                        <div class="fb-av">JK</div>
+                        <span class="fb-name">James Kolawole</span>
+                        <span class="chip ctl">Manager</span>
+                        <span class="fb-date">Mar 10, 2025</span>
+                      </div>
+                      <div class="fb-role">Head of People Operations</div>
+                      <div class="fb-text">"Priya has shown strong execution this quarter, particularly on HRIS data quality. The engagement score improvement is meaningful given the organisational changes underway. I'd like to see the certification goal formalised in Q2. Communication with stakeholders remains a key strength."</div>
+                      <div class="rating-row">
+                        <span class="rating-label">Overall</span>
+                        <div class="rating-stars">
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <span class="rating-val">3.8 / 5</span>
+                      </div>
+                    </div>
+                    <!-- Peer -->
+                    <div class="fb-row" style="border-bottom:none">
+                      <div class="fb-head">
+                        <div class="fb-av" style="background:linear-gradient(135deg,#F59E0B,#EF4444)">AN</div>
+                        <span class="fb-name">Ayesha Nair</span>
+                        <span class="chip cv">Peer</span>
+                        <span class="fb-date">Mar 8, 2025</span>
+                      </div>
+                      <div class="fb-role">Senior HR Specialist · People Operations</div>
+                      <div class="fb-text">"Priya is highly collaborative and always brings data to the table. Her workshop on inclusive hiring practices was one of the best I've attended. I'd encourage her to delegate more on project coordination to free time for strategic work."</div>
+                      <div class="rating-row">
+                        <span class="rating-label">Overall</span>
+                        <div class="rating-stars">
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star on" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <svg class="star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <span class="rating-val">3.7 / 5</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <!-- Competency ratings -->
+                <div class="card">
+                  <div class="ch"><span class="ct2">Competency Ratings</span></div>
+                  <div class="cb2">
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                      <div class="prog-row" style="margin-bottom:0">
+                        <div class="prog-head"><span class="prog-lbl">Execution &amp; Delivery</span><span class="prog-pct">92%</span></div>
+                        <div class="prog-bar"><div class="prog-fill" style="width:92%"></div></div>
+                      </div>
+                      <div class="prog-row" style="margin-bottom:0">
+                        <div class="prog-head"><span class="prog-lbl">Communication</span><span class="prog-pct">88%</span></div>
+                        <div class="prog-bar"><div class="prog-fill" style="width:88%"></div></div>
+                      </div>
+                      <div class="prog-row" style="margin-bottom:0">
+                        <div class="prog-head"><span class="prog-lbl">Collaboration</span><span class="prog-pct">85%</span></div>
+                        <div class="prog-bar"><div class="prog-fill" style="width:85%"></div></div>
+                      </div>
+                      <div class="prog-row" style="margin-bottom:0">
+                        <div class="prog-head"><span class="prog-lbl">Strategic Thinking</span><span class="prog-pct">74%</span></div>
+                        <div class="prog-bar"><div class="prog-fill" style="width:74%"></div></div>
+                      </div>
+                      <div class="prog-row" style="margin-bottom:0">
+                        <div class="prog-head"><span class="prog-lbl">Leadership</span><span class="prog-pct">70%</span></div>
+                        <div class="prog-bar"><div class="prog-fill" style="width:70%"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Manager notes -->
+                <div class="card">
+                  <div class="ch"><span class="ct2">Manager Notes</span></div>
+                  <div class="cb2">
+                    <div style="font-size:12.5px;color:var(--t2);line-height:1.6">Strong quarter overall. Recommended for Exceeds rating. SHRM-CP to be formalised as Q2 goal. Explore succession readiness for HR Manager track in H2 2025.</div>
+                    <div class="sep-line"></div>
+                    <div class="field"><label>Development Areas</label></div>
+                    <ul style="margin-top:7px;padding-left:18px;display:flex;flex-direction:column;gap:5px">
+                      <li style="font-size:12.5px;color:var(--t2)">Increase delegation and project coordination handoff</li>
+                      <li style="font-size:12.5px;color:var(--t2)">Invest in strategic HR / business-partnering skills</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: Calibration -->
+        <div class="tab-panel" id="tp3">
+          <div class="tab-scroll">
+            <div class="card" style="margin-bottom:14px">
+              <div class="ch">
+                <span class="ct2">Performance Calibration</span>
+                <span class="chip ca">Pending</span>
+              </div>
+              <div class="cb2">
+                <div style="font-size:12.5px;color:var(--t3);margin-bottom:16px">Select the calibrated performance rating for this employee. Calibration is currently pending HR review.</div>
+                <div class="calib-grid">
+                  <div class="calib-cell">
+                    <div class="calib-cell-lbl">Rating 1</div>
+                    <div class="calib-cell-name">Needs Improvement</div>
+                    <div class="calib-cell-pct">Bottom 10%</div>
+                  </div>
+                  <div class="calib-cell">
+                    <div class="calib-cell-lbl">Rating 2</div>
+                    <div class="calib-cell-name">Meets Expectations</div>
+                    <div class="calib-cell-pct">Core 60%</div>
+                  </div>
+                  <div class="calib-cell sel">
+                    <div class="calib-cell-lbl">Rating 3</div>
+                    <div class="calib-cell-name" style="color:var(--teal)">Exceeds Expectations</div>
+                    <div class="calib-cell-pct">Top 25%</div>
+                  </div>
+                  <div class="calib-cell">
+                    <div class="calib-cell-lbl">Rating 4</div>
+                    <div class="calib-cell-name">Outstanding</div>
+                    <div class="calib-cell-pct">Top 10%</div>
+                  </div>
+                  <div class="calib-cell">
+                    <div class="calib-cell-lbl">Rating 5</div>
+                    <div class="calib-cell-name">Exceptional</div>
+                    <div class="calib-cell-pct">Top 5%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="ch"><span class="ct2">Calibration Notes</span></div>
+              <div class="cb2">
+                <div style="background:var(--t5);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;font-size:12.5px;color:var(--t3);min-height:80px">Add calibration notes here…</div>
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+                  <button class="btn btn-sm">Cancel</button>
+                  <button class="btn btn-p btn-sm">Save Calibration</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-panels -->
+    </div>
+  </div>
+</div>
+<script>
+function switchTab(i){
+  document.querySelectorAll('.ptab').forEach((t,j)=>t.classList.toggle('on',i===j));
+  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('on',i===j));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+﻿{
+  "id": "hrms-h08-global-search-contract",
+  "version": "1.0",
+  "last_updated": "2026-03-29",
+  "archetype_ref": "hrms-schema-template.json",
+  "seed_page_ref": "frontend/seeds/p8-search.html",
+  "page": "Global Search",
+  "file": "pages/h08-global-search.html",
+  "backend_service": "search_service",
+  "gaps": ["BG-021"],
+
+  "renderer_schema": {
+    "dsl_version": "1.0",
+    "slots": ["SEARCH_BAR", "FACET_PANEL", "RESULT_LIST", "RESULT_ACTIONS"]
+  },
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "label": "Global Search",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "service": "search_service",
+      "params": {
+        "q": "string — search query",
+        "entity_type": "string (multi) — employee | candidate | document | department | role",
+        "domain": "string (multi) — employees | hiring | documents | organization | payroll",
+        "department_id": "string — filter by department",
+        "role_id": "string — filter by role",
+        "status": "string — filter by entity status",
+        "limit": "integer — default 25 · max 100",
+        "cursor": "string — pagination cursor (numeric offset)",
+        "sort": "string — relevance | name | updated_at"
+      },
+      "response_fields": {
+        "items": "SearchDocument[] — matched index documents",
+        "items[].document_id": "search_service › SearchDocument.document_id",
+        "items[].tenant_id": "search_service › SearchDocument.tenant_id",
+        "items[].source_view": "search_service › SearchDocument.source_view",
+        "items[].entity_type": "search_service › SearchDocument.entity_type — employee | candidate | document | department | role",
+        "items[].domain": "search_service › SearchDocument.domain — employees | hiring | documents | organization | payroll",
+        "items[].display_name": "search_service › SearchDocument.display_name",
+        "items[].department_id": "search_service › SearchDocument.department_id",
+        "items[].department_name": "search_service › SearchDocument.department_name",
+        "items[].role_id": "search_service › SearchDocument.role_id",
+        "items[].role_title": "search_service › SearchDocument.role_title",
+        "items[].status": "search_service › SearchDocument.status",
+        "items[].metadata": "search_service › SearchDocument.metadata — shape varies by entity_type",
+        "items[].metadata.employee_id": "employee entity — search_service › SearchDocument.metadata.employee_id",
+        "items[].metadata.employee_number": "employee entity — search_service › SearchDocument.metadata.employee_number",
+        "items[].metadata.email": "employee entity — search_service › SearchDocument.metadata.email",
+        "items[].metadata.hire_date": "employee entity — search_service › SearchDocument.metadata.hire_date",
+        "items[].metadata.employment_type": "employee entity — ref:api-contracts#EmploymentType",
+        "items[].metadata.manager_name": "employee entity — search_service › SearchDocument.metadata.manager_name",
+        "_pagination.limit": "integer",
+        "_pagination.cursor": "string",
+        "_pagination.next_cursor": "string | null",
+        "_pagination.count": "integer — items in this page",
+        "_pagination.total_count": "integer — total matched"
+      },
+      "ui_surface": "All entity type views — drives RESULT_LIST and result count display",
+      "gap_notes": "BG-021: metadata for employee entity type does not include salary, location, or skills — UI shows placeholder values for salary and skill tags"
+    },
+    {
+      "id": "E02",
+      "label": "Employee Search (scoped)",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "service": "search_service",
+      "params": {
+        "entity_type": "employee",
+        "q": "string",
+        "department_id": "string",
+        "status": "ref:api-contracts#EmployeeStatus",
+        "limit": "integer",
+        "cursor": "string"
+      },
+      "ui_surface": "People filter tab — entity type chips setEtype('employee')"
+    },
+    {
+      "id": "E03",
+      "label": "Candidate Search (scoped)",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "service": "search_service",
+      "params": {
+        "entity_type": "candidate",
+        "q": "string",
+        "limit": "integer",
+        "cursor": "string"
+      },
+      "ui_surface": "Candidates filter tab — entity type chips setEtype('candidate')"
+    },
+    {
+      "id": "E04",
+      "label": "Document Search (scoped)",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "service": "search_service",
+      "params": {
+        "entity_type": "document",
+        "q": "string",
+        "limit": "integer",
+        "cursor": "string"
+      },
+      "ui_surface": "Documents filter tab — entity type chips setEtype('document')"
+    }
+  ],
+
+  "mock_data_notes": {
+    "entity_types_shown": ["employee", "candidate", "document"],
+    "employee_statuses_used": ["Active", "OnLeave", "Onboarding"],
+    "candidate_stages_used": ["Interviewing", "Offered"],
+    "document_statuses_used": ["Active"],
+    "document_types_used": ["Contract", "Certification", "Policy"],
+    "salary_field": "stub — BG-021, not in SearchDocument model",
+    "skills_tags": "stub — BG-021, not indexed in SearchDocument",
+    "location_field": "stub — BG-021, not in SearchDocument metadata"
+  }
+}

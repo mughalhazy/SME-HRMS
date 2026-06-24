@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Raise Travel Request</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#EFF6FF;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4)}
+.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer}.crumb a:hover{color:var(--teal)}.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.page-title-bar{background:var(--w);border-bottom:1px solid var(--bd);padding:16px 24px;flex-shrink:0}
+.pt-title{font-size:17px;font-weight:700;color:var(--t1)}
+.pt-sub{font-size:12.5px;color:var(--t3);margin-top:3px}
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+.section{margin-bottom:22px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:18px 0}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg3{grid-template-columns:1fr 1fr 1fr}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:72px}
+.fhint{font-size:11px;color:var(--t4)}
+/* Trip type */
+.tt-group{display:flex;gap:7px}
+.tt-opt{padding:7px 14px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;font-size:12.5px;font-weight:600;color:var(--t2);transition:all .12s;user-select:none}
+.tt-opt:hover{border-color:var(--tb);background:var(--tl)}
+.tt-opt.on{border-color:var(--teal);background:var(--tl);color:var(--teal)}
+/* Route display */
+.route-display{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);margin-top:8px}
+.route-city{font-weight:700;color:var(--t1);font-size:13px}
+.route-arrow{color:var(--t4);font-size:20px}
+/* Rail */
+.rail-sec{margin-bottom:16px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3)}.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.sum-empty{color:var(--t4);font-style:italic;font-weight:400}
+.cost-display{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);padding:10px 13px;text-align:center;margin-top:8px}
+.cost-amt{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--teal)}
+.cost-lbl{font-size:11px;color:var(--t3);margin-top:2px}
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+  <div class="sb-av">PS</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>Travel Requests</a><span class="sep">›</span><span class="cur">Raise Travel Request</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Submit Request</button>
+    <div class="tav">PS</div>
+  </div>
+  <div class="page-title-bar">
+    <div class="pt-title">Raise Travel Request</div>
+    <div class="pt-sub">Request approval for a business trip. Itinerary details can be added after approval.</div>
+  </div>
+  <div class="form-wrap">
+    <div class="form-main">
+
+      <div class="section">
+        <div class="sec-title">Trip Type <span style="color:var(--red)">*</span></div>
+        <div class="tt-group" id="tt-group">
+          <div class="tt-opt on" onclick="selTT(this,'RoundTrip')">Round Trip</div>
+          <div class="tt-opt" onclick="selTT(this,'OneWay')">One Way</div>
+          <div class="tt-opt" onclick="selTT(this,'MultiCity')">Multi-City</div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Route &amp; Dates <span style="color:var(--red)">*</span></div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>Origin City <span class="req">*</span></label>
+            <input type="text" id="origin" value="Dubai" oninput="updateRoute()">
+          </div>
+          <div class="fgroup">
+            <label>Destination City <span class="req">*</span></label>
+            <input type="text" id="dest" value="London" oninput="updateRoute()">
+          </div>
+          <div class="fgroup">
+            <label>Departure Date <span class="req">*</span></label>
+            <input type="date" id="dep-date" value="2026-04-14" oninput="updateSummary()">
+          </div>
+          <div class="fgroup">
+            <label>Return Date</label>
+            <input type="date" id="ret-date" value="2026-04-18" oninput="updateSummary()">
+            <span class="fhint">Leave blank for one-way trips</span>
+          </div>
+        </div>
+        <div class="route-display" id="route-display">
+          <div class="route-city" id="route-origin">Dubai</div>
+          <div class="route-arrow">→</div>
+          <div class="route-city" id="route-dest">London</div>
+          <div class="route-arrow" id="route-back" style="display:none">→</div>
+          <div class="route-city" id="route-return-city" style="display:none">Dubai</div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Purpose &amp; Cost</div>
+        <div class="fg">
+          <div class="fgroup span2">
+            <label>Trip Purpose <span class="req">*</span></label>
+            <textarea id="purpose" rows="2">Client meeting at Meridian London HQ. Quarterly business review with the UK leadership team.</textarea>
+          </div>
+          <div class="fgroup">
+            <label>Estimated Cost <span class="req">*</span></label>
+            <input type="number" id="est-cost" value="4800" min="0" step="0.01" oninput="updateCost()">
+          </div>
+          <div class="fgroup">
+            <label>Currency</label>
+            <select id="currency" onchange="updateCost()">
+              <option selected>AED</option><option>USD</option><option>EUR</option><option>GBP</option>
+            </select>
+          </div>
+          <div class="fgroup span2">
+            <label>Additional Notes</label>
+            <textarea rows="2" placeholder="Any special requirements, preferred flights, hotel preferences..."></textarea>
+          </div>
+        </div>
+        <div class="cost-display">
+          <div class="cost-amt" id="cost-amt">AED 4,800.00</div>
+          <div class="cost-lbl">Estimated total cost</div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Approval</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>Approving Manager</label>
+            <select>
+              <option selected>Aisha Al-Rashidi · VP People (default)</option>
+              <option>James Okonkwo · CHRO</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="form-rail">
+      <div class="rail-sec">
+        <div class="rail-lbl">Trip Summary</div>
+        <div class="sum-row"><span class="sum-l">Employee</span><span class="sum-v">Priya Subramaniam</span></div>
+        <div class="sum-row"><span class="sum-l">Trip type</span><span class="sum-v" id="sum-type">Round Trip</span></div>
+        <div class="sum-row"><span class="sum-l">From</span><span class="sum-v" id="sum-origin">Dubai</span></div>
+        <div class="sum-row"><span class="sum-l">To</span><span class="sum-v" id="sum-dest">London</span></div>
+        <div class="sum-row"><span class="sum-l">Departs</span><span class="sum-v" id="sum-dep">14 Apr 2026</span></div>
+        <div class="sum-row"><span class="sum-l">Returns</span><span class="sum-v" id="sum-ret">18 Apr 2026</span></div>
+        <div class="sum-row"><span class="sum-l">Est. cost</span><span class="sum-v" id="sum-cost" style="font-family:var(--mono)">AED 4,800</span></div>
+        <div class="sum-row"><span class="sum-l">Approver</span><span class="sum-v">Aisha Al-Rashidi</span></div>
+      </div>
+      <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+      <div style="font-size:12px;color:var(--t3);padding:10px 12px;background:var(--bl);border:1px solid #BFDBFE;border-radius:var(--r)">
+        After approval, HR or travel admin will attach the itinerary segments (flights, hotel, transfers) to this request.
+      </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <div class="ff-info">Submits <code>POST /api/v1/travel-requests</code> — travel_service</div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Submit Request</button>
+  </div>
+</main>
+</div>
+<script>
+let tripType = 'RoundTrip';
+function selTT(el, t) {
+  document.querySelectorAll('.tt-opt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on');
+  tripType = t;
+  document.getElementById('sum-type').textContent = {'RoundTrip':'Round Trip','OneWay':'One Way','MultiCity':'Multi-City'}[t];
+  const backArrow = document.getElementById('route-back');
+  const returnCity = document.getElementById('route-return-city');
+  if (t === 'RoundTrip') {
+    backArrow.style.display = '';
+    returnCity.style.display = '';
+    returnCity.textContent = document.getElementById('origin').value.trim();
+  } else {
+    backArrow.style.display = 'none';
+    returnCity.style.display = 'none';
+  }
+}
+function updateRoute() {
+  const o = document.getElementById('origin').value.trim();
+  const d = document.getElementById('dest').value.trim();
+  document.getElementById('route-origin').textContent = o || 'Origin';
+  document.getElementById('route-dest').textContent = d || 'Destination';
+  document.getElementById('route-return-city').textContent = o || 'Origin';
+  document.getElementById('sum-origin').textContent = o || '—';
+  document.getElementById('sum-dest').textContent = d || '—';
+}
+function updateSummary() {
+  const dep = document.getElementById('dep-date').value;
+  const ret = document.getElementById('ret-date').value;
+  if (dep) document.getElementById('sum-dep').textContent = new Date(dep).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  if (ret) document.getElementById('sum-ret').textContent = new Date(ret).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+function updateCost() {
+  const a = parseFloat(document.getElementById('est-cost').value) || 0;
+  const curr = document.getElementById('currency').value;
+  const fmt = curr + ' ' + a.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('cost-amt').textContent = fmt;
+  document.getElementById('sum-cost').textContent = curr + ' ' + Math.round(a).toLocaleString();
+}
+function submitForm() {
+  const o = document.getElementById('origin').value.trim();
+  const d = document.getElementById('dest').value.trim();
+  const dep = document.getElementById('dep-date').value;
+  const p = document.getElementById('purpose').value.trim();
+  if (!o || !d || !dep || !p) { alert('Origin, destination, departure date and purpose are required.'); return; }
+  const payload = {
+    purpose: p, trip_type: tripType,
+    origin_city: o, destination_city: d,
+    start_date: dep, end_date: document.getElementById('ret-date').value || dep,
+    estimated_cost: parseFloat(document.getElementById('est-cost').value) || 0,
+    currency: document.getElementById('currency').value
+  };
+  alert('POST /api/v1/travel-requests\n\n' + JSON.stringify(payload, null, 2));
+}
+</script>
+</body>
+</html>

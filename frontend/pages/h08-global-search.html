@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Global Search</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+
+/* Shell */
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sb-ico{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--t4);transition:all .12s}
+.sb-ico:hover{background:var(--bg);color:var(--t2)}.sb-ico.on{background:var(--tl);color:var(--teal)}
+.sb-ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;flex-shrink:0}
+
+/* Main layout */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+/* Search hero */
+.search-hero{background:var(--w);border-bottom:1px solid var(--bd);padding:18px 24px;flex-shrink:0}
+.hero-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+.hero-title{font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-0.015em}
+.hero-actions{display:flex;gap:7px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Big search box */
+.big-search{display:flex;align-items:center;gap:10px;background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--r2);padding:10px 16px;transition:all .15s;margin-bottom:11px}
+.big-search:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 4px rgba(10,143,132,.08)}
+.big-search svg{width:18px;height:18px;stroke:var(--t3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.big-search input{background:none;border:none;outline:none;font-size:15px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.big-search input::placeholder{color:var(--t4)}
+.search-kb{font-size:11px;color:var(--t4);background:var(--t5);border:1px solid var(--bd);border-radius:5px;padding:2px 7px;flex-shrink:0;font-family:var(--mono)}
+
+/* Entity type tab row */
+.etype-row{display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.etype-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t3);transition:all .12s;user-select:none}
+.etype-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--tl)}
+.etype-btn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.etype-btn svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.etype-sep{width:1px;height:18px;background:var(--bd);margin:0 2px}
+
+/* Active filter chips */
+.filters-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.filter-chip{display:flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;transition:all .12s;user-select:none}
+.fc-on{background:var(--tl);border-color:var(--teal);color:var(--teal)}
+.fc-off{background:var(--w);border-color:var(--bd);color:var(--t3)}
+.fc-off:hover{border-color:var(--teal);color:var(--teal);background:var(--tl)}
+.fc-clear{background:transparent;border-color:transparent;color:var(--teal);font-size:12px;font-weight:600;padding:4px 8px;cursor:pointer}
+.fc-clear:hover{text-decoration:underline}
+
+/* Body grid */
+.search-body{flex:1;overflow:hidden;display:grid;grid-template-columns:228px 1fr;min-height:0}
+
+/* Facet sidebar */
+.facets{background:var(--w);border-right:1px solid var(--bd);overflow-y:auto;min-height:0;padding:14px 14px 12vh}
+.facet-group{margin-bottom:18px}
+.facet-title{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:8px;padding:0 2px}
+.facet-item{display:flex;align-items:center;justify-content:space-between;padding:5px 4px;cursor:pointer;transition:background .1s;border-radius:5px}
+.facet-item:hover{background:var(--bg)}
+.facet-item.on .facet-lbl{font-weight:600;color:var(--teal)}
+.facet-item.on .facet-ct{background:var(--tl);color:var(--teal)}
+.facet-lbl{font-size:12.5px;color:var(--t2);display:flex;align-items:center;gap:6px}
+.facet-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.facet-ct{font-family:var(--mono);font-size:10.5px;color:var(--t4);background:var(--t5);padding:1px 5px;border-radius:3px;flex-shrink:0}
+.facet-div{height:1px;background:var(--bd);margin:12px 0}
+
+/* Results area */
+.results-area{overflow-y:auto;min-height:0;display:flex;flex-direction:column;padding-bottom:12vh}
+.results-head{position:sticky;top:0;z-index:2;background:var(--t6);border-bottom:1px solid var(--bd);padding:9px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.rh-count{font-size:12.5px;color:var(--t3)}
+.rh-count strong{color:var(--t1);font-weight:700}
+.rh-right{display:flex;align-items:center;gap:9px}
+.sel{background:var(--w);border:1px solid var(--bd);border-radius:var(--r);padding:5px 8px;font-size:12.5px;color:var(--t2);font-family:'Inter',sans-serif;cursor:pointer;outline:none}
+.view-tog{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:2px}
+.vt{width:28px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s}
+.vt.on{background:var(--w);color:var(--teal);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.vt svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* Recent searches */
+.recent-sec{padding:16px 18px;border-bottom:1px solid var(--bd)}
+.recent-title{font-size:11px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:10px}
+.recent-items{display:flex;gap:7px;flex-wrap:wrap}
+.recent-item{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:99px;font-size:12.5px;color:var(--t2);border:1px solid var(--bd);background:var(--w);cursor:pointer;transition:all .12s}
+.recent-item:hover{border-color:var(--teal);color:var(--teal);background:var(--tl)}
+.recent-item svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Result items */
+.result-item{display:flex;align-items:flex-start;gap:14px;padding:13px 18px;border-bottom:1px solid var(--t5);cursor:pointer;transition:background .12s;position:relative}
+.result-item:last-child{border-bottom:none}
+.result-item:hover{background:var(--tl)}
+.ri-av{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+.ri-av-sq{width:42px;height:42px;border-radius:var(--r);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--t5);border:1px solid var(--bd)}
+.ri-av-sq svg{width:20px;height:20px;stroke:var(--t3);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ri-main{flex:1;min-width:0}
+.ri-name{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.ri-meta{font-size:12px;color:var(--t3);margin-bottom:6px}
+.ri-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.skill-tag{font-size:11px;font-weight:500;padding:2px 7px;border-radius:4px;background:var(--t5);color:var(--t2);border:1px solid var(--bd)}
+.ri-right{text-align:right;flex-shrink:0;min-width:100px}
+.ri-val{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.ri-sub{font-size:11.5px;color:var(--t4)}
+.ri-actions{display:flex;gap:5px;justify-content:flex-end;margin-top:7px;opacity:0;transition:opacity .12s}
+.result-item:hover .ri-actions{opacity:1}
+.ri-type{position:absolute;top:13px;right:18px}
+
+/* Entity badge (not a status chip — shown top-right of card) */
+.ety-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:99px;background:var(--t5);color:var(--t4);border:1px solid var(--bd)}
+.ety-emp{background:var(--bl);color:var(--blue);border-color:var(--bl)}
+.ety-cand{background:var(--vl);color:var(--violet);border-color:var(--vl)}
+.ety-doc{background:var(--al);color:var(--amber);border-color:var(--al)}
+
+/* P-07 status chips */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.cg{background:var(--gl);color:var(--grn)}
+.ca{background:var(--al);color:var(--amber)}
+.cb{background:var(--bl);color:var(--blue)}
+.ct{background:var(--tl);color:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}
+.cr{background:var(--rl);color:var(--red)}
+
+/* Highlight */
+.hl{background:#FEF9C3;border-radius:2px;padding:0 1px;color:var(--t1)}
+
+/* Empty / zero state */
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;color:var(--t4);text-align:center}
+.empty-icon{width:44px;height:44px;background:var(--t5);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.empty-icon svg{width:22px;height:22px;stroke:var(--t4);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.empty-title{font-size:14px;font-weight:600;color:var(--t2);margin-bottom:6px}
+.empty-sub{font-size:12.5px;color:var(--t4);line-height:1.6;max-width:320px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="sb-ico on"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- Search hero -->
+  <div class="search-hero">
+    <div class="hero-row">
+      <div class="hero-title">Global Search</div>
+      <div class="hero-actions">
+        <button class="btn btn-sm">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Search
+        </button>
+        <button class="btn btn-sm btn-p">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Results
+        </button>
+      </div>
+    </div>
+
+    <div class="big-search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="main-search" placeholder="Search employees, candidates, documents, roles, departments…" value="senior engineer">
+      <span class="search-kb">⌘K</span>
+    </div>
+
+    <div class="etype-row">
+      <span style="font-size:12px;font-weight:600;color:var(--t3)">Show:</span>
+      <button class="etype-btn on" onclick="setEtype(this,'all')">All</button>
+      <button class="etype-btn" onclick="setEtype(this,'employee')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        People
+      </button>
+      <button class="etype-btn" onclick="setEtype(this,'candidate')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Candidates
+      </button>
+      <button class="etype-btn" onclick="setEtype(this,'document')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Documents
+      </button>
+      <div class="etype-sep"></div>
+      <div class="filters-row" id="active-filters">
+        <div class="filter-chip fc-on" data-f="dept:Engineering" onclick="toggleChip(this)">Engineering</div>
+        <div class="filter-chip fc-on" data-f="status:Active" onclick="toggleChip(this)">Active only</div>
+        <div class="filter-chip fc-off" data-f="loc:San Francisco" onclick="toggleChip(this)">San Francisco</div>
+        <span class="fc-clear" onclick="clearAll()">Clear all ✕</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-body">
+
+    <!-- Facets -->
+    <div class="facets">
+      <div class="facet-group">
+        <div class="facet-title">Department</div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl"><div class="facet-dot" style="background:#3B82F6"></div>Engineering</span><span class="facet-ct">128</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl"><div class="facet-dot" style="background:#7C3AED"></div>Product</span><span class="facet-ct">54</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl"><div class="facet-dot" style="background:#22C55E"></div>Sales</span><span class="facet-ct">46</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl"><div class="facet-dot" style="background:#F59E0B"></div>Marketing</span><span class="facet-ct">38</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl"><div class="facet-dot" style="background:#EF4444"></div>Finance</span><span class="facet-ct">24</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl"><div class="facet-dot" style="background:#0EA5E9"></div>HR & Ops</span><span class="facet-ct">31</span></div>
+      </div>
+
+      <div class="facet-div"></div>
+
+      <div class="facet-group">
+        <div class="facet-title">Status</div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">Active</span><span class="facet-ct">318</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">On Leave</span><span class="facet-ct">18</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Onboarding</span><span class="facet-ct">6</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Suspended</span><span class="facet-ct">3</span></div>
+      </div>
+
+      <div class="facet-div"></div>
+
+      <div class="facet-group">
+        <div class="facet-title">Employment Type</div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">Full Time</span><span class="facet-ct">288</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Part Time</span><span class="facet-ct">24</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Contract</span><span class="facet-ct">19</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Intern</span><span class="facet-ct">14</span></div>
+      </div>
+
+      <div class="facet-div"></div>
+
+      <div class="facet-group">
+        <div class="facet-title">Location</div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">San Francisco</span><span class="facet-ct">182</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Remote</span><span class="facet-ct">74</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">New York</span><span class="facet-ct">44</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">London</span><span class="facet-ct">28</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Singapore</span><span class="facet-ct">14</span></div>
+      </div>
+
+      <div class="facet-div"></div>
+
+      <div class="facet-group">
+        <div class="facet-title">Domain</div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">Employees</span><span class="facet-ct">321</span></div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">Hiring</span><span class="facet-ct">48</span></div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">Documents</span><span class="facet-ct">89</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Organisation</span><span class="facet-ct">22</span></div>
+      </div>
+
+      <div class="facet-div"></div>
+
+      <div class="facet-group">
+        <div class="facet-title">Skills</div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">Python</span><span class="facet-ct">48</span></div>
+        <div class="facet-item on" onclick="toggleFacet(this)"><span class="facet-lbl">Go</span><span class="facet-ct">32</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">AWS</span><span class="facet-ct">56</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">Kubernetes</span><span class="facet-ct">24</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">React</span><span class="facet-ct">28</span></div>
+        <div class="facet-item" onclick="toggleFacet(this)"><span class="facet-lbl">TypeScript</span><span class="facet-ct">36</span></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-area" id="results-area">
+
+      <!-- Recent searches -->
+      <div class="recent-sec" id="recent-sec">
+        <div class="recent-title">Recent Searches</div>
+        <div class="recent-items">
+          <div class="recent-item" onclick="doSearch(this)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>engineering manager</div>
+          <div class="recent-item" onclick="doSearch(this)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>product designer remote</div>
+          <div class="recent-item" onclick="doSearch(this)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>python aws senior</div>
+          <div class="recent-item" onclick="doSearch(this)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>employment contract expired</div>
+          <div class="recent-item" onclick="doSearch(this)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>staff engineer offered</div>
+        </div>
+      </div>
+
+      <!-- Results header -->
+      <div class="results-head">
+        <div class="rh-count"><strong id="result-ct">8 results</strong> for "<span id="result-q">senior engineer</span>"</div>
+        <div class="rh-right">
+          <select class="sel" id="sort-sel">
+            <option>Relevance</option>
+            <option>Name A–Z</option>
+            <option>Recently joined</option>
+            <option>Last updated</option>
+          </select>
+          <div class="view-tog">
+            <div class="vt on" title="List view"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+            <div class="vt" title="Grid view"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result list -->
+      <div id="result-list"></div>
+
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+/* ── Mock data ─────────────────────────────────────────── */
+const EMPLOYEES = [
+  {
+    etype:'employee',
+    av:'JO', avc:'#4F46E5',
+    name:'James Okafor',
+    meta:'<span class="hl">Senior</span> Software <span class="hl">Engineer</span> II · Backend Platform · Manager: S. Mitchell',
+    skills:['Python','Go','Kubernetes','AWS'],
+    status:'Onboarding', sc:'cb',
+    val:'$185,000', sub:'Engineering', loc:'San Francisco',
+    joined:'Mar 10, 2026'
+  },
+  {
+    etype:'employee',
+    av:'RS', avc:'#16A34A',
+    name:'Ravi Sharma',
+    meta:'<span class="hl">Engineering</span> Manager (<span class="hl">Senior</span>) · Platform · Manager: CTO',
+    skills:['Go','Distributed Systems','Leadership','Terraform'],
+    status:'Active', sc:'cg',
+    val:'$210,000', sub:'Engineering', loc:'San Francisco',
+    joined:'Jun 12, 2024'
+  },
+  {
+    etype:'employee',
+    av:'YT', avc:'#EC4899',
+    name:'Yuki Tanaka',
+    meta:'Data Scientist (<span class="hl">Senior</span>) · Data · Manager: R. Sharma',
+    skills:['Python','ML','PyTorch','SQL'],
+    status:'Active', sc:'cg',
+    val:'$158,000', sub:'Engineering', loc:'Singapore',
+    joined:'Nov 03, 2023'
+  },
+  {
+    etype:'employee',
+    av:'MH', avc:'#0284C7',
+    name:'Marcus Hill',
+    meta:'DevOps <span class="hl">Engineer</span> (<span class="hl">Senior</span>) · Infrastructure · Manager: S. Mitchell',
+    skills:['Terraform','AWS','Docker','Kubernetes'],
+    status:'OnLeave', sc:'cb',
+    val:'$172,000', sub:'Engineering', loc:'Remote',
+    joined:'Feb 03, 2026'
+  },
+  {
+    etype:'employee',
+    av:'PM', avc:'#7C3AED',
+    name:'Priya Mehta',
+    meta:'Product Manager (<span class="hl">Senior</span>) · Core Product · Manager: D. Chen',
+    skills:['Product Strategy','Roadmapping','SQL','Figma'],
+    status:'Active', sc:'cg',
+    val:'$168,000', sub:'Product', loc:'New York',
+    joined:'Sep 08, 2023'
+  },
+];
+
+const CANDIDATES = [
+  {
+    etype:'candidate',
+    av:'SR', avc:'#0D9488',
+    name:'Sofia Reyes',
+    meta:'Applied: UX Designer (<span class="hl">Senior</span>) · Product Design · Source: LinkedIn',
+    skills:['Figma','User Research','Prototyping','Design Systems'],
+    status:'Interviewing', sc:'cb',
+    val:'Stage 3', sub:'2 interviews left', loc:'San Francisco',
+    joined:'Applied Mar 18, 2026'
+  },
+  {
+    etype:'candidate',
+    av:'CW', avc:'#F59E0B',
+    name:'Chen Wei',
+    meta:'Applied: Staff <span class="hl">Engineer</span> · Backend Platform · Source: Referral',
+    skills:['Go','Distributed Systems','Kafka','Kubernetes'],
+    status:'Offered', sc:'ct',
+    val:'Stage 5', sub:'Offer pending', loc:'Remote',
+    joined:'Applied Mar 05, 2026'
+  },
+];
+
+const DOCUMENTS = [
+  {
+    etype:'document',
+    name:'Employment Contract — James Okafor',
+    meta:'Contract · Employee: <span class="hl">James Okafor</span> (EMP-0042) · Issued by HR',
+    skills:['Contract','Employment'],
+    status:'Active', sc:'cg',
+    val:'Expires', sub:'No expiry', loc:'2 pages',
+    joined:'Created Mar 10, 2026'
+  },
+  {
+    etype:'document',
+    name:'AWS Solutions Architect Certification — M. Hill',
+    meta:'Certification · Employee: Marcus Hill (EMP-0011) · Issued by AWS',
+    skills:['Certification','AWS','Cloud'],
+    status:'Active', sc:'cg',
+    val:'Expires', sub:'Dec 14, 2026', loc:'1 page',
+    joined:'Stored Feb 12, 2026'
+  },
+  {
+    etype:'document',
+    name:'Senior <span class="hl">Engineer</span> Role — Job Description',
+    meta:'Policy · Department: Engineering · Approved by Legal',
+    skills:['Policy','Role Definition'],
+    status:'Active', sc:'cg',
+    val:'Version', sub:'v2.1', loc:'3 pages',
+    joined:'Updated Jan 30, 2026'
+  },
+];
+
+const ALL_RESULTS = [...EMPLOYEES, ...CANDIDATES, ...DOCUMENTS];
+
+let currentEtype = 'all';
+
+/* ── Render ────────────────────────────────────────────── */
+function renderEmployeeCard(r) {
+  return `<div class="result-item">
+    <div class="ri-av" style="background:${r.avc}">${r.av}</div>
+    <div class="ri-main">
+      <div class="ri-name">${r.name}</div>
+      <div class="ri-meta">${r.meta} · ${r.loc} · Joined ${r.joined}</div>
+      <div class="ri-tags">
+        ${r.skills.map(s=>`<span class="skill-tag">${s}</span>`).join('')}
+        <span class="chip ${r.sc}">${statusLabel(r.status)}</span>
+      </div>
+      <div class="ri-actions">
+        <button class="btn btn-sm">View Profile</button>
+        <button class="btn btn-sm">Message</button>
+        <button class="btn btn-sm">Edit</button>
+      </div>
+    </div>
+    <div class="ri-right">
+      <div class="ri-val">${r.val}</div>
+      <div class="ri-sub">${r.sub}</div>
+    </div>
+    <div class="ri-type"><span class="ety-badge ety-emp">Employee</span></div>
+  </div>`;
+}
+
+function renderCandidateCard(r) {
+  return `<div class="result-item">
+    <div class="ri-av" style="background:${r.avc}">${r.av}</div>
+    <div class="ri-main">
+      <div class="ri-name">${r.name}</div>
+      <div class="ri-meta">${r.meta} · ${r.loc} · ${r.joined}</div>
+      <div class="ri-tags">
+        ${r.skills.map(s=>`<span class="skill-tag">${s}</span>`).join('')}
+        <span class="chip ${r.sc}">${r.status}</span>
+      </div>
+      <div class="ri-actions">
+        <button class="btn btn-sm">View Pipeline</button>
+        <button class="btn btn-sm">Schedule Interview</button>
+      </div>
+    </div>
+    <div class="ri-right">
+      <div class="ri-val">${r.val}</div>
+      <div class="ri-sub">${r.sub}</div>
+    </div>
+    <div class="ri-type"><span class="ety-badge ety-cand">Candidate</span></div>
+  </div>`;
+}
+
+function renderDocumentCard(r) {
+  return `<div class="result-item">
+    <div class="ri-av-sq">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    </div>
+    <div class="ri-main">
+      <div class="ri-name">${r.name}</div>
+      <div class="ri-meta">${r.meta} · ${r.loc} · ${r.joined}</div>
+      <div class="ri-tags">
+        ${r.skills.map(s=>`<span class="skill-tag">${s}</span>`).join('')}
+        <span class="chip ${r.sc}">${r.status}</span>
+      </div>
+      <div class="ri-actions">
+        <button class="btn btn-sm">View Document</button>
+        <button class="btn btn-sm">Download</button>
+      </div>
+    </div>
+    <div class="ri-right">
+      <div class="ri-val">${r.val}</div>
+      <div class="ri-sub">${r.sub}</div>
+    </div>
+    <div class="ri-type"><span class="ety-badge ety-doc">Document</span></div>
+  </div>`;
+}
+
+function statusLabel(s) {
+  const map = {Active:'Active',OnLeave:'On Leave',Onboarding:'Onboarding',Suspended:'Suspended',Terminated:'Terminated'};
+  return map[s] || s;
+}
+
+function activeFilters() {
+  const filters = {};
+  document.querySelectorAll('.filter-chip.fc-on[data-f]').forEach(el => {
+    const [key, val] = el.dataset.f.split(':');
+    filters[key] = val;
+  });
+  return filters;
+}
+
+function renderResults() {
+  let pool = currentEtype === 'all' ? ALL_RESULTS
+    : currentEtype === 'employee' ? EMPLOYEES
+    : currentEtype === 'candidate' ? CANDIDATES
+    : DOCUMENTS;
+
+  const f = activeFilters();
+  if (f.dept)   pool = pool.filter(r => r.etype !== 'employee' || r.sub === f.dept);
+  if (f.status) pool = pool.filter(r => r.status === f.status);
+  if (f.loc)    pool = pool.filter(r => r.etype === 'document'  || r.loc === f.loc);
+
+  document.getElementById('result-ct').textContent = pool.length + ' result' + (pool.length !== 1 ? 's' : '');
+  document.getElementById('result-list').innerHTML = pool.length
+    ? pool.map(r => {
+        if (r.etype === 'employee') return renderEmployeeCard(r);
+        if (r.etype === 'candidate') return renderCandidateCard(r);
+        return renderDocumentCard(r);
+      }).join('')
+    : `<div class="empty-state">
+        <div class="empty-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="empty-title">No results match your filters</div>
+        <div class="empty-sub">Try removing a filter or broadening your search.</div>
+      </div>`;
+}
+
+/* ── Interactions ──────────────────────────────────────── */
+function setEtype(el, type) {
+  currentEtype = type;
+  document.querySelectorAll('.etype-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  renderResults();
+}
+
+function toggleChip(el) {
+  el.classList.toggle('fc-on');
+  el.classList.toggle('fc-off');
+  renderResults();
+}
+
+function clearAll() {
+  document.querySelectorAll('.filter-chip').forEach(c => { c.classList.remove('fc-on'); c.classList.add('fc-off'); });
+  renderResults();
+}
+
+function toggleFacet(el) { el.classList.toggle('on'); }
+
+function doSearch(el) {
+  document.getElementById('main-search').value = el.textContent.trim();
+}
+
+document.querySelectorAll('.vt').forEach(t => t.addEventListener('click', function() {
+  document.querySelectorAll('.vt').forEach(x => x.classList.remove('on'));
+  this.classList.add('on');
+}));
+
+renderResults();
+</script>
+</body>
+</html>

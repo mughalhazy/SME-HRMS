@@ -1,0 +1,134 @@
+﻿{
+  "_meta": {
+    "id": "h04-create-job-posting",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Create Job Posting",
+    "variant": "Stepped (4 steps)",
+    "surface": "admin",
+    "primary_actor": "HR Business Partner · Hiring Manager",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Job Postings", "Create Job Posting"],
+      "actions": [
+        { "label": "Back",       "style": "ghost",      "action": "navigate_previous" },
+        { "label": "Save Draft", "style": "secondary",  "action": "POST /api/v1/job-postings with status=Draft" },
+        { "label": "Next / Publish", "style": "primary-blue", "action": "navigate_next or submit on step 4" }
+      ]
+    },
+
+    "STEP_HEADER": {
+      "title": "Create Job Posting",
+      "subtitle": "Define the role, set requirements, choose a pipeline, and publish.",
+      "steps": [
+        { "n": 1, "label": "Job Details" },
+        { "n": 2, "label": "Requirements" },
+        { "n": 3, "label": "Pipeline Template" },
+        { "n": 4, "label": "Review & Publish" }
+      ]
+    },
+
+    "FORM_STEPS": {
+      "step_1_job_details": {
+        "fields": [
+          { "id": "title",              "label": "Job Title",          "type": "text",   "required": true,  "maps_to": "JobPosting.title" },
+          { "id": "department_id",      "label": "Department",         "type": "select", "required": true,  "source": "GET /api/v1/departments", "maps_to": "JobPosting.department_id" },
+          { "id": "role_id",            "label": "Linked Role",        "type": "select", "required": false, "source": "GET /api/v1/roles", "maps_to": "JobPosting.role_id" },
+          { "id": "location",           "label": "Location",           "type": "text",   "required": false, "maps_to": "JobPosting.location" },
+          { "id": "openings_count",     "label": "Number of Openings", "type": "number", "required": true,  "min": 1, "maps_to": "JobPosting.openings_count" },
+          { "id": "employment_type",    "label": "Employment Type",    "type": "radio",  "required": true,  "enum_ref": "employee.model.EMPLOYMENT_TYPES", "values": ["FullTime","PartTime","Contract","Intern"], "maps_to": "JobPosting.employment_type" },
+          { "id": "posting_date",       "label": "Posting Date",       "type": "date",   "required": true,  "maps_to": "JobPosting.posting_date" },
+          { "id": "closing_date",       "label": "Closing Date",       "type": "date",   "required": false, "maps_to": "JobPosting.closing_date" },
+          { "id": "hiring_manager_id",  "label": "Hiring Manager",     "type": "select", "required": false, "source": "GET /api/v1/employees?status=Active", "maps_to": "JobPosting.hiring_manager_id" },
+          { "id": "recruiter_ids",      "label": "Lead Recruiter",     "type": "select", "required": false, "source": "GET /api/v1/employees?status=Active", "maps_to": "JobPosting.recruiter_ids" }
+        ]
+      },
+
+      "step_2_requirements": {
+        "fields": [
+          { "id": "description",        "label": "Job Description",   "type": "textarea", "required": true,  "maps_to": "JobPosting.description" },
+          { "id": "required_skills",    "label": "Required Skills",   "type": "tag_input","required": false, "maps_to": "JobPosting.hiring_plan.required_skills" },
+          { "id": "min_experience",     "label": "Min Experience",    "type": "select",   "required": false, "maps_to": "JobPosting.hiring_plan.min_experience" },
+          { "id": "education_level",    "label": "Education Level",   "type": "select",   "required": false, "maps_to": "JobPosting.hiring_plan.education_level" },
+          { "id": "salary_min",         "label": "Salary Min",        "type": "number",   "required": false, "maps_to": "JobPosting.hiring_plan.salary_range.min" },
+          { "id": "salary_max",         "label": "Salary Max",        "type": "number",   "required": false, "maps_to": "JobPosting.hiring_plan.salary_range.max" },
+          { "id": "salary_currency",    "label": "Currency",          "type": "select",   "required": false, "maps_to": "JobPosting.hiring_plan.salary_range.currency" },
+          { "id": "salary_visibility",  "label": "Salary Visibility", "type": "select",   "required": false, "maps_to": "JobPosting.hiring_plan.salary_visibility" }
+        ]
+      },
+
+      "step_3_pipeline_template": {
+        "fields": [
+          { "id": "pipeline_template_id", "label": "Pipeline Template", "type": "card_selector", "required": true, "source": "GET /api/v1/pipeline-templates", "maps_to": "JobPosting.hiring_plan.pipeline_template_id" }
+        ],
+        "note": "Pipeline templates are sourced from PipelineTemplate records. Mock templates shown: Standard Engineering, Fast Track, Executive, Intern/Graduate, Custom."
+      },
+
+      "step_4_review_publish": {
+        "component": "review_summary_cards",
+        "sections": ["Job Details","Timeline","Hiring Team","Compensation"],
+        "fields": [
+          { "id": "status", "label": "Initial Status", "type": "select", "values": ["Open","Draft"], "default": "Open", "maps_to": "JobPosting.status", "note": "JOB_POSTING_STATUSES = {Draft, Open, OnHold, Closed, Filled}" }
+        ],
+        "submit_action": "POST /api/v1/job-postings"
+      }
+    },
+
+    "FORM_RAIL": {
+      "posting_summary": {
+        "fields": ["title","department","location","openings_count","employment_type","pipeline","posting_date"]
+      },
+      "step_progress": {
+        "description": "Side panel tracks step completion status"
+      }
+    },
+
+    "FORM_FOOTER": {
+      "left_info": "Step N of 4 · step label",
+      "right": [
+        { "label": "Back",       "style": "ghost",     "hidden_on": "step_1" },
+        { "label": "Save Draft", "style": "secondary" },
+        { "label": "Next",       "style": "primary",   "visible_on": "steps_1_to_3" },
+        { "label": "Publish",    "style": "primary",   "visible_on": "step_4", "action": "POST /api/v1/job-postings" }
+      ]
+    }
+  },
+
+  "submit_flow": {
+    "method": "POST",
+    "endpoint": "/api/v1/job-postings",
+    "service": "hiring_service",
+    "body": {
+      "title": "string (required)",
+      "department_id": "string (required)",
+      "role_id": "string (optional)",
+      "employment_type": "EmploymentType (required)",
+      "location": "string (optional)",
+      "description": "string (required)",
+      "openings_count": "int (required)",
+      "posting_date": "date (required)",
+      "closing_date": "date (optional)",
+      "status": "JobPostingStatus (Draft|Open) — default Open on publish",
+      "hiring_manager_id": "string (optional)",
+      "recruiter_ids": "string[] (optional)",
+      "hiring_plan": "dict — salary_range, required_skills, pipeline_template_id, etc."
+    },
+    "on_success": { "redirect": "H03 Job Posting Detail" }
+  },
+
+  "data_sources": [
+    { "slot": "department_id",       "endpoint": "GET /api/v1/departments",            "service": "employee-service" },
+    { "slot": "role_id",             "endpoint": "GET /api/v1/roles",                  "service": "employee-service" },
+    { "slot": "hiring_manager_id",   "endpoint": "GET /api/v1/employees?status=Active","service": "employee-service" },
+    { "slot": "pipeline_template_id","endpoint": "GET /api/v1/pipeline-templates",     "service": "hiring_service" }
+  ],
+
+  "known_gaps": [],
+
+  "patterns_applied": ["P-07", "P-31", "P-32"]
+}

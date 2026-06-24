@@ -1,0 +1,108 @@
+﻿{
+  "_meta": {
+    "id":            "h02-employees",
+    "archetype":     "H02 List",
+    "page":          "Employees",
+    "surface":       "admin",
+    "version":       "1.0",
+    "last_updated":  "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps":          ["BG-005"]
+  },
+
+  "workflow": {
+    "primary_actor": "HR Administrator",
+    "leads_to": [
+      "H03 Employee Profile",
+      "H04 Add Employee"
+    ],
+    "actions": {
+      "primary": "Add Employee",
+      "secondary": ["Export CSV", "Bulk Actions"]
+    }
+  },
+
+  "api_contract": {
+    "services": ["employee-service"],
+    "endpoints": {
+      "list":      "GET /api/v1/employees?status=&department_id=&employment_type=&limit=&offset=",
+      "summary":   "BG-005: no aggregate — GET /api/v1/employees/summary not yet built",
+      "create":    "POST /api/v1/employees",
+      "delete":    "DELETE /api/v1/employees/:employeeId"
+    }
+  },
+
+  "renderer_schema": {
+    "dsl_version":  "1.0",
+    "archetype":    "list",
+    "surface":      "admin",
+    "page_title":   "Employees",
+    "page_states":  ["loaded", "skeleton", "empty", "error"],
+
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title":    "Employees",
+        "subtitle": "{{total}} employees across {{dept_count}} departments",
+        "actions": [
+          { "label": "Export CSV",    "type": "secondary", "icon": "download" },
+          { "label": "Bulk Actions",  "type": "secondary", "icon": "list" },
+          { "label": "Add Employee",  "type": "primary",   "icon": "plus" }
+        ]
+      }
+    },
+
+    "slots": {
+      "STATS_STRIP": {
+        "required": true,
+        "columns":  5,
+        "gap_ref":  "BG-005",
+        "items": [
+          { "key": "total",           "label": "Total",          "source": "BG-005 mock", "format": "integer" },
+          { "key": "active",          "label": "Active",         "source": "BG-005 mock", "format": "integer" },
+          { "key": "on_leave",        "label": "On Leave",       "source": "BG-005 mock", "format": "integer" },
+          { "key": "new_this_month",  "label": "New This Month", "source": "BG-005 mock", "format": "integer" },
+          { "key": "avg_tenure",      "label": "Avg Tenure",     "source": "BG-005 mock", "format": "years" }
+        ]
+      },
+
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",     "filter": null },
+          { "label": "Active",  "filter": "status=Active" },
+          { "label": "On Leave","filter": "status=OnLeave" },
+          { "label": "Draft",   "filter": "status=Draft" }
+        ],
+        "filters": [
+          { "key": "department_id",    "label": "Department",      "type": "select", "source": "employee-service › Department" },
+          { "key": "employment_type",  "label": "Employment Type", "type": "select", "enum_ref": "ref:api-contracts#Employee.employment_type" }
+        ],
+        "search": { "placeholder": "Search by name or ID…" }
+      },
+
+      "DATA_TABLE": {
+        "required": true,
+        "source":   "employee-service › Employee (paginated, 12/page)",
+        "row_action": "navigate → H03 Employee Profile",
+        "bulk_actions": ["Export selected", "Assign manager", "Offboard"],
+        "columns": [
+          { "key": "checkbox",         "label": "",              "width_pct": 4,  "component": "checkbox" },
+          { "key": "employee",         "label": "Employee",      "width_pct": 24, "component": "avatar_name_id" },
+          { "key": "department_name",  "label": "Department",    "width_pct": 16 },
+          { "key": "role_title",       "label": "Role",          "width_pct": 22 },
+          { "key": "employment_type",  "label": "Employment Type","width_pct": 14, "enum_ref": "ref:api-contracts#Employee.employment_type" },
+          { "key": "hire_date",        "label": "Hire Date",     "width_pct": 12, "format": "date_short", "font": "mono", "sortable": true },
+          { "key": "status",           "label": "Status",        "width_pct": 8,  "component": "chip", "enum_ref": "ref:api-contracts#Employee.status" }
+        ]
+      },
+
+      "PAGINATION": {
+        "required":      true,
+        "default_limit": 12,
+        "options":       [12, 25, 50]
+      }
+    }
+  }
+}

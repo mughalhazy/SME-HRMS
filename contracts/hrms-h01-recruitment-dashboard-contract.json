@@ -1,0 +1,131 @@
+﻿{
+  "_meta": {
+    "id":            "h01-recruitment-dashboard",
+    "archetype":     "H01 Dashboard",
+    "page":          "Recruitment Dashboard",
+    "surface":       "admin",
+    "version":       "1.0",
+    "last_updated":  "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p1-dashboard.html",
+    "gaps":          ["BG-004"]
+  },
+
+  "workflow": {
+    "primary_actor": "Talent Acquisition Lead",
+    "leads_to": [
+      "H02 Job Postings",
+      "H02 Candidates",
+      "H03 Pipeline View"
+    ],
+    "actions": {
+      "primary": "New Job Posting",
+      "secondary": ["Export"]
+    }
+  },
+
+  "api_contract": {
+    "services": [
+      "hiring_service"
+    ],
+    "endpoints": {
+      "hiring_metrics":  "BG-004: no aggregate endpoint — GET /api/v1/hiring/metrics?period_start=&period_end= not yet built",
+      "job_postings":    "GET /api/v1/hiring/job-postings?status=",
+      "candidates":      "GET /api/v1/hiring/candidates?status=&limit=",
+      "stage_transitions": "GET /api/v1/hiring/candidates/:id/stage-transitions — used to derive time-to-hire"
+    }
+  },
+
+  "renderer_schema": {
+    "dsl_version":  "1.0",
+    "archetype":    "dashboard",
+    "surface":      "admin",
+    "page_title":   "Recruitment Dashboard",
+    "page_states":  ["loaded", "skeleton", "empty", "error"],
+
+    "chrome": {
+      "nav_active": "Dashboard",
+      "topbar": {
+        "title":   "Recruitment Dashboard",
+        "actions": [
+          { "label": "Export",          "type": "secondary", "icon": "download" },
+          { "label": "New Job Posting", "type": "primary",   "icon": "plus" }
+        ]
+      }
+    },
+
+    "slots": {
+      "KPI_ROW": {
+        "required": true,
+        "columns":  4,
+        "gap_ref":  "BG-004",
+        "items": [
+          {
+            "key":    "open_positions",
+            "label":  "Open Positions",
+            "source": "hiring_service › JobPosting (count status=Pending) — BG-004 mock",
+            "format": "integer"
+          },
+          {
+            "key":    "active_candidates",
+            "label":  "Active Candidates",
+            "source": "hiring_service › Candidate (count stage≠Completed,NoShow) — BG-004 mock",
+            "format": "integer"
+          },
+          {
+            "key":    "avg_time_to_hire",
+            "label":  "Avg Time-to-Hire",
+            "source": "hiring_service › CandidateStageTransition (avg Applied→Completed delta) — BG-004 mock",
+            "format": "integer_days"
+          },
+          {
+            "key":    "offer_accept_rate",
+            "label":  "Offer Accept Rate",
+            "source": "hiring_service › Candidate (Offered→Completed / Offered total) — BG-004 mock",
+            "format": "percentage"
+          }
+        ]
+      },
+
+      "CHART_PRIMARY": {
+        "required":  true,
+        "type":      "bar_horizontal_funnel",
+        "title":     "Candidate Pipeline",
+        "source":    "hiring_service › Candidate grouped by stage",
+        "fields":    ["stage", "count"],
+        "enum_ref":  "ref:api-contracts#Hiring.candidate.stage",
+        "gap_ref":   "BG-004",
+        "mock_data": [
+          { "stage": "Applied",      "count": 68 },
+          { "stage": "Interviewing", "count": 48 },
+          { "stage": "Offered",      "count": 18 },
+          { "stage": "Completed",    "count": 8  }
+        ]
+      },
+
+      "CHART_SECONDARY": {
+        "required": true,
+        "type":     "item_list",
+        "title":    "Open Roles",
+        "source":   "hiring_service › JobPosting (status=Pending,Draft, limit 4)",
+        "fields":   ["title", "department_name", "days_open", "applicant_count", "status"],
+        "enum_ref": "ref:api-contracts#Hiring.job.status"
+      },
+
+      "ACTIVITY_FEED": {
+        "required": true,
+        "type":     "table",
+        "title":    "Recent Candidate Activity",
+        "source":   "hiring_service › Candidate (active, limit 5, order by updated_at desc)",
+        "columns": [
+          { "key": "candidate",   "label": "Candidate",     "width_pct": 22, "component": "avatar_name" },
+          { "key": "role",        "label": "Role",          "width_pct": 22 },
+          { "key": "department",  "label": "Department",    "width_pct": 16 },
+          { "key": "applied",     "label": "Applied",       "width_pct": 16, "format": "date_short", "font": "mono" },
+          { "key": "stage",       "label": "Stage",         "width_pct": 14, "component": "chip", "enum_ref": "ref:api-contracts#Hiring.candidate.stage" },
+          { "key": "days_in_stage","label": "Days in Stage","width_pct": 10, "font": "mono" }
+        ]
+      }
+    }
+  }
+}

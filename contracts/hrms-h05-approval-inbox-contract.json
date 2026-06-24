@@ -1,0 +1,271 @@
+﻿{
+  "_meta": {
+    "id": "h05-approval-inbox",
+    "archetype": "H05 Workflow / Approval",
+    "page": "Approval Inbox",
+    "surface": "admin",
+    "primary_actor": "HR Manager · Line Manager · Finance Approver",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p5-workflow.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Approval Inbox"],
+      "summary_chips": [
+        { "label": "N pending",     "source": "count of WorkflowInstance where status=pending and actor=current_user" },
+        { "label": "N SLA breached","source": "count of steps where sla_deadline < now" },
+        { "label": "N due today",   "source": "count of steps where sla_deadline date = today" }
+      ],
+      "actions": [
+        {
+          "label": "Approve All Eligible",
+          "style": "primary",
+          "action": "bulk_approve",
+          "endpoint": "POST /workflow/approve-batch",
+          "gap_note": "BG-010 — endpoint not yet built; button is mocked"
+        }
+      ]
+    },
+
+    "FILTER_TABS": {
+      "tabs": [
+        { "label": "All",     "filter": null },
+        { "label": "Leave",   "filter": { "subject_type": "LeaveRequest" } },
+        { "label": "Expense", "filter": { "subject_type": "ExpenseClaim" } },
+        { "label": "Travel",  "filter": { "subject_type": "TravelRequest" } }
+      ],
+      "filtering": "client_side",
+      "gap_note": "BG-009 — GET /workflow/inbox has no subject_type filter param; full inbox loaded then filtered client-side"
+    },
+
+    "APPROVAL_LIST": {
+      "data_source": "GET /workflow/inbox?status=pending",
+      "service": "workflow_service",
+      "sort": "sla_deadline ASC",
+      "card_fields": [
+        { "field": "requester_name",    "label": "Requester",    "maps_to": "WorkflowInstance.metadata.requester_name (derived)" },
+        { "field": "requester_avatar",  "label": "Avatar",       "maps_to": "WorkflowInstance.metadata.requester_avatar (derived)" },
+        { "field": "request_type",      "label": "Type",         "maps_to": "WorkflowInstance.definition_code",
+          "chip_map": {
+            "leave_request":   { "bg": "#DBEAFE", "text": "#1D4ED8", "label": "Leave" },
+            "expense_claim":   { "bg": "#F3E8FF", "text": "#5B21B6", "label": "Expense" },
+            "travel_request":  { "bg": "#FEF3C7", "text": "#B45309", "label": "Travel" }
+          }
+        },
+        { "field": "request_summary",   "label": "Summary",      "maps_to": "BG-011: derived from subject record (not in WorkflowInstance)" },
+        { "field": "sla_deadline",      "label": "SLA",          "maps_to": "WorkflowInstance.steps[current].sla_deadline" },
+        { "field": "sla_status",        "label": "SLA Status",   "values": ["breached","due_today","due_soon","ok"],
+          "chip_map": {
+            "breached":  { "bg": "#FEE2E2", "text": "#B91C1C" },
+            "due_today": { "bg": "#FEF3C7", "text": "#B45309" },
+            "due_soon":  { "bg": "#FEF3C7", "text": "#B45309" },
+            "ok":        { "bg": "#F1F4F8", "text": "#64748B" }
+          }
+        }
+      ]
+    },
+
+    "DETAIL_PANEL": {
+      "sections": [
+        {
+          "id": "dp_head",
+          "type": "header",
+          "sticky": true,
+          "fields": [
+            { "field": "requester_name",   "maps_to": "WorkflowInstance.metadata.requester_name" },
+            { "field": "requester_role",   "maps_to": "WorkflowInstance.metadata.requester_role" },
+            { "field": "definition_code",  "maps_to": "WorkflowInstance.definition_code" },
+            { "field": "workflow_id",      "maps_to": "WorkflowInstance.workflow_id" },
+            { "field": "submitted_at",     "maps_to": "WorkflowInstance.created_at" }
+          ],
+          "actions": [
+            { "label": "View Full Record", "leads_to": "H03 Detail (subject-type-dependent)", "style": "ghost" }
+          ]
+        },
+        {
+          "id": "dp_request_details",
+          "type": "key_value_grid",
+          "title": "Request Details",
+          "fields_note": "All fields sourced from originating service record via subject_id",
+          "gap_note": "BG-011 — GET /workflow/{id}/context not yet built; fields mocked per subject_type",
+          "leave_fields": [
+            { "field": "leave_type",     "maps_to": "LeaveRequest.leave_type" },
+            { "field": "from_date",      "maps_to": "LeaveRequest.start_date" },
+            { "field": "to_date",        "maps_to": "LeaveRequest.end_date" },
+            { "field": "days",           "maps_to": "LeaveRequest.duration_days" },
+            { "field": "reason",         "maps_to": "LeaveRequest.reason" }
+          ],
+          "expense_fields": [
+            { "field": "category",       "maps_to": "ExpenseClaim.category" },
+            { "field": "amount",         "maps_to": "ExpenseClaim.total_amount" },
+            { "field": "currency",       "maps_to": "ExpenseClaim.currency" },
+            { "field": "line_item_count","maps_to": "ExpenseClaim.items[].length" },
+            { "field": "description",    "maps_to": "ExpenseClaim.description" }
+          ],
+          "travel_fields": [
+            { "field": "destination",    "maps_to": "TravelRequest.destination_city" },
+            { "field": "departure",      "maps_to": "TravelRequest.departure_date" },
+            { "field": "return",         "maps_to": "TravelRequest.return_date" },
+            { "field": "purpose",        "maps_to": "TravelRequest.purpose" },
+            { "field": "budget",         "maps_to": "TravelRequest.estimated_cost" }
+          ]
+        },
+        {
+          "id": "dp_context",
+          "type": "context_panel",
+          "variants": {
+            "leave_request": {
+              "label": "Leave Balance",
+              "fields": [
+                { "field": "leave_type",       "maps_to": "LeaveBalance.leave_type" },
+                { "field": "entitlement_days", "maps_to": "LeaveBalance.entitlement_days" },
+                { "field": "used_days",        "maps_to": "LeaveBalance.approved_days" },
+                { "field": "remaining_days",   "maps_to": "LeaveBalance.remaining_days" },
+                { "field": "policy_note",      "maps_to": "leave_policy.notes" }
+              ],
+              "endpoint_note": "BG-006 — GET /api/v1/leave/employees/:id/balances not yet built; mocked"
+            },
+            "expense_claim": {
+              "label": "Policy Compliance",
+              "fields": [
+                { "field": "daily_limit",       "maps_to": "expense_policy.daily_limit" },
+                { "field": "category_limit",    "maps_to": "expense_policy.category_limits[category]" },
+                { "field": "receipt_required",  "maps_to": "expense_policy.receipt_threshold" }
+              ]
+            },
+            "travel_request": {
+              "label": "Travel Policy",
+              "fields": [
+                { "field": "advance_booking_days", "maps_to": "travel_policy.advance_booking_requirement_days" },
+                { "field": "budget_limit",          "maps_to": "travel_policy.per_trip_budget_limit" }
+              ]
+            }
+          }
+        },
+        {
+          "id": "dp_team_coverage",
+          "type": "info_strip",
+          "title": "Team Coverage",
+          "condition": "subject_type === LeaveRequest",
+          "fields": [
+            { "field": "team_size",            "maps_to": "department.headcount (derived)" },
+            { "field": "overlapping_leaves",   "maps_to": "leave_service: concurrent approved leaves in same dept/period" }
+          ],
+          "gap_note": "BG-011: no aggregate endpoint; mocked"
+        },
+        {
+          "id": "dp_ai_assessment",
+          "type": "ai_card",
+          "pattern": "P-12",
+          "colour": "teal",
+          "fields": [
+            { "field": "assessment_text", "maps_to": "BG-002 mock: no AI inference endpoint" },
+            { "field": "confidence_score","maps_to": "BG-002 mock" },
+            { "field": "dismissable",     "value": true }
+          ],
+          "note": "AI assessment card always teal per P-12 rules. Pulsing dot (2s). Confidence % always shown."
+        },
+        {
+          "id": "dp_approval_history",
+          "type": "timeline",
+          "title": "Approval History",
+          "fields": [
+            { "field": "step_name",    "maps_to": "WorkflowInstance.history[].step_name" },
+            { "field": "actor",        "maps_to": "WorkflowInstance.history[].actor_id (name derived)" },
+            { "field": "decision",     "maps_to": "WorkflowInstance.history[].status" },
+            { "field": "comment",      "maps_to": "WorkflowInstance.history[].comment" },
+            { "field": "decided_at",   "maps_to": "WorkflowInstance.history[].updated_at" }
+          ]
+        }
+      ],
+
+      "comment_input": {
+        "label": "Comment (optional)",
+        "type": "textarea",
+        "placeholder": "Add a comment visible to the requester…",
+        "maps_to": "approve/reject payload: comment"
+      }
+    },
+
+    "ACTION_BAR": {
+      "layout": "always_visible",
+      "note": "dp-actions uses flex-shrink:0; detail-col uses overflow:hidden so action bar is never scrolled away",
+      "actions": [
+        {
+          "label": "Approve",
+          "style": "primary",
+          "full_width": true,
+          "endpoint": "POST /workflow/{workflow_id}/approve",
+          "payload": { "actor_id": "current_user.id", "actor_role": "current_user.role", "comment": "comment_input.value" },
+          "service": "workflow_service"
+        },
+        {
+          "label": "Reject",
+          "style": "danger",
+          "endpoint": "POST /workflow/{workflow_id}/reject",
+          "payload": { "actor_id": "current_user.id", "comment": "comment_input.value" },
+          "service": "workflow_service"
+        },
+        {
+          "label": "Delegate",
+          "style": "secondary",
+          "endpoint": "POST /workflow/{workflow_id}/delegate",
+          "payload": { "actor_id": "current_user.id", "delegate_to": "delegate_picker.value" },
+          "service": "workflow_service",
+          "note": "Delegate target picker not yet implemented in UI — mocked"
+        }
+      ]
+    }
+  },
+
+  "data_sources": [
+    {
+      "slot": "APPROVAL_LIST",
+      "endpoint": "GET /workflow/inbox",
+      "params": { "status": "pending" },
+      "service": "workflow_service",
+      "returns": "WorkflowInstance[]"
+    },
+    {
+      "slot": "DETAIL_PANEL (request details + context)",
+      "endpoint": "GET /workflow/{workflow_id}/context",
+      "service": "workflow_service",
+      "status": "NOT_BUILT",
+      "gap_ref": "BG-011",
+      "workaround": "Mock data per subject_type"
+    },
+    {
+      "slot": "DETAIL_PANEL (leave balance)",
+      "endpoint": "GET /api/v1/leave/employees/:employeeId/balances",
+      "service": "leave_service",
+      "status": "NOT_BUILT",
+      "gap_ref": "BG-006",
+      "workaround": "Hardcoded leave balance values"
+    }
+  ],
+
+  "action_endpoints": [
+    { "action": "approve",       "method": "POST", "endpoint": "/workflow/{id}/approve",  "service": "workflow_service" },
+    { "action": "reject",        "method": "POST", "endpoint": "/workflow/{id}/reject",   "service": "workflow_service" },
+    { "action": "delegate",      "method": "POST", "endpoint": "/workflow/{id}/delegate", "service": "workflow_service" },
+    { "action": "bulk_approve",  "method": "POST", "endpoint": "/workflow/approve-batch", "service": "workflow_service", "status": "NOT_BUILT", "gap_ref": "BG-010" }
+  ],
+
+  "known_gaps": ["BG-009", "BG-010", "BG-011", "BG-012"],
+
+  "patterns_applied": ["P-07", "P-12", "P-18", "P-27", "P-31", "P-32"],
+
+  "mock_data": {
+    "approval_cards": [
+      { "id": "wf-001", "definition_code": "leave_request",  "requester": "Tom Nakamura",  "summary": "Annual Leave · 5 days · 1–5 Apr", "sla_status": "breached",  "sla_label": "SLA breached 8d" },
+      { "id": "wf-002", "definition_code": "expense_claim",  "requester": "Sarah Mensah",  "summary": "Client Entertainment · AED 1,240", "sla_status": "due_today", "sla_label": "Due today" },
+      { "id": "wf-003", "definition_code": "travel_request", "requester": "Dev Patel",     "summary": "Dubai → Riyadh · 14–16 Apr",       "sla_status": "due_soon",  "sla_label": "Due in 1d" },
+      { "id": "wf-004", "definition_code": "leave_request",  "requester": "Amara Kofi",    "summary": "Sick Leave · 2 days · 10–11 Apr",  "sla_status": "ok",        "sla_label": "Due in 3d" },
+      { "id": "wf-005", "definition_code": "expense_claim",  "requester": "Marcus Hill",   "summary": "Office Supplies · AED 320",        "sla_status": "ok",        "sla_label": "Due in 5d" }
+    ],
+    "detail_panel_default": "wf-001 (Tom Nakamura — leave_request)"
+  }
+}

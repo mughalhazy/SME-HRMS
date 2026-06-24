@@ -1,0 +1,155 @@
+﻿{
+  "_meta": {
+    "id":            "h07-compliance-reports",
+    "archetype":     "H07 Analytics/Reports",
+    "page":          "Compliance Reports",
+    "surface":       "admin",
+    "version":       "1.0",
+    "last_updated":  "2026-03-29",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p7-analytics.html",
+    "status":        "sealed"
+  },
+
+  "backend_service": {
+    "primary":   "employee-service",
+    "secondary": null,
+    "note":      "reporting_analytics has no compliance aggregate type (BG-020). All tabs hit employee-service document-compliance endpoints directly."
+  },
+
+  "gaps": ["BG-020"],
+
+  "tab_inventory": {
+    "overview":         "built — document status breakdown + task status breakdown + type distributions (client-derived from raw lists)",
+    "documents":        "built — EmployeeDocument list (all types + statuses)",
+    "expiring":         "built — GET /documents/expiring (sorted by expiry_date asc)",
+    "acknowledgements": "built — PolicyAcknowledgement log (requires_acknowledgement=true docs)",
+    "tasks":            "built — ComplianceTask list (all task types + statuses)"
+  },
+
+  "api_contract": {
+    "E01": {
+      "tab":      "Overview",
+      "service":  "employee-service",
+      "endpoint": "GET /api/v1/documents",
+      "params":   { "tenant_id": "required", "status": "optional", "document_type": "optional" },
+      "response_fields": {
+        "document_id":    "EmployeeDocument.document_id",
+        "document_type":  "EmployeeDocument.document_type — ref:api-contracts#DocumentType",
+        "status":         "EmployeeDocument.status — ref:api-contracts#DocumentStatus",
+        "expiry_date":    "EmployeeDocument.expiry_date"
+      },
+      "note": "KPIs client-derived: total, expiring count, status breakdown, type distribution"
+    },
+    "E02": {
+      "tab":      "Documents",
+      "service":  "employee-service",
+      "endpoint": "GET /api/v1/documents",
+      "params":   {
+        "tenant_id":               "required",
+        "document_type":           "optional — filter by DOCUMENT_TYPES enum",
+        "status":                  "optional — filter by DOCUMENT_STATUSES enum",
+        "requires_acknowledgement":"optional boolean",
+        "expiry_to":               "optional ISO date — documents expiring before this date"
+      },
+      "response_fields": {
+        "document_id":              "EmployeeDocument.document_id",
+        "employee_id":              "EmployeeDocument.employee_id",
+        "document_type":            "EmployeeDocument.document_type — ref:api-contracts#DocumentType",
+        "title":                    "EmployeeDocument.title",
+        "status":                   "EmployeeDocument.status — ref:api-contracts#DocumentStatus",
+        "issued_on":                "EmployeeDocument.issued_on",
+        "expiry_date":              "EmployeeDocument.expiry_date",
+        "requires_acknowledgement": "EmployeeDocument.requires_acknowledgement",
+        "policy_code":              "EmployeeDocument.policy_code",
+        "contract_details":         "EmployeeDocument.contract_details — ContractDetails{contract_kind, effective_from, effective_to}"
+      }
+    },
+    "E03": {
+      "tab":      "Expiring",
+      "service":  "employee-service",
+      "endpoint": "GET /api/v1/documents/expiring",
+      "params":   {
+        "tenant_id":  "required",
+        "employee_id":"optional",
+        "expiry_to":  "optional ISO date — upper bound for expiry_date filter"
+      },
+      "response_fields": {
+        "document_id":   "EmployeeDocument.document_id",
+        "employee_id":   "EmployeeDocument.employee_id",
+        "document_type": "EmployeeDocument.document_type — ref:api-contracts#DocumentType",
+        "title":         "EmployeeDocument.title",
+        "status":        "EmployeeDocument.status — ref:api-contracts#DocumentStatus",
+        "expiry_date":   "EmployeeDocument.expiry_date"
+      },
+      "note": "days_remaining is client-derived: Math.ceil((new Date(expiry_date) - Date.now()) / 86400000)"
+    },
+    "E04": {
+      "tab":      "Acknowledgements",
+      "service":  "employee-service",
+      "endpoint": "GET /api/v1/documents?requires_acknowledgement=true",
+      "secondary_endpoint": "GET /api/v1/documents/:documentId → acknowledgements[]",
+      "response_fields": {
+        "acknowledgement_id": "PolicyAcknowledgement.acknowledgement_id",
+        "document_id":        "PolicyAcknowledgement.document_id",
+        "employee_id":        "PolicyAcknowledgement.employee_id",
+        "acknowledged_by":    "PolicyAcknowledgement.acknowledged_by",
+        "acknowledged_at":    "PolicyAcknowledgement.acknowledged_at",
+        "comment":            "PolicyAcknowledgement.comment"
+      }
+    },
+    "E05": {
+      "tab":      "Compliance Tasks",
+      "service":  "employee-service",
+      "endpoint": "GET /api/v1/compliance-tasks",
+      "params":   {
+        "tenant_id":            "required",
+        "employee_id":          "optional",
+        "assigned_employee_id": "optional",
+        "task_type":            "optional — ref:api-contracts#ComplianceTaskType",
+        "status":               "optional — ref:api-contracts#ComplianceTaskStatus",
+        "due_to":               "optional ISO date"
+      },
+      "response_fields": {
+        "task_id":              "ComplianceTask.task_id",
+        "employee_id":          "ComplianceTask.employee_id",
+        "task_type":            "ComplianceTask.task_type — ref:api-contracts#ComplianceTaskType",
+        "title":                "ComplianceTask.title",
+        "description":          "ComplianceTask.description",
+        "due_date":             "ComplianceTask.due_date",
+        "status":               "ComplianceTask.status — ref:api-contracts#ComplianceTaskStatus",
+        "assigned_employee_id": "ComplianceTask.assigned_employee_id",
+        "completed_at":         "ComplianceTask.completed_at",
+        "completed_by":         "ComplianceTask.completed_by"
+      }
+    }
+  },
+
+  "renderer_schema": {
+    "dsl_version":  "1.0",
+    "archetype":    "analytics_reports",
+    "surface":      "admin",
+    "page_title":   "Compliance Reports",
+    "accent_colour":"#B45309 (amber — compliance/risk theme · P-06 warning token)",
+    "page_states":  ["loaded", "skeleton", "empty", "error", "partial"],
+    "chrome": {
+      "nav_active":  "Analytics",
+      "topbar": {
+        "breadcrumb":     ["Analytics", "Compliance Reports"],
+        "primary_action": { "label": "New Task", "variant": "primary" },
+        "secondary_actions": ["Export PDF", "Export CSV"]
+      },
+      "filter_bar": {
+        "filters": ["Period", "Department", "Doc Type"]
+      }
+    },
+    "tabs": [
+      { "id": "overview",         "label": "Overview",          "icon": "📋", "default": true  },
+      { "id": "documents",        "label": "Documents",         "icon": "📄"                    },
+      { "id": "expiring",         "label": "Expiring",          "icon": "⏱"                     },
+      { "id": "acknowledgements", "label": "Acknowledgements",  "icon": "✅"                    },
+      { "id": "tasks",            "label": "Compliance Tasks",  "icon": "📋"                    }
+    ],
+    "patterns_applied": ["P-07", "P-11", "P-20", "P-27", "P-31", "P-32", "P-33"]
+  }
+}

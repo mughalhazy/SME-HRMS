@@ -1,0 +1,184 @@
+﻿{
+  "id": "hrms-h11-workflow-builder-contract",
+  "version": "1.0",
+  "last_updated": "2026-03-29",
+  "archetype_ref": "hrms-schema-template.json",
+  "seed_page_ref": "frontend/seeds/p11-builder.html",
+  "page": "h11-workflow-builder.html",
+  "description": "Workflow Builder — view and configure workflow definitions via step canvas, palette, and properties panel",
+  "services": ["workflow_service"],
+  "gaps": ["BG-028", "BG-029"],
+  "gap_notes": {
+    "BG-028": "No workflow definition CRUD API in workflow_service — register_definition() is internal only. Publish button, version history panel, and switcher dropdown are chrome.",
+    "BG-029": "Form field schema not modeled in workflow_service — Form Fields palette section and canvas form sections (s1, s5) are chrome."
+  },
+  "endpoints": [
+    {
+      "id": "E01",
+      "label": "Get workflow instance",
+      "method": "GET",
+      "path": "/api/v1/workflows/{workflow_id}",
+      "service": "workflow_service",
+      "handler": "get_instance",
+      "response_model": "WorkflowInstance",
+      "response_schema": {
+        "workflow_id": "string",
+        "tenant_id": "string",
+        "definition_code": "string",
+        "source_service": "string",
+        "subject_type": "string",
+        "subject_id": "string",
+        "status": "ref:api-contracts#WorkflowStatus",
+        "steps": [
+          {
+            "step_id": "string",
+            "type": "approval",
+            "name": "string",
+            "assignee": "string",
+            "sla": "string (ISO 8601 duration)",
+            "metadata": {
+              "sequence": "integer",
+              "parallel_group": "string | null",
+              "condition_key": "string | null",
+              "escalation_assignee_template": "string | null"
+            }
+          }
+        ],
+        "metadata": "object",
+        "history": [
+          {
+            "history_id": "string",
+            "action": "string",
+            "actor_id": "string",
+            "step_id": "string",
+            "from_status": "string",
+            "to_status": "string"
+          }
+        ]
+      },
+      "used_by": ["canvas step rendering", "properties panel"]
+    },
+    {
+      "id": "E02",
+      "label": "Get workflow inbox",
+      "method": "GET",
+      "path": "/api/v1/workflows/inbox",
+      "service": "workflow_service",
+      "handler": "get_inbox",
+      "response_model": "WorkflowInstance[]",
+      "query_params": {
+        "assignee": "string (optional — filter by current user)",
+        "status": "ref:api-contracts#WorkflowStatus (optional)"
+      },
+      "used_by": ["workflow switcher dropdown (chrome BG-028)"]
+    },
+    {
+      "id": "E03",
+      "label": "Approve workflow step",
+      "method": "POST",
+      "path": "/api/v1/workflows/{workflow_id}/approve",
+      "service": "workflow_service",
+      "handler": "approve",
+      "request_body": {
+        "step_id": "string",
+        "comment": "string (optional)"
+      },
+      "response_model": "WorkflowInstance",
+      "used_by": ["approval step action (runtime — not builder)"]
+    },
+    {
+      "id": "E04",
+      "label": "Reject workflow step",
+      "method": "POST",
+      "path": "/api/v1/workflows/{workflow_id}/reject",
+      "service": "workflow_service",
+      "handler": "reject",
+      "request_body": {
+        "step_id": "string",
+        "reason": "string"
+      },
+      "response_model": "WorkflowInstance",
+      "used_by": ["rejection action (runtime — not builder)"]
+    },
+    {
+      "id": "E05",
+      "label": "Delegate workflow step",
+      "method": "POST",
+      "path": "/api/v1/workflows/{workflow_id}/delegate",
+      "service": "workflow_service",
+      "handler": "delegate",
+      "request_body": {
+        "step_id": "string",
+        "delegate_to": "string (actor_id)"
+      },
+      "response_model": "WorkflowInstance",
+      "used_by": ["delegate action (runtime — not builder)"]
+    },
+    {
+      "id": "E06",
+      "label": "Escalate workflow step",
+      "method": "POST",
+      "path": "/api/v1/workflows/{workflow_id}/escalate",
+      "service": "workflow_service",
+      "handler": "escalate",
+      "request_body": {
+        "step_id": "string",
+        "escalation_assignee": "string (actor_id or role template)"
+      },
+      "response_model": "WorkflowInstance",
+      "used_by": ["escalation action (runtime — not builder)"]
+    }
+  ],
+  "renderer_schema": {
+    "dsl_version": "1.0",
+    "layout": "three-panel-builder",
+    "panels": {
+      "palette": {
+        "sections": ["workflow-logic", "form-fields", "notifications", "layout"],
+        "chrome_sections": ["form-fields", "notifications"],
+        "chrome_refs": ["BG-028", "BG-029"]
+      },
+      "canvas": {
+        "sections": [
+          {
+            "id": "s1",
+            "label": "Leave Details",
+            "chrome": true,
+            "chrome_ref": "BG-029",
+            "source": "leave_service › LeaveRequest"
+          },
+          {
+            "id": "s2",
+            "label": "Approval Routing",
+            "chrome": false,
+            "source": "workflow_service › WorkflowDefinition.steps[type=approval]",
+            "fields": ["condition_key", "assignee", "sla", "metadata.sequence", "metadata.parallel_group"]
+          },
+          {
+            "id": "s3",
+            "label": "Auto Notification",
+            "chrome": true,
+            "chrome_ref": "BG-028"
+          },
+          {
+            "id": "s4",
+            "label": "SLA & Escalation",
+            "chrome": false,
+            "source": "workflow_service › WorkflowDefinition.steps[sla]",
+            "fields": ["sla", "metadata.escalation_assignee_template"]
+          },
+          {
+            "id": "s5",
+            "label": "AI Pre-check",
+            "chrome": true,
+            "chrome_ref": "BG-029"
+          }
+        ]
+      },
+      "properties": {
+        "active_section": "s2 (default)",
+        "real_fields": ["step_id", "type", "name", "assignee", "sla", "metadata.sequence", "metadata.parallel_group", "metadata.condition_key", "metadata.escalation_assignee_template"]
+      }
+    }
+  }
+}

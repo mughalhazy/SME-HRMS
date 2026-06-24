@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Raise Leave Request</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4)}
+.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer}.crumb a:hover{color:var(--teal)}.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.page-title-bar{background:var(--w);border-bottom:1px solid var(--bd);padding:16px 24px;flex-shrink:0}
+.pt-title{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.pt-sub{font-size:12.5px;color:var(--t3);margin-top:3px}
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+.section{margin-bottom:22px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:18px 0}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=date],select,textarea{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+textarea{resize:vertical;min-height:72px}
+.fhint{font-size:11px;color:var(--t4)}
+/* Leave type cards */
+.lt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lt-card{padding:11px 13px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;user-select:none}
+.lt-card:hover{border-color:var(--tb);background:var(--tl)}
+.lt-card.on{border-color:var(--teal);background:var(--tl)}
+.lt-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.lt-card.on .lt-title{color:var(--teal)}
+.lt-balance{font-size:11.5px;color:var(--t3)}
+.lt-card.on .lt-balance{color:var(--teal)}
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)}
+.toggle-lbl{font-size:12.5px;font-weight:600;color:var(--t1)}
+.toggle-sub{font-size:11.5px;color:var(--t3);margin-top:1px}
+.tog{width:36px;height:20px;border-radius:99px;background:#CBD5E1;cursor:pointer;position:relative;transition:background .14s;flex-shrink:0}
+.tog.on{background:var(--teal)}
+.tog::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .14s}
+.tog.on::after{transform:translateX(16px)}
+/* Duration badge */
+.dur-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);font-size:13px;font-weight:700;color:var(--teal);margin-top:10px}
+/* Rail */
+.rail-sec{margin-bottom:16px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3)}.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.sum-empty{color:var(--t4);font-style:italic;font-weight:400}
+/* Balance bars */
+.bal-item{margin-bottom:10px}
+.bal-top{display:flex;justify-content:space-between;margin-bottom:4px}
+.bal-lbl{font-size:12px;color:var(--t2)}
+.bal-val{font-family:var(--mono);font-size:11.5px;color:var(--t3)}
+.bal-bar{height:6px;border-radius:99px;background:var(--t5)}
+.bal-fill{height:100%;border-radius:99px;background:var(--teal)}
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+  <div class="sb-av">PS</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>My Leave</a><span class="sep">›</span><span class="cur">Raise Leave Request</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Submit Request</button>
+    <div class="tav">PS</div>
+  </div>
+  <div class="page-title-bar">
+    <div class="pt-title">Raise Leave Request</div>
+    <div class="pt-sub">Select leave type, dates, and submit for manager approval.</div>
+  </div>
+  <div class="form-wrap">
+    <div class="form-main">
+
+      <div class="section">
+        <div class="sec-title">Leave Type <span style="color:var(--red)">*</span></div>
+        <div class="lt-grid" id="lt-grid">
+          <div class="lt-card on" onclick="selLT(this,'Annual')">
+            <div class="lt-title">Annual Leave</div>
+            <div class="lt-balance">12.5 days remaining</div>
+          </div>
+          <div class="lt-card" onclick="selLT(this,'Sick')">
+            <div class="lt-title">Sick Leave</div>
+            <div class="lt-balance">8.0 days remaining</div>
+          </div>
+          <div class="lt-card" onclick="selLT(this,'Casual')">
+            <div class="lt-title">Casual Leave</div>
+            <div class="lt-balance">3.0 days remaining</div>
+          </div>
+          <div class="lt-card" onclick="selLT(this,'Unpaid')">
+            <div class="lt-title">Unpaid Leave</div>
+            <div class="lt-balance">No cap</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Dates <span style="color:var(--red)">*</span></div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>Start Date <span class="req">*</span></label>
+            <input type="date" id="start-date" value="2026-04-07" oninput="calcDays()">
+          </div>
+          <div class="fgroup">
+            <label>End Date <span class="req">*</span></label>
+            <input type="date" id="end-date" value="2026-04-11" oninput="calcDays()">
+          </div>
+        </div>
+        <div class="toggle-row" style="margin-top:12px" onclick="document.getElementById('half-tog').classList.toggle('on');calcDays()">
+          <div>
+            <div class="toggle-lbl">Half Day</div>
+            <div class="toggle-sub">Apply to first day only</div>
+          </div>
+          <div class="tog" id="half-tog"></div>
+        </div>
+        <div class="dur-badge" id="dur-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="dur-text">5 working days</span>
+        </div>
+      </div>
+
+      <div class="sec-div"></div>
+
+      <div class="section">
+        <div class="sec-title">Details</div>
+        <div class="fgroup">
+          <label>Reason</label>
+          <textarea id="reason" placeholder="Optional — briefly describe the reason for your leave request." rows="3"></textarea>
+          <span class="fhint">Required for Sick and Unpaid leave</span>
+        </div>
+        <div style="margin-top:12px" class="fgroup">
+          <label>Acting Approver Override</label>
+          <select>
+            <option value="">— Use default manager (Aisha Al-Rashidi) —</option>
+            <option value="james">James Okonkwo · CHRO</option>
+            <option value="dev">Dev Patel · Director Engineering</option>
+          </select>
+          <span class="fhint">Only change if your manager is unavailable</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="form-rail">
+      <div class="rail-sec">
+        <div class="rail-lbl">Request Summary</div>
+        <div class="sum-row"><span class="sum-l">Employee</span><span class="sum-v">Priya Subramaniam</span></div>
+        <div class="sum-row"><span class="sum-l">Leave type</span><span class="sum-v" id="sum-lt">Annual</span></div>
+        <div class="sum-row"><span class="sum-l">Duration</span><span class="sum-v" id="sum-dur">5 days</span></div>
+        <div class="sum-row"><span class="sum-l">Start</span><span class="sum-v" id="sum-start">7 Apr 2026</span></div>
+        <div class="sum-row"><span class="sum-l">End</span><span class="sum-v" id="sum-end">11 Apr 2026</span></div>
+        <div class="sum-row"><span class="sum-l">Approver</span><span class="sum-v">Aisha Al-Rashidi</span></div>
+      </div>
+      <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+      <div class="rail-sec">
+        <div class="rail-lbl">Leave Balances</div>
+        <div class="bal-item">
+          <div class="bal-top"><span class="bal-lbl">Annual</span><span class="bal-val">12.5 / 18</span></div>
+          <div class="bal-bar"><div class="bal-fill" style="width:69%"></div></div>
+        </div>
+        <div class="bal-item">
+          <div class="bal-top"><span class="bal-lbl">Sick</span><span class="bal-val">8.0 / 10</span></div>
+          <div class="bal-bar"><div class="bal-fill" style="width:80%"></div></div>
+        </div>
+        <div class="bal-item">
+          <div class="bal-top"><span class="bal-lbl">Casual</span><span class="bal-val">3.0 / 7</span></div>
+          <div class="bal-bar"><div class="bal-fill" style="width:43%"></div></div>
+        </div>
+        <div style="font-size:11px;color:var(--t4);margin-top:6px">BG-006: balances from mock data. No live endpoint.</div>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <div class="ff-info">Submits <code>POST /api/v1/leave/requests</code> — leave_service</div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="submitForm()">Submit Request</button>
+  </div>
+</main>
+</div>
+<script>
+let leaveType = 'Annual';
+function selLT(el, lt) {
+  document.querySelectorAll('.lt-card').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  leaveType = lt;
+  document.getElementById('sum-lt').textContent = lt;
+}
+function calcDays() {
+  const s = new Date(document.getElementById('start-date').value);
+  const e = new Date(document.getElementById('end-date').value);
+  if (isNaN(s) || isNaN(e) || e < s) return;
+  const half = document.getElementById('half-tog').classList.contains('on');
+  let days = 0;
+  const cur = new Date(s);
+  while (cur <= e) {
+    const d = cur.getDay();
+    if (d !== 0 && d !== 6) days++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  if (half && days > 0) days -= 0.5;
+  const txt = days + ' working day' + (days !== 1 ? 's' : '');
+  document.getElementById('dur-text').textContent = txt;
+  document.getElementById('sum-dur').textContent = days + ' days';
+  document.getElementById('sum-start').textContent = s.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('sum-end').textContent = e.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+}
+function submitForm() {
+  const s = document.getElementById('start-date').value;
+  const e = document.getElementById('end-date').value;
+  if (!s || !e) { alert('Dates are required.'); return; }
+  const payload = {
+    leave_type: leaveType,
+    start_date: s,
+    end_date: e,
+    reason: document.getElementById('reason').value.trim() || undefined,
+    partial_day_portion: document.getElementById('half-tog').classList.contains('on') ? 0.5 : 1.0
+  };
+  alert('POST /api/v1/leave/requests\n\n' + JSON.stringify(payload, null, 2));
+}
+calcDays();
+</script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+﻿{
+  "id": "hrms-h12-helpdesk-contract",
+  "version": "1.0",
+  "last_updated": "2026-03-30",
+  "archetype_ref": "hrms-schema-template.json",
+  "seed_page_ref": "frontend/seeds/p12-support.html",
+  "page": "pages/h12-helpdesk.html",
+  "description": "Helpdesk support ticket management — two-panel layout, ticket list + detail with thread, rail, and SLA workflow.",
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "method": "GET",
+      "path": "/api/v1/helpdesk/tickets",
+      "service": "helpdesk_service",
+      "purpose": "Load ticket list (left panel)",
+      "query_params": {
+        "status": "ref:api-contracts#Helpdesk.ticket.status",
+        "priority": "ref:api-contracts#Helpdesk.ticket.priority",
+        "assignee_id": "uuid | null",
+        "search": "string | null",
+        "page": "int",
+        "page_size": "int"
+      },
+      "response_shape": {
+        "items": "HelpdeskTicket[]",
+        "total": "int",
+        "page": "int",
+        "page_size": "int"
+      },
+      "ui_surface": "ticket-list · tl-scroll"
+    },
+    {
+      "id": "E02",
+      "method": "GET",
+      "path": "/api/v1/helpdesk/tickets/{ticket_id}",
+      "service": "helpdesk_service",
+      "purpose": "Load full ticket detail on row click",
+      "response_shape": {
+        "id": "uuid",
+        "ticket_number": "string",
+        "subject": "string",
+        "description": "string",
+        "status": "ref:api-contracts#Helpdesk.ticket.status",
+        "priority": "ref:api-contracts#Helpdesk.ticket.priority",
+        "category": "string | null",
+        "reporter": "helpdesk_service › EmployeeSnapshot",
+        "assignee": "helpdesk_service › EmployeeSnapshot | null",
+        "sla_summary": {
+          "status": "draft | on_track | escalated | completed",
+          "current_step": "string | null",
+          "current_assignee": "string | null",
+          "deadline_at": "ISO8601 | null",
+          "escalated_at": "ISO8601 | null"
+        },
+        "comments": "TicketComment[]",
+        "attachments": "TicketAttachment[]",
+        "related_ticket_ids": "uuid[]",
+        "created_at": "ISO8601",
+        "updated_at": "ISO8601"
+      },
+      "ui_surface": "ticket-detail · td-main · td-rail"
+    },
+    {
+      "id": "E03",
+      "method": "POST",
+      "path": "/api/v1/helpdesk/tickets",
+      "service": "helpdesk_service",
+      "purpose": "Create new ticket (New Ticket button)",
+      "request_body": {
+        "subject": "string",
+        "description": "string",
+        "priority": "ref:api-contracts#Helpdesk.ticket.priority",
+        "category": "string | null",
+        "attachments": "file[] | null"
+      },
+      "response_shape": {
+        "id": "uuid",
+        "ticket_number": "string",
+        "status": "Draft"
+      },
+      "ui_surface": "topbar · btn-primary 'New Ticket'"
+    },
+    {
+      "id": "E04",
+      "method": "POST",
+      "path": "/api/v1/helpdesk/tickets/{ticket_id}/submit",
+      "service": "helpdesk_service",
+      "purpose": "Submit draft ticket → Open status",
+      "request_body": {},
+      "response_shape": {
+        "id": "uuid",
+        "status": "Open"
+      },
+      "ui_surface": "td-rail · workflow submit action"
+    },
+    {
+      "id": "E05",
+      "method": "POST",
+      "path": "/api/v1/helpdesk/tickets/{ticket_id}/decision",
+      "service": "helpdesk_service",
+      "purpose": "Approve or reject triage / resolution step",
+      "request_body": {
+        "action": "approve | reject",
+        "comment": "string | null"
+      },
+      "response_shape": {
+        "id": "uuid",
+        "status": "ref:api-contracts#Helpdesk.ticket.status",
+        "sla_summary": {
+          "status": "string",
+          "current_step": "string | null",
+          "deadline_at": "ISO8601 | null"
+        }
+      },
+      "ui_surface": "td-rail · Workflow Actions · Approve button · Reject button",
+      "notes": "Triage step → InProgress on approve. Resolution step → Resolved on approve. Any step → Open on reject."
+    },
+    {
+      "id": "E06",
+      "method": "POST",
+      "path": "/api/v1/helpdesk/tickets/{ticket_id}/close",
+      "service": "helpdesk_service",
+      "purpose": "Close a resolved ticket",
+      "request_body": {
+        "comment": "string | null"
+      },
+      "response_shape": {
+        "id": "uuid",
+        "status": "Closed"
+      },
+      "ui_surface": "td-rail · Workflow Actions · Resolve button (post-Resolved)"
+    },
+    {
+      "id": "E07",
+      "method": "POST",
+      "path": "/api/v1/helpdesk/tickets/{ticket_id}/comments",
+      "service": "helpdesk_service",
+      "purpose": "Post a comment or internal note from reply-area",
+      "request_body": {
+        "body": "string",
+        "visibility": "public | internal",
+        "attachments": "file[] | null"
+      },
+      "response_shape": {
+        "id": "uuid",
+        "body": "string",
+        "visibility": "public | internal",
+        "author": "helpdesk_service › EmployeeSnapshot",
+        "created_at": "ISO8601"
+      },
+      "ui_surface": "reply-area · Send Reply button · Internal Note tab"
+    },
+    {
+      "id": "E08",
+      "method": "GET",
+      "path": "/api/v1/helpdesk/tickets/{ticket_id}/comments",
+      "service": "helpdesk_service",
+      "purpose": "Load comment thread for ticket detail",
+      "response_shape": {
+        "items": "TicketComment[]"
+      },
+      "ui_surface": "td-main · thread tab"
+    },
+    {
+      "id": "E09",
+      "method": "GET",
+      "path": "/api/v1/helpdesk/tickets/stats",
+      "service": "helpdesk_service",
+      "purpose": "Load stats strip (Open, In Progress, Pending Response, Resolved This Week, Avg Resolution Time)",
+      "notes": "Endpoint not confirmed in helpdesk_api.py. Stats strip uses derived counts if unavailable.",
+      "response_shape": {
+        "open_count": "int",
+        "open_urgent_count": "int",
+        "in_progress_count": "int",
+        "in_progress_near_sla_count": "int",
+        "pending_response_count": "int",
+        "resolved_this_week_count": "int",
+        "avg_resolution_days": "float"
+      },
+      "ui_surface": "stat-strip"
+    },
+    {
+      "id": "E10",
+      "method": "POST",
+      "path": "/api/v1/helpdesk/tickets/{ticket_id}/attachments",
+      "service": "helpdesk_service",
+      "purpose": "Upload attachment to ticket",
+      "request_body": {
+        "file": "binary",
+        "filename": "string"
+      },
+      "response_shape": {
+        "id": "uuid",
+        "filename": "string",
+        "url": "string",
+        "size_bytes": "int"
+      },
+      "ui_surface": "reply-area · attach icon"
+    }
+  ],
+
+  "chrome_items": [
+    {
+      "id": "CHROME-01",
+      "element": "Priority select (td-rail)",
+      "reason": "No PATCH /helpdesk/tickets/{id} endpoint",
+      "gap_ref": "BG-032",
+      "behaviour": "Rendered disabled — opacity:.6, pointer-events:none, title tooltip citing BG-032"
+    },
+    {
+      "id": "CHROME-02",
+      "element": "Reassign button (td-rail)",
+      "reason": "No PATCH /helpdesk/tickets/{id} endpoint",
+      "gap_ref": "BG-032",
+      "behaviour": "Rendered disabled — opacity:.6, pointer-events:none, title tooltip citing BG-032"
+    },
+    {
+      "id": "CHROME-03",
+      "element": "Merge button (topbar of ticket detail)",
+      "reason": "No PATCH /helpdesk/tickets/{id} with merge_into_id field",
+      "gap_ref": "BG-032",
+      "behaviour": "Button present but non-functional — title tooltip citing BG-032"
+    },
+    {
+      "id": "CHROME-04",
+      "element": "Forward tab (reply-area)",
+      "reason": "No PATCH /helpdesk/tickets/{id} with forward_to_service field",
+      "gap_ref": "BG-032",
+      "behaviour": "Tab visible but non-functional — title tooltip citing BG-032"
+    }
+  ],
+
+  "renderer_schema": {
+    "dsl_version": "1.0",
+    "ticket_list": {
+      "row_height": "auto (min 72px)",
+      "first_col": "avatar + name + ticket_number",
+      "status_chip": "ref:api-contracts#Helpdesk.ticket.status",
+      "priority_chip": "ref:api-contracts#Helpdesk.ticket.priority"
+    },
+    "ticket_detail": {
+      "thread_tab": "TicketComment[] ordered by created_at asc",
+      "internal_note_chip": "chip-grey · 'Internal'",
+      "sla_status_chip": {
+        "on_track": "chip-green",
+        "draft": "chip-grey",
+        "escalated": "chip-red",
+        "completed": "chip-green"
+      }
+    }
+  },
+
+  "mock_data_note": "7 tickets seeded in JS — TKT-0148 (InProgress/Urgent), TKT-0147 (Open/High), TKT-0146 (InProgress/Medium), TKT-0145 (Open/High), TKT-0144 (Resolved/Low), TKT-0143 (Draft/Medium), TKT-0142 (Open/Urgent). All status/priority values use real enums from api-contracts v1.2."
+}

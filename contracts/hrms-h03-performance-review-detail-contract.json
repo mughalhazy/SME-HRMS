@@ -1,0 +1,165 @@
+﻿{
+  "_meta": {
+    "id": "h03-performance-review-detail",
+    "archetype": "H03 Detail / Profile",
+    "page": "Performance Review Detail",
+    "surface": "admin",
+    "primary_actor": "HR Manager / Reviewer",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Performance", "Review Cycles", "Q1 2025", "Priya Subramaniam"],
+      "actions": [
+        { "label": "Export PDF", "style": "secondary", "action": "GET /api/v1/performance/reviews/:reviewId/export" },
+        { "label": "Edit Review", "style": "primary", "leads_to": "H04 Edit Performance Review" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "avatar": { "initials": "PS", "size": 56, "gradient": "violet" },
+      "name": "Q1 2025 Performance Review",
+      "role_line": "Priya Subramaniam · EMP-0127 · Senior HR Business Partner · People Operations",
+      "chips": [
+        { "field": "review_cycle_status", "enum_ref": "ref:REVIEW_CYCLE_STATUSES", "style": "teal-if-open" },
+        { "field": "code", "style": "grey", "font": "mono" },
+        { "field": "review_period", "prefix": "Period", "style": "grey" },
+        { "field": "owner_employee_name", "prefix": "Owner", "style": "grey" }
+      ]
+    },
+
+    "TAB_NAV": {
+      "tabs": ["Overview", "Goals", "Feedback & Ratings", "Calibration"]
+    },
+
+    "TAB_OVERVIEW": {
+      "layout": "2col-profile",
+      "kpi_strip": [
+        { "label": "Goals Set", "source": "count(GoalRecord where review_cycle_id=:id and employee_id=:eid)" },
+        { "label": "Goals Approved", "source": "count(GoalRecord where status=Approved)" },
+        { "label": "Pending Feedback", "source": "derived: feedback requests not yet completed" },
+        { "label": "Avg. Progress", "source": "derived: avg(GoalRecord.current_value/target_value)" }
+      ],
+      "left": [
+        {
+          "card": "Cycle Details",
+          "service": "performance_service",
+          "model": "ReviewCycle",
+          "endpoint": "GET /api/v1/performance/cycles/:cycleId",
+          "fields": ["review_cycle_id", "code", "name", "review_period_start", "review_period_end", "status", "owner_employee_id", "workflow_id"]
+        },
+        {
+          "card": "Goals Progress",
+          "type": "progress-list",
+          "source": "GET /api/v1/performance/goals?review_cycle_id=:cycleId&employee_id=:employeeId",
+          "model": "GoalRecord",
+          "fields": ["title", "current_value", "target_value", "status"]
+        }
+      ],
+      "right": [
+        {
+          "card": "Overall Score",
+          "type": "score-ring",
+          "sources": {
+            "self_rating": "FeedbackRecord where reviewer_type=Self",
+            "manager_rating": "FeedbackRecord where reviewer_type=Manager",
+            "peer_avg": "avg(FeedbackRecord where reviewer_type=Peer)",
+            "final": "ReviewCycle.final_score — pending calibration"
+          }
+        },
+        {
+          "card": "Review Progress",
+          "type": "checklist",
+          "steps": ["Self-assessment submitted", "Manager review submitted", "Peer feedback collected", "Calibration pending", "Final score published"]
+        }
+      ]
+    },
+
+    "TAB_GOALS": {
+      "card": "Goals",
+      "service": "performance_service",
+      "endpoint": "GET /api/v1/performance/goals?review_cycle_id=:cycleId&employee_id=:employeeId",
+      "model": "GoalRecord",
+      "display": "goal-rows",
+      "fields": ["goal_id", "title", "description", "metric_name", "current_value", "target_value", "weight", "status"],
+      "enum_refs": { "status": "ref:GOAL_STATUSES" },
+      "actions": [{ "label": "Add Goal", "style": "secondary", "leads_to": "H04 Add Goal" }]
+    },
+
+    "TAB_FEEDBACK": {
+      "layout": "2col",
+      "left": {
+        "card": "360° Feedback",
+        "service": "performance_service",
+        "endpoint": "GET /api/v1/performance/feedback?review_cycle_id=:cycleId&subject_employee_id=:employeeId",
+        "model": "FeedbackRecord",
+        "display": "feedback-rows",
+        "fields": ["reviewer_name", "reviewer_type", "submitted_at", "text", "ratings"]
+      },
+      "right": [
+        {
+          "card": "Competency Ratings",
+          "type": "progress-list",
+          "source": "derived from FeedbackRecord.ratings"
+        },
+        {
+          "card": "Manager Notes",
+          "type": "notes-card",
+          "source": "FeedbackRecord where reviewer_type=Manager — notes field"
+        }
+      ]
+    },
+
+    "TAB_CALIBRATION": {
+      "card": "Performance Calibration",
+      "type": "calibration-grid",
+      "options": ["Needs Improvement", "Meets Expectations", "Exceeds Expectations", "Outstanding", "Exceptional"],
+      "action": "PATCH /api/v1/performance/reviews/:reviewId → calibrated_rating + calibration_notes",
+      "notes_field": true
+    }
+  },
+
+  "data_sources": {
+    "review_cycle": {
+      "service": "performance_service",
+      "endpoint": "GET /api/v1/performance/cycles/:cycleId",
+      "model": "ReviewCycle"
+    },
+    "goals": {
+      "service": "performance_service",
+      "endpoint": "GET /api/v1/performance/goals?review_cycle_id=:cycleId&employee_id=:employeeId",
+      "model": "GoalRecord"
+    },
+    "feedback": {
+      "service": "performance_service",
+      "endpoint": "GET /api/v1/performance/feedback?review_cycle_id=:cycleId&subject_employee_id=:employeeId",
+      "model": "FeedbackRecord"
+    }
+  },
+
+  "gaps": [],
+
+  "mock_data": {
+    "review_cycle": {
+      "review_cycle_id": "CYCLE-2025-Q1",
+      "code": "CYCLE-2025-Q1",
+      "name": "Q1 2025 Performance Review",
+      "review_period_start": "2025-01-01",
+      "review_period_end": "2025-03-31",
+      "status": "Open",
+      "owner_employee_id": "EMP-0041",
+      "workflow_id": "WF-PERF-001"
+    },
+    "goals": [
+      { "goal_id": "GOAL-001", "review_cycle_id": "CYCLE-2025-Q1", "employee_id": "EMP-0127", "title": "Implement HRIS data quality framework", "metric_name": "Error rate reduction %", "target_value": 100, "current_value": 85, "weight": 30, "status": "Approved" },
+      { "goal_id": "GOAL-002", "review_cycle_id": "CYCLE-2025-Q1", "employee_id": "EMP-0127", "title": "Reduce time-to-hire by 15%", "metric_name": "Avg days to hire", "target_value": 21, "current_value": 24, "weight": 25, "status": "Approved" },
+      { "goal_id": "GOAL-003", "review_cycle_id": "CYCLE-2025-Q1", "employee_id": "EMP-0127", "title": "Employee engagement score ≥ 80", "metric_name": "Engagement score", "target_value": 80, "current_value": 77, "weight": 25, "status": "Approved" },
+      { "goal_id": "GOAL-004", "review_cycle_id": "CYCLE-2025-Q1", "employee_id": "EMP-0127", "title": "Deliver 4 HR capability workshops", "metric_name": "Workshops delivered", "target_value": 4, "current_value": 3, "weight": 15, "status": "Submitted" },
+      { "goal_id": "GOAL-005", "review_cycle_id": "CYCLE-2025-Q1", "employee_id": "EMP-0127", "title": "Complete SHRM-CP certification", "metric_name": "Certification passed", "target_value": 1, "current_value": 0, "weight": 5, "status": "Draft" }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY docker/api_gateway_service.py /app/api_gateway_service.py
+EXPOSE 8000
+CMD ["python", "/app/api_gateway_service.py"]

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Notifications Inbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+
+/* Shell */
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sb-ico{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--t4);transition:all .12s;position:relative}
+.sb-ico:hover{background:var(--bg);color:var(--t2)}.sb-ico.on{background:var(--tl);color:var(--teal)}
+.sb-ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-badge{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--red2);border:1.5px solid var(--w)}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:9px;flex-shrink:0}
+.tb-title{font-size:14px;font-weight:700;color:var(--t1);flex:1;display:flex;align-items:center;gap:8px}
+.unread-badge{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--red2);color:#fff;padding:2px 7px;border-radius:99px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+
+/* Three-panel body */
+.inbox-body{flex:1;overflow:hidden;display:grid;grid-template-columns:200px 340px 1fr;min-height:0}
+
+/* ── Folder nav panel ── */
+.inbox-nav{background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.nav-head{padding:13px 14px 10px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.nav-head-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:9px}
+.nav-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;transition:all .14s}
+.nav-srch:focus-within{border-color:var(--teal);background:var(--w)}
+.nav-srch input{background:none;border:none;outline:none;font-size:12px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.nav-srch input::placeholder{color:var(--t4)}
+.nav-srch svg{width:12px;height:12px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nav-items{padding:8px;overflow-y:auto;min-height:0;flex:1;padding-bottom:12vh}
+.nav-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:8px 6px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;transition:background .12s;margin-bottom:1px;user-select:none}
+.nav-item:hover{background:var(--bg)}.nav-item.on{background:var(--tl);color:var(--teal)}
+.nav-item svg{width:14px;height:14px;fill:none;stroke:var(--t4);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nav-item.on svg{stroke:var(--teal)}
+.nav-lbl{flex:1;font-size:12.5px;font-weight:500;color:var(--t2)}
+.nav-item.on .nav-lbl{font-weight:600;color:var(--teal)}
+.nav-badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:99px;flex-shrink:0}
+.nb-r{background:var(--rl);color:var(--red)}
+.nb-a{background:var(--al);color:var(--amber)}
+.nb-t{background:var(--tl);color:var(--teal)}
+.nb-n{background:var(--t5);color:var(--t4)}
+.nav-div{height:1px;background:var(--bd);margin:6px 8px}
+
+/* ── Message list panel ── */
+.msg-list{border-right:1px solid var(--bd);overflow-y:auto;min-height:0;display:flex;flex-direction:column;padding-bottom:12vh}
+.ml-head{position:sticky;top:0;z-index:2;background:var(--w);border-bottom:1px solid var(--bd);padding:10px 14px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.ml-title{font-size:13px;font-weight:700;color:var(--t1)}
+.ml-acts{display:flex;gap:4px}
+.ml-ico{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.ml-ico:hover{background:var(--bg);color:var(--t2)}
+.ml-ico svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* Message row */
+.msg{padding:12px 14px;border-bottom:1px solid var(--t5);cursor:pointer;transition:background .12s;position:relative}
+.msg:last-child{border-bottom:none}
+.msg:hover{background:var(--bg)}.msg.sel{background:var(--tl)}
+.msg.unread::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:26px;background:var(--teal);border-radius:0 3px 3px 0}
+.msg-top{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.msg-av{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff}
+.msg-from{font-size:12.5px;font-weight:600;color:var(--t1);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msg-time{font-size:10.5px;color:var(--t4);font-family:var(--mono);flex-shrink:0}
+.msg-subject{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msg-preview{font-size:11.5px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px}
+.msg-chips{display:flex;gap:5px;flex-wrap:wrap}
+
+/* P-07 chips */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.cg{background:var(--gl);color:var(--grn)}
+.ca{background:var(--al);color:var(--amber)}
+.cr{background:var(--rl);color:var(--red)}
+.cb{background:var(--bl);color:var(--blue)}
+.ct{background:var(--tl);color:var(--teal)}
+.cv{background:var(--vl);color:var(--violet)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}
+
+/* ── Detail panel ── */
+.msg-detail{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.detail-head{padding:16px 22px;border-bottom:1px solid var(--bd);background:var(--w);flex-shrink:0}
+.dh-subject{font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-0.015em;margin-bottom:11px}
+.dh-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dh-from{display:flex;align-items:center;gap:10px;flex:1}
+.dh-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.dh-name{font-size:13px;font-weight:600;color:var(--t1)}
+.dh-sub{font-size:12px;color:var(--t3)}
+.dh-time{font-size:12px;color:var(--t4);font-family:var(--mono)}
+.dh-acts{display:flex;gap:6px}
+.detail-body{flex:1;overflow-y:auto;min-height:0;padding:20px 22px 12vh}
+
+/* P-12 AI component */
+.ai-bar{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r2);padding:12px 16px;margin-bottom:18px;display:flex;gap:12px;align-items:flex-start}
+.ai-bar-icon{width:32px;height:32px;border-radius:50%;background:var(--teal);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ai-bar-icon svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ai-bar-content{flex:1;min-width:0}
+.ai-bar-header{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.ai-bar-label{font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.06em}
+.ai-confidence{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--teal);background:rgba(10,143,132,.12);padding:2px 7px;border-radius:99px}
+.ai-bar-dismiss{font-size:11px;color:var(--t4);cursor:pointer;padding:2px 6px;border-radius:4px;transition:all .12s;flex-shrink:0}
+.ai-bar-dismiss:hover{background:var(--bg);color:var(--t2)}
+.ai-bar-text{font-size:12.5px;color:var(--t2);line-height:1.6}
+
+/* Message body */
+.msg-body-txt{font-size:13.5px;color:var(--t2);line-height:1.8}
+.msg-body-txt p{margin-bottom:14px}.msg-body-txt p:last-child{margin-bottom:0}
+.msg-body-txt strong{font-weight:600;color:var(--t1)}
+.detail-action-row{display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)}
+
+/* Thread items */
+.thread-item{border-top:1px solid var(--bd);padding:16px 0 0;margin-top:16px}
+.ti-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ti-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.ti-name{font-size:12.5px;font-weight:600;color:var(--t1);flex:1}
+.ti-time{font-size:11px;color:var(--t4);font-family:var(--mono)}
+.ti-txt{font-size:13px;color:var(--t2);line-height:1.7;padding-left:38px}
+
+/* Reply area */
+.reply-area{border-top:1px solid var(--bd);padding:14px 0 0;margin-top:20px}
+.reply-label{font-size:11px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.reply-label span{font-size:10px;color:var(--t4);font-weight:400;text-transform:none;letter-spacing:0}
+.reply-inp{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--bg);resize:none;height:72px;transition:all .14s;line-height:1.6}
+.reply-inp:focus{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.reply-inp::placeholder{color:var(--t4)}
+.reply-acts{display:flex;align-items:center;gap:7px;margin-top:9px}
+.reply-gap{flex:1}
+
+/* Empty detail */
+.detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--t4);text-align:center;padding:40px}
+.detail-empty svg{width:36px;height:36px;stroke:var(--t4);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:14px}
+.detail-empty-title{font-size:14px;font-weight:600;color:var(--t3);margin-bottom:6px}
+.detail-empty-sub{font-size:12.5px;color:var(--t4);line-height:1.6}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div class="sb-ico on"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><div class="sb-badge"></div></div>
+  <div class="sb-div"></div>
+  <div class="sb-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <div class="topbar">
+    <div class="tb-title">Inbox <span class="unread-badge" id="unread-total">6</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn btn-sm" onclick="markAllRead()">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      Mark all read
+    </button>
+    <button class="btn btn-sm btn-p">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Compose
+    </button>
+    <div class="tb-av">AW</div>
+  </div>
+
+  <div class="inbox-body">
+
+    <!-- Folder nav -->
+    <div class="inbox-nav">
+      <div class="nav-head">
+        <div class="nav-head-title">Notifications</div>
+        <div class="nav-srch">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input placeholder="Search…" oninput="filterSearch(this.value)">
+        </div>
+      </div>
+      <div class="nav-items">
+        <div class="nav-sec">Inbox</div>
+        <div class="nav-item on" onclick="setFolder(this,'all')">
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.63a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+          <span class="nav-lbl">All Messages</span>
+          <span class="nav-badge nb-r" id="badge-all">6</span>
+        </div>
+        <div class="nav-item" onclick="setFolder(this,'approvals')">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span class="nav-lbl">Approvals</span>
+          <span class="nav-badge nb-a">2</span>
+        </div>
+        <div class="nav-item" onclick="setFolder(this,'ai')">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span class="nav-lbl">AI Alerts</span>
+          <span class="nav-badge nb-t">1</span>
+        </div>
+        <div class="nav-item" onclick="setFolder(this,'leave')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+          <span class="nav-lbl">Leave</span>
+          <span class="nav-badge nb-r">2</span>
+        </div>
+        <div class="nav-item" onclick="setFolder(this,'payroll')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          <span class="nav-lbl">Payroll</span>
+          <span class="nav-badge nb-r">1</span>
+        </div>
+        <div class="nav-item" onclick="setFolder(this,'hiring')">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span class="nav-lbl">Hiring</span>
+          <span class="nav-badge nb-r">1</span>
+        </div>
+        <div class="nav-item" onclick="setFolder(this,'performance')">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span class="nav-lbl">Performance</span>
+          <span class="nav-badge nb-r">1</span>
+        </div>
+        <div class="nav-sec">Saved</div>
+        <div class="nav-item" onclick="setFolder(this,'starred')">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="nav-lbl">Starred</span>
+          <span class="nav-badge nb-n">3</span>
+        </div>
+        <div class="nav-div"></div>
+        <div class="nav-item" onclick="setFolder(this,'sent')">
+          <svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>
+          <span class="nav-lbl">Sent</span>
+        </div>
+        <div class="nav-item" onclick="setFolder(this,'archive')">
+          <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <span class="nav-lbl">Archive</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message list -->
+    <div class="msg-list" id="msg-list">
+      <div class="ml-head">
+        <div class="ml-title" id="folder-title">All Messages</div>
+        <div class="ml-acts">
+          <div class="ml-ico" title="Mark all read" onclick="markAllRead()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ml-ico" title="Filter"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div>
+        </div>
+      </div>
+      <div id="msg-rows"></div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="msg-detail" id="msg-detail">
+      <div class="detail-empty">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <div class="detail-empty-title">Select a notification</div>
+        <div class="detail-empty-sub">Choose a message from the list to read it here.</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<script>
+/* ── Notification mock data (topic_codes from notification_service.py) ─── */
+const MSGS = [
+  {
+    id:'leave-sub-1', folder:'leave', folder2:'approvals',
+    av:'TN', avc:'#B45309',
+    from:'Tom Nakamura', sub_label:'Employee',
+    subject:'Leave request — Apr 7–10 (Annual Leave)',
+    preview:'Hi, I\'d like to request 4 days of annual leave for a family event. Coverage confirmed with L. Barnes.',
+    time:'10:14', day:'Today', unread:true,
+    topic_code:'leave.submission',
+    chips:[{t:'Leave Request',c:'cb'},{t:'Action Needed',c:'ca'}],
+    body:`<p>Hi Alex,</p>
+<p>I'd like to request <strong>4 days of annual leave</strong> from <strong>Apr 7–10, 2026</strong> for a family event. I've confirmed coverage with Laura Barnes — she's happy to handle my accounts during this period with no concerns raised.</p>
+<p>I have sufficient leave balance (11.5 days remaining) and there are no critical deadlines in that window.</p>
+<p>Please let me know if you need anything else.<br><strong>Tom Nakamura</strong><br>Software Engineer II · Engineering · Backend</p>`,
+    thread:[{av:'AW',avc:'#0A8F84',name:'You (Alex Wang)',time:'10:31',txt:'Thanks Tom — reviewing now. Coverage confirmed with Laura. Will approve shortly.'}],
+    actions:[{lbl:'Approve',cls:'btn-p'},{lbl:'Reject',cls:''},{lbl:'View Leave Balance',cls:''}],
+    ai:null
+  },
+  {
+    id:'att-ai-1', folder:'ai', folder2:null,
+    av:'AI', avc:'#0A8F84',
+    from:'AI — Attendance Alert', sub_label:'System',
+    subject:'Attendance anomaly: Marcus Hill — 3 missed clock-ins this week',
+    preview:'Confidence: 78%. Pattern detected: 3 consecutive missed clock-ins (Mon–Wed). Possible WFH mismatch.',
+    time:'08:17', day:'Today', unread:true,
+    topic_code:'attendance.capture',
+    chips:[{t:'AI Alert',c:'ct'},{t:'Attendance',c:'cn'}],
+    body:`<p>The attendance monitoring system has detected an anomaly for <strong>Marcus Hill</strong> (EMP-0011 · Infrastructure Engineering).</p>
+<p>Over the past 3 business days (Mon Mar 25 – Wed Mar 27), Marcus has <strong>3 consecutive missed clock-in records</strong>. His calendar shows scheduled WFH, but no remote attendance entries have been logged in the system.</p>
+<p>This may indicate a system sync issue with the remote attendance tool, or missed entries. No leave request is on file for this period.</p>
+<p><strong>Recommended action:</strong> Confirm WFH status with Marcus and his manager, and verify attendance tool integration.</p>`,
+    thread:[],
+    actions:[{lbl:'View Attendance Record',cls:''},{lbl:'Message Marcus',cls:''},{lbl:'Dismiss',cls:''}],
+    ai:{label:'AI Alert — Attendance',confidence:'78%',text:'Pattern: 3 consecutive missed clock-ins Mon–Wed. No leave record on file. Remote attendance tool may not be syncing correctly for this employee.'}
+  },
+  {
+    id:'hiring-stage-1', folder:'hiring', folder2:null,
+    av:'RK', avc:'#059669',
+    from:'Ravi Kumar (Recruiting)', sub_label:'Recruiter',
+    subject:'Ji-ho Lim — Final round: 3 Strong Hire votes · offer decision needed',
+    preview:'Panel complete. 3 Strong Hire, 0 No Hire. Offer for Staff Engineer role pending go/no-go before Apr 1.',
+    time:'Yesterday', day:'Yesterday', unread:true,
+    topic_code:'hiring.candidate_stage',
+    chips:[{t:'Hiring',c:'cv'},{t:'Action Needed',c:'ca'}],
+    body:`<p>Hi Alex,</p>
+<p>The final round panel for <strong>Ji-ho Lim</strong> (Staff Engineer — Backend Platform) is complete.</p>
+<p>Results: <strong>3 × Strong Hire · 0 × No Hire</strong>. All interviewers noted strong systems design and leadership signal. Feedback is in the hiring portal.</p>
+<p>We need a <strong>go/no-go by Apr 1</strong> to keep the candidate warm. Compensation band: $210K–$225K base + 0.15% equity.</p>
+<p>Please confirm in the portal or reply here.<br><strong>Ravi Kumar</strong> · Recruiting</p>`,
+    thread:[],
+    actions:[{lbl:'View Candidate Profile',cls:''},{lbl:'Approve Offer',cls:'btn-p'},{lbl:'Defer',cls:''}],
+    ai:null
+  },
+  {
+    id:'payroll-proc-1', folder:'payroll', folder2:null,
+    av:'PS', avc:'#0D9488',
+    from:'Payroll System', sub_label:'System',
+    subject:'March 2026 payroll processed — 3 anomalies require review',
+    preview:'Pre-run check complete. 3 records flagged for human approval before disbursement on Apr 1.',
+    time:'Yesterday', day:'Yesterday', unread:true,
+    topic_code:'payroll.processed',
+    chips:[{t:'Payroll',c:'ca'},{t:'Review Required',c:'cr'}],
+    body:`<p>The <strong>March 2026 payroll pre-run</strong> has completed successfully for 342 employees.</p>
+<p>The system has flagged <strong>3 records</strong> that require manual review before the Apr 1 disbursement:</p>
+<p><strong>1. Eva Fischer (EMP-0087)</strong> — Base salary mismatch: system shows $113,000 vs contract $105,000. Possible manual entry error.<br><strong>2. Daniel Park (EMP-0134)</strong> — Retroactive adjustment pending from Q4 2025 salary review. Requires sign-off.<br><strong>3. Kenji Ito (EMP-0201)</strong> — Overtime calculation discrepancy (28.5 hrs recorded, 22 approved). Manager confirmation needed.</p>
+<p>Disbursement will be held for these 3 records until approval is received.</p>`,
+    thread:[{av:'AW',avc:'#0A8F84',name:'You (Alex Wang)',time:'Yesterday, 14:05',txt:'Acknowledged. I\'ve flagged Eva\'s record to the payroll team and notified Daniel\'s manager about the Q4 adjustment. Kenji\'s overtime will be verified with his team lead by EOD.'}],
+    actions:[{lbl:'View Payroll Records',cls:''},{lbl:'Approve All 3',cls:'btn-p'}],
+    ai:null
+  },
+  {
+    id:'perf-review-1', folder:'performance', folder2:null,
+    av:'HR', avc:'#4F46E5',
+    from:'HR System', sub_label:'System',
+    subject:'Q1 2026 performance review cycle is now open — 14 reviews pending',
+    preview:'Review window: Mar 29 – Apr 18, 2026. 14 direct reports require manager review submissions.',
+    time:'Mon', day:'Mon', unread:true,
+    topic_code:'performance.review_submission',
+    chips:[{t:'Performance',c:'cb'}],
+    body:`<p>The <strong>Q1 2026 performance review cycle</strong> opened today (Mar 29, 2026). The review window closes on <strong>Apr 18, 2026</strong>.</p>
+<p>You have <strong>14 direct and skip-level reports</strong> with pending manager review submissions. Employees have been notified to complete their self-assessments by Apr 7.</p>
+<p>Review format: Self-assessment → Manager review → Calibration session (Apr 21) → Employee feedback.</p>
+<p>Please complete all manager reviews by <strong>Apr 14, 2026</strong> to allow calibration preparation time.</p>`,
+    thread:[],
+    actions:[{lbl:'Open Review Dashboard',cls:'btn-p'},{lbl:'View My Reports',cls:''}],
+    ai:null
+  },
+  {
+    id:'leave-appr-1', folder:'leave', folder2:null,
+    av:'SY', avc:'#16A34A',
+    from:'System — Leave Management', sub_label:'System',
+    subject:'Your leave request for Apr 7–10 has been approved',
+    preview:'4 days annual leave approved by Alex Wang. Your leave balance has been updated.',
+    time:'Mon', day:'Mon', unread:false,
+    topic_code:'leave.approval',
+    chips:[{t:'Approved',c:'cg'},{t:'Leave',c:'cb'}],
+    body:`<p>Your leave request has been <strong>approved</strong>.</p>
+<p><strong>Leave period:</strong> Apr 7–10, 2026 (4 days · Annual Leave)<br><strong>Approved by:</strong> Alex Wang · HR Manager<br><strong>Remaining balance:</strong> 7.5 days after this leave</p>
+<p>Your out-of-office period has been added to the team calendar. Your manager and coverage contact (Laura Barnes) have been notified.</p>`,
+    thread:[],
+    actions:[{lbl:'View Leave Calendar',cls:''},{lbl:'View Leave Balance',cls:''}],
+    ai:null
+  },
+  {
+    id:'interview-sched-1', folder:'hiring', folder2:null,
+    av:'RK', avc:'#059669',
+    from:'Ravi Kumar (Recruiting)', sub_label:'Recruiter',
+    subject:'Interview scheduled: Sofia Reyes — Mar 31 at 2:00pm (Video)',
+    preview:'Final round panel interview confirmed. Sofia Reyes · Senior UX Designer · 2pm–3:30pm via Zoom.',
+    time:'Fri', day:'Fri', unread:false,
+    topic_code:'hiring.interview_scheduled',
+    chips:[{t:'Interview',c:'cv'}],
+    body:`<p>A panel interview has been scheduled for <strong>Sofia Reyes</strong> (Senior UX Designer candidate).</p>
+<p><strong>Date/Time:</strong> Monday Mar 31, 2026 · 2:00pm–3:30pm<br><strong>Format:</strong> Video (Zoom link in calendar invite)<br><strong>Panel:</strong> You, Dana Chen (Design Lead), Ravi Kumar (Recruiting)</p>
+<p>Interview focus: Portfolio review (30 min) · Design challenge debrief (30 min) · Culture & values (30 min).</p>
+<p>Candidate background and scorecard template are in the hiring portal.</p>`,
+    thread:[],
+    actions:[{lbl:'View Candidate Profile',cls:''},{lbl:'Open Scorecard',cls:'btn-p'}],
+    ai:null
+  },
+  {
+    id:'travel-sub-1', folder:'approvals', folder2:null,
+    av:'PM', avc:'#7C3AED',
+    from:'Priya Mehta', sub_label:'Employee',
+    subject:'Travel request — New York · Apr 14–16 (Product summit)',
+    preview:'2-night stay + flights. Total estimate $1,240. Within policy. Approval needed by Apr 5.',
+    time:'Thu', day:'Thu', unread:false,
+    topic_code:'travel.submission',
+    chips:[{t:'Travel Request',c:'cv'},{t:'Approval Needed',c:'ca'}],
+    body:`<p>Hi Alex,</p>
+<p>I'd like to request travel approval for the <strong>Product Summit NYC</strong> (Apr 14–16, 2026).</p>
+<p><strong>Flights:</strong> SFO → JFK return · Economy · $440<br><strong>Hotel:</strong> 2 nights · Marriott Midtown · $530 total<br><strong>Meals & transport estimate:</strong> $270<br><strong>Total:</strong> $1,240 (within $1,500 single-trip policy limit)</p>
+<p>This aligns with the Q2 product roadmap review and I'll be presenting the Core Product roadmap. Approval needed by Apr 5 to confirm bookings.<br><strong>Priya Mehta</strong> · Senior Product Manager</p>`,
+    thread:[],
+    actions:[{lbl:'Approve',cls:'btn-p'},{lbl:'Reject',cls:''},{lbl:'View Policy',cls:''}],
+    ai:null
+  },
+  {
+    id:'payroll-paid-1', folder:'payroll', folder2:null,
+    av:'PS', avc:'#0D9488',
+    from:'Payroll System', sub_label:'System',
+    subject:'February 2026 payroll disbursed — 342 employees paid',
+    preview:'Payroll run complete. Total disbursed: $3,847,250. All records processed successfully.',
+    time:'28 Feb', day:'28 Feb', unread:false,
+    topic_code:'payroll.paid',
+    chips:[{t:'Paid',c:'cg'},{t:'Payroll',c:'cn'}],
+    body:`<p>The <strong>February 2026 payroll</strong> has been disbursed successfully.</p>
+<p><strong>Employees paid:</strong> 342<br><strong>Total disbursed:</strong> $3,847,250<br><strong>Pay date:</strong> Feb 28, 2026<br><strong>Failed records:</strong> 0</p>
+<p>All employee payslips have been generated and are available in the Payroll portal. Employees have been notified via email and in-app notification.</p>`,
+    thread:[],
+    actions:[{lbl:'View Payroll Report',cls:''},{lbl:'Download Summary',cls:''}],
+    ai:null
+  },
+  {
+    id:'leave-cancel-1', folder:'leave', folder2:null,
+    av:'MC', avc:'#475569',
+    from:'System — Leave Management', sub_label:'System',
+    subject:'Maya Chen cancelled leave request (Apr 1–3)',
+    preview:'3-day annual leave cancelled by employee. Team calendar updated. No action required.',
+    time:'25 Mar', day:'25 Mar', unread:false,
+    topic_code:'leave.cancellation',
+    chips:[{t:'Cancelled',c:'cn'},{t:'Leave',c:'cb'}],
+    body:`<p>Maya Chen (EMP-0063 · Frontend Engineering) has <strong>cancelled</strong> her approved leave request.</p>
+<p><strong>Cancelled period:</strong> Apr 1–3, 2026 (3 days · Annual Leave)<br><strong>Cancelled at:</strong> Mar 25, 2026 · 11:22am<br><strong>Reason provided:</strong> Travel plans changed</p>
+<p>Her leave balance of 3 days has been restored. The team calendar has been updated and her coverage contact has been notified.</p>`,
+    thread:[],
+    actions:[{lbl:'View Leave Calendar',cls:''}],
+    ai:null
+  },
+];
+
+const FOLDER_LABELS = {
+  all:'All Messages', approvals:'Approvals', ai:'AI Alerts',
+  leave:'Leave', payroll:'Payroll', hiring:'Hiring',
+  performance:'Performance', starred:'Starred', sent:'Sent', archive:'Archive'
+};
+
+let currentFolder = 'all';
+let selectedId = null;
+
+/* ── Filtering ─────────────────────────────────────────── */
+function folderItems(folder) {
+  if (folder === 'all') return MSGS;
+  return MSGS.filter(m => m.folder === folder || m.folder2 === folder);
+}
+
+let searchTerm = '';
+function filterSearch(val) {
+  searchTerm = val.toLowerCase().trim();
+  renderList();
+}
+
+/* ── Render list ───────────────────────────────────────── */
+function renderList() {
+  let items = folderItems(currentFolder);
+  if (searchTerm) items = items.filter(m =>
+    m.subject.toLowerCase().includes(searchTerm) ||
+    m.from.toLowerCase().includes(searchTerm) ||
+    m.preview.toLowerCase().includes(searchTerm)
+  );
+  const unread = items.filter(m => m.unread).length;
+  document.getElementById('unread-total').textContent = MSGS.filter(m => m.unread).length;
+  document.getElementById('folder-title').textContent = FOLDER_LABELS[currentFolder];
+
+  document.getElementById('msg-rows').innerHTML = items.length
+    ? items.map(m => `
+      <div class="msg${m.unread?' unread':''}${m.id===selectedId?' sel':''}" onclick="selMsg('${m.id}')">
+        <div class="msg-top">
+          <div class="msg-av" style="background:${m.avc}">${m.av}</div>
+          <div class="msg-from">${m.from}</div>
+          <div class="msg-time">${m.time}</div>
+        </div>
+        <div class="msg-subject">${m.subject}</div>
+        <div class="msg-preview">${m.preview}</div>
+        <div class="msg-chips">${m.chips.map(c=>`<span class="chip ${c.c}">${c.t}</span>`).join('')}</div>
+      </div>`).join('')
+    : `<div style="padding:32px 16px;text-align:center;color:var(--t4);font-size:12.5px">No notifications in this folder.</div>`;
+}
+
+/* ── Render detail ─────────────────────────────────────── */
+function renderDetail(m) {
+  const aiHtml = m.ai
+    ? `<div class="ai-bar">
+        <div class="ai-bar-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="ai-bar-content">
+          <div class="ai-bar-header">
+            <span class="ai-bar-label">${m.ai.label}</span>
+            <span class="ai-confidence">${m.ai.confidence} confidence</span>
+          </div>
+          <div class="ai-bar-text">${m.ai.text}</div>
+        </div>
+        <span class="ai-bar-dismiss" onclick="this.closest('.ai-bar').style.display='none'">Dismiss ✕</span>
+      </div>` : '';
+
+  const threadHtml = m.thread.length
+    ? m.thread.map(t => `
+      <div class="thread-item">
+        <div class="ti-head">
+          <div class="ti-av" style="background:${t.avc}">${t.av}</div>
+          <div class="ti-name">${t.name}</div>
+          <div class="ti-time">${t.time}</div>
+        </div>
+        <div class="ti-txt">${t.txt}</div>
+      </div>`).join('') : '';
+
+  const actHtml = m.actions.map(a =>
+    `<button class="btn btn-sm ${a.cls||''}">${a.lbl}</button>`
+  ).join('');
+
+  document.getElementById('msg-detail').innerHTML = `
+    <div class="detail-head">
+      <div class="dh-subject">${m.subject}</div>
+      <div class="dh-meta">
+        <div class="dh-from">
+          <div class="dh-av" style="background:${m.avc}">${m.av}</div>
+          <div>
+            <div class="dh-name">${m.from}</div>
+            <div class="dh-sub">${m.sub_label} · topic: ${m.topic_code} · ${m.day}</div>
+          </div>
+        </div>
+        <div class="dh-time">${m.day}, ${m.time}</div>
+        <div class="dh-acts">
+          <button class="btn btn-sm"><svg viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>Reply</button>
+          <button class="btn btn-sm">Forward</button>
+          <button class="btn btn-sm">Archive</button>
+        </div>
+      </div>
+    </div>
+    <div class="detail-body">
+      ${aiHtml}
+      <div class="msg-body-txt">${m.body}</div>
+      ${threadHtml}
+      <div class="detail-action-row">${actHtml}</div>
+      <div class="reply-area">
+        <div class="reply-label">Reply <span>(BG-022 — notification_service is read-only; compose/reply not yet implemented)</span></div>
+        <textarea class="reply-inp" placeholder="Type a reply… (not yet connected to backend)"></textarea>
+        <div class="reply-acts">
+          <button class="btn btn-sm"><svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>Attach</button>
+          <div class="reply-gap"></div>
+          <button class="btn btn-sm">Discard</button>
+          <button class="btn btn-sm btn-p"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Interactions ──────────────────────────────────────── */
+function selMsg(id) {
+  const m = MSGS.find(x => x.id === id);
+  if (!m) return;
+  if (m.unread) { m.unread = false; renderList(); }
+  selectedId = id;
+  renderList();
+  renderDetail(m);
+}
+
+function setFolder(el, folder) {
+  currentFolder = folder;
+  selectedId = null;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
+  el.classList.add('on');
+  renderList();
+  document.getElementById('msg-detail').innerHTML = `
+    <div class="detail-empty">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <div class="detail-empty-title">Select a notification</div>
+      <div class="detail-empty-sub">Choose a message from the list to read it here.</div>
+    </div>`;
+}
+
+function markAllRead() {
+  MSGS.forEach(m => { m.unread = false; });
+  document.getElementById('unread-total').textContent = '0';
+  document.getElementById('badge-all').textContent = '0';
+  renderList();
+}
+
+/* ── Init ──────────────────────────────────────────────── */
+renderList();
+</script>
+</body>
+</html>

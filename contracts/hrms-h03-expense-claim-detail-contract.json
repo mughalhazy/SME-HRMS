@@ -1,0 +1,134 @@
+﻿{
+  "_meta": {
+    "id": "h03-expense-claim-detail",
+    "archetype": "H03 Detail / Profile",
+    "page": "Expense Claim Detail",
+    "surface": "admin",
+    "primary_actor": "Expense Approver / HR Manager",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Expenses", "Expense Claims", "EXP-2025-0127-003"],
+      "actions": [
+        { "label": "Reject", "style": "danger", "leads_to": "H05 Reject Expense Workflow", "requires_confirm": true },
+        { "label": "Approve", "style": "primary", "leads_to": "H05 Approve Expense Workflow", "action": "PATCH /api/v1/expenses/claims/:claimId → status=Approved" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "avatar": { "initials": "PS", "size": 56, "gradient": "violet" },
+      "name": "Business Travel — Conference",
+      "role_line": "Priya Subramaniam · EMP-0127 · Senior HR Business Partner",
+      "chips": [
+        { "field": "status", "enum_ref": "ref:CLAIM_STATUSES", "style": "amber-if-submitted" },
+        { "field": "expense_claim_id", "style": "grey", "font": "mono" },
+        { "field": "category_code", "style": "grey" },
+        { "field": "expense_date", "style": "grey" }
+      ],
+      "right_display": {
+        "value_field": "amount",
+        "currency_field": "currency",
+        "label": "Total Claimed",
+        "font": "mono-large"
+      }
+    },
+
+    "LAYOUT": {
+      "type": "2col-no-tabs",
+      "left_width": "1fr",
+      "right_width": "292px"
+    },
+
+    "LEFT_COLUMN": [
+      {
+        "card": "Claim Details",
+        "service": "expense_service",
+        "model": "ExpenseClaim",
+        "endpoint": "GET /api/v1/expenses/claims/:claimId",
+        "fields": ["expense_claim_id", "category_code", "expense_date", "employee_id", "department", "submitted_at", "description"]
+      },
+      {
+        "card": "Line Items",
+        "type": "line-items-table",
+        "note": "Derived from ExpenseClaim.description for MVP — future: dedicated line-items model",
+        "columns": ["description", "category", "date", "amount"]
+      },
+      {
+        "card": "Attachments",
+        "source": "ExpenseClaim.attachments[]",
+        "fields": ["filename", "file_size", "uploaded_at", "url"],
+        "actions": [{ "label": "Download", "action": "GET attachment.url" }]
+      },
+      {
+        "card": "AI Policy Compliance Check",
+        "type": "ai-card",
+        "variant": "teal-informational",
+        "confidence_display": true,
+        "dismissable": true,
+        "note": "P-12 — teal = informational. Checks claim against expense policy limits."
+      }
+    ],
+
+    "RIGHT_COLUMN": [
+      {
+        "card": "Claim Status",
+        "type": "summary-card",
+        "primary_value": "amount",
+        "currency_field": "currency",
+        "display": "large-mono",
+        "fields": ["status", "submitted_at", "approver_employee_id", "policy_ref", "currency"]
+      },
+      {
+        "card": "Policy Limits",
+        "type": "limits-table",
+        "columns": ["category", "claimed", "cap"],
+        "note": "Caps sourced from expense policy config — not yet a backend endpoint"
+      },
+      {
+        "card": "Approval History",
+        "type": "timeline",
+        "source": "GET /api/v1/expenses/claims/:claimId/workflow-history"
+      }
+    ]
+  },
+
+  "data_sources": {
+    "expense_claim": {
+      "service": "expense_service",
+      "endpoint": "GET /api/v1/expenses/claims/:claimId",
+      "model": "ExpenseClaim"
+    }
+  },
+
+  "gaps": [],
+
+  "mock_data": {
+    "expense_claim": {
+      "expense_claim_id": "EXP-2025-0127-003",
+      "employee_id": "EMP-0127",
+      "category_id": "CAT-BT-001",
+      "category_code": "BusinessTravel",
+      "amount": 1840.00,
+      "currency": "AED",
+      "expense_date": "2025-03-12",
+      "description": "Attendance at the SHRM Annual Conference 2025 in Dubai — flights, hotel accommodation (2 nights), and conference registration fee. Pre-approved under policy EXP-POL-04.",
+      "status": "Submitted",
+      "approver_employee_id": "EMP-0041",
+      "workflow_id": "WF-EXP-0041",
+      "submitted_at": "2025-03-14T09:11:00Z",
+      "approved_at": null,
+      "rejected_at": null,
+      "reimbursed_at": null,
+      "attachments": [
+        { "filename": "EK-101_eticket.pdf", "file_size": "412 KB", "uploaded_at": "2025-03-14T09:11:00Z" },
+        { "filename": "GrandHyatt_invoice.pdf", "file_size": "238 KB", "uploaded_at": "2025-03-14T09:11:00Z" },
+        { "filename": "SHRM_receipt.png", "file_size": "88 KB", "uploaded_at": "2025-03-14T09:11:00Z" }
+      ]
+    }
+  }
+}

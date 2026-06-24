@@ -1,0 +1,108 @@
+﻿{
+  "_meta": {
+    "id": "h03-role-detail",
+    "archetype": "H03 Detail / Profile",
+    "page": "Role Detail",
+    "surface": "admin",
+    "primary_actor": "HR Administrator",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Organisation", "Roles", "Senior HR Business Partner"],
+      "actions": [
+        { "label": "Edit Role", "style": "secondary", "leads_to": "H04 Edit Role" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "entity_icon": {
+        "type": "square",
+        "gradient": "violet",
+        "icon": "briefcase",
+        "size": 56
+      },
+      "name": "Senior HR Business Partner",
+      "sub_line": "ROLE-HCM-012",
+      "chips": [
+        { "field": "status", "enum_ref": "ref:RoleStatus", "style": "green-if-active" },
+        { "field": "level", "style": "grey" },
+        { "field": "employment_category", "enum_ref": "ref:EmploymentCategory", "style": "blue" }
+      ]
+    },
+
+    "TAB_NAV": {
+      "tabs": ["Overview", "Employees in Role"]
+    },
+
+    "TAB_OVERVIEW": {
+      "layout": "2col-profile",
+      "left": [
+        {
+          "card": "Role Details",
+          "service": "employee-service",
+          "model": "Role",
+          "endpoint": "GET /api/v1/roles/:roleId",
+          "fields": ["role_id", "title", "level", "description", "employment_category", "status", "created_at", "updated_at"]
+        },
+        {
+          "card": "Permissions",
+          "type": "tag-list",
+          "source": "Role.permissions",
+          "enum_ref": "ref:RolePermissionCode",
+          "display": "code-chip"
+        }
+      ],
+      "right": [
+        {
+          "card": "At a Glance",
+          "kpis": [
+            { "label": "Employees in Role", "source": "GET /api/v1/employees?role_id=:id&status=Active&count=true" },
+            { "label": "Open Vacancies", "source": "GET /api/v1/jobs?role_id=:id&status=Open&count=true" }
+          ]
+        }
+      ]
+    },
+
+    "TAB_EMPLOYEES_IN_ROLE": {
+      "card": "Employees in Role",
+      "service": "employee-service",
+      "endpoint": "GET /api/v1/employees?role_id=:roleId&status=Active",
+      "model": "EmployeeDirectoryReadModel",
+      "display": "list-rows",
+      "fields": ["avatar_initials", "full_name", "department_name", "status", "hire_date"]
+    }
+  },
+
+  "data_sources": {
+    "role": {
+      "service": "employee-service",
+      "endpoint": "GET /api/v1/roles/:roleId",
+      "model": "Role"
+    }
+  },
+
+  "gaps": [],
+
+  "mock_data": {
+    "role": {
+      "tenant_id": "t-meridian",
+      "role_id": "ROLE-HCM-012",
+      "title": "Senior HR Business Partner",
+      "level": "Senior",
+      "description": "Strategic HR partner responsible for end-to-end people operations including talent management, employee relations, and HR system oversight.",
+      "employment_category": "FullTime",
+      "status": "Active",
+      "permissions": [
+        "employee:read", "employee:write", "leave:approve", "expense:approve",
+        "performance:read", "org:read", "compensation:read", "hiring:read"
+      ],
+      "created_at": "2021-03-01T00:00:00Z",
+      "updated_at": "2024-11-15T14:00:00Z"
+    }
+  }
+}

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Summary — Meridian HCM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+  <script>
+    function showTab(el, id) {
+      document.querySelectorAll('.rn-tab').forEach(function(t){ t.classList.remove('on'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('tab-' + id).classList.add('on');
+      document.getElementById('mainPage').scrollTop = 0;
+    }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{zoom:1.1}
+    html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;color:#374151;background:#F5F7FA}
+    :root{
+      --teal:#0A8F84;--grn:#15803D;--amber:#B45309;--red:#B91C1C;--blue:#1D4ED8;
+      --t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;
+      --w:#FFFFFF;--bd:#E4E7EC;--bg:#F5F7FA;--bg2:#F1F4F8;
+      --dur:120ms
+    }
+
+    /* layout */
+    .shell{display:flex;height:100vh;overflow:hidden}
+    .sb{width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+    .sb-logo{width:34px;height:34px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+    .sb-logo svg{fill:white;width:18px;height:18px}
+    .sb-nav{display:flex;flex-direction:column;gap:4px;align-items:center;width:100%;flex:1}
+    .sb-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:background var(--dur),color var(--dur);text-decoration:none}
+    .sb-ico:hover{background:var(--bg2);color:var(--t2)}
+    .sb-ico.on{background:#EDFAF8;color:var(--teal)}
+    .sb-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+    .sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0C9E92);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;margin-top:auto;flex-shrink:0}
+
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+    /* topbar */
+    .topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+    .bc{flex:1;font-size:13px;color:var(--t3)}
+    .bc b{color:var(--t1);font-weight:600}
+    .btn{padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:background var(--dur)}
+    .btn.sm{padding:4px 10px}
+    .btn.pri{background:var(--teal);color:#fff}.btn.pri:hover{background:#0C9E92}
+    .btn.sec{background:var(--w);border:1px solid var(--bd);color:var(--t2)}.btn.sec:hover{background:var(--bg2)}
+
+    /* report-nav */
+    .report-nav{background:var(--w);border-bottom:1px solid var(--bd);display:flex;padding:0 20px;flex-shrink:0;overflow-x:auto}
+    .rn-tab{padding:13px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:color var(--dur),border-color var(--dur)}
+    .rn-tab:hover{color:var(--t2)}
+    .rn-tab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+
+    /* filter bar */
+    .fbar{background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:10px 20px;gap:10px;flex-shrink:0;flex-wrap:wrap}
+    .flbl{font-size:12px;font-weight:500;color:var(--t3)}
+    .fsel{padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;color:var(--t2);background:var(--w);cursor:pointer;outline:none;font-family:inherit}
+    .fsel:focus{border-color:var(--teal)}
+    .fsep{width:1px;height:20px;background:var(--bd);margin:0 2px}
+    .factions{margin-left:auto;display:flex;gap:8px}
+
+    /* P-32 scroll */
+    .page{flex:1;overflow-y:auto;min-height:0}
+    .content{padding:22px 22px 12vh}
+
+    /* tab panels */
+    .tab-panel{display:none}
+    .tab-panel.on{display:block}
+
+    /* section */
+    .sect{margin-bottom:22px}
+    .sect-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px}
+    .sect-title{font-size:15px;font-weight:600;color:var(--t1)}
+    .sect-sub{font-size:12px;color:var(--t3);margin-top:2px}
+
+    /* KPI grid */
+    .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px}
+    .kpi-grid.g4{grid-template-columns:repeat(4,1fr)}
+    .kpi{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:16px 18px;transition:transform var(--dur),box-shadow var(--dur)}
+    .kpi:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .kpi-dot{width:8px;height:8px;border-radius:50%;margin-bottom:10px}
+    .kpi-dot.tl{background:var(--teal)}.kpi-dot.gn{background:var(--grn)}.kpi-dot.am{background:var(--amber)}.kpi-dot.bl{background:var(--blue)}.kpi-dot.re{background:var(--red)}
+    .kpi-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--t1);line-height:1.1}
+    .kpi-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t4);margin-top:4px}
+    .kpi-tr{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;margin-top:8px;padding:2px 6px;border-radius:4px}
+    .kpi-tr.up{background:#DCFCE7;color:var(--grn)}
+    .kpi-tr.dn{background:#FEE2E2;color:var(--red)}
+    .kpi-tr.nt{background:var(--bg2);color:var(--t3)}
+
+    /* chart cards */
+    .cc{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:18px}
+    .cc-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px}
+    .cc-sub{font-size:11px;color:var(--t3);margin-bottom:14px}
+    .cg21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:22px}
+    .cg11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+
+    /* inline bars */
+    .ibars{display:flex;flex-direction:column;gap:10px}
+    .ibar{display:flex;align-items:center;gap:10px}
+    .ibar-lbl{font-size:12px;color:var(--t2);width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ibar-tr{flex:1;height:8px;background:var(--bg2);border-radius:99px;overflow:hidden}
+    .ibar-fi{height:100%;border-radius:99px}
+    .ibar-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t1);width:46px;text-align:right;flex-shrink:0}
+
+    /* line SVG */
+    .lsvg{width:100%;height:140px}
+
+    /* stacked bar */
+    .sbar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .sbar-lbl{font-size:12px;color:var(--t2);width:120px;flex-shrink:0}
+    .sbar-tr{flex:1;height:14px;border-radius:4px;overflow:hidden;display:flex}
+    .sbar-seg{height:100%;transition:width var(--dur)}
+
+    /* P-11 table */
+    .twrap{background:var(--w);border:1px solid var(--bd);border-radius:11px;overflow:hidden}
+    .twrap.scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);white-space:nowrap}
+    tbody tr td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--t2);transition:background .12s}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--bg2)}
+    .tn{font-weight:600;color:var(--t1)}
+    .tnum{font-family:'JetBrains Mono',monospace;font-weight:500}
+    .tup{color:var(--grn)}.tdn{color:var(--red)}
+
+    /* P-07 chips */
+    .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+    .cg{background:#DCFCE7;color:var(--grn)}
+    .ca{background:#FEF3C7;color:var(--amber)}
+    .cr{background:#FEE2E2;color:var(--red)}
+    .cb{background:#DBEAFE;color:var(--blue)}
+    .ct{background:#EDFAF8;color:var(--teal)}
+    .cgy{background:var(--bg2);color:var(--t3)}
+
+    /* anomaly row */
+    .anom-ico{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sb">
+    <div class="sb-logo"><svg viewBox="0 0 18 18"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="10" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="10" width="6" height="6" rx="1.5"/><rect x="10" y="10" width="6" height="6" rx="1.5"/></svg></div>
+    <div class="sb-nav">
+      <a class="sb-ico" href="h01-hr-manager-dashboard.html" target="_blank" title="Dashboard"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></a>
+      <a class="sb-ico" href="h02-employees.html" target="_blank" title="Employees"><svg viewBox="0 0 20 20"><circle cx="8" cy="6" r="3"/><path d="M2 17c0-3.314 2.686-6 6-6s6 2.686 6 6"/><circle cx="15" cy="7" r="2"/><path d="M15 12c1.657 0 3 1.343 3 3"/></svg></a>
+      <a class="sb-ico" href="h06-leave-calendar.html" target="_blank" title="Leave"><svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4M13 2v4M3 9h14"/></svg></a>
+      <a class="sb-ico" href="h01-payroll-admin-dashboard.html" target="_blank" title="Payroll"><svg viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M2 9h16M6 13h2M10 13h4"/></svg></a>
+      <a class="sb-ico" href="h05-approval-inbox.html" target="_blank" title="Approvals"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="3"/><path d="M6 10l3 3 5-6"/></svg></a>
+      <a class="sb-ico on" href="h07-attendance-summary.html" title="Analytics"><svg viewBox="0 0 20 20"><path d="M2 16l4-5 3 3 4-6 5 4" stroke-width="1.8"/><circle cx="6" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+    </div>
+    <div class="sb-av">AK</div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="bc">Analytics &rsaquo; <b>Attendance Summary</b></div>
+      <button class="btn sec sm">Export PDF</button>
+      <button class="btn sec sm">Export CSV</button>
+      <button class="btn pri sm">Schedule Report</button>
+    </div>
+
+    <!-- Report Nav -->
+    <div class="report-nav">
+      <div class="rn-tab on"  onclick="showTab(this,'overview')">&#128200; Overview</div>
+      <div class="rn-tab"     onclick="showTab(this,'daily')">&#128197; Daily Attendance</div>
+      <div class="rn-tab"     onclick="showTab(this,'dept')">&#127970; Department Breakdown</div>
+      <div class="rn-tab"     onclick="showTab(this,'anomalies')">&#9888; Anomalies</div>
+      <div class="rn-tab"     onclick="showTab(this,'corrections')">&#9998; Corrections</div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="fbar">
+      <span class="flbl">Period</span>
+      <select class="fsel">
+        <option>Q1 2026 (Jan–Mar)</option>
+        <option>Q4 2025 (Oct–Dec)</option>
+        <option>Last 30 Days</option>
+        <option>Last 90 Days</option>
+        <option>Year to Date</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Department</span>
+      <select class="fsel">
+        <option>All Departments</option>
+        <option>Engineering</option>
+        <option>Sales</option>
+        <option>Operations</option>
+        <option>HR</option>
+        <option>Finance</option>
+        <option>Marketing</option>
+        <option>Product</option>
+        <option>Customer Success</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Status</span>
+      <select class="fsel">
+        <option>All Statuses</option>
+        <option>Present</option>
+        <option>Absent</option>
+        <option>Late</option>
+        <option>HalfDay</option>
+        <option>Holiday</option>
+      </select>
+      <div class="factions">
+        <button class="btn sec sm">Reset</button>
+        <button class="btn pri sm">Apply</button>
+      </div>
+    </div>
+
+    <!-- Page -->
+    <div class="page" id="mainPage">
+      <div class="content">
+
+
+        <!-- ── OVERVIEW ────────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/reporting/aggregates?aggregate_type=workforce.attendance.trend&dimension_key=all -->
+        <div class="tab-panel on" id="tab-overview">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">94.2%</div><div class="kpi-lbl">Attendance Rate</div><div class="kpi-tr up">&#9650; +0.8% vs Q4 2025</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">1,174</div><div class="kpi-lbl">Present Today</div><div class="kpi-tr nt">of 1,247 active</div></div>
+            <div class="kpi"><div class="kpi-dot re"></div><div class="kpi-val">41</div><div class="kpi-lbl">Absent Today</div><div class="kpi-tr nt">3.3% of headcount</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">32</div><div class="kpi-lbl">Late Today</div><div class="kpi-tr nt">2.6% of headcount</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">7.8h</div><div class="kpi-lbl">Avg Hours / Day</div><div class="kpi-tr up">&#9650; +0.2h vs Q4 2025</div></div>
+          </div>
+
+          <div class="cg21">
+            <!-- Attendance rate trend -->
+            <div class="cc">
+              <div class="cc-title">Attendance Rate Trend</div>
+              <div class="cc-sub">Q1 2026 · daily rate · workforce.attendance.trend by attendance_date</div>
+              <svg class="lsvg" viewBox="0 0 500 130" preserveAspectRatio="none">
+                <defs><linearGradient id="ag" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#0A8F84" stop-opacity=".15"/><stop offset="100%" stop-color="#0A8F84" stop-opacity="0"/></linearGradient></defs>
+                <line x1="0" y1="20"  x2="500" y2="20"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="65"  x2="500" y2="65"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="110" x2="500" y2="110" stroke="#F1F4F8" stroke-width="1"/>
+                <!-- Smooth attendance rate line (values between 88–98%) -->
+                <path d="M0,68 L50,55 L100,60 L150,72 L200,48 L250,52 L300,40 L350,58 L400,44 L450,35 L500,30 L500,130 L0,130Z" fill="url(#ag)"/>
+                <polyline points="0,68 50,55 100,60 150,72 200,48 250,52 300,40 350,58 400,44 450,35 500,30" fill="none" stroke="#0A8F84" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="500" cy="30" r="4" fill="#fff" stroke="#0A8F84" stroke-width="2.5"/>
+                <text x="0"   y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Jan 1</text>
+                <text x="125" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Jan 31</text>
+                <text x="250" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Feb 28</text>
+                <text x="375" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Mar 14</text>
+                <text x="500" y="124" font-size="9" fill="#0A8F84" font-weight="600" font-family="Inter" text-anchor="middle">Mar 28</text>
+              </svg>
+            </div>
+
+            <!-- Status breakdown donut -->
+            <div class="cc">
+              <div class="cc-title">Today's Status Mix</div>
+              <div class="cc-sub">record_count breakdown</div>
+              <div style="display:flex;align-items:center;gap:20px;height:150px">
+                <svg width="100" height="100" viewBox="0 0 100 100" style="flex-shrink:0">
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#F1F4F8" stroke-width="18"/>
+                  <!-- Present 94.2% -->
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#0A8F84" stroke-width="18" stroke-dasharray="213.2 13.0" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+                  <!-- Late 2.6% -->
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#FCD34D" stroke-width="18" stroke-dasharray="5.9 220.3" stroke-dashoffset="-213.2" transform="rotate(-90 50 50)"/>
+                  <!-- Absent 3.3% -->
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#FCA5A5" stroke-width="18" stroke-dasharray="7.4 218.8" stroke-dashoffset="-219.1" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="46" text-anchor="middle" font-size="14" font-weight="700" fill="#0F1623" font-family="JetBrains Mono,monospace">94%</text>
+                  <text x="50" y="58" text-anchor="middle" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">Present</text>
+                </svg>
+                <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:50%;background:#0A8F84;flex-shrink:0"></div><span style="flex:1;color:#374151">Present</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:#0F1623">94.2%</span></div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:50%;background:#FCD34D;flex-shrink:0"></div><span style="flex:1;color:#374151">Late</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:#0F1623">2.6%</span></div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:50%;background:#FCA5A5;flex-shrink:0"></div><span style="flex:1;color:#374151">Absent</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:#0F1623">3.3%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dept attendance rate bars -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Attendance Rate by Department</div><div class="sect-sub">Q1 2026 · attendance_rate · dimension_key=department_id</div></div></div>
+            <div class="cc">
+              <div class="ibars" style="padding:4px 0">
+                <div class="ibar"><span class="ibar-lbl">Finance</span><div class="ibar-tr"><div class="ibar-fi" style="width:98%;background:#0A8F84"></div></div><span class="ibar-val">98.1%</span></div>
+                <div class="ibar"><span class="ibar-lbl">HR</span><div class="ibar-tr"><div class="ibar-fi" style="width:97%;background:#0A8F84"></div></div><span class="ibar-val">97.2%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Engineering</span><div class="ibar-tr"><div class="ibar-fi" style="width:96%;background:#0A8F84"></div></div><span class="ibar-val">96.4%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Product</span><div class="ibar-tr"><div class="ibar-fi" style="width:95%;background:#0A8F84"></div></div><span class="ibar-val">95.0%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Operations</span><div class="ibar-tr"><div class="ibar-fi" style="width:93%;background:#1D4ED8"></div></div><span class="ibar-val">93.2%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Marketing</span><div class="ibar-tr"><div class="ibar-fi" style="width:92%;background:#1D4ED8"></div></div><span class="ibar-val">92.1%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Customer Success</span><div class="ibar-tr"><div class="ibar-fi" style="width:88%;background:#B45309"></div></div><span class="ibar-val">88.3%</span></div>
+                <div class="ibar"><span class="ibar-lbl">Sales</span><div class="ibar-tr"><div class="ibar-fi" style="width:86%;background:#B91C1C"></div></div><span class="ibar-val">86.4%</span></div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /overview -->
+
+
+        <!-- ── DAILY ATTENDANCE ────────────────────────────────────── -->
+        <!-- API: GET /api/v1/reporting/aggregates?aggregate_type=workforce.attendance.trend&dimension_key=attendance_date -->
+        <div class="tab-panel" id="tab-daily">
+
+          <div class="kpi-grid g4">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">63</div><div class="kpi-lbl">Working Days (Q1)</div><div class="kpi-tr nt">Jan + Feb + Mar 2026</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">94.2%</div><div class="kpi-lbl">Avg Daily Rate</div><div class="kpi-tr up">&#9650; +0.8% vs Q4</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">14 Mar</div><div class="kpi-lbl">Lowest Rate Day</div><div class="kpi-tr dn">&#9660; 82.1% (Holiday adj.)</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">3 Feb</div><div class="kpi-lbl">Best Rate Day</div><div class="kpi-tr up">&#9650; 98.7%</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Daily Attendance Log</div><div class="sect-sub">attendance_date dimension · metrics: record_count, present_count, late_count, absent_count, attendance_rate, average_hours</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Date</th><th>Day</th><th>Record Count</th><th>Present</th><th>Late</th><th>Absent</th><th>Half Day</th><th>Attendance Rate</th><th>Avg Hours</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">28 Mar 2026</td><td class="tnum">Fri</td><td class="tnum">1,247</td><td class="tnum">1,174</td><td class="tnum">32</td><td class="tnum">41</td><td class="tnum">0</td><td class="tnum tup">94.2%</td><td class="tnum">7.8h</td></tr>
+                  <tr><td class="tn">27 Mar 2026</td><td class="tnum">Thu</td><td class="tnum">1,247</td><td class="tnum">1,187</td><td class="tnum">24</td><td class="tnum">36</td><td class="tnum">0</td><td class="tnum tup">96.9%</td><td class="tnum">7.9h</td></tr>
+                  <tr><td class="tn">26 Mar 2026</td><td class="tnum">Wed</td><td class="tnum">1,247</td><td class="tnum">1,192</td><td class="tnum">18</td><td class="tnum">37</td><td class="tnum">0</td><td class="tnum tup">97.0%</td><td class="tnum">8.0h</td></tr>
+                  <tr><td class="tn">25 Mar 2026</td><td class="tnum">Tue</td><td class="tnum">1,247</td><td class="tnum">1,201</td><td class="tnum">20</td><td class="tnum">26</td><td class="tnum">0</td><td class="tnum tup">97.9%</td><td class="tnum">8.1h</td></tr>
+                  <tr><td class="tn">24 Mar 2026</td><td class="tnum">Mon</td><td class="tnum">1,247</td><td class="tnum">1,148</td><td class="tnum">44</td><td class="tnum">55</td><td class="tnum">0</td><td class="tnum ca">91.5%</td><td class="tnum">7.6h</td></tr>
+                  <tr><td class="tn">21 Mar 2026</td><td class="tnum">Fri</td><td class="tnum">1,247</td><td class="tnum">1,163</td><td class="tnum">38</td><td class="tnum">46</td><td class="tnum">0</td><td class="tnum">93.3%</td><td class="tnum">7.7h</td></tr>
+                  <tr><td class="tn">20 Mar 2026</td><td class="tnum">Thu</td><td class="tnum">1,247</td><td class="tnum">1,182</td><td class="tnum">22</td><td class="tnum">43</td><td class="tnum">0</td><td class="tnum">96.3%</td><td class="tnum">7.9h</td></tr>
+                  <tr><td class="tn">19 Mar 2026</td><td class="tnum">Wed</td><td class="tnum">1,247</td><td class="tnum">1,176</td><td class="tnum">29</td><td class="tnum">42</td><td class="tnum">0</td><td class="tnum">95.6%</td><td class="tnum">7.8h</td></tr>
+                  <tr><td class="tn">18 Mar 2026</td><td class="tnum">Tue</td><td class="tnum">1,247</td><td class="tnum">1,196</td><td class="tnum">21</td><td class="tnum">30</td><td class="tnum">0</td><td class="tnum tup">97.4%</td><td class="tnum">8.0h</td></tr>
+                  <tr><td class="tn">17 Mar 2026</td><td class="tnum">Mon</td><td class="tnum">1,247</td><td class="tnum">1,139</td><td class="tnum">51</td><td class="tnum">57</td><td class="tnum">0</td><td class="tnum ca">88.4%</td><td class="tnum">7.5h</td></tr>
+                  <tr><td class="tn">14 Mar 2026</td><td class="tnum">Fri</td><td class="tnum">1,247</td><td class="tnum">1,023</td><td class="tnum">62</td><td class="tnum">162</td><td class="tnum">0</td><td class="tnum cr">87.0%</td><td class="tnum">7.2h</td></tr>
+                  <tr><td class="tn">03 Feb 2026</td><td class="tnum">Tue</td><td class="tnum">1,241</td><td class="tnum">1,226</td><td class="tnum">8</td><td class="tnum">7</td><td class="tnum">0</td><td class="tnum tup">98.7%</td><td class="tnum">8.2h</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /daily -->
+
+
+        <!-- ── DEPARTMENT BREAKDOWN ────────────────────────────────── -->
+        <!-- API: GET /api/v1/reporting/aggregates?aggregate_type=workforce.attendance.trend&dimension_key=department_id -->
+        <div class="tab-panel" id="tab-dept">
+
+          <div class="kpi-grid g4">
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">98.1%</div><div class="kpi-lbl">Best Dept Rate</div><div class="kpi-tr nt">Finance</div></div>
+            <div class="kpi"><div class="kpi-dot re"></div><div class="kpi-val">86.4%</div><div class="kpi-lbl">Lowest Dept Rate</div><div class="kpi-tr dn">&#9660; Sales</div></div>
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">94.2%</div><div class="kpi-lbl">Overall Rate</div><div class="kpi-tr up">&#9650; +0.8% vs Q4</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">8</div><div class="kpi-lbl">Depts Below 90%</div><div class="kpi-tr nt">2 flagged</div></div>
+          </div>
+
+          <!-- Stacked bars -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Attendance Mix by Department</div><div class="sect-sub">Q1 2026 · present · late · absent split · dimension_key=department_id</div></div></div>
+            <div class="cc">
+              <div style="display:flex;gap:16px;margin-bottom:14px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748B"><div style="width:10px;height:10px;border-radius:2px;background:#0A8F84"></div>Present</div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748B"><div style="width:10px;height:10px;border-radius:2px;background:#FCD34D"></div>Late</div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748B"><div style="width:10px;height:10px;border-radius:2px;background:#FCA5A5"></div>Absent</div>
+              </div>
+              <div class="sbar-row"><span class="sbar-lbl">Finance</span><div class="sbar-tr"><div class="sbar-seg" style="width:96%;background:#0A8F84"></div><div class="sbar-seg" style="width:2.1%;background:#FCD34D"></div><div class="sbar-seg" style="width:1.9%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#0F1623;margin-left:10px;flex-shrink:0">98.1%</span></div>
+              <div class="sbar-row"><span class="sbar-lbl">HR</span><div class="sbar-tr"><div class="sbar-seg" style="width:95%;background:#0A8F84"></div><div class="sbar-seg" style="width:2.2%;background:#FCD34D"></div><div class="sbar-seg" style="width:2.8%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#0F1623;margin-left:10px;flex-shrink:0">97.2%</span></div>
+              <div class="sbar-row"><span class="sbar-lbl">Engineering</span><div class="sbar-tr"><div class="sbar-seg" style="width:94%;background:#0A8F84"></div><div class="sbar-seg" style="width:2.4%;background:#FCD34D"></div><div class="sbar-seg" style="width:3.6%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#0F1623;margin-left:10px;flex-shrink:0">96.4%</span></div>
+              <div class="sbar-row"><span class="sbar-lbl">Product</span><div class="sbar-tr"><div class="sbar-seg" style="width:92%;background:#0A8F84"></div><div class="sbar-seg" style="width:3.0%;background:#FCD34D"></div><div class="sbar-seg" style="width:5.0%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#0F1623;margin-left:10px;flex-shrink:0">95.0%</span></div>
+              <div class="sbar-row"><span class="sbar-lbl">Operations</span><div class="sbar-tr"><div class="sbar-seg" style="width:90%;background:#0A8F84"></div><div class="sbar-seg" style="width:3.2%;background:#FCD34D"></div><div class="sbar-seg" style="width:6.8%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#0F1623;margin-left:10px;flex-shrink:0">93.2%</span></div>
+              <div class="sbar-row"><span class="sbar-lbl">Marketing</span><div class="sbar-tr"><div class="sbar-seg" style="width:89%;background:#0A8F84"></div><div class="sbar-seg" style="width:3.1%;background:#FCD34D"></div><div class="sbar-seg" style="width:7.9%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#0F1623;margin-left:10px;flex-shrink:0">92.1%</span></div>
+              <div class="sbar-row"><span class="sbar-lbl">Customer Success</span><div class="sbar-tr"><div class="sbar-seg" style="width:85%;background:#0A8F84"></div><div class="sbar-seg" style="width:3.3%;background:#FCD34D"></div><div class="sbar-seg" style="width:11.7%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#0F1623;margin-left:10px;flex-shrink:0">88.3%</span></div>
+              <div class="sbar-row"><span class="sbar-lbl">Sales</span><div class="sbar-tr"><div class="sbar-seg" style="width:83%;background:#B91C1C"></div><div class="sbar-seg" style="width:3.4%;background:#FCD34D"></div><div class="sbar-seg" style="width:13.6%;background:#FCA5A5"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#B91C1C;margin-left:10px;flex-shrink:0">86.4%</span></div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Department Detail Table</div><div class="sect-sub">All metrics · dimension_key=department_id · workforce.attendance.trend</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Headcount</th><th>Record Count</th><th>Present</th><th>Late</th><th>Absent</th><th>Half Day</th><th>Attendance Rate</th><th>Avg Hours</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Finance</td><td class="tnum">89</td><td class="tnum">5,607</td><td class="tnum">5,499</td><td class="tnum">118</td><td class="tnum">107</td><td class="tnum">0</td><td class="tnum tup">98.1%</td><td class="tnum">8.1h</td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">67</td><td class="tnum">4,221</td><td class="tnum">4,103</td><td class="tnum">93</td><td class="tnum">118</td><td class="tnum">0</td><td class="tnum tup">97.2%</td><td class="tnum">8.0h</td></tr>
+                  <tr><td class="tn">Engineering</td><td class="tnum">312</td><td class="tnum">19,656</td><td class="tnum">18,948</td><td class="tnum">472</td><td class="tnum">708</td><td class="tnum">0</td><td class="tnum tup">96.4%</td><td class="tnum">8.0h</td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">156</td><td class="tnum">9,828</td><td class="tnum">9,337</td><td class="tnum">295</td><td class="tnum">491</td><td class="tnum">0</td><td class="tnum">95.0%</td><td class="tnum">7.9h</td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">241</td><td class="tnum">15,183</td><td class="tnum">14,150</td><td class="tnum">486</td><td class="tnum">1,033</td><td class="tnum">0</td><td class="tnum">93.2%</td><td class="tnum">7.8h</td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">112</td><td class="tnum">7,056</td><td class="tnum">6,499</td><td class="tnum">219</td><td class="tnum">557</td><td class="tnum">0</td><td class="tnum">92.1%</td><td class="tnum">7.7h</td></tr>
+                  <tr><td class="tn">Customer Success</td><td class="tnum">72</td><td class="tnum">4,536</td><td class="tnum">4,005</td><td class="tnum">150</td><td class="tnum">531</td><td class="tnum">0</td><td class="tnum ca">88.3%</td><td class="tnum">7.6h</td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">198</td><td class="tnum">12,474</td><td class="tnum">10,778</td><td class="tnum">424</td><td class="tnum">1,696</td><td class="tnum">0</td><td class="tnum cr">86.4%</td><td class="tnum">7.4h</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /dept -->
+
+
+        <!-- ── ANOMALIES ───────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/attendance?lifecycle_state=Validated&anomalies=Late,MissingCheckIn,MissingCheckOut -->
+        <div class="tab-panel" id="tab-anomalies">
+
+          <div class="kpi-grid g4">
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">847</div><div class="kpi-lbl">Late Arrivals (Q1)</div><div class="kpi-tr dn">&#9660; +12% vs Q4</div></div>
+            <div class="kpi"><div class="kpi-dot re"></div><div class="kpi-val">312</div><div class="kpi-lbl">Missing Check-in</div><div class="kpi-tr nt">+3 this week</div></div>
+            <div class="kpi"><div class="kpi-dot re"></div><div class="kpi-val">289</div><div class="kpi-lbl">Missing Check-out</div><div class="kpi-tr nt">+2 this week</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">124</div><div class="kpi-lbl">Overtime Records</div><div class="kpi-tr up">&#9650; reviewed</div></div>
+          </div>
+
+          <div class="cg11">
+            <div class="cc">
+              <div class="cc-title">Anomaly Type Breakdown</div>
+              <div class="cc-sub">Q1 2026 · AttendanceAnomaly enum counts</div>
+              <div class="ibars" style="margin-top:10px">
+                <div class="ibar"><span class="ibar-lbl">Late</span><div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#B45309"></div></div><span class="ibar-val">847</span></div>
+                <div class="ibar"><span class="ibar-lbl">MissingCheckIn</span><div class="ibar-tr"><div class="ibar-fi" style="width:37%;background:#B91C1C"></div></div><span class="ibar-val">312</span></div>
+                <div class="ibar"><span class="ibar-lbl">MissingCheckOut</span><div class="ibar-tr"><div class="ibar-fi" style="width:34%;background:#B91C1C"></div></div><span class="ibar-val">289</span></div>
+                <div class="ibar"><span class="ibar-lbl">Overtime</span><div class="ibar-tr"><div class="ibar-fi" style="width:15%;background:#1D4ED8"></div></div><span class="ibar-val">124</span></div>
+                <div class="ibar"><span class="ibar-lbl">EarlyDeparture</span><div class="ibar-tr"><div class="ibar-fi" style="width:11%;background:#94A3B8"></div></div><span class="ibar-val">91</span></div>
+                <div class="ibar"><span class="ibar-lbl">ShortShift</span><div class="ibar-tr"><div class="ibar-fi" style="width:7%;background:#94A3B8"></div></div><span class="ibar-val">58</span></div>
+                <div class="ibar"><span class="ibar-lbl">UnscheduledAtt.</span><div class="ibar-tr"><div class="ibar-fi" style="width:4%;background:#94A3B8"></div></div><span class="ibar-val">34</span></div>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-title">Anomaly by Department</div>
+              <div class="cc-sub">total anomaly count · dimension_key=department_id</div>
+              <div class="ibars" style="margin-top:10px">
+                <div class="ibar"><span class="ibar-lbl">Sales</span><div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#B91C1C"></div></div><span class="ibar-val">528</span></div>
+                <div class="ibar"><span class="ibar-lbl">Operations</span><div class="ibar-tr"><div class="ibar-fi" style="width:71%;background:#B45309"></div></div><span class="ibar-val">374</span></div>
+                <div class="ibar"><span class="ibar-lbl">Engineering</span><div class="ibar-tr"><div class="ibar-fi" style="width:59%;background:#B45309"></div></div><span class="ibar-val">310</span></div>
+                <div class="ibar"><span class="ibar-lbl">Customer Success</span><div class="ibar-tr"><div class="ibar-fi" style="width:47%;background:#94A3B8"></div></div><span class="ibar-val">248</span></div>
+                <div class="ibar"><span class="ibar-lbl">Marketing</span><div class="ibar-tr"><div class="ibar-fi" style="width:35%;background:#94A3B8"></div></div><span class="ibar-val">182</span></div>
+                <div class="ibar"><span class="ibar-lbl">Product</span><div class="ibar-tr"><div class="ibar-fi" style="width:25%;background:#94A3B8"></div></div><span class="ibar-val">131</span></div>
+                <div class="ibar"><span class="ibar-lbl">Finance</span><div class="ibar-tr"><div class="ibar-fi" style="width:13%;background:#94A3B8"></div></div><span class="ibar-val">68</span></div>
+                <div class="ibar"><span class="ibar-lbl">HR</span><div class="ibar-tr"><div class="ibar-fi" style="width:10%;background:#94A3B8"></div></div><span class="ibar-val">52</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Recent Anomaly Records</div><div class="sect-sub">AttendanceRecord · anomalies[] field · lifecycle_state: Validated / Approved</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Employee</th><th>Date</th><th>Status</th><th>Anomaly</th><th>Check-in</th><th>Check-out</th><th>Total Hours</th><th>Source</th><th>Record State</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">James Okafor</td><td class="tnum">28 Mar 2026</td><td><span class="chip ca">Late</span></td><td><span class="chip ca">Late</span></td><td class="tnum">09:42</td><td class="tnum">18:10</td><td class="tnum">8.5h</td><td><span class="chip cgy">Biometric</span></td><td><span class="chip ct">Validated</span></td></tr>
+                  <tr><td class="tn">Tom Brennan</td><td class="tnum">28 Mar 2026</td><td><span class="chip cg">Present</span></td><td><span class="chip cr">MissingCheckOut</span></td><td class="tnum">08:55</td><td class="tnum">—</td><td class="tnum">—</td><td><span class="chip cgy">Biometric</span></td><td><span class="chip ca">Captured</span></td></tr>
+                  <tr><td class="tn">Amara Diallo</td><td class="tnum">27 Mar 2026</td><td><span class="chip cg">Present</span></td><td><span class="chip cb">Overtime</span></td><td class="tnum">08:30</td><td class="tnum">21:15</td><td class="tnum">12.8h</td><td><span class="chip cgy">Biometric</span></td><td><span class="chip ct">Approved</span></td></tr>
+                  <tr><td class="tn">Chris Yuen</td><td class="tnum">27 Mar 2026</td><td><span class="chip cg">Present</span></td><td><span class="chip cr">MissingCheckIn</span></td><td class="tnum">—</td><td class="tnum">17:30</td><td class="tnum">—</td><td><span class="chip cgy">Manual</span></td><td><span class="chip ca">Captured</span></td></tr>
+                  <tr><td class="tn">Priya Nair</td><td class="tnum">26 Mar 2026</td><td><span class="chip ca">Late</span></td><td><span class="chip ca">Late</span></td><td class="tnum">10:18</td><td class="tnum">19:00</td><td class="tnum">8.7h</td><td><span class="chip cgy">APIImport</span></td><td><span class="chip ct">Validated</span></td></tr>
+                  <tr><td class="tn">Daniel Marsh</td><td class="tnum">25 Mar 2026</td><td><span class="chip cg">Present</span></td><td><span class="chip ca">EarlyDeparture</span></td><td class="tnum">08:50</td><td class="tnum">14:20</td><td class="tnum">5.5h</td><td><span class="chip cgy">Biometric</span></td><td><span class="chip ct">Validated</span></td></tr>
+                  <tr><td class="tn">Fatima Al-Hassan</td><td class="tnum">24 Mar 2026</td><td><span class="chip ca">Late</span></td><td><span class="chip ca">Late</span></td><td class="tnum">09:51</td><td class="tnum">18:30</td><td class="tnum">8.6h</td><td><span class="chip cgy">Biometric</span></td><td><span class="chip ct">Validated</span></td></tr>
+                  <tr><td class="tn">Sarah Mitchell</td><td class="tnum">24 Mar 2026</td><td><span class="chip cg">Present</span></td><td><span class="chip cb">ShortShift</span></td><td class="tnum">09:00</td><td class="tnum">15:45</td><td class="tnum">6.8h</td><td><span class="chip cgy">Biometric</span></td><td><span class="chip ct">Validated</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /anomalies -->
+
+
+        <!-- ── CORRECTIONS ─────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/attendance/corrections — AttendanceCorrection model -->
+        <div class="tab-panel" id="tab-corrections">
+
+          <div class="kpi-grid g4">
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">18</div><div class="kpi-lbl">Pending</div><div class="kpi-tr nt">Submitted · awaiting</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">142</div><div class="kpi-lbl">Approved (Q1)</div><div class="kpi-tr up">&#9650; 89.3% approval rate</div></div>
+            <div class="kpi"><div class="kpi-dot re"></div><div class="kpi-val">17</div><div class="kpi-lbl">Rejected (Q1)</div><div class="kpi-tr nt">10.7% rejection rate</div></div>
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">159</div><div class="kpi-lbl">Total (Q1)</div><div class="kpi-tr nt">All correction requests</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">Correction Requests</div><div class="sect-sub">AttendanceCorrection model · CorrectionStatus: Submitted / Approved / Rejected</div></div>
+              <button class="btn sec sm">Export</button>
+            </div>
+            <div class="twrap">
+              <table style="font-size:12px;table-layout:fixed;width:100%">
+                <colgroup>
+                  <col style="width:13%"><!-- Employee -->
+                  <col style="width:9%"> <!-- Corr. ID -->
+                  <col style="width:9%"> <!-- Date -->
+                  <col style="width:20%"><!-- Reason -->
+                  <col style="width:9%"> <!-- Req. Status -->
+                  <col style="width:8%"> <!-- Check-in -->
+                  <col style="width:8%"> <!-- Check-out -->
+                  <col style="width:9%"> <!-- Status -->
+                  <col style="width:9%"> <!-- Submitted -->
+                </colgroup>
+                <thead><tr>
+                  <th style="padding:8px 10px">Employee</th>
+                  <th style="padding:8px 10px">Corr. ID</th>
+                  <th style="padding:8px 10px">Date</th>
+                  <th style="padding:8px 10px">Reason</th>
+                  <th style="padding:8px 10px">Req. Status</th>
+                  <th style="padding:8px 10px">Check-in</th>
+                  <th style="padding:8px 10px">Check-out</th>
+                  <th style="padding:8px 10px">Status</th>
+                  <th style="padding:8px 10px">Submitted</th>
+                </tr></thead>
+                <tbody>
+                  <tr><td class="tn" style="padding:9px 10px">Tom Brennan</td><td class="tnum" style="padding:9px 10px">CORR-0412</td><td class="tnum" style="padding:9px 10px">28 Mar 2026</td><td style="padding:9px 10px">Forgot to badge out</td><td style="padding:9px 10px"><span class="chip cg">Present</span></td><td class="tnum" style="padding:9px 10px">08:55</td><td class="tnum" style="padding:9px 10px">17:30</td><td style="padding:9px 10px"><span class="chip ca">Submitted</span></td><td class="tnum" style="padding:9px 10px">28 Mar 2026</td></tr>
+                  <tr><td class="tn" style="padding:9px 10px">Chris Yuen</td><td class="tnum" style="padding:9px 10px">CORR-0411</td><td class="tnum" style="padding:9px 10px">27 Mar 2026</td><td style="padding:9px 10px">Badge reader failure</td><td style="padding:9px 10px"><span class="chip cg">Present</span></td><td class="tnum" style="padding:9px 10px">08:45</td><td class="tnum" style="padding:9px 10px">17:30</td><td style="padding:9px 10px"><span class="chip ca">Submitted</span></td><td class="tnum" style="padding:9px 10px">27 Mar 2026</td></tr>
+                  <tr><td class="tn" style="padding:9px 10px">Priya Nair</td><td class="tnum" style="padding:9px 10px">CORR-0409</td><td class="tnum" style="padding:9px 10px">24 Mar 2026</td><td style="padding:9px 10px">System outage at entry</td><td style="padding:9px 10px"><span class="chip cg">Present</span></td><td class="tnum" style="padding:9px 10px">09:05</td><td class="tnum" style="padding:9px 10px">18:00</td><td style="padding:9px 10px"><span class="chip cg">Approved</span></td><td class="tnum" style="padding:9px 10px">25 Mar 2026</td></tr>
+                  <tr><td class="tn" style="padding:9px 10px">Daniel Marsh</td><td class="tnum" style="padding:9px 10px">CORR-0408</td><td class="tnum" style="padding:9px 10px">24 Mar 2026</td><td style="padding:9px 10px">Doctor's appt — half day</td><td style="padding:9px 10px"><span class="chip cb">HalfDay</span></td><td class="tnum" style="padding:9px 10px">08:50</td><td class="tnum" style="padding:9px 10px">14:20</td><td style="padding:9px 10px"><span class="chip cg">Approved</span></td><td class="tnum" style="padding:9px 10px">24 Mar 2026</td></tr>
+                  <tr><td class="tn" style="padding:9px 10px">James Okafor</td><td class="tnum" style="padding:9px 10px">CORR-0403</td><td class="tnum" style="padding:9px 10px">19 Mar 2026</td><td style="padding:9px 10px">Misrecorded late entry</td><td style="padding:9px 10px"><span class="chip cg">Present</span></td><td class="tnum" style="padding:9px 10px">09:12</td><td class="tnum" style="padding:9px 10px">18:15</td><td style="padding:9px 10px"><span class="chip cr">Rejected</span></td><td class="tnum" style="padding:9px 10px">20 Mar 2026</td></tr>
+                  <tr><td class="tn" style="padding:9px 10px">Amara Diallo</td><td class="tnum" style="padding:9px 10px">CORR-0397</td><td class="tnum" style="padding:9px 10px">14 Mar 2026</td><td style="padding:9px 10px">Remote work — no badge log</td><td style="padding:9px 10px"><span class="chip cg">Present</span></td><td class="tnum" style="padding:9px 10px">08:30</td><td class="tnum" style="padding:9px 10px">17:30</td><td style="padding:9px 10px"><span class="chip cg">Approved</span></td><td class="tnum" style="padding:9px 10px">15 Mar 2026</td></tr>
+                  <tr><td class="tn" style="padding:9px 10px">Sarah Mitchell</td><td class="tnum" style="padding:9px 10px">CORR-0391</td><td class="tnum" style="padding:9px 10px">10 Mar 2026</td><td style="padding:9px 10px">Left early — pre-approved</td><td style="padding:9px 10px"><span class="chip cb">HalfDay</span></td><td class="tnum" style="padding:9px 10px">09:00</td><td class="tnum" style="padding:9px 10px">13:30</td><td style="padding:9px 10px"><span class="chip cg">Approved</span></td><td class="tnum" style="padding:9px 10px">10 Mar 2026</td></tr>
+                  <tr><td class="tn" style="padding:9px 10px">Fatima Al-Hassan</td><td class="tnum" style="padding:9px 10px">CORR-0382</td><td class="tnum" style="padding:9px 10px">03 Mar 2026</td><td style="padding:9px 10px">System glitch at turnstile</td><td style="padding:9px 10px"><span class="chip cg">Present</span></td><td class="tnum" style="padding:9px 10px">08:58</td><td class="tnum" style="padding:9px 10px">18:10</td><td style="padding:9px 10px"><span class="chip cg">Approved</span></td><td class="tnum" style="padding:9px 10px">04 Mar 2026</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /corrections -->
+
+
+      </div><!-- /content -->
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+</body>
+</html>

@@ -1,0 +1,166 @@
+﻿{
+  "_meta": {
+    "id": "h04-add-employee",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Add Employee",
+    "surface": "admin",
+    "primary_actor": "HR Business Partner",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Employees", "Add Employee"],
+      "actions": []
+    },
+
+    "STEP_HEADER": {
+      "title": "Add New Employee",
+      "subtitle": "Complete all steps to create the employee record.",
+      "steps": [
+        { "n": 1, "label": "Personal Info" },
+        { "n": 2, "label": "Employment" },
+        { "n": 3, "label": "Role & Dept" },
+        { "n": 4, "label": "Compensation" },
+        { "n": 5, "label": "Access & Roles" },
+        { "n": 6, "label": "Review" }
+      ]
+    },
+
+    "FORM_STEPS": {
+      "step_1_personal_info": {
+        "title": "Personal Information",
+        "fields": [
+          { "id": "first_name",      "label": "First Name",      "type": "text",   "required": true,  "maps_to": "CreateEmployeeInput.first_name" },
+          { "id": "last_name",       "label": "Last Name",       "type": "text",   "required": true,  "maps_to": "CreateEmployeeInput.last_name" },
+          { "id": "preferred_name",  "label": "Preferred Name",  "type": "text",   "required": false, "maps_to": "BG-008: field absent from CreateEmployeeInput" },
+          { "id": "personal_email",  "label": "Personal Email",  "type": "email",  "required": false, "maps_to": "BG-008: field absent from CreateEmployeeInput" },
+          { "id": "phone_number",    "label": "Phone Number",    "type": "tel",    "required": false, "maps_to": "CreateEmployeeInput.phone_number" },
+          { "id": "date_of_birth",   "label": "Date of Birth",   "type": "date",   "required": false, "maps_to": "BG-008: field absent from CreateEmployeeInput" },
+          { "id": "nationality",     "label": "Nationality",     "type": "text",   "required": false, "maps_to": "BG-008: field absent from CreateEmployeeInput" },
+          { "id": "home_address",    "label": "Home Address",    "type": "textarea","required": false, "maps_to": "BG-008: field absent from CreateEmployeeInput" }
+        ],
+        "gap_note": "BG-008 — date_of_birth, nationality, home_address, personal_email, preferred_name absent from CreateEmployeeInput. Captured by form but not sent to backend."
+      },
+
+      "step_2_employment": {
+        "title": "Employment Details",
+        "fields": [
+          { "id": "employee_number", "label": "Employee Number",  "type": "text",   "required": true,  "maps_to": "CreateEmployeeInput.employee_number" },
+          { "id": "work_email",      "label": "Work Email",       "type": "email",  "required": true,  "maps_to": "CreateEmployeeInput.email" },
+          { "id": "hire_date",       "label": "Start Date",       "type": "date",   "required": true,  "maps_to": "CreateEmployeeInput.hire_date" },
+          { "id": "employment_type", "label": "Employment Type",  "type": "radio",  "required": true,  "enum_ref": "employee.model.EMPLOYMENT_TYPES", "values": ["FullTime","PartTime","Contract","Intern"], "maps_to": "CreateEmployeeInput.employment_type" },
+          { "id": "location_name",   "label": "Office Location",  "type": "select", "required": true,  "maps_to": "CreateEmployeeInput.location_name" },
+          { "id": "probation_end_date", "label": "Probation End Date", "type": "date", "required": false, "maps_to": "BG-008: field absent from CreateEmployeeInput" }
+        ],
+        "gap_note": "BG-008 — probation_end_date absent from CreateEmployeeInput."
+      },
+
+      "step_3_role_dept": {
+        "title": "Role & Department",
+        "fields": [
+          { "id": "department_id",   "label": "Department",     "type": "select", "required": true,  "source": "GET /api/v1/departments", "maps_to": "CreateEmployeeInput.department_id" },
+          { "id": "role_id",         "label": "Role",           "type": "select", "required": true,  "source": "GET /api/v1/roles", "maps_to": "CreateEmployeeInput.role_id" },
+          { "id": "job_title",       "label": "Job Title",      "type": "text",   "required": true,  "maps_to": "CreateEmployeeInput.job_title" },
+          { "id": "manager_id",      "label": "Manager",        "type": "select", "required": false, "source": "GET /api/v1/employees?status=Active", "maps_to": "CreateEmployeeInput.manager_id" }
+        ]
+      },
+
+      "step_4_compensation": {
+        "title": "Compensation & Benefits",
+        "fields": [
+          { "id": "base_salary",     "label": "Base Salary",    "type": "number", "required": false, "maps_to": "SalaryRevision.base_salary" },
+          { "id": "currency",        "label": "Currency",       "type": "select", "required": false, "values": ["AED","USD","EUR","GBP","INR"], "maps_to": "SalaryRevision.currency" },
+          { "id": "benefits_plan",   "label": "Benefits Plan",  "type": "checkbox_group", "required": false, "enum_ref": "compensation.model.BENEFITS_PLAN_TYPES", "values": ["Health","Retirement","Insurance","Wellness","Other"], "maps_to": "BenefitsEnrollment.plan_type" }
+        ],
+        "submit_action": "POST /api/v1/compensation/employees/:employeeId/salary-revisions",
+        "note": "Compensation saved in a separate request after employee record is created."
+      },
+
+      "step_5_access_roles": {
+        "title": "System Access & Roles",
+        "fields": [
+          { "id": "hcm_role",         "label": "HCM Role",         "type": "select", "required": false, "values": ["Employee","Manager","HR Business Partner","HR Admin","Payroll Admin","Finance Approver","IT Admin"], "maps_to": "BG-007: POST /api/v1/auth/users/:userId/role-bindings (endpoint not yet built)" },
+          { "id": "create_account",   "label": "Create System Account", "type": "toggle", "required": false, "maps_to": "BG-007: POST /api/v1/auth/users (endpoint not yet built)" },
+          { "id": "send_invite",      "label": "Send Welcome Email",    "type": "toggle", "required": false, "maps_to": "BG-007: not yet built" }
+        ],
+        "gap_note": "BG-007 — auth-service exposes no HTTP route for user provisioning or role assignment. Step is informational only; no payload submitted."
+      },
+
+      "step_6_review": {
+        "title": "Review & Create",
+        "layout": "summary_cards_2col",
+        "sections": ["Personal Info", "Employment", "Role & Department", "Compensation", "System Access", "Checklist"],
+        "submit_action": "POST /api/v1/employees",
+        "submit_body_ref": "CreateEmployeeInput",
+        "submit_fields": ["first_name","last_name","email","employee_number","hire_date","employment_type","location_name","department_id","role_id","job_title","manager_id"],
+        "success_leads_to": "H03 Employee Profile (new employee)"
+      }
+    },
+
+    "FORM_RAIL": {
+      "summary_card": {
+        "title": "Employee Summary",
+        "fields_shown": ["full_name","employee_number","department","role","employment_type","start_date"]
+      },
+      "ai_suggestions": {
+        "title": "Smart Fill",
+        "source": "BG-002 mock",
+        "note": "AI suggestion chips for auto-populating common fields. No live AI endpoint."
+      },
+      "checklist": {
+        "title": "Onboarding Checklist",
+        "items": ["Personal details","Employment info","Role assigned","Compensation set","System access","Review complete"]
+      }
+    },
+
+    "FORM_FOOTER": {
+      "left": [
+        { "label": "Back", "style": "ghost", "disabled_on": "step_1" }
+      ],
+      "right": [
+        { "label": "Save & Exit",        "style": "secondary", "action": "save_draft" },
+        { "label": "Next",               "style": "primary",   "action": "navigate_next", "visible_on": "steps_1_to_5" },
+        { "label": "Create Employee",    "style": "primary",   "action": "submit",         "visible_on": "step_6" }
+      ]
+    }
+  },
+
+  "data_sources": [
+    { "slot": "step_3.department_id",  "endpoint": "GET /api/v1/departments",           "service": "employee-service" },
+    { "slot": "step_3.role_id",        "endpoint": "GET /api/v1/roles",                 "service": "employee-service" },
+    { "slot": "step_3.manager_id",     "endpoint": "GET /api/v1/employees?status=Active","service": "employee-service" }
+  ],
+
+  "submit_flow": {
+    "step": "Review (step 6)",
+    "method": "POST",
+    "endpoint": "/api/v1/employees",
+    "service": "employee-service",
+    "body": "CreateEmployeeInput",
+    "on_success": {
+      "secondary_calls": [
+        { "condition": "base_salary provided", "endpoint": "POST /api/v1/compensation/employees/:id/salary-revisions" },
+        { "condition": "benefits selected",    "endpoint": "POST /api/v1/compensation/employees/:id/benefits-enrollments" }
+      ],
+      "redirect": "H03 Employee Profile"
+    }
+  },
+
+  "known_gaps": ["BG-007", "BG-008"],
+
+  "patterns_applied": ["P-07", "P-31", "P-32"],
+
+  "mock_persona": {
+    "name": "Amir Hassan",
+    "employee_number": "EMP-0412",
+    "job_title": "Junior Data Engineer",
+    "department": "Engineering",
+    "location": "Dubai HQ",
+    "employment_type": "FullTime",
+    "start_date": "2026-04-01"
+  }
+}

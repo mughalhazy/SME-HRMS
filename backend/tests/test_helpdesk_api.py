@@ -1,0 +1,230 @@
+import unittest
+
+from helpdesk_api import (
+    get_helpdesk_automation_hooks,
+    get_helpdesk_automation_runs,
+    get_helpdesk_analytics,
+    get_helpdesk_ticket,
+    get_helpdesk_tickets,
+    post_helpdesk_ticket_close,
+    post_helpdesk_ticket_comment,
+    post_helpdesk_ticket_decision,
+    post_helpdesk_ticket_reopen,
+    post_helpdesk_ticket_submit,
+    post_helpdesk_tickets,
+    post_helpdesk_automation_hook,
+)
+from helpdesk_service import HelpdeskService
+
+
+class HelpdeskApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.service = HelpdeskService()
+
+    def test_employee_self_service_and_helpdesk_resolution_flow(self) -> None:
+        status, created = post_helpdesk_tickets(
+            self.service,
+            'Employee',
+            'emp-001',
+            {
+                'tenant_id': 'tenant-default',
+                'requester_employee_id': 'emp-001',
+                'subject': 'Need to update dependent information',
+                'category_code': 'BENEFITS',
+                'description': 'Dependent date of birth was entered incorrectly during onboarding.',
+                'priority': 'High',
+            },
+            trace_id='trace-helpdesk-api-create',
+        )
+        self.assertEqual(status, 201)
+        ticket_id = created['data']['ticket_id']
+
+        status, submitted = post_helpdesk_ticket_submit(
+            self.service,
+            'Employee',
+            'emp-001',
+            ticket_id,
+            {'tenant_id': 'tenant-default'},
+            trace_id='trace-helpdesk-api-submit',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(submitted['data']['status'], 'Open')
+        self.assertEqual(submitted['data']['workflow']['definition_code'], 'hr_helpdesk_ticket_lifecycle')
+
+        status, comment = post_helpdesk_ticket_comment(
+            self.service,
+            'Employee',
+            'emp-001',
+            ticket_id,
+            {'tenant_id': 'tenant-default', 'body': 'Please let me know if you need supporting documents.'},
+            trace_id='trace-helpdesk-api-comment',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(comment['meta']['service'], 'helpdesk-service')
+
+        status, triaged = post_helpdesk_ticket_decision(
+            self.service,
+            'approve',
+            'Helpdesk',
+            'helpdesk-agent',
+            ticket_id,
+            {'tenant_id': 'tenant-default', 'comment': 'Reviewed and assigned to HR specialist.'},
+            trace_id='trace-helpdesk-api-triage',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(triaged['data']['status'], 'InProgress')
+
+        status, resolved = post_helpdesk_ticket_decision(
+            self.service,
+            'approve',
+            'Helpdesk',
+            'hr-helpdesk-specialist',
+            ticket_id,
+            {
+                'tenant_id': 'tenant-default',
+                'comment': 'Dependent information corrected in benefits platform.',
+                'resolution_summary': 'Dependent profile corrected and employee notified.',
+            },
+            trace_id='trace-helpdesk-api-resolve',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(resolved['data']['status'], 'Resolved')
+
+        status, closed = post_helpdesk_ticket_close(
+            self.service,
+            'Employee',
+            'emp-001',
+            ticket_id,
+            {'tenant_id': 'tenant-default', 'closure_comment': 'Confirmed on my side.'},
+            trace_id='trace-helpdesk-api-close',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(closed['data']['status'], 'Closed')
+
+        status, reopened = post_helpdesk_ticket_reopen(
+            self.service,
+            'Employee',
+            'emp-001',
+            ticket_id,
+            {'tenant_id': 'tenant-default', 'reopen_comment': 'Actually the spouse coverage still needs review.'},
+            trace_id='trace-helpdesk-api-reopen',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(reopened['data']['status'], 'Open')
+
+        status, fetched = get_helpdesk_ticket(
+            self.service,
+            'Employee',
+            'emp-001',
+            ticket_id,
+            {'tenant_id': 'tenant-default'},
+            trace_id='trace-helpdesk-api-get',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(fetched['data']['ticket_id'], ticket_id)
+
+    def test_list_helpdesk_tickets_filters_for_self_service(self) -> None:
+        status, created = post_helpdesk_tickets(
+            self.service,
+            'Employee',
+            'emp-001',
+            {
+                'tenant_id': 'tenant-default',
+                'requester_employee_id': 'emp-001',
+                'subject': 'Payroll document request',
+                'category_code': 'DOCUMENTS',
+                'description': 'Need the last two payslips for loan underwriting.',
+            },
+            trace_id='trace-helpdesk-api-create-2',
+        )
+        self.assertEqual(status, 201)
+
+        status, listing = get_helpdesk_tickets(
+            self.service,
+            'Employee',
+            'emp-001',
+            {'tenant_id': 'tenant-default', 'requester_employee_id': 'emp-001'},
+            trace_id='trace-helpdesk-api-list',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(len(listing['data']['items']), 1)
+        self.assertEqual(listing['meta']['pagination']['count'], 1)
+        self.assertEqual(listing['meta']['service'], 'helpdesk-service')
+
+    def test_helpdesk_analytics_returns_priority_and_status_breakdown(self) -> None:
+        status, created = post_helpdesk_tickets(
+            self.service,
+            'Employee',
+            'emp-001',
+            {
+                'tenant_id': 'tenant-default',
+                'requester_employee_id': 'emp-001',
+                'subject': 'Badge access issue',
+                'category_code': 'ACCESS',
+                'description': 'Access stopped after office move.',
+                'priority': 'High',
+            },
+            trace_id='trace-helpdesk-api-analytics-create',
+        )
+        self.assertEqual(status, 201)
+        ticket_id = created['data']['ticket_id']
+        post_helpdesk_ticket_submit(self.service, 'Employee', 'emp-001', ticket_id, {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-analytics-submit')
+        post_helpdesk_ticket_decision(self.service, 'approve', 'Helpdesk', 'helpdesk-agent', ticket_id, {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-analytics-progress')
+
+        status, analytics = get_helpdesk_analytics(
+            self.service,
+            'Helpdesk',
+            'helpdesk-agent',
+            {'tenant_id': 'tenant-default'},
+            trace_id='trace-helpdesk-api-analytics-read',
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(analytics['data']['prioritization']['High'], 1)
+        self.assertEqual(analytics['data']['status_breakdown']['InProgress'], 1)
+        self.assertEqual(analytics['data']['sla_tracking']['first_response_tracked_tickets'], 1)
+        self.assertEqual(analytics['data']['escalation']['currently_breached_tickets'], 0)
+        self.assertEqual(analytics['data']['automation']['active_hooks'], 0)
+
+    def test_helpdesk_automation_hooks_trigger_and_are_reportable(self) -> None:
+        status, hook = post_helpdesk_automation_hook(
+            self.service,
+            'Helpdesk',
+            'helpdesk-agent',
+            {
+                'tenant_id': 'tenant-default',
+                'event_name': 'HelpdeskTicketSubmitted',
+                'target': 'automation://notify-hr-queue',
+            },
+            trace_id='trace-helpdesk-api-hook-create',
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(hook['data']['event_name'], 'HelpdeskTicketSubmitted')
+
+        status, created = post_helpdesk_tickets(
+            self.service,
+            'Employee',
+            'emp-001',
+            {
+                'tenant_id': 'tenant-default',
+                'requester_employee_id': 'emp-001',
+                'subject': 'Laptop battery replacement',
+                'category_code': 'IT',
+                'description': 'Battery health is below 30%.',
+            },
+            trace_id='trace-helpdesk-api-hook-ticket',
+        )
+        self.assertEqual(status, 201)
+        ticket_id = created['data']['ticket_id']
+        post_helpdesk_ticket_submit(self.service, 'Employee', 'emp-001', ticket_id, {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-hook-submit')
+
+        status, hooks = get_helpdesk_automation_hooks(self.service, 'Helpdesk', 'helpdesk-agent', {'tenant_id': 'tenant-default'}, trace_id='trace-helpdesk-api-hook-list')
+        self.assertEqual(status, 200)
+        self.assertEqual(hooks['data']['items'][0]['target'], 'automation://notify-hr-queue')
+
+        status, runs = get_helpdesk_automation_runs(self.service, 'Helpdesk', 'helpdesk-agent', {'tenant_id': 'tenant-default', 'ticket_id': ticket_id}, trace_id='trace-helpdesk-api-hook-runs')
+        self.assertEqual(status, 200)
+        self.assertEqual(runs['data']['items'][0]['event_name'], 'HelpdeskTicketSubmitted')
+
+
+if __name__ == '__main__':
+    unittest.main()

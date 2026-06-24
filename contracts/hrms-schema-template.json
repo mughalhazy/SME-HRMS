@@ -1,0 +1,614 @@
+﻿{
+  "_meta": {
+    "id": "hrms-schema-template",
+    "system": "HRMS",
+    "design_language": "Meridian (design-language.html)",
+    "version": "1.0",
+    "last_updated": "2026-03-22",
+    "dsl_version": "1.0",
+    "description": "Slot contracts for all 13 HRMS archetypes. Page contracts reference this file via archetype_ref. This file defines LAYOUT only — no data, no sources, no enums, no gaps.",
+    "forbidden_fields": ["source", "service", "endpoint", "enum_ref", "gap"],
+    "note": "Forbidden fields must never appear in this file. Their presence is a BLOCKER in audit --contracts."
+  },
+
+  "chrome": {
+    "description": "Shared chrome across all archetypes",
+    "sidebar": {
+      "collapsed_width": "54px",
+      "expanded_width": "216px",
+      "background": "#FFFFFF",
+      "border": "1px solid #E4E7EC",
+      "logo_mark": { "size": "34px", "border_radius": "9px", "background": "teal" },
+      "nav_icon": { "size": "36px", "border_radius": "8px" },
+      "active_state": { "background": "#EDFAF8", "color": "#0A8F84" },
+      "hover_state": { "background": "#F5F7FA", "color": "#374151" }
+    },
+    "topbar": {
+      "height": "52px",
+      "background": "#FFFFFF",
+      "border": "1px solid #E4E7EC",
+      "left": "breadcrumb",
+      "right": "actions + avatar"
+    },
+    "canvas": {
+      "background": "#F5F7FA",
+      "scrollable": true,
+      "below": "topbar"
+    }
+  },
+
+  "page_states": {
+    "description": "Standard states all archetypes must implement",
+    "states": ["loaded", "skeleton", "empty", "error", "partial"],
+    "skeleton_rule": "Column/section headers stay real. Only data rows/cards skeleton.",
+    "empty_rule": "Icon + headline + body + single CTA. No table chrome.",
+    "error_rule": "Inline error block + retry. Specific service message."
+  },
+
+  "archetypes": {
+
+    "H01": {
+      "name": "Dashboard",
+      "seed_page": "frontend/seeds/p1-dashboard.html",
+      "layout": "sidebar + topbar + scrollable canvas",
+      "description": "Overview and decision entry point. KPIs, charts, activity feed, AI insights.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "period_selector", "avatar"]
+        },
+        "KPI_ROW": {
+          "component": "KpiCardRow",
+          "required": true,
+          "contains": ["KpiCard"],
+          "layout": "5-column grid",
+          "card_spec": {
+            "dot": "6px teal · top left",
+            "value": "22px monospace bold",
+            "label": "10px uppercase tracking",
+            "trend": "badge below value"
+          }
+        },
+        "CHART_PRIMARY": {
+          "component": "ChartPanel",
+          "required": true,
+          "layout": "2/3 width",
+          "variants": ["bar_chart", "line_chart", "grouped_bar"]
+        },
+        "CHART_SECONDARY": {
+          "component": "ChartPanel",
+          "required": false,
+          "layout": "1/3 width",
+          "variants": ["donut_chart", "stat_list", "kpi_card"]
+        },
+        "AI_BAR": {
+          "component": "AiInsightBar",
+          "required": false,
+          "condition": "when AI insights available",
+          "spec": {
+            "background": "teal",
+            "contains": ["confidence_score", "label", "dismiss_button"],
+            "dot": "pulsing 2s infinite",
+            "rule": "Never red. Always dismissable. Always shows confidence."
+          }
+        },
+        "ACTIVITY_FEED": {
+          "component": "ActivityFeed",
+          "required": false,
+          "contains": ["ActivityItem"],
+          "item_spec": { "avatar": true, "text": true, "timestamp": true }
+        }
+      }
+    },
+
+    "H02": {
+      "name": "List / Table",
+      "seed_page": "frontend/seeds/p2-list.html",
+      "layout": "sidebar + topbar + filter bar + table + pagination",
+      "description": "Scan, filter, and manage collections of records.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "record_count", "primary_action", "secondary_actions"]
+        },
+        "FILTER_BAR": {
+          "component": "FilterBar",
+          "required": true,
+          "contains": ["search_input", "select_filters", "date_range"],
+          "layout": "search leftmost · date range rightmost",
+          "background": "white · border-bottom 1px"
+        },
+        "BULK_TOOLBAR": {
+          "component": "BulkActionToolbar",
+          "required": false,
+          "condition": "visible when row_selection_count > 0",
+          "replaces": "FILTER_BAR when active"
+        },
+        "DATA_TABLE": {
+          "component": "DataTable",
+          "required": true,
+          "row_height": "40px",
+          "header": "sticky · bg #F1F4F8 · 11px uppercase",
+          "row_hover": "bg #F5F7FA · 120ms",
+          "first_column": "avatar + name + ID stacked",
+          "actions_column": "icon buttons · appear on row hover · rightmost"
+        },
+        "PAGINATION": {
+          "component": "Pagination",
+          "required": true,
+          "contains": ["per_page_selector", "page_info", "page_controls"]
+        }
+      }
+    },
+
+    "H03": {
+      "name": "Detail / Profile",
+      "seed_page": "frontend/seeds/p3-profile.html",
+      "layout": "sidebar + topbar with breadcrumb + profile header + tabs + scrollable content",
+      "description": "Deep inspection of a single record with contextual actions.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["breadcrumb", "primary_action", "secondary_actions", "avatar"]
+        },
+        "PROFILE_HEADER": {
+          "component": "ProfileHeader",
+          "required": true,
+          "contains": ["avatar_large", "name", "role_title", "status_chip", "meta_row", "action_buttons"],
+          "avatar_size": "48px"
+        },
+        "TAB_NAV": {
+          "component": "TabNav",
+          "required": true,
+          "style": "underline · active = teal underline",
+          "reset_scroll": true
+        },
+        "TAB_CONTENT": {
+          "component": "TabPanel",
+          "required": true,
+          "scrollable": true,
+          "variants": ["overview_grid", "table", "timeline", "form_fields"]
+        },
+        "ACTION_RAIL": {
+          "component": "ActionRail",
+          "required": false,
+          "position": "top-right of profile header or fixed right"
+        }
+      }
+    },
+
+    "H04": {
+      "name": "Create / Edit Form",
+      "seed_page": "frontend/seeds/p4-form.html",
+      "layout": "sidebar + topbar with breadcrumb + step header + scrollable form + sticky footer",
+      "description": "Focused creation or editing. Simple (single section) or stepped (multi-section).",
+      "variants": {
+        "simple": "single section · no stepper",
+        "stepped": "numbered steps · progress strip · Back/Next navigation"
+      },
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["breadcrumb", "avatar"]
+        },
+        "STEP_HEADER": {
+          "component": "StepHeader",
+          "required": true,
+          "contains": ["form_title", "form_subtitle", "step_progress_strip"],
+          "step_strip": "numbered dots · active = teal · completed = teal check"
+        },
+        "FORM_BODY": {
+          "component": "FormBody",
+          "required": true,
+          "max_width": "680px",
+          "centred": true,
+          "section_spec": {
+            "title": "13px 600 weight",
+            "fields": "1 or 2-column grid",
+            "divider": "between sections"
+          },
+          "field_rules": {
+            "label": "above field · 12px 500 · #64748B",
+            "required": "default — mark optional with (optional)",
+            "validate": "on blur not keystroke"
+          }
+        },
+        "FORM_FOOTER": {
+          "component": "FormFooter",
+          "required": true,
+          "position": "sticky bottom",
+          "background": "white · border-top 1px",
+          "contains": ["back_button (left)", "save_or_next_button (right)"]
+        }
+      }
+    },
+
+    "H05": {
+      "name": "Workflow / Approval",
+      "seed_page": "frontend/seeds/p5-workflow.html",
+      "layout": "sidebar + topbar + split view (list left · detail right)",
+      "description": "Action-in-place approvals. Approve/reject/delegate without leaving page.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "filter_tabs", "avatar"]
+        },
+        "FILTER_TABS": {
+          "component": "FilterTabs",
+          "required": true,
+          "position": "above approval list",
+          "variants": ["All", "Leave", "Expense", "Travel", "Hiring", "Payroll"]
+        },
+        "APPROVAL_LIST": {
+          "component": "ApprovalList",
+          "required": true,
+          "width": "340px",
+          "item_spec": {
+            "avatar": true,
+            "name": true,
+            "request_type": true,
+            "date_range": true,
+            "days_count": true,
+            "status_chip": true
+          },
+          "selected_state": "teal left border"
+        },
+        "DETAIL_PANEL": {
+          "component": "ApprovalDetailPanel",
+          "required": true,
+          "width": "flex-1",
+          "contains": [
+            "request_title",
+            "request_detail_rows",
+            "policy_box",
+            "ai_assessment_box",
+            "approval_history",
+            "comment_textarea"
+          ],
+          "ai_box": {
+            "label": "AI Assessment",
+            "background": "teal tint",
+            "contains": ["reasoning", "confidence_score"]
+          }
+        },
+        "ACTION_BAR": {
+          "component": "ApprovalActionBar",
+          "required": true,
+          "position": "bottom of detail panel",
+          "layout": "Approve full-width (teal) · Reject + Delegate 50/50 below"
+        }
+      }
+    },
+
+    "H06": {
+      "name": "Calendar / Timeline",
+      "seed_page": "frontend/seeds/p6-calendar.html",
+      "layout": "sidebar + topbar + mini-cal sidebar + filter strip + main calendar grid",
+      "description": "Date-based views for leave, attendance, rosters, and timelines.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "month_nav", "view_toggle", "today_button"]
+        },
+        "MINI_CAL": {
+          "component": "MiniCalendar",
+          "required": true,
+          "width": "~100px",
+          "shows": "compact month view · week day labels"
+        },
+        "FILTER_STRIP": {
+          "component": "FilterStrip",
+          "required": true,
+          "layout": "horizontal chips · toggle on/off per category",
+          "colour_coded": true
+        },
+        "CALENDAR_GRID": {
+          "component": "CalendarGrid",
+          "required": true,
+          "default_view": "month",
+          "views": ["month", "week", "day"],
+          "day_cell": {
+            "contains": ["day_number", "event_chips"],
+            "event_chip": "colour per type · truncated label · tooltip on hover",
+            "overflow": "+N more"
+          }
+        },
+        "EVENT_TOOLTIP": {
+          "component": "EventTooltip",
+          "required": false,
+          "trigger": "hover on event chip"
+        }
+      }
+    },
+
+    "H07": {
+      "name": "Analytics / Reports",
+      "seed_page": "frontend/seeds/p7-analytics.html",
+      "layout": "sidebar + topbar + report tab nav + filter bar + chart grid",
+      "description": "Explore and export HR data. Interactive or static snapshot modes.",
+      "variants": {
+        "explore": "interactive filters · live data · drill-down",
+        "export": "static snapshot · PDF or CSV · scheduled or on-demand"
+      },
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "export_pdf", "schedule_report", "new_report"]
+        },
+        "REPORT_TABS": {
+          "component": "ReportTabNav",
+          "required": true,
+          "tabs": ["Workforce", "Payroll", "Attendance & Leave", "Recruiting", "Performance", "Saved Reports"]
+        },
+        "FILTER_BAR": {
+          "component": "FilterBar",
+          "required": true,
+          "contains": ["period_selector", "department_filter"]
+        },
+        "CHART_GRID": {
+          "component": "ChartGrid",
+          "required": true,
+          "responsive": true,
+          "chart_types": ["bar", "line", "donut", "grouped_bar", "inline_bar"]
+        },
+        "DATA_TABLE": {
+          "component": "DataTable",
+          "required": false,
+          "condition": "when tabular data view selected"
+        },
+        "EXPORT_BAR": {
+          "component": "ExportBar",
+          "required": false,
+          "condition": "export mode"
+        }
+      }
+    },
+
+    "H08": {
+      "name": "Search / Discovery",
+      "seed_page": "frontend/seeds/p8-search.html",
+      "layout": "sidebar + search hero + facet panel (left) + results list (right)",
+      "description": "Find and explore employees, candidates, and documents.",
+      "slots": {
+        "SEARCH_HERO": {
+          "component": "SearchHero",
+          "required": true,
+          "contains": ["search_input_large", "filter_chips_row", "result_count"]
+        },
+        "FACET_PANEL": {
+          "component": "FacetPanel",
+          "required": true,
+          "width": "~220px",
+          "contains": ["facet_groups"],
+          "facet_group": {
+            "contains": ["section_title", "checkbox_items"],
+            "collapsible": true
+          }
+        },
+        "RESULT_LIST": {
+          "component": "ResultList",
+          "required": true,
+          "width": "flex-1",
+          "result_card": {
+            "contains": ["avatar", "name", "role", "department", "skill_tags", "salary", "action_buttons"],
+            "highlight": "query terms highlighted in results"
+          }
+        },
+        "VIEW_TOGGLE": {
+          "component": "ViewToggle",
+          "required": false,
+          "options": ["list", "grid"]
+        }
+      }
+    },
+
+    "H09": {
+      "name": "Inbox / Feed",
+      "seed_page": "frontend/seeds/p9-inbox.html",
+      "layout": "sidebar + topbar + folder nav (left) + message list (centre) + detail panel (right)",
+      "description": "Notifications, alerts, and activity feed with detail view.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "compose_button", "avatar"]
+        },
+        "FOLDER_NAV": {
+          "component": "FolderNav",
+          "required": true,
+          "width": "~200px",
+          "contains": ["compose_button", "folder_items"],
+          "folder_item": { "contains": ["icon", "label", "unread_count"] }
+        },
+        "MESSAGE_LIST": {
+          "component": "MessageList",
+          "required": true,
+          "item_spec": {
+            "contains": ["sender_avatar", "sender_name", "subject", "preview", "timestamp"],
+            "unread_state": "font-weight 600 · dot indicator"
+          }
+        },
+        "DETAIL_PANEL": {
+          "component": "MessageDetail",
+          "required": true,
+          "contains": ["message_header", "message_body", "reply_input", "action_buttons"],
+          "slide": "220ms ease-out from right"
+        }
+      }
+    },
+
+    "H10": {
+      "name": "Settings / Configuration",
+      "seed_page": "frontend/seeds/p10-settings.html",
+      "layout": "sidebar + topbar + settings nav (left) + content (right) + save bar (bottom)",
+      "description": "Org and system configuration. Grouped by domain.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "avatar"]
+        },
+        "SETTINGS_NAV": {
+          "component": "SettingsNav",
+          "required": true,
+          "width": "~220px",
+          "groups": ["Account", "Organisation"],
+          "item_spec": { "contains": ["label", "active_indicator"] }
+        },
+        "SETTINGS_CONTENT": {
+          "component": "SettingsContent",
+          "required": true,
+          "width": "flex-1",
+          "section_spec": {
+            "contains": ["section_title", "section_subtitle", "form_fields_or_config_panels"]
+          }
+        },
+        "SAVE_BAR": {
+          "component": "SaveBar",
+          "required": true,
+          "position": "sticky bottom",
+          "condition": "visible when unsaved changes exist",
+          "contains": ["discard_button", "save_changes_button"]
+        }
+      }
+    },
+
+    "H11": {
+      "name": "Builder",
+      "seed_page": "frontend/seeds/p11-builder.html",
+      "layout": "sidebar + builder topbar + palette (left) + canvas (centre) + properties (right)",
+      "description": "Visual builder for workflows, surveys, and reports. Auto-save every 30s.",
+      "save_model": {
+        "auto_save": "every 30s",
+        "manual_publish": true,
+        "states": ["Draft", "Published"]
+      },
+      "slots": {
+        "BUILDER_TOPBAR": {
+          "component": "BuilderTopbar",
+          "required": true,
+          "contains": ["brand_name", "undo", "redo", "version_history", "preview", "test", "publish_button", "avatar"],
+          "publish_button": "teal primary"
+        },
+        "PALETTE": {
+          "component": "ComponentPalette",
+          "required": true,
+          "width": "240px",
+          "contains": ["palette_search", "component_sections"],
+          "component_item": { "contains": ["icon", "label", "subtitle"], "draggable": true }
+        },
+        "CANVAS": {
+          "component": "BuilderCanvas",
+          "required": true,
+          "width": "flex-1",
+          "contains": ["canvas_sections", "zoom_controls"],
+          "zoom": { "default": "100%", "min": "50%", "max": "200%" },
+          "selected_state": "teal border"
+        },
+        "PROPERTIES_PANEL": {
+          "component": "PropertiesPanel",
+          "required": true,
+          "width": "280px",
+          "context_sensitive": true,
+          "contains": ["properties_title", "properties_subtitle", "property_sections"]
+        },
+        "BUILDER_FOOTER": {
+          "component": "BuilderFooter",
+          "required": true,
+          "contains": ["autosave_status", "section_field_count"]
+        }
+      }
+    },
+
+    "H12": {
+      "name": "Support / Ticket",
+      "seed_page": "frontend/seeds/p12-support.html",
+      "layout": "sidebar + topbar + status strip + ticket list (left) + ticket detail (right)",
+      "description": "Helpdesk ticket lifecycle. Status overview, list, detail, and actions.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "filter_button", "export_button", "new_ticket_button"]
+        },
+        "STATUS_STRIP": {
+          "component": "StatusStrip",
+          "required": true,
+          "cells": ["Open", "In Progress", "Pending", "Resolved This Week"],
+          "cell_spec": { "contains": ["label", "count", "urgency_note"] }
+        },
+        "TICKET_LIST": {
+          "component": "TicketList",
+          "required": true,
+          "width": "~360px",
+          "item_spec": {
+            "contains": ["priority_indicator", "title", "assignee", "sla_badge", "status_chip"],
+            "selected_state": "teal left border"
+          }
+        },
+        "TICKET_DETAIL": {
+          "component": "TicketDetail",
+          "required": true,
+          "width": "flex-1",
+          "contains": [
+            "ticket_header",
+            "description",
+            "attachments",
+            "comment_thread",
+            "comment_input",
+            "status_actions"
+          ],
+          "status_actions": ["Resolve", "Close", "Reopen", "Escalate"]
+        }
+      }
+    },
+
+    "H13": {
+      "name": "Candidate Pipeline",
+      "seed_page": "frontend/seeds/p13-pipeline.html",
+      "layout": "sidebar + topbar + KPI strip + Kanban board (column per stage)",
+      "description": "Hiring pipeline as Kanban board. One column per stage.",
+      "slots": {
+        "TOPBAR": {
+          "component": "Topbar",
+          "required": true,
+          "contains": ["page_title", "role_selector", "department_filter", "export_button", "add_candidate_button"]
+        },
+        "KPI_STRIP": {
+          "component": "KpiStrip",
+          "required": true,
+          "cells": ["Total Candidates", "Open Roles", "Avg Time-to-Hire", "Offer Accept Rate"],
+          "cell_spec": { "contains": ["label", "value_monospace", "trend_note"] }
+        },
+        "PIPELINE_BOARD": {
+          "component": "KanbanBoard",
+          "required": true,
+          "overflow": "horizontal scroll",
+          "column_spec": {
+            "contains": ["stage_label", "candidate_count", "candidate_cards"],
+            "stage_label": "uppercase · 11px · #94A3B8"
+          }
+        },
+        "CANDIDATE_CARD": {
+          "component": "CandidateCard",
+          "required": true,
+          "contains": ["avatar", "name", "role", "days_in_stage", "quick_actions"],
+          "draggable": true
+        },
+        "DETAIL_DRAWER": {
+          "component": "CandidateDrawer",
+          "required": false,
+          "condition": "on card click",
+          "position": "slides in from right · 220ms ease-out"
+        }
+      }
+    }
+  }
+}

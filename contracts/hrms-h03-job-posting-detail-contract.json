@@ -1,0 +1,132 @@
+﻿{
+  "_meta": {
+    "id": "h03-job-posting-detail",
+    "archetype": "H03 Detail / Profile",
+    "page": "Job Posting Detail",
+    "surface": "admin",
+    "primary_actor": "Recruiter / Hiring Manager",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Hiring", "Job Postings", "Senior Data Engineer"],
+      "actions": [
+        { "label": "Edit Posting", "style": "secondary", "leads_to": "H04 Edit Job Posting" },
+        { "label": "Add Candidate", "style": "primary", "leads_to": "H04 Add Candidate" },
+        { "label": "Close Posting", "style": "danger", "requires_confirm": true, "action": "PATCH /api/v1/jobs/:jobId → status=Closed" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "entity_icon": {
+        "type": "square",
+        "gradient": "blue",
+        "icon": "briefcase",
+        "size": 56
+      },
+      "name": "Senior Data Engineer",
+      "sub_line": "JOB-2025-ENG-004",
+      "chips": [
+        { "field": "status", "enum_ref": "ref:JOB_POSTING_STATUSES", "style": "green-if-open" },
+        { "field": "department_name", "style": "grey" },
+        { "field": "employment_type", "enum_ref": "ref:EmploymentType", "style": "blue" },
+        { "field": "location", "style": "grey" }
+      ]
+    },
+
+    "TAB_NAV": {
+      "tabs": ["Overview", "Candidates", "Interview Schedule"]
+    },
+
+    "TAB_OVERVIEW": {
+      "layout": "2col-profile",
+      "left": [
+        {
+          "card": "Job Details",
+          "service": "hiring_service",
+          "model": "JobPosting",
+          "endpoint": "GET /api/v1/jobs/:jobId",
+          "fields": ["posting_id", "title", "department_id", "location", "employment_type", "status", "posted_date", "closing_date", "hiring_manager_id", "description"]
+        },
+        {
+          "card": "Pipeline Summary",
+          "type": "funnel-bars",
+          "source": "GET /api/v1/candidates?job_id=:jobId grouped by status",
+          "stages": ["Applied", "Screening", "Interviewing", "Offered", "Hired", "Rejected"],
+          "enum_ref": "ref:CANDIDATE_STATUSES"
+        }
+      ],
+      "right": [
+        {
+          "card": "At a Glance",
+          "kpis": [
+            { "label": "Total Applicants", "source": "GET /api/v1/candidates?job_id=:id&count=true" },
+            { "label": "Active Pipeline", "source": "derived: Applied+Screening+Interviewing" },
+            { "label": "Offers Extended", "source": "derived: Offered+Hired" },
+            { "label": "Days Open", "source": "derived: today - posted_date" }
+          ]
+        }
+      ]
+    },
+
+    "TAB_CANDIDATES": {
+      "card": "Candidates",
+      "service": "hiring_service",
+      "endpoint": "GET /api/v1/candidates?job_id=:jobId",
+      "model": "Candidate",
+      "display": "table",
+      "columns": ["full_name", "applied_date", "stage", "source", "actions"],
+      "enum_refs": { "stage": "ref:CANDIDATE_STATUSES" },
+      "row_action": { "label": "View", "leads_to": "H03 Candidate Detail" }
+    },
+
+    "TAB_INTERVIEW_SCHEDULE": {
+      "card": "Interview Schedule",
+      "service": "hiring_service",
+      "endpoint": "GET /api/v1/interviews?job_id=:jobId",
+      "model": "Interview",
+      "display": "table",
+      "columns": ["candidate_name", "interview_type", "scheduled_at", "interviewer_name", "status", "actions"],
+      "enum_refs": { "status": "ref:INTERVIEW_STATUSES" }
+    }
+  },
+
+  "data_sources": {
+    "job_posting": {
+      "service": "hiring_service",
+      "endpoint": "GET /api/v1/jobs/:jobId",
+      "model": "JobPosting"
+    },
+    "candidates": {
+      "service": "hiring_service",
+      "endpoint": "GET /api/v1/candidates?job_id=:jobId",
+      "model": "Candidate"
+    },
+    "interviews": {
+      "service": "hiring_service",
+      "endpoint": "GET /api/v1/interviews?job_id=:jobId",
+      "model": "Interview"
+    }
+  },
+
+  "gaps": [],
+
+  "mock_data": {
+    "job_posting": {
+      "posting_id": "JOB-2025-ENG-004",
+      "title": "Senior Data Engineer",
+      "department_id": "DEPT-ENG-001",
+      "location": "Dubai, UAE",
+      "employment_type": "FullTime",
+      "status": "Open",
+      "posted_date": "2025-02-10",
+      "closing_date": "2025-04-30",
+      "hiring_manager_id": "EMP-0055",
+      "description": "We are looking for a Senior Data Engineer to lead our data infrastructure build-out using dbt, Snowflake, and Airflow."
+    }
+  }
+}

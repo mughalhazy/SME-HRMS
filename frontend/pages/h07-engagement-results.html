@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engagement Results — Meridian HCM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+  <script>
+    function showTab(el, id) {
+      document.querySelectorAll('.rn-tab').forEach(function(t){ t.classList.remove('on'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('tab-' + id).classList.add('on');
+      document.getElementById('mainPage').scrollTop = 0;
+    }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{zoom:1.1}
+    html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;color:#374151;background:#F5F7FA}
+    :root{
+      --teal:#0A8F84;--grn:#15803D;--amber:#B45309;--red:#B91C1C;--blue:#1D4ED8;--violet:#5B21B6;
+      --t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;
+      --w:#FFFFFF;--bd:#E4E7EC;--bg:#F5F7FA;--bg2:#F1F4F8;
+      --dur:120ms
+    }
+
+    /* layout */
+    .shell{display:flex;height:100vh;overflow:hidden}
+    .sb{width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+    .sb-logo{width:34px;height:34px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+    .sb-logo svg{fill:white;width:18px;height:18px}
+    .sb-nav{display:flex;flex-direction:column;gap:4px;align-items:center;width:100%;flex:1}
+    .sb-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:background var(--dur),color var(--dur);text-decoration:none}
+    .sb-ico:hover{background:var(--bg2);color:var(--t2)}
+    .sb-ico.on{background:#EDFAF8;color:var(--teal)}
+    .sb-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+    .sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0C9E92);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;margin-top:auto;flex-shrink:0}
+
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+    /* topbar */
+    .topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+    .bc{flex:1;font-size:13px;color:var(--t3)}
+    .bc b{color:var(--t1);font-weight:600}
+    .btn{padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:background var(--dur)}
+    .btn.sm{padding:4px 10px}
+    .btn.pri{background:var(--teal);color:#fff}.btn.pri:hover{background:#0C9E92}
+    .btn.sec{background:var(--w);border:1px solid var(--bd);color:var(--t2)}.btn.sec:hover{background:var(--bg2)}
+
+    /* report-nav */
+    .report-nav{background:var(--w);border-bottom:1px solid var(--bd);display:flex;padding:0 20px;flex-shrink:0;overflow-x:auto}
+    .rn-tab{padding:13px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:color var(--dur),border-color var(--dur)}
+    .rn-tab:hover{color:var(--t2)}
+    .rn-tab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+
+    /* filter bar */
+    .fbar{background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:10px 20px;gap:10px;flex-shrink:0;flex-wrap:wrap}
+    .flbl{font-size:12px;font-weight:500;color:var(--t3)}
+    .fsel{padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;color:var(--t2);background:var(--w);cursor:pointer;outline:none;font-family:inherit}
+    .fsel:focus{border-color:var(--teal)}
+    .fsep{width:1px;height:20px;background:var(--bd);margin:0 2px}
+    .factions{margin-left:auto;display:flex;gap:8px}
+
+    /* P-32 scroll */
+    .page{flex:1;overflow-y:auto;min-height:0}
+    .content{padding:22px 22px 12vh}
+
+    /* tab panels */
+    .tab-panel{display:none}
+    .tab-panel.on{display:block}
+
+    /* section */
+    .sect{margin-bottom:22px}
+    .sect-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px}
+    .sect-title{font-size:15px;font-weight:600;color:var(--t1)}
+    .sect-sub{font-size:12px;color:var(--t3);margin-top:2px}
+
+    /* KPI grid */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+    .kpi{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:16px 18px;transition:transform var(--dur),box-shadow var(--dur)}
+    .kpi:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .kpi-dot{width:8px;height:8px;border-radius:50%;margin-bottom:10px}
+    .kpi-dot.tl{background:var(--teal)}.kpi-dot.gn{background:var(--grn)}.kpi-dot.am{background:var(--amber)}.kpi-dot.bl{background:var(--blue)}.kpi-dot.vi{background:var(--violet)}
+    .kpi-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--t1);line-height:1.1}
+    .kpi-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t4);margin-top:4px}
+    .kpi-tr{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;margin-top:8px;padding:2px 6px;border-radius:4px}
+    .kpi-tr.up{background:#DCFCE7;color:var(--grn)}
+    .kpi-tr.dn{background:#FEE2E2;color:var(--red)}
+    .kpi-tr.nt{background:var(--bg2);color:var(--t3)}
+
+    /* chart cards */
+    .cc{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:18px}
+    .cc-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px}
+    .cc-sub{font-size:11px;color:var(--t3);margin-bottom:14px}
+    .cg21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:22px}
+    .cg11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+
+    /* inline bars */
+    .ibars{display:flex;flex-direction:column;gap:10px}
+    .ibar{display:flex;align-items:center;gap:10px}
+    .ibar-lbl{font-size:12px;color:var(--t2);width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ibar-tr{flex:1;height:8px;background:var(--bg2);border-radius:99px;overflow:hidden}
+    .ibar-fi{height:100%;border-radius:99px}
+    .ibar-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t1);width:40px;text-align:right;flex-shrink:0}
+
+    /* score bar (0-5 scale) */
+    .sco-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .sco-lbl{font-size:12px;color:var(--t2);width:130px;flex-shrink:0}
+    .sco-tr{flex:1;height:10px;background:var(--bg2);border-radius:99px;overflow:hidden;position:relative}
+    .sco-fi{height:100%;border-radius:99px;transition:width var(--dur)}
+    .sco-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--t1);width:36px;text-align:right;flex-shrink:0}
+    .sco-fav{font-size:11px;color:var(--t3);width:46px;text-align:right;flex-shrink:0}
+
+    /* score distribution */
+    .dist-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .dist-lbl{font-size:12px;color:var(--t3);width:18px;text-align:center;flex-shrink:0}
+    .dist-tr{flex:1;height:18px;background:var(--bg2);border-radius:4px;overflow:hidden}
+    .dist-fi{height:100%;border-radius:4px}
+    .dist-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t2);width:36px;text-align:right;flex-shrink:0}
+
+    /* dim badge */
+    .dim-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+
+    /* P-11 table */
+    .twrap{background:var(--w);border:1px solid var(--bd);border-radius:11px;overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);white-space:nowrap}
+    tbody tr td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--t2);transition:background .12s}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--bg2)}
+    .tn{font-weight:600;color:var(--t1)}
+    .tnum{font-family:'JetBrains Mono',monospace;font-weight:500}
+    .tup{color:var(--grn)}.tdn{color:var(--red)}
+
+    /* P-07 chips */
+    .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+    .cg{background:#DCFCE7;color:var(--grn)}
+    .ca{background:#FEF3C7;color:var(--amber)}
+    .cr{background:#FEE2E2;color:var(--red)}
+    .cb{background:#DBEAFE;color:var(--blue)}
+    .ct{background:#EDFAF8;color:var(--teal)}
+    .cvi{background:#EDE9FE;color:var(--violet)}
+    .cgy{background:var(--bg2);color:var(--t3)}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sb">
+    <div class="sb-logo"><svg viewBox="0 0 18 18"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="10" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="10" width="6" height="6" rx="1.5"/><rect x="10" y="10" width="6" height="6" rx="1.5"/></svg></div>
+    <div class="sb-nav">
+      <a class="sb-ico" href="h01-hr-manager-dashboard.html" target="_blank" title="Dashboard"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></a>
+      <a class="sb-ico" href="h02-employees.html" target="_blank" title="Employees"><svg viewBox="0 0 20 20"><circle cx="8" cy="6" r="3"/><path d="M2 17c0-3.314 2.686-6 6-6s6 2.686 6 6"/><circle cx="15" cy="7" r="2"/><path d="M15 12c1.657 0 3 1.343 3 3"/></svg></a>
+      <a class="sb-ico" href="h06-leave-calendar.html" target="_blank" title="Leave"><svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4M13 2v4M3 9h14"/></svg></a>
+      <a class="sb-ico" href="h01-payroll-admin-dashboard.html" target="_blank" title="Payroll"><svg viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M2 9h16M6 13h2M10 13h4"/></svg></a>
+      <a class="sb-ico" href="h05-approval-inbox.html" target="_blank" title="Approvals"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="3"/><path d="M6 10l3 3 5-6"/></svg></a>
+      <a class="sb-ico on" href="h07-engagement-results.html" title="Analytics"><svg viewBox="0 0 20 20"><path d="M2 16l4-5 3 3 4-6 5 4" stroke-width="1.8"/><circle cx="6" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+    </div>
+    <div class="sb-av">AK</div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="bc">Analytics &rsaquo; <b>Engagement Results</b></div>
+      <button class="btn sec sm">Export PDF</button>
+      <button class="btn sec sm">Export CSV</button>
+      <button class="btn pri sm">New Survey</button>
+    </div>
+
+    <!-- Report Nav -->
+    <div class="report-nav">
+      <div class="rn-tab on"  onclick="showTab(this,'overview')">&#128200; Overview</div>
+      <div class="rn-tab"     onclick="showTab(this,'surveys')">&#128203; Survey Results</div>
+      <div class="rn-tab"     onclick="showTab(this,'dimensions')">&#127775; Dimension Scores</div>
+      <div class="rn-tab"     onclick="showTab(this,'questions')">&#10067; Question Analysis</div>
+      <div class="rn-tab"     onclick="showTab(this,'responses')">&#128100; Responses</div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="fbar">
+      <span class="flbl">Survey</span>
+      <select class="fsel">
+        <option>Q1 2026 Pulse Survey</option>
+        <option>Q4 2025 Annual Engagement</option>
+        <option>Q3 2025 Pulse Survey</option>
+        <option>All Surveys</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Status</span>
+      <select class="fsel">
+        <option>All Statuses</option>
+        <option>Open</option>
+        <option>Closed</option>
+        <option>Draft</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Department</span>
+      <select class="fsel">
+        <option>All Departments</option>
+        <option>Engineering</option>
+        <option>Sales</option>
+        <option>Operations</option>
+        <option>HR</option>
+        <option>Finance</option>
+        <option>Marketing</option>
+        <option>Product</option>
+        <option>Customer Success</option>
+      </select>
+      <div class="factions">
+        <button class="btn sec sm">Reset</button>
+        <button class="btn pri sm">Apply</button>
+      </div>
+    </div>
+
+    <!-- Page -->
+    <div class="page" id="mainPage">
+      <div class="content">
+
+
+        <!-- ── OVERVIEW ────────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/engagement/surveys/{survey_id}/aggregated-results -->
+        <div class="tab-panel on" id="tab-overview">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">3.9</div><div class="kpi-lbl">Overall Score (avg)</div><div class="kpi-tr up">&#9650; +0.2 vs Q4 2025</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">74.3%</div><div class="kpi-lbl">Favorable Ratio</div><div class="kpi-tr up">&#9650; +3.1% vs Q4 2025</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">891</div><div class="kpi-lbl">Responses</div><div class="kpi-tr nt">of 1,024 invited</div></div>
+            <div class="kpi"><div class="kpi-dot vi"></div><div class="kpi-val">87.0%</div><div class="kpi-lbl">Participation Rate</div><div class="kpi-tr up">&#9650; +4.2% vs Q4 2025</div></div>
+          </div>
+
+          <div class="cg21">
+            <!-- Participation trend -->
+            <div class="cc">
+              <div class="cc-title">Participation Rate Trend</div>
+              <div class="cc-sub">Survey-over-survey · participation_rate from AggregatedSurveyResult</div>
+              <svg width="100%" height="140" viewBox="0 0 400 140" preserveAspectRatio="none">
+                <defs><linearGradient id="vg" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#5B21B6" stop-opacity=".12"/><stop offset="100%" stop-color="#5B21B6" stop-opacity="0"/></linearGradient></defs>
+                <line x1="0" y1="20"  x2="400" y2="20"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="70"  x2="400" y2="70"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="120" x2="400" y2="120" stroke="#F1F4F8" stroke-width="1"/>
+                <path d="M0,92 L100,78 L200,65 L300,58 L400,42 L400,130 L0,130Z" fill="url(#vg)"/>
+                <polyline points="0,92 100,78 200,65 300,58 400,42" fill="none" stroke="#5B21B6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="0"   cy="92" r="3.5" fill="#5B21B6"/>
+                <circle cx="100" cy="78" r="3.5" fill="#5B21B6"/>
+                <circle cx="200" cy="65" r="3.5" fill="#5B21B6"/>
+                <circle cx="300" cy="58" r="3.5" fill="#5B21B6"/>
+                <circle cx="400" cy="42" r="4"   fill="#fff" stroke="#5B21B6" stroke-width="2.5"/>
+                <text x="0"   y="134" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q4 2024</text>
+                <text x="100" y="134" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q1 2025</text>
+                <text x="200" y="134" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q2 2025</text>
+                <text x="300" y="134" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Q4 2025</text>
+                <text x="400" y="134" font-size="9" fill="#5B21B6" font-weight="600" font-family="Inter" text-anchor="middle">Q1 2026</text>
+              </svg>
+            </div>
+
+            <!-- Score distribution -->
+            <div class="cc">
+              <div class="cc-title">Score Distribution</div>
+              <div class="cc-sub">score_distribution · Likert5 (1–5) · Q1 2026</div>
+              <div style="margin-top:14px">
+                <div class="dist-row"><span class="dist-lbl" style="color:var(--grn);font-weight:700">5</span><div class="dist-tr"><div class="dist-fi" style="width:48%;background:#15803D"></div></div><span class="dist-val">428</span></div>
+                <div class="dist-row"><span class="dist-lbl" style="color:#22C55E;font-weight:700">4</span><div class="dist-tr"><div class="dist-fi" style="width:34%;background:#4ADE80"></div></div><span class="dist-val">235</span></div>
+                <div class="dist-row"><span class="dist-lbl" style="color:var(--t3);font-weight:700">3</span><div class="dist-tr"><div class="dist-fi" style="width:12%;background:#CBD5E1"></div></div><span class="dist-val">107</span></div>
+                <div class="dist-row"><span class="dist-lbl" style="color:var(--amber);font-weight:700">2</span><div class="dist-tr"><div class="dist-fi" style="width:5%;background:#FCD34D"></div></div><span class="dist-val">78</span></div>
+                <div class="dist-row"><span class="dist-lbl" style="color:var(--red);font-weight:700">1</span><div class="dist-tr"><div class="dist-fi" style="width:5%;background:#FCA5A5"></div></div><span class="dist-val">43</span></div>
+              </div>
+              <div style="margin-top:12px;font-size:11px;color:var(--t3)">Favorable (4–5): <b style="color:var(--grn)">74.3%</b> · Threshold: &#8805;4</div>
+            </div>
+          </div>
+
+          <!-- Dimension scores overview -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Score by Dimension</div><div class="sect-sub">dimension_scores · Q1 2026 · overall_average_score + favorable_ratio per dimension</div></div></div>
+            <div class="cc">
+              <div style="margin-top:4px">
+                <div class="sco-bar"><span class="sco-lbl">D1 · Wellbeing</span><div class="sco-tr"><div class="sco-fi" style="width:82%;background:var(--teal)"></div></div><span class="sco-val">4.1</span><span class="sco-fav">79.2%</span></div>
+                <div class="sco-bar"><span class="sco-lbl">D2 · Management</span><div class="sco-tr"><div class="sco-fi" style="width:78%;background:var(--teal)"></div></div><span class="sco-val">3.9</span><span class="sco-fav">75.0%</span></div>
+                <div class="sco-bar"><span class="sco-lbl">D3 · Learning</span><div class="sco-tr"><div class="sco-fi" style="width:74%;background:#1D4ED8"></div></div><span class="sco-val">3.7</span><span class="sco-fav">70.4%</span></div>
+                <div class="sco-bar"><span class="sco-lbl">D4 · Culture</span><div class="sco-tr"><div class="sco-fi" style="width:80%;background:var(--teal)"></div></div><span class="sco-val">4.0</span><span class="sco-fav">77.1%</span></div>
+                <div class="sco-bar"><span class="sco-lbl">D5 · Purpose</span><div class="sco-tr"><div class="sco-fi" style="width:76%;background:#1D4ED8"></div></div><span class="sco-val">3.8</span><span class="sco-fav">72.8%</span></div>
+              </div>
+              <div style="font-size:11px;color:var(--t3);margin-top:6px">Score / 5.0 &nbsp;·&nbsp; Favorable % shown right</div>
+            </div>
+          </div>
+        </div><!-- /overview -->
+
+
+        <!-- ── SURVEY RESULTS ──────────────────────────────────────── -->
+        <!-- API: GET /api/v1/engagement/surveys?status=Closed -->
+        <div class="tab-panel" id="tab-surveys">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">4</div><div class="kpi-lbl">Surveys Run (12mo)</div><div class="kpi-tr nt">3 Closed · 1 Open</div></div>
+            <div class="kpi"><div class="kpi-dot vi"></div><div class="kpi-val">82.6%</div><div class="kpi-lbl">Avg Participation</div><div class="kpi-tr up">&#9650; improving trend</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">3.86</div><div class="kpi-lbl">Avg Score (all)</div><div class="kpi-tr up">&#9650; +0.18 vs prior yr</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">10</div><div class="kpi-lbl">Questions / Survey</div><div class="kpi-tr nt">2 per dimension (D1–D5)</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Survey List</div><div class="sect-sub">Survey model · GET /api/v1/engagement/surveys · AggregatedSurveyResult inline</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Survey</th><th>Code</th><th>Target</th><th>Status</th><th>Published</th><th>Closed</th><th>Responses</th><th>Participation</th><th>Avg Score</th><th>Favorable</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Q1 2026 Pulse Survey</td><td class="tnum">PULSE-Q1-26</td><td class="tnum">All Staff</td><td><span class="chip cg">Open</span></td><td class="tnum">01 Mar 2026</td><td class="tnum">—</td><td class="tnum">891 / 1,024</td><td class="tnum tup">87.0%</td><td class="tnum">3.90</td><td class="tnum tup">74.3%</td></tr>
+                  <tr><td class="tn">Q4 2025 Annual Engagement</td><td class="tnum">ANNUAL-Q4-25</td><td class="tnum">All Staff</td><td><span class="chip cgy">Closed</span></td><td class="tnum">01 Dec 2025</td><td class="tnum">22 Dec 2025</td><td class="tnum">978 / 1,189</td><td class="tnum">82.3%</td><td class="tnum">3.72</td><td class="tnum">71.2%</td></tr>
+                  <tr><td class="tn">Q3 2025 Pulse Survey</td><td class="tnum">PULSE-Q3-25</td><td class="tnum">All Staff</td><td><span class="chip cgy">Closed</span></td><td class="tnum">01 Sep 2025</td><td class="tnum">21 Sep 2025</td><td class="tnum">824 / 1,042</td><td class="tnum">79.1%</td><td class="tnum">3.68</td><td class="tnum">69.8%</td></tr>
+                  <tr><td class="tn">Q1 2025 Pulse Survey</td><td class="tnum">PULSE-Q1-25</td><td class="tnum">All Staff</td><td><span class="chip cgy">Closed</span></td><td class="tnum">03 Mar 2025</td><td class="tnum">21 Mar 2025</td><td class="tnum">761 / 986</td><td class="tnum">77.2%</td><td class="tnum">3.54</td><td class="tnum">65.4%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /surveys -->
+
+
+        <!-- ── DIMENSION SCORES ────────────────────────────────────── -->
+        <!-- API: GET /api/v1/engagement/surveys/{id}/aggregated-results → dimension_scores[] -->
+        <div class="tab-panel" id="tab-dimensions">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">D1</div><div class="kpi-lbl">Top Dimension</div><div class="kpi-tr up">Wellbeing 4.1 / 5.0</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">D3</div><div class="kpi-lbl">Lowest Dimension</div><div class="kpi-tr dn">Learning 3.7 / 5.0</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">79.2%</div><div class="kpi-lbl">Best Favorable</div><div class="kpi-tr nt">D1 · Wellbeing</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">+0.2</div><div class="kpi-lbl">Avg Dimension Gain</div><div class="kpi-tr up">&#9650; vs Q4 2025</div></div>
+          </div>
+
+          <div class="cg11">
+            <!-- D1 Wellbeing -->
+            <div class="cc">
+              <div class="cc-title">D1 · Wellbeing</div>
+              <div class="cc-sub">overall_average_score: 4.1 · favorable_ratio: 79.2% · 2 questions</div>
+              <div style="display:flex;gap:20px;align-items:center;margin-bottom:16px">
+                <div style="text-align:center">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--teal)">4.1</div>
+                  <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);margin-top:2px">out of 5.0</div>
+                </div>
+                <div style="flex:1">
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--grn);font-weight:700">5</span><div class="dist-tr"><div class="dist-fi" style="width:54%;background:#15803D"></div></div><span class="dist-val">241</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:#22C55E;font-weight:700">4</span><div class="dist-tr"><div class="dist-fi" style="width:28%;background:#4ADE80"></div></div><span class="dist-val">106</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--t3);font-weight:700">3</span><div class="dist-tr"><div class="dist-fi" style="width:12%;background:#CBD5E1"></div></div><span class="dist-val">58</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--amber);font-weight:700">2</span><div class="dist-tr"><div class="dist-fi" style="width:4%;background:#FCD34D"></div></div><span class="dist-val">34</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--red);font-weight:700">1</span><div class="dist-tr"><div class="dist-fi" style="width:3%;background:#FCA5A5"></div></div><span class="dist-val">14</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- D2 Management -->
+            <div class="cc">
+              <div class="cc-title">D2 · Management</div>
+              <div class="cc-sub">overall_average_score: 3.9 · favorable_ratio: 75.0% · 2 questions</div>
+              <div style="display:flex;gap:20px;align-items:center;margin-bottom:16px">
+                <div style="text-align:center">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--teal)">3.9</div>
+                  <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);margin-top:2px">out of 5.0</div>
+                </div>
+                <div style="flex:1">
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--grn);font-weight:700">5</span><div class="dist-tr"><div class="dist-fi" style="width:44%;background:#15803D"></div></div><span class="dist-val">181</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:#22C55E;font-weight:700">4</span><div class="dist-tr"><div class="dist-fi" style="width:33%;background:#4ADE80"></div></div><span class="dist-val">138</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--t3);font-weight:700">3</span><div class="dist-tr"><div class="dist-fi" style="width:14%;background:#CBD5E1"></div></div><span class="dist-val">81</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--amber);font-weight:700">2</span><div class="dist-tr"><div class="dist-fi" style="width:5%;background:#FCD34D"></div></div><span class="dist-val">52</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--red);font-weight:700">1</span><div class="dist-tr"><div class="dist-fi" style="width:4%;background:#FCA5A5"></div></div><span class="dist-val">39</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- D3 Learning -->
+            <div class="cc">
+              <div class="cc-title">D3 · Learning &amp; Growth</div>
+              <div class="cc-sub">overall_average_score: 3.7 · favorable_ratio: 70.4% · 2 questions · lowest dimension</div>
+              <div style="display:flex;gap:20px;align-items:center;margin-bottom:16px">
+                <div style="text-align:center">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--amber)">3.7</div>
+                  <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);margin-top:2px">out of 5.0</div>
+                </div>
+                <div style="flex:1">
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--grn);font-weight:700">5</span><div class="dist-tr"><div class="dist-fi" style="width:38%;background:#15803D"></div></div><span class="dist-val">163</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:#22C55E;font-weight:700">4</span><div class="dist-tr"><div class="dist-fi" style="width:34%;background:#4ADE80"></div></div><span class="dist-val">144</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--t3);font-weight:700">3</span><div class="dist-tr"><div class="dist-fi" style="width:15%;background:#CBD5E1"></div></div><span class="dist-val">98</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--amber);font-weight:700">2</span><div class="dist-tr"><div class="dist-fi" style="width:8%;background:#FCD34D"></div></div><span class="dist-val">62</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--red);font-weight:700">1</span><div class="dist-tr"><div class="dist-fi" style="width:6%;background:#FCA5A5"></div></div><span class="dist-val">41</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- D4 Culture -->
+            <div class="cc">
+              <div class="cc-title">D4 · Culture</div>
+              <div class="cc-sub">overall_average_score: 4.0 · favorable_ratio: 77.1% · 2 questions</div>
+              <div style="display:flex;gap:20px;align-items:center;margin-bottom:16px">
+                <div style="text-align:center">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--teal)">4.0</div>
+                  <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);margin-top:2px">out of 5.0</div>
+                </div>
+                <div style="flex:1">
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--grn);font-weight:700">5</span><div class="dist-tr"><div class="dist-fi" style="width:50%;background:#15803D"></div></div><span class="dist-val">208</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:#22C55E;font-weight:700">4</span><div class="dist-tr"><div class="dist-fi" style="width:29%;background:#4ADE80"></div></div><span class="dist-val">119</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--t3);font-weight:700">3</span><div class="dist-tr"><div class="dist-fi" style="width:12%;background:#CBD5E1"></div></div><span class="dist-val">92</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--amber);font-weight:700">2</span><div class="dist-tr"><div class="dist-fi" style="width:5%;background:#FCD34D"></div></div><span class="dist-val">44</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--red);font-weight:700">1</span><div class="dist-tr"><div class="dist-fi" style="width:3%;background:#FCA5A5"></div></div><span class="dist-val">31</span></div>
+                </div>
+              </div>
+            </div>
+            <!-- D5 Purpose -->
+            <div class="cc" style="grid-column:1/3">
+              <div class="cc-title">D5 · Purpose</div>
+              <div class="cc-sub">overall_average_score: 3.8 · favorable_ratio: 72.8% · 2 questions</div>
+              <div style="display:flex;gap:40px;align-items:center">
+                <div style="text-align:center;flex-shrink:0">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:#1D4ED8">3.8</div>
+                  <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);margin-top:2px">out of 5.0</div>
+                </div>
+                <div style="flex:1;max-width:400px">
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--grn);font-weight:700">5</span><div class="dist-tr"><div class="dist-fi" style="width:40%;background:#15803D"></div></div><span class="dist-val">195</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:#22C55E;font-weight:700">4</span><div class="dist-tr"><div class="dist-fi" style="width:34%;background:#4ADE80"></div></div><span class="dist-val">154</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--t3);font-weight:700">3</span><div class="dist-tr"><div class="dist-fi" style="width:13%;background:#CBD5E1"></div></div><span class="dist-val">88</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--amber);font-weight:700">2</span><div class="dist-tr"><div class="dist-fi" style="width:7%;background:#FCD34D"></div></div><span class="dist-val">56</span></div>
+                  <div class="dist-row"><span class="dist-lbl" style="color:var(--red);font-weight:700">1</span><div class="dist-tr"><div class="dist-fi" style="width:5%;background:#FCA5A5"></div></div><span class="dist-val">48</span></div>
+                </div>
+                <div style="flex:1;padding-left:20px;border-left:1px solid var(--bd)">
+                  <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:10px">Notable comments</div>
+                  <div style="font-size:12px;color:var(--t3);line-height:1.6">"I understand how my work connects to the company's goals" — avg 3.9</div>
+                  <div style="font-size:12px;color:var(--t3);line-height:1.6;margin-top:8px">"Leadership communicates a clear direction for the future" — avg 3.7</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /dimensions -->
+
+
+        <!-- ── QUESTION ANALYSIS ───────────────────────────────────── -->
+        <!-- API: GET /api/v1/engagement/surveys/{id}/aggregated-results → question_scores[] -->
+        <div class="tab-panel" id="tab-questions">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">10</div><div class="kpi-lbl">Questions (Survey)</div><div class="kpi-tr nt">2 per dimension D1–D5</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">4.3</div><div class="kpi-lbl">Highest Question Score</div><div class="kpi-tr up">D1 · Wellbeing</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">3.5</div><div class="kpi-lbl">Lowest Question Score</div><div class="kpi-tr dn">D3 · Learning</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">891</div><div class="kpi-lbl">Total Answers</div><div class="kpi-tr nt">per question</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Question Scores (ranked)</div><div class="sect-sub">question_scores[] · overall_average_score + favorable_ratio per question · sorted highest → lowest</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>#</th><th>Question Prompt</th><th>Dimension</th><th>Score (avg)</th><th>Favorable %</th><th>Responses</th></tr></thead>
+                <tbody>
+                  <tr><td class="tnum">1</td><td class="tn">I feel my physical and mental wellbeing is supported at work</td><td><span class="chip ct">D1</span></td><td class="tnum tup">4.3</td><td class="tnum tup">82.4%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">2</td><td class="tn">I feel fairly treated and respected by my colleagues</td><td><span class="chip cg">D4</span></td><td class="tnum tup">4.2</td><td class="tnum tup">81.0%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">3</td><td class="tn">My workload feels manageable and sustainable</td><td><span class="chip ct">D1</span></td><td class="tnum tup">4.0</td><td class="tnum">76.0%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">4</td><td class="tn">The culture here makes me proud to work at this company</td><td><span class="chip cg">D4</span></td><td class="tnum tup">3.9</td><td class="tnum">74.3%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">5</td><td class="tn">My manager gives me clear, useful feedback</td><td><span class="chip cb">D2</span></td><td class="tnum tup">3.9</td><td class="tnum">73.1%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">6</td><td class="tn">I understand how my work connects to the company's goals</td><td><span class="chip cvi">D5</span></td><td class="tnum">3.9</td><td class="tnum">72.8%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">7</td><td class="tn">My manager supports my development and career growth</td><td><span class="chip cb">D2</span></td><td class="tnum">3.8</td><td class="tnum">70.8%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">8</td><td class="tn">Leadership communicates a clear direction for the future</td><td><span class="chip cvi">D5</span></td><td class="tnum ca">3.7</td><td class="tnum">70.6%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">9</td><td class="tn">I have opportunities to develop new skills in my role</td><td><span class="chip ca">D3</span></td><td class="tnum ca">3.7</td><td class="tnum">68.9%</td><td class="tnum">891</td></tr>
+                  <tr><td class="tnum">10</td><td class="tn">I receive the training and resources I need to grow</td><td><span class="chip ca">D3</span></td><td class="tnum cr">3.5</td><td class="tnum cr">66.3%</td><td class="tnum">891</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /questions -->
+
+
+        <!-- ── RESPONSES ───────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/engagement/surveys/{survey_id}/responses — SurveyResponse model -->
+        <div class="tab-panel" id="tab-responses">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">891</div><div class="kpi-lbl">Total Responses</div><div class="kpi-tr nt">Q1 2026 Pulse Survey</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">87.0%</div><div class="kpi-lbl">Participation Rate</div><div class="kpi-tr up">&#9650; target_population: 1,024</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">133</div><div class="kpi-lbl">Not Responded</div><div class="kpi-tr nt">Reminder sent 25 Mar</div></div>
+            <div class="kpi"><div class="kpi-dot vi"></div><div class="kpi-val">42%</div><div class="kpi-lbl">Left Comment</div><div class="kpi-tr nt">overall_comment present</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">Response Log</div><div class="sect-sub">SurveyResponse model · response_id · survey_id · employee_id · answers[] · submitted_at</div></div>
+              <button class="btn sec sm">Export CSV</button>
+            </div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Response ID</th><th>Employee ID</th><th>Submitted</th><th>D1</th><th>D2</th><th>D3</th><th>D4</th><th>D5</th><th>Avg Score</th><th>Comment</th></tr></thead>
+                <tbody>
+                  <tr><td class="tnum">RSP-7821</td><td class="tnum">EMP-001</td><td class="tnum">28 Mar 2026</td><td class="tnum tup">5</td><td class="tnum tup">4</td><td class="tnum">4</td><td class="tnum tup">5</td><td class="tnum tup">4</td><td class="tnum tup">4.4</td><td><span class="chip ct">Yes</span></td></tr>
+                  <tr><td class="tnum">RSP-7820</td><td class="tnum">EMP-002</td><td class="tnum">27 Mar 2026</td><td class="tnum tup">4</td><td class="tnum tup">5</td><td class="tnum">3</td><td class="tnum tup">4</td><td class="tnum">3</td><td class="tnum">3.8</td><td><span class="chip cgy">No</span></td></tr>
+                  <tr><td class="tnum">RSP-7819</td><td class="tnum">EMP-003</td><td class="tnum">27 Mar 2026</td><td class="tnum tup">5</td><td class="tnum tup">4</td><td class="tnum tup">5</td><td class="tnum tup">5</td><td class="tnum tup">4</td><td class="tnum tup">4.6</td><td><span class="chip ct">Yes</span></td></tr>
+                  <tr><td class="tnum">RSP-7818</td><td class="tnum">EMP-004</td><td class="tnum">26 Mar 2026</td><td class="tnum">3</td><td class="tnum">3</td><td class="tnum ca">2</td><td class="tnum">3</td><td class="tnum ca">2</td><td class="tnum ca">2.6</td><td><span class="chip ct">Yes</span></td></tr>
+                  <tr><td class="tnum">RSP-7817</td><td class="tnum">EMP-005</td><td class="tnum">26 Mar 2026</td><td class="tnum tup">4</td><td class="tnum tup">4</td><td class="tnum">3</td><td class="tnum tup">4</td><td class="tnum tup">4</td><td class="tnum tup">3.8</td><td><span class="chip cgy">No</span></td></tr>
+                  <tr><td class="tnum">RSP-7816</td><td class="tnum">EMP-006</td><td class="tnum">25 Mar 2026</td><td class="tnum tup">5</td><td class="tnum tup">5</td><td class="tnum tup">4</td><td class="tnum tup">5</td><td class="tnum tup">5</td><td class="tnum tup">4.8</td><td><span class="chip ct">Yes</span></td></tr>
+                  <tr><td class="tnum">RSP-7815</td><td class="tnum">EMP-007</td><td class="tnum">25 Mar 2026</td><td class="tnum tup">4</td><td class="tnum">3</td><td class="tnum">3</td><td class="tnum tup">4</td><td class="tnum">3</td><td class="tnum">3.4</td><td><span class="chip cgy">No</span></td></tr>
+                  <tr><td class="tnum">RSP-7814</td><td class="tnum">EMP-008</td><td class="tnum">24 Mar 2026</td><td class="tnum tup">4</td><td class="tnum tup">4</td><td class="tnum tup">5</td><td class="tnum tup">4</td><td class="tnum">3</td><td class="tnum tup">4.0</td><td><span class="chip ct">Yes</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /responses -->
+
+
+      </div><!-- /content -->
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+</body>
+</html>

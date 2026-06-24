@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Add Employee</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Slim sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Step header */
+.step-header{background:var(--w);border-bottom:1px solid var(--bd);padding:0 24px;flex-shrink:0}
+.step-top{display:flex;align-items:center;justify-content:space-between;padding:16px 0 12px}
+.step-title{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.step-sub{font-size:12.5px;color:var(--t3);margin-top:2px}
+.steps-row{display:flex;align-items:center;gap:0}
+.step{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.step.done{color:var(--grn)}.step.active{border-bottom-color:var(--teal)}.step.pending{color:var(--t4)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.step.done .step-num{background:var(--gl);color:var(--grn)}
+.step.active .step-num{background:var(--teal);color:#fff}
+.step.pending .step-num{background:var(--t5);color:var(--t4)}
+.step-lbl{font-size:12.5px;font-weight:600}
+.step.active .step-lbl{color:var(--teal)}.step.done .step-lbl{color:var(--grn)}.step.pending .step-lbl{color:var(--t4)}
+.step-arr{color:var(--bd);margin:0 2px;font-size:13px;line-height:1}
+
+/* Form layout */
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 304px}
+.form-main{overflow-y:auto;padding:26px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;background:var(--w);padding:18px}
+
+/* Sections */
+.section{margin-bottom:26px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.sec-sub{font-size:12px;color:var(--t3);margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:22px 0}
+
+/* Field grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);
+  font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);
+  transition:border-color .14s,box-shadow .14s;line-height:1.5
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:80px}
+.fhint{font-size:11px;color:var(--t4)}
+
+/* Avatar upload */
+.av-upload{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg);border:1px dashed var(--bd);border-radius:var(--r2);margin-bottom:4px;cursor:pointer;transition:all .14s}
+.av-upload:hover{border-color:var(--teal);background:var(--tl)}
+.av-preview{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0}
+.av-info{flex:1}.av-lbl{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px}.av-sub{font-size:11.5px;color:var(--t3)}
+
+/* Radio options */
+.radio-group{display:flex;gap:7px;flex-wrap:wrap}
+.ropt{display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;font-size:12.5px;color:var(--t2);user-select:none}
+.ropt:hover{border-color:var(--tb);background:var(--tl)}
+.ropt.on{border-color:var(--teal);background:var(--tl);color:var(--teal);font-weight:600}
+.rdot2{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.ropt.on .rdot2{border-color:var(--teal);background:var(--teal)}
+.ropt.on .rdot2::after{content:'';width:5px;height:5px;border-radius:50%;background:#fff}
+
+/* Rail */
+.rail-sec{margin-bottom:18px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--t5)}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3)}.sum-v{font-size:12px;font-weight:600;color:var(--t1)}.sum-empty{color:var(--t4);font-style:italic;font-weight:400}
+
+/* AI suggest */
+.ai-sug{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);padding:11px;margin-bottom:12px}
+.ais-head{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.ais-dot{width:5px;height:5px;border-radius:50%;background:var(--teal)}
+.ais-lbl{font-size:9.5px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.10em}
+.ais-text{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:8px}
+.ais-chip{font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;background:rgba(10,143,132,.1);color:var(--teal);cursor:pointer;display:inline-block;margin:2px;transition:all .12s}
+.ais-chip:hover{background:rgba(10,143,132,.2)}
+
+/* Checklist */
+.cl-item{display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:7px}
+.cl-num{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.cl-done{background:var(--gl);color:var(--grn)}.cl-active{background:var(--teal);color:#fff}.cl-pend{background:var(--t5);color:var(--t4)}
+
+/* Footer */
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+.ff-info strong{color:var(--t2);font-weight:600}
+.ff-prog{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t3)}
+
+/* Hidden steps */
+.step-content{display:none}.step-content.active{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <div class="topbar">
+    <div class="crumb"><a>Employees</a><span class="sep">›</span><span class="cur">Add New Employee</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn">Save Draft</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- Step header -->
+  <div class="step-header">
+    <div class="step-top">
+      <div><div class="step-title">Add New Employee</div><div class="step-sub">Complete all sections to onboard the new hire</div></div>
+      <span style="font-size:11.5px;color:var(--t4)"><span style="color:var(--red)">*</span> Required fields</span>
+    </div>
+    <div class="steps-row" id="steps-row">
+      <div class="step done"    onclick="goStep(1)"><div class="step-num">✓</div><div class="step-lbl">Personal Info</div></div>
+      <span class="step-arr">›</span>
+      <div class="step active"  onclick="goStep(2)"><div class="step-num">2</div><div class="step-lbl">Employment</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(3)"><div class="step-num">3</div><div class="step-lbl">Compensation</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(4)"><div class="step-num">4</div><div class="step-lbl">Access & Roles</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(5)"><div class="step-num">5</div><div class="step-lbl">Review</div></div>
+    </div>
+  </div>
+
+  <div class="form-wrap">
+    <div class="form-main">
+
+      <!-- STEP 1: Personal Info -->
+      <div id="step-1" class="step-content">
+        <div class="section">
+          <div class="sec-title">Profile Photo</div>
+          <div class="sec-sub">Upload a professional photo or use initials</div>
+          <div class="av-upload">
+            <div class="av-preview">JO</div>
+            <div class="av-info"><div class="av-lbl">Upload Profile Photo</div><div class="av-sub">JPG or PNG · max 5 MB · square images work best</div></div>
+            <button class="btn btn-sm" onclick="event.stopPropagation()">Choose File</button>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Personal Information</div>
+          <div class="sec-sub">Basic identity and contact details</div>
+          <div class="fg">
+            <div class="fgroup"><label>First Name <span class="req">*</span></label><input type="text" value="James"></div>
+            <div class="fgroup"><label>Last Name <span class="req">*</span></label><input type="text" value="Okafor"></div>
+            <div class="fgroup"><label>Preferred Name</label><input type="text" placeholder="Optional display name"></div>
+            <div class="fgroup"><label>Date of Birth <span class="req">*</span></label><input type="date" value="1991-04-14"></div>
+            <div class="fgroup span2"><label>Personal Email <span class="req">*</span></label><input type="email" value="james.okafor@gmail.com"><div class="fhint">Used for pre-boarding before work email is created</div></div>
+            <div class="fgroup"><label>Phone</label><input type="text" placeholder="+1 (555) 000-0000"></div>
+            <div class="fgroup"><label>Nationality</label><select><option>Nigerian / British</option><option>American</option><option>Other</option></select></div>
+            <div class="fgroup span2"><label>Home Address</label><input type="text" value="1204 Market Street, San Francisco, CA 94102"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Employment (default active) -->
+      <div id="step-2" class="step-content active">
+        <div class="section">
+          <div class="sec-title">Role & Reporting</div>
+          <div class="sec-sub">Define this employee's position, team, and reporting line</div>
+          <div class="fg">
+            <div class="fgroup"><label>Job Title <span class="req">*</span></label><input type="text" value="Senior Software Engineer II"></div>
+            <div class="fgroup"><label>Employee ID <span class="req">*</span></label><input type="text" value="EMP-0341" style="font-family:var(--mono)"><div class="fhint">Auto-generated — edit if needed</div></div>
+            <div class="fgroup"><label>Department <span class="req">*</span></label><select><option>Engineering</option><option>Product</option><option>Sales</option><option>Marketing</option><option>HR & Ops</option><option>Finance</option></select></div>
+            <div class="fgroup"><label>Team</label><input type="text" value="Backend Platform"></div>
+            <div class="fgroup"><label>Direct Manager <span class="req">*</span></label><select><option>Sarah Mitchell (Eng. Manager)</option><option>Ravi Sharma (VP Engineering)</option><option>David Chen (VP Product)</option></select></div>
+            <div class="fgroup"><label>Job Level</label><select><option>IC4 — Senior II</option><option>IC3 — Mid-level</option><option>IC5 — Staff</option><option>IC6 — Principal</option></select></div>
+            <div class="fgroup"><label>Start Date <span class="req">*</span></label><input type="date" value="2026-03-10"></div>
+            <div class="fgroup"><label>Probation End Date</label><input type="date" value="2026-06-10"></div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Work Location & Type <span class="req">*</span></div>
+          <div class="sec-sub">Where and how does this employee work?</div>
+          <div class="radio-group" id="rg-work">
+            <div class="ropt on" onclick="selOpt(this,'rg-work')"><div class="rdot2"></div>Hybrid</div>
+            <div class="ropt" onclick="selOpt(this,'rg-work')"><div class="rdot2"></div>On-site</div>
+            <div class="ropt" onclick="selOpt(this,'rg-work')"><div class="rdot2"></div>Remote</div>
+          </div>
+          <div style="margin-top:12px">
+            <div class="fg">
+              <div class="fgroup"><label>Primary Office</label><select><option>San Francisco HQ</option><option>New York</option><option>London</option><option>Singapore</option></select></div>
+              <div class="fgroup"><label>Onsite Days / Week</label><select><option>3 days</option><option>2 days</option><option>4 days</option><option>5 days</option></select></div>
+            </div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Employment Type <span class="req">*</span></div>
+          <div class="radio-group" id="rg-type">
+            <div class="ropt on" onclick="selOpt(this,'rg-type')"><div class="rdot2"></div>Full-time Permanent</div>
+            <div class="ropt" onclick="selOpt(this,'rg-type')"><div class="rdot2"></div>Full-time Fixed-term</div>
+            <div class="ropt" onclick="selOpt(this,'rg-type')"><div class="rdot2"></div>Part-time</div>
+            <div class="ropt" onclick="selOpt(this,'rg-type')"><div class="rdot2"></div>Contractor</div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Onboarding Notes</div>
+          <div class="fg">
+            <div class="fgroup span2">
+              <label>Notes for onboarding team</label>
+              <textarea>Requires MacBook Pro M3. Senior security clearance needed for internal infra repo access. Arrange building access badge day 1.</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Compensation -->
+      <div id="step-3" class="step-content">
+        <div class="section">
+          <div class="sec-title">Compensation</div>
+          <div class="sec-sub">Salary, pay cycle and bonus structure</div>
+          <div class="fg">
+            <div class="fgroup"><label>Base Salary <span class="req">*</span></label><input type="number" value="185000"></div>
+            <div class="fgroup"><label>Currency</label><select><option>USD — US Dollar</option><option>GBP — British Pound</option><option>EUR — Euro</option></select></div>
+            <div class="fgroup"><label>Pay Cycle <span class="req">*</span></label><select><option>Monthly</option><option>Semi-monthly</option><option>Bi-weekly</option></select></div>
+            <div class="fgroup"><label>Pay Grade</label><input type="text" value="IC4 / Band 5" style="font-family:var(--mono)"></div>
+            <div class="fgroup"><label>Bonus Target %</label><input type="number" value="15"></div>
+            <div class="fgroup"><label>Equity / RSUs</label><input type="text" value="120 RSUs · 4yr vest" style="font-family:var(--mono)"></div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Benefits Enrollment</div>
+          <div class="radio-group" id="rg-benefits">
+            <div class="ropt on" onclick="selOpt(this,'rg-benefits')"><div class="rdot2"></div>Standard Package</div>
+            <div class="ropt" onclick="selOpt(this,'rg-benefits')"><div class="rdot2"></div>Premium Package</div>
+            <div class="ropt" onclick="selOpt(this,'rg-benefits')"><div class="rdot2"></div>Opt Out</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Access -->
+      <div id="step-4" class="step-content">
+        <div class="section">
+          <div class="sec-title">System Access & Permissions</div>
+          <div class="sec-sub">Define what tools and permissions this employee will have on day one</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)"><div><div style="font-size:13px;font-weight:600;color:var(--t1)">GitHub (Engineering Org)</div><div style="font-size:12px;color:var(--t3)">Read/write access to private repos</div></div><select class="sel" style="width:140px;padding:5px 8px"><option>Member</option><option>Maintainer</option><option>Owner</option><option>No Access</option></select></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)"><div><div style="font-size:13px;font-weight:600;color:var(--t1)">AWS (Development Environment)</div><div style="font-size:12px;color:var(--t3)">Dev environment access, read prod logs</div></div><select class="sel" style="width:140px;padding:5px 8px"><option>Dev Access</option><option>Full Access</option><option>Read Only</option><option>No Access</option></select></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)"><div><div style="font-size:13px;font-weight:600;color:var(--t1)">Jira & Confluence</div><div style="font-size:12px;color:var(--t3)">Project management and documentation</div></div><select class="sel" style="width:140px;padding:5px 8px"><option>Member</option><option>Admin</option><option>No Access</option></select></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)"><div><div style="font-size:13px;font-weight:600;color:var(--t1)">Slack</div><div style="font-size:12px;color:var(--t3)">Company workspace + Engineering channels</div></div><select class="sel" style="width:140px;padding:5px 8px"><option>Full Member</option><option>Guest</option><option>No Access</option></select></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)"><div><div style="font-size:13px;font-weight:600;color:var(--t1)">Meridian HCM (self-service)</div><div style="font-size:12px;color:var(--t3)">Leave requests, pay slips, personal info</div></div><select class="sel" style="width:140px;padding:5px 8px"><option>Employee</option><option>Manager</option><option>Admin</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Review -->
+      <div id="step-5" class="step-content">
+        <div class="section">
+          <div class="sec-title">Review & Submit</div>
+          <div class="sec-sub">Confirm all details before creating the employee record</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:var(--bg);border-radius:var(--r);padding:14px"><div style="font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Personal</div><div style="font-size:13px;color:var(--t1);margin-bottom:3px;font-weight:600">James Okafor</div><div style="font-size:12px;color:var(--t3)">james.okafor@gmail.com</div><div style="font-size:12px;color:var(--t3)">San Francisco, CA</div></div>
+            <div style="background:var(--bg);border-radius:var(--r);padding:14px"><div style="font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Employment</div><div style="font-size:13px;color:var(--t1);margin-bottom:3px;font-weight:600">Senior SWE II · Engineering</div><div style="font-size:12px;color:var(--t3)">Hybrid · San Francisco HQ</div><div style="font-size:12px;color:var(--t3)">Start: Mar 10, 2026</div></div>
+            <div style="background:var(--bg);border-radius:var(--r);padding:14px"><div style="font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Compensation</div><div style="font-size:16px;font-family:var(--mono);font-weight:700;color:var(--teal);margin-bottom:3px">$185,000</div><div style="font-size:12px;color:var(--t3)">IC4 / Band 5 · Monthly</div></div>
+            <div style="background:var(--bg);border-radius:var(--r);padding:14px"><div style="font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Access</div><div style="font-size:13px;color:var(--t1);margin-bottom:3px;font-weight:600">5 systems configured</div><div style="font-size:12px;color:var(--t3)">GitHub, AWS, Jira, Slack, HCM</div></div>
+          </div>
+          <div style="margin-top:14px;background:var(--gl);border:1px solid #86EFAC;border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px">✅</span>
+            <div style="font-size:13px;color:var(--grn);font-weight:600">All required fields complete — ready to submit</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Rail -->
+    <div class="form-rail">
+      <div class="rail-sec">
+        <div class="rail-lbl">Summary</div>
+        <div class="sum-row"><span class="sum-l">Full Name</span><span class="sum-v">James Okafor</span></div>
+        <div class="sum-row"><span class="sum-l">Department</span><span class="sum-v">Engineering</span></div>
+        <div class="sum-row"><span class="sum-l">Role</span><span class="sum-v">Senior SWE II</span></div>
+        <div class="sum-row"><span class="sum-l">Start Date</span><span class="sum-v" style="font-family:var(--mono);font-size:11.5px">Mar 10, 2026</span></div>
+        <div class="sum-row"><span class="sum-l">Manager</span><span class="sum-v">S. Mitchell</span></div>
+        <div class="sum-row"><span class="sum-l">Location</span><span class="sum-v">San Francisco</span></div>
+        <div class="sum-row"><span class="sum-l">Work Type</span><span class="sum-v">Hybrid · 3 days</span></div>
+        <div class="sum-row"><span class="sum-l">Contract</span><span class="sum-v">Permanent</span></div>
+        <div class="sum-row"><span class="sum-l">Base Salary</span><span id="sum-sal" class="sum-v sum-empty">Step 3</span></div>
+        <div class="sum-row"><span class="sum-l">Access Level</span><span id="sum-acc" class="sum-v sum-empty">Step 4</span></div>
+      </div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">AI Suggestions</div>
+        <div class="ai-sug">
+          <div class="ais-head"><div class="ais-dot"></div><div class="ais-lbl">Smart Fill</div></div>
+          <div class="ais-text">Based on Senior SWE II role in Engineering, typical values:</div>
+          <span class="ais-chip">$175k–195k</span>
+          <span class="ais-chip">IC4 grade</span>
+          <span class="ais-chip">GitHub member</span>
+          <span class="ais-chip">AWS dev env</span>
+          <span class="ais-chip">Jira access</span>
+        </div>
+      </div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Checklist</div>
+        <div class="cl-item" id="cl-1"><div class="cl-num cl-done">✓</div><span style="color:var(--t2)">Personal information</span></div>
+        <div class="cl-item" id="cl-2"><div class="cl-num cl-active">2</div><span style="font-weight:600">Employment details</span></div>
+        <div class="cl-item" id="cl-3"><div class="cl-num cl-pend">3</div><span style="color:var(--t4)">Compensation</span></div>
+        <div class="cl-item" id="cl-4"><div class="cl-num cl-pend">4</div><span style="color:var(--t4)">Access & Roles</span></div>
+        <div class="cl-item" id="cl-5"><div class="cl-num cl-pend">5</div><span style="color:var(--t4)">Review & Submit</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="form-footer" id="form-footer">
+    <div class="ff-info">Step <strong id="step-label">2 of 5</strong> — Employment Details</div>
+    <div class="ff-prog" id="step-prog">40% complete</div>
+    <button class="btn" id="btn-back" onclick="navigateStep(-1)"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>Back</button>
+    <button class="btn">Save & Exit</button>
+    <button class="btn btn-p" id="btn-next" onclick="navigateStep(1)">Next: Compensation <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div>
+
+</main>
+</div>
+
+<script>
+let currentStep = 2;
+const stepLabels = ['Personal Info','Employment','Compensation','Access & Roles','Review & Submit'];
+const stepProgress = ['20%','40%','60%','80%','100%'];
+const stepNextLabels = ['Next: Employment','Next: Compensation','Next: Access & Roles','Next: Review','Create Employee'];
+
+function selOpt(el, g) {
+  document.querySelectorAll('#'+g+' .ropt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function goStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.step-content').forEach((el, i) => {
+    el.classList.toggle('active', i+1 === n);
+  });
+  // Update step indicators
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.classList.remove('done','active','pending');
+    const num = el.querySelector('.step-num');
+    if (i+1 < n) { el.classList.add('done'); num.textContent = '✓'; }
+    else if (i+1 === n) { el.classList.add('active'); num.textContent = i+1; }
+    else { el.classList.add('pending'); num.textContent = i+1; }
+  });
+  // Update checklist
+  for(let i=1;i<=5;i++){
+    const el=document.getElementById('cl-'+i);
+    if(!el)continue;
+    const num=el.querySelector('.cl-num');
+    num.className='cl-num';
+    if(i<n){num.classList.add('cl-done');num.textContent='✓';el.querySelector('span').style.color='var(--t2)';el.querySelector('span').style.fontWeight='400'}
+    else if(i===n){num.classList.add('cl-active');num.textContent=i;el.querySelector('span').style.fontWeight='600';el.querySelector('span').style.color='var(--t1)'}
+    else{num.classList.add('cl-pend');num.textContent=i;el.querySelector('span').style.color='var(--t4)';el.querySelector('span').style.fontWeight='400'}
+  }
+  // Update footer
+  document.getElementById('step-label').textContent = n+' of 5 — '+stepLabels[n-1];
+  document.getElementById('step-prog').textContent = stepProgress[n-1];
+  const btnNext = document.getElementById('btn-next');
+  if(n===5){btnNext.innerHTML='Create Employee <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>';btnNext.style.background='#16A34A';btnNext.style.borderColor='#16A34A';}
+  else{btnNext.innerHTML=stepNextLabels[n-1]+' <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>';btnNext.style.background='';btnNext.style.borderColor='';}
+  // Update salary in rail when on step 3+
+  if(n>=3){document.getElementById('sum-sal').textContent='$185,000';document.getElementById('sum-sal').classList.remove('sum-empty')}
+  if(n>=4){document.getElementById('sum-acc').textContent='5 systems';document.getElementById('sum-acc').classList.remove('sum-empty')}
+  document.getElementById('btn-back').style.opacity = n===1 ? '0.4' : '1';
+}
+
+function navigateStep(dir) {
+  const next = currentStep + dir;
+  if(next >= 1 && next <= 5) goStep(next);
+}
+
+document.querySelectorAll('.si').forEach(el => el.addEventListener('click', function() { document.querySelectorAll('.si').forEach(x => x.classList.remove('on')); this.classList.add('on'); }));
+goStep(2);
+</script>
+</body>
+</html>

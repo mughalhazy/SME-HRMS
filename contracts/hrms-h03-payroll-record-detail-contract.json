@@ -1,0 +1,113 @@
+﻿{
+  "_meta": {
+    "id": "h03-payroll-record-detail",
+    "archetype": "H03 Detail / Profile",
+    "page": "Payroll Record Detail",
+    "surface": "admin",
+    "primary_actor": "Payroll Administrator / HR Manager",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Payroll", "Payroll Records", "PR-2025-0228-0127"],
+      "actions": [
+        { "label": "Download Payslip", "style": "secondary", "action": "GET /api/v1/payroll/records/:recordId/payslip" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "avatar": { "initials": "PS", "size": 56, "gradient": "violet" },
+      "name": "Feb 2025 Payslip",
+      "role_line": "Priya Subramaniam · EMP-0127 · Senior HR Business Partner",
+      "chips": [
+        { "field": "status", "enum_ref": "ref:PayrollStatus", "style": "green-if-paid" },
+        { "field": "payroll_record_id", "style": "grey", "font": "mono" },
+        { "field": "pay_period", "prefix": "Period", "style": "grey" },
+        { "field": "currency", "style": "grey" }
+      ]
+    },
+
+    "LAYOUT": {
+      "type": "2col-no-tabs",
+      "left_width": "1fr",
+      "right_width": "292px"
+    },
+
+    "LEFT_COLUMN": [
+      {
+        "card": "Earnings",
+        "service": "payroll_service",
+        "model": "PayrollRecord",
+        "fields": ["base_salary", "allowances"],
+        "display": "earnings-table",
+        "footer": "gross_pay"
+      },
+      {
+        "card": "Deductions",
+        "service": "payroll_service",
+        "model": "PayrollRecord",
+        "fields": ["deductions"],
+        "display": "deductions-table",
+        "footer": "total_deductions"
+      }
+    ],
+
+    "RIGHT_COLUMN": [
+      {
+        "card": "Net Pay",
+        "type": "summary-card",
+        "primary_value": "net_pay",
+        "currency_field": "currency",
+        "display": "large-mono",
+        "colour": "teal"
+      },
+      {
+        "card": "Record Details",
+        "service": "payroll_service",
+        "model": "PayrollRecord",
+        "endpoint": "GET /api/v1/payroll/records/:recordId",
+        "fields": ["payroll_record_id", "pay_period_start", "pay_period_end", "payment_date", "status", "currency"]
+      }
+    ]
+  },
+
+  "data_sources": {
+    "payroll_record": {
+      "service": "payroll_service",
+      "endpoint": "GET /api/v1/payroll/records/:recordId",
+      "model": "PayrollRecord"
+    }
+  },
+
+  "gaps": [],
+
+  "mock_data": {
+    "payroll_record": {
+      "payroll_record_id": "PR-2025-0228-0127",
+      "employee_id": "EMP-0127",
+      "pay_period_start": "2025-02-01",
+      "pay_period_end": "2025-02-28",
+      "base_salary": 22000.00,
+      "allowances": [
+        { "name": "Housing Allowance", "amount": 2000.00 },
+        { "name": "Transport Allowance", "amount": 1000.00 },
+        { "name": "Meal Allowance", "amount": 500.00 }
+      ],
+      "deductions": [
+        { "name": "DEWS Contribution", "amount": 2083.33 },
+        { "name": "Health Insurance", "amount": 500.00 },
+        { "name": "Life Insurance", "amount": 250.00 }
+      ],
+      "overtime_pay": 0.00,
+      "gross_pay": 25500.00,
+      "net_pay": 22666.67,
+      "currency": "AED",
+      "payment_date": "2025-02-28",
+      "status": "Paid"
+    }
+  }
+}

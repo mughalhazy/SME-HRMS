@@ -1,0 +1,112 @@
+﻿{
+  "_meta": {
+    "id": "h03-department-detail",
+    "archetype": "H03 Detail / Profile",
+    "page": "Department Detail",
+    "surface": "admin",
+    "primary_actor": "HR Administrator / Manager",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Organisation", "Departments", "People Operations"],
+      "actions": [
+        { "label": "Edit Department", "style": "secondary", "leads_to": "H04 Edit Department" },
+        { "label": "Add Member", "style": "primary", "action": "POST /api/v1/employees/:employeeId/department" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "entity_icon": {
+        "type": "square",
+        "gradient": "teal",
+        "icon": "building",
+        "size": 56
+      },
+      "name": "People Operations",
+      "sub_line": "DEPT-HR-001",
+      "chips": [
+        { "field": "status", "enum_ref": "ref:DepartmentStatus", "style": "green-if-active" },
+        { "field": "code", "style": "grey", "font": "mono" },
+        { "field": "parent_department_name", "prefix": "Parent", "style": "grey" },
+        { "field": "head_employee_name", "prefix": "Head", "style": "grey" }
+      ]
+    },
+
+    "TAB_NAV": {
+      "tabs": ["Overview", "Members", "Sub-departments"]
+    },
+
+    "TAB_OVERVIEW": {
+      "layout": "2col-profile",
+      "left": [
+        {
+          "card": "Department Details",
+          "service": "employee-service",
+          "model": "Department",
+          "endpoint": "GET /api/v1/departments/:departmentId",
+          "fields": ["department_id", "name", "code", "description", "status", "parent_department_id", "head_employee_id", "created_at", "updated_at"]
+        },
+        {
+          "card": "At a Glance",
+          "type": "kpi-strip",
+          "kpis": [
+            { "label": "Total Members", "source": "GET /api/v1/employees?department_id=:id&status=Active&count=true" },
+            { "label": "Open Roles", "source": "GET /api/v1/jobs?department_id=:id&status=Open&count=true" },
+            { "label": "Sub-departments", "source": "GET /api/v1/departments?parent_department_id=:id&count=true" },
+            { "label": "On Leave", "source": "GET /api/v1/leave/requests?department_id=:id&status=Approved&active=true&count=true" }
+          ]
+        }
+      ],
+      "right": []
+    },
+
+    "TAB_MEMBERS": {
+      "card": "Members",
+      "service": "employee-service",
+      "endpoint": "GET /api/v1/employees?department_id=:departmentId&status=Active",
+      "model": "EmployeeDirectoryReadModel",
+      "display": "list-rows",
+      "fields": ["avatar_initials", "full_name", "role_title", "employment_type", "status"],
+      "pagination": true
+    },
+
+    "TAB_SUB_DEPARTMENTS": {
+      "card": "Sub-departments",
+      "service": "employee-service",
+      "endpoint": "GET /api/v1/departments?parent_department_id=:departmentId",
+      "model": "Department",
+      "display": "list-rows",
+      "fields": ["name", "code", "head_employee_name", "member_count", "status"]
+    }
+  },
+
+  "data_sources": {
+    "department": {
+      "service": "employee-service",
+      "endpoint": "GET /api/v1/departments/:departmentId",
+      "model": "Department"
+    }
+  },
+
+  "gaps": [],
+
+  "mock_data": {
+    "department": {
+      "tenant_id": "t-meridian",
+      "department_id": "DEPT-HR-001",
+      "name": "People Operations",
+      "code": "HR-OPS",
+      "description": "Responsible for talent acquisition, HR business partnering, employee relations, learning & development, and HR systems.",
+      "parent_department_id": "DEPT-CORP-001",
+      "head_employee_id": "EMP-0041",
+      "status": "Active",
+      "created_at": "2020-01-15T00:00:00Z",
+      "updated_at": "2025-01-10T09:30:00Z"
+    }
+  }
+}

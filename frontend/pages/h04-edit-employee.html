@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Edit Employee</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --violet:#7C3AED;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-d{background:var(--rl);color:var(--red);border-color:#FCA5A5}.btn-d:hover{background:#FEE2E2}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Form header bar */
+.form-header{background:var(--w);border-bottom:1px solid var(--bd);padding:14px 24px;flex-shrink:0;display:flex;align-items:center;gap:14px}
+.fh-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0}
+.fh-info{flex:1}
+.fh-name{font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+.fh-meta{font-size:12px;color:var(--t3);margin-top:2px}
+.fh-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.chip-active{background:var(--gl);color:var(--grn)}
+.chip-grey{background:var(--t5);color:var(--t3)}
+
+/* Section nav tabs */
+.sec-nav{background:var(--w);border-bottom:1px solid var(--bd);padding:0 24px;display:flex;gap:0;flex-shrink:0}
+.snav-item{padding:10px 14px;font-size:12.5px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;white-space:nowrap}
+.snav-item:hover{color:var(--t1)}.snav-item.on{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* Form layout */
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+
+/* Sections */
+.section{margin-bottom:24px}
+.sec-heading{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1)}
+.sec-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--t5);color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+.sec-sub{font-size:12px;color:var(--t3);margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:20px 0}
+
+/* Field grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=email],input[type=date],input[type=number],input[type=tel],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);
+  font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);
+  transition:border-color .14s,box-shadow .14s;line-height:1.5
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:72px}
+.fhint{font-size:11px;color:var(--t4)}
+.field-mono input{font-family:var(--mono);font-size:12px}
+input[disabled]{background:var(--bg);color:var(--t3);cursor:not-allowed}
+select[disabled]{background:var(--bg);color:var(--t3);cursor:not-allowed}
+
+/* Radio */
+.radio-group{display:flex;gap:7px;flex-wrap:wrap}
+.ropt{display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;font-size:12.5px;color:var(--t2);user-select:none}
+.ropt:hover{border-color:var(--tb);background:var(--tl)}
+.ropt.on{border-color:var(--teal);background:var(--tl);color:var(--teal);font-weight:600}
+.rdot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.ropt.on .rdot{border-color:var(--teal);background:var(--teal)}
+.ropt.on .rdot::after{content:'';width:5px;height:5px;border-radius:50%;background:#fff}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:8px}
+.toggle-info{flex:1}
+.toggle-lbl{font-size:12.5px;font-weight:600;color:var(--t1)}
+.toggle-sub{font-size:11.5px;color:var(--t3);margin-top:2px}
+.toggle{width:36px;height:20px;border-radius:99px;background:#CBD5E1;cursor:pointer;position:relative;transition:background .14s;flex-shrink:0}
+.toggle.on{background:var(--teal)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .14s}
+.toggle.on::after{transform:translateX(16px)}
+
+/* Change indicator */
+.changed-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0}
+
+/* Rail */
+.rail-sec{margin-bottom:18px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--t5);gap:8px}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3);flex-shrink:0}
+.sum-v{font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.sum-changed{color:var(--amber)}
+
+/* Change summary */
+.change-banner{background:var(--al);border:1px solid #FCD34D;border-radius:var(--r);padding:10px 12px;margin-bottom:14px;display:none}
+.change-banner.visible{display:block}
+.change-banner-title{font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.change-item{font-size:11.5px;color:var(--t2);padding:2px 0;display:flex;align-items:center;gap:6px}
+.change-item::before{content:'→';color:var(--amber);font-size:10px;font-weight:700}
+
+/* Warning card */
+.warn-card{background:var(--al);border:1px solid #FCD34D;border-radius:var(--r);padding:11px 13px;margin-bottom:16px}
+.warn-card-title{font-size:11.5px;font-weight:700;color:var(--amber);display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.warn-card-body{font-size:12px;color:var(--t2);line-height:1.5}
+
+/* Footer */
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+.ff-info strong{color:var(--t2);font-weight:600}
+
+/* Section content visibility */
+.sec-content{display:none}.sec-content.active{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="crumb">
+      <a>Employees</a><span class="sep">›</span>
+      <a>Priya Subramaniam</a><span class="sep">›</span>
+      <span class="cur">Edit Profile</span>
+    </div>
+    <div class="tb-vd"></div>
+    <button class="btn">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Cancel
+    </button>
+    <button class="btn btn-p" onclick="saveChanges()">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      Save Changes
+    </button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- Employee header -->
+  <div class="form-header">
+    <div class="fh-avatar">PS</div>
+    <div class="fh-info">
+      <div class="fh-name">Priya Subramaniam</div>
+      <div class="fh-meta" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <span class="fh-chip chip-active">Active</span>
+        <span class="fh-chip chip-grey">Full Time</span>
+        <span style="color:var(--bd)">·</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--t3)">EMP-0087</span>
+        <span style="color:var(--bd)">·</span>
+        <span>Senior HR Business Partner · People Operations</span>
+        <span style="color:var(--bd)">·</span>
+        <span>Dubai HQ</span>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--t4)">Last updated <strong style="color:var(--t3)">14 Mar 2026</strong></div>
+  </div>
+
+  <!-- Section nav -->
+  <div class="sec-nav">
+    <div class="snav-item on" onclick="showSection('personal',this)">Personal Info</div>
+    <div class="snav-item" onclick="showSection('employment',this)">Employment</div>
+    <div class="snav-item" onclick="showSection('organisation',this)">Organisation</div>
+    <div class="snav-item" onclick="showSection('contract',this)">Contract Details</div>
+  </div>
+
+  <!-- Form body -->
+  <div class="form-wrap">
+
+    <!-- Main -->
+    <div class="form-main">
+
+      <!-- PERSONAL INFO -->
+      <div class="sec-content active" id="sec-personal">
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Name & Contact</div></div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>First Name <span class="req">*</span></label>
+              <input type="text" value="Priya" oninput="markChanged('first_name',this.value,'Priya')">
+            </div>
+            <div class="fgroup">
+              <label>Last Name <span class="req">*</span></label>
+              <input type="text" value="Subramaniam" oninput="markChanged('last_name',this.value,'Subramaniam')">
+            </div>
+            <div class="fgroup">
+              <label>Work Email <span class="req">*</span></label>
+              <input type="email" value="priya.subramaniam@meridian.com" oninput="markChanged('email',this.value,'priya.subramaniam@meridian.com')">
+            </div>
+            <div class="fgroup">
+              <label>Phone Number</label>
+              <input type="tel" value="+971 50 234 5678" oninput="markChanged('phone',this.value,'+971 50 234 5678')">
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-heading">
+            <div class="sec-title">Personal Details</div>
+            <div class="sec-badge">BG-008</div>
+          </div>
+          <div class="warn-card">
+            <div class="warn-card-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Backend Gap BG-008 — Fields not persisted
+            </div>
+            <div class="warn-card-body">The following fields are captured by the form but are absent from <code>UpdateEmployeeInput</code>. Values entered here will not be sent to the backend until BG-008 is resolved.</div>
+          </div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Preferred Name</label>
+              <input type="text" placeholder="e.g. Priya">
+              <span class="fhint">Display name in greetings and notifications</span>
+            </div>
+            <div class="fgroup">
+              <label>Personal Email</label>
+              <input type="email" placeholder="personal@example.com">
+              <span class="fhint">Used for pre-boarding communications</span>
+            </div>
+            <div class="fgroup">
+              <label>Date of Birth</label>
+              <input type="date" value="1990-06-14">
+            </div>
+            <div class="fgroup">
+              <label>Nationality</label>
+              <input type="text" value="Indian">
+            </div>
+            <div class="fgroup span2">
+              <label>Home Address</label>
+              <textarea>Apt 12B, Marina Residences, Dubai Marina, Dubai, UAE</textarea>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /sec-personal -->
+
+      <!-- EMPLOYMENT -->
+      <div class="sec-content" id="sec-employment">
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Employment Details</div></div>
+          <div class="fg">
+            <div class="fgroup field-mono">
+              <label>Employee Number</label>
+              <input type="text" value="EMP-0087" disabled>
+              <span class="fhint">Assigned at creation — cannot be changed</span>
+            </div>
+            <div class="fgroup">
+              <label>Start Date <span class="req">*</span></label>
+              <input type="date" value="2021-03-15" oninput="markChanged('hire_date',this.value,'2021-03-15')">
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Employment Type <span class="req">*</span></div></div>
+          <div class="radio-group" id="emp-type-group">
+            <div class="ropt on" onclick="selEmpType(this,'FullTime')"><div class="rdot"></div>Full Time</div>
+            <div class="ropt" onclick="selEmpType(this,'PartTime')"><div class="rdot"></div>Part Time</div>
+            <div class="ropt" onclick="selEmpType(this,'Contract')"><div class="rdot"></div>Contract</div>
+            <div class="ropt" onclick="selEmpType(this,'Intern')"><div class="rdot"></div>Intern</div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Location & Status</div></div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Office Location</label>
+              <select onchange="markChanged('location_id',this.value,'dubai-hq')">
+                <option value="dubai-hq" selected>Dubai HQ</option>
+                <option value="abu-dhabi">Abu Dhabi Office</option>
+                <option value="riyadh">Riyadh Office</option>
+                <option value="london">London Office</option>
+                <option value="remote">Remote</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Employee Status</label>
+              <select onchange="markChanged('status',this.value,'Active')">
+                <option value="Draft">Draft</option>
+                <option value="Active" selected>Active</option>
+                <option value="OnLeave">On Leave</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Terminated">Terminated</option>
+              </select>
+              <span class="fhint">Changing to Suspended or Terminated will restrict access</span>
+            </div>
+            <div class="fgroup">
+              <label>Business Unit</label>
+              <select onchange="markChanged('business_unit_id',this.value,'corp-services')">
+                <option value="corp-services" selected>Corporate Services</option>
+                <option value="technology">Technology</option>
+                <option value="finance">Finance</option>
+                <option value="operations">Operations</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Legal Entity</label>
+              <select>
+                <option selected>Meridian HCM FZ-LLC (UAE)</option>
+                <option>Meridian HCM Ltd (UK)</option>
+                <option>Meridian HCM Inc (US)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-heading">
+            <div class="sec-title">Probation Details</div>
+            <div class="sec-badge">BG-008</div>
+          </div>
+          <div style="background:var(--al);border:1px solid #FCD34D;border-radius:var(--r);padding:10px 12px;margin-bottom:14px">
+            <div style="font-size:11.5px;color:var(--amber)"><strong>BG-008:</strong> <code>probation_end_date</code> absent from <code>UpdateEmployeeInput</code>. Field displayed for UX completeness; not persisted.</div>
+          </div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Probation End Date</label>
+              <input type="date" value="2021-09-15">
+              <span class="fhint">Leave blank if probation has passed</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /sec-employment -->
+
+      <!-- ORGANISATION -->
+      <div class="sec-content" id="sec-organisation">
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Role & Department</div></div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Department <span class="req">*</span></label>
+              <select onchange="markChanged('department_id',this.value,'people-ops')">
+                <option value="people-ops" selected>People Operations</option>
+                <option value="engineering">Engineering</option>
+                <option value="finance">Finance</option>
+                <option value="product">Product</option>
+                <option value="sales">Sales</option>
+                <option value="legal">Legal &amp; Compliance</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Role <span class="req">*</span></label>
+              <select onchange="markChanged('role_id',this.value,'sr-hrbp')">
+                <option value="sr-hrbp" selected>Senior HR Business Partner</option>
+                <option value="hrbp">HR Business Partner</option>
+                <option value="hr-coord">HR Coordinator</option>
+                <option value="hr-admin">HR Administrator</option>
+                <option value="talent-mgr">Talent Manager</option>
+              </select>
+            </div>
+            <div class="fgroup span2">
+              <label>Job Title <span class="req">*</span></label>
+              <input type="text" value="Senior HR Business Partner" oninput="markChanged('job_title',this.value,'Senior HR Business Partner')">
+              <span class="fhint">Displayed on profile, org chart, and documents</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Reporting Lines</div></div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Primary Manager</label>
+              <select onchange="markChanged('manager_employee_id',this.value,'aisha-al-rashidi')">
+                <option value="">— No manager —</option>
+                <option value="aisha-al-rashidi" selected>Aisha Al-Rashidi · VP People</option>
+                <option value="james-okonkwo">James Okonkwo · CHRO</option>
+                <option value="dev-patel">Dev Patel · Director Engineering</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Cost Centre</label>
+              <select>
+                <option selected>CC-HR-001 · People Operations</option>
+                <option>CC-CORP-001 · Corporate</option>
+                <option>CC-TECH-001 · Technology</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-div"></div>
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Grade & Position</div></div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Grade Band</label>
+              <select onchange="markChanged('grade_band_id',this.value,'gb-5')">
+                <option value="">— Not assigned —</option>
+                <option value="gb-3">Grade Band 3 · Associate</option>
+                <option value="gb-4">Grade Band 4 · Professional</option>
+                <option value="gb-5" selected>Grade Band 5 · Senior</option>
+                <option value="gb-6">Grade Band 6 · Lead</option>
+                <option value="gb-7">Grade Band 7 · Manager</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Job Position</label>
+              <select>
+                <option selected>HRBP-SENIOR-001 · Sr. HRBP (People Ops)</option>
+                <option>HRBP-001 · HR Business Partner</option>
+                <option>TALENT-001 · Talent Acquisition Manager</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /sec-organisation -->
+
+      <!-- CONTRACT DETAILS -->
+      <div class="sec-content" id="sec-contract">
+
+        <div class="section">
+          <div class="sec-heading"><div class="sec-title">Contract Metadata</div></div>
+          <div style="font-size:12.5px;color:var(--t3);margin-bottom:16px;padding:10px 13px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r)">
+            Contract metadata fields apply to <strong>Contract</strong> employment type employees only. Priya Subramaniam is a <strong>Full Time</strong> employee — these fields are optional and informational.
+          </div>
+          <div class="fg">
+            <div class="fgroup">
+              <label>Contract Type</label>
+              <select disabled>
+                <option>— Not applicable —</option>
+                <option>Independent Contractor</option>
+                <option>Agency</option>
+                <option>Statement of Work</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Contract Start Date</label>
+              <input type="date" disabled>
+            </div>
+            <div class="fgroup">
+              <label>Contract End Date</label>
+              <input type="date" disabled>
+            </div>
+            <div class="fgroup">
+              <label>Vendor Name</label>
+              <input type="text" disabled placeholder="Contractor agency or firm name">
+            </div>
+            <div class="fgroup">
+              <label>Vendor Contact Email</label>
+              <input type="email" disabled placeholder="vendor@example.com">
+            </div>
+            <div class="fgroup">
+              <label>Purchase Order #</label>
+              <input type="text" disabled placeholder="PO-XXXX">
+            </div>
+            <div class="fgroup">
+              <label>Billing Rate</label>
+              <input type="number" disabled placeholder="0.00">
+            </div>
+            <div class="fgroup">
+              <label>Billing Currency</label>
+              <select disabled>
+                <option>AED</option><option>USD</option><option>EUR</option><option>GBP</option>
+              </select>
+            </div>
+            <div class="fgroup">
+              <label>Access Expires</label>
+              <input type="date" disabled>
+            </div>
+            <div class="fgroup">
+              <label>Sponsor (Internal)</label>
+              <select disabled>
+                <option>— Select sponsor employee —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:13px;background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);font-size:12px;color:var(--t2)">
+          To enable contract fields, change the <strong>Employment Type</strong> to <strong>Contract</strong> in the Employment tab.
+        </div>
+
+      </div><!-- /sec-contract -->
+
+    </div><!-- /form-main -->
+
+    <!-- Rail -->
+    <div class="form-rail">
+
+      <!-- Change summary -->
+      <div class="change-banner" id="change-banner">
+        <div class="change-banner-title">Unsaved Changes</div>
+        <div id="change-list"></div>
+      </div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Current Values</div>
+        <div class="sum-row"><span class="sum-l">Employee #</span><span class="sum-v" style="font-family:var(--mono);font-size:11px">EMP-0087</span></div>
+        <div class="sum-row"><span class="sum-l">Name</span><span class="sum-v" id="rail-name">Priya Subramaniam</span></div>
+        <div class="sum-row"><span class="sum-l">Email</span><span class="sum-v" id="rail-email" style="font-size:11px">priya.subramaniam@meridian.com</span></div>
+        <div class="sum-row"><span class="sum-l">Department</span><span class="sum-v">People Operations</span></div>
+        <div class="sum-row"><span class="sum-l">Role</span><span class="sum-v">Senior HR Business Partner</span></div>
+        <div class="sum-row"><span class="sum-l">Type</span><span class="sum-v">Full Time</span></div>
+        <div class="sum-row"><span class="sum-l">Status</span><span class="sum-v">Active</span></div>
+        <div class="sum-row"><span class="sum-l">Location</span><span class="sum-v">Dubai HQ</span></div>
+        <div class="sum-row"><span class="sum-l">Manager</span><span class="sum-v">Aisha Al-Rashidi</span></div>
+        <div class="sum-row"><span class="sum-l">Start Date</span><span class="sum-v">15 Mar 2021</span></div>
+      </div>
+
+      <div class="sec-div" style="margin:12px 0"></div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Audit Info</div>
+        <div class="sum-row"><span class="sum-l">Created</span><span class="sum-v">15 Mar 2021</span></div>
+        <div class="sum-row"><span class="sum-l">Last updated</span><span class="sum-v">14 Mar 2026</span></div>
+        <div class="sum-row"><span class="sum-l">Updated by</span><span class="sum-v">admin@meridian.com</span></div>
+        <div class="sum-row"><span class="sum-l">Tenant</span><span class="sum-v" style="font-family:var(--mono);font-size:11px">meridian-hcm</span></div>
+      </div>
+
+      <div class="sec-div" style="margin:12px 0"></div>
+
+      <div class="rail-sec">
+        <div class="rail-lbl">Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn btn-sm" style="justify-content:flex-start;width:100%">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Transfer Department
+          </button>
+          <button class="btn btn-sm" style="justify-content:flex-start;width:100%">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            Edit System Access
+          </button>
+          <button class="btn btn-sm" style="justify-content:flex-start;width:100%;background:var(--al);color:var(--amber);border-color:#FCD34D">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            Suspend Employee
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /form-rail -->
+  </div><!-- /form-wrap -->
+
+  <!-- Footer -->
+  <div class="form-footer">
+    <div class="ff-info">Editing <strong>Priya Subramaniam</strong> · EMP-0087 · Changes saved via <code>PATCH /api/v1/employees/:employeeId</code></div>
+    <button class="btn">Cancel</button>
+    <button class="btn btn-p" onclick="saveChanges()">Save Changes</button>
+  </div>
+
+</main>
+</div>
+
+<script>
+// Section nav
+function showSection(id, el) {
+  document.querySelectorAll('.sec-content').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.snav-item').forEach(s => s.classList.remove('on'));
+  document.getElementById('sec-' + id).classList.add('active');
+  el.classList.add('on');
+}
+
+// Employment type radio
+function selEmpType(el, val) {
+  document.querySelectorAll('#emp-type-group .ropt').forEach(r => r.classList.remove('on'));
+  el.classList.add('on');
+  markChanged('employment_type', val, 'FullTime');
+}
+
+// Change tracking
+const changes = {};
+function markChanged(field, newVal, origVal) {
+  if (newVal !== origVal) {
+    changes[field] = newVal;
+  } else {
+    delete changes[field];
+  }
+  renderChanges();
+}
+
+function renderChanges() {
+  const banner = document.getElementById('change-banner');
+  const list = document.getElementById('change-list');
+  const keys = Object.keys(changes);
+  if (keys.length === 0) {
+    banner.classList.remove('visible');
+    return;
+  }
+  banner.classList.add('visible');
+  const labels = {
+    first_name:'First name', last_name:'Last name', email:'Email',
+    phone:'Phone', hire_date:'Start date', employment_type:'Employment type',
+    location_id:'Location', status:'Status', business_unit_id:'Business unit',
+    department_id:'Department', role_id:'Role', job_title:'Job title',
+    manager_employee_id:'Manager', grade_band_id:'Grade band',
+    cost_center_id:'Cost centre'
+  };
+  list.innerHTML = keys.map(k =>
+    `<div class="change-item">${labels[k]||k}</div>`
+  ).join('');
+}
+
+function saveChanges() {
+  if (Object.keys(changes).length === 0) {
+    alert('No changes to save.');
+    return;
+  }
+  alert('PATCH /api/v1/employees/emp-0087 → ' + JSON.stringify(changes, null, 2));
+}
+</script>
+</body>
+</html>

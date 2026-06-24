@@ -1,0 +1,198 @@
+{
+  "contract": "hrms-h07-attendance-summary",
+  "version": "1.0",
+  "date": "2026-03-28",
+  "last_updated": "2026-03-28",
+  "page": "h07-attendance-summary.html",
+  "archetype": "H07 — HR Analytics / Reports",
+  "archetype_ref": "hrms-schema-template.json",
+  "status": "sealed",
+
+  "backend_service": "reporting_analytics",
+  "base_url": "/api/v1/reporting",
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "workforce.attendance.trend",
+        "dimension_key": "all",
+        "dimension_value": "all"
+      },
+      "used_by": [
+        "tab-overview — KPI row (attendance rate, present today, absent today, late today, avg hours)",
+        "tab-overview — Attendance Rate Trend line chart",
+        "tab-overview — Today's Status Mix donut",
+        "tab-overview — Attendance Rate by Department inline bars"
+      ],
+      "response_shape": {
+        "aggregate_id": "string",
+        "aggregate_type": "workforce.attendance.trend",
+        "dimension_key": "attendance_date | department_id",
+        "dimension_value": "string",
+        "window_start": "ISO-8601 date | null",
+        "window_end": "ISO-8601 date | null",
+        "metrics": {
+          "record_count": "int",
+          "present_count": "int",
+          "late_count": "int",
+          "absent_count": "int",
+          "half_day_count": "int",
+          "total_hours": "float",
+          "attendance_rate": "float (0.0–1.0)",
+          "average_hours": "float"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "KPIs: 94.2% rate, 1174 present, 41 absent, 32 late, 7.8h avg. Trend line SVG Jan–Mar. Donut: Present 94.2%, Late 2.6%, Absent 3.3%. 8 dept bars hardcoded."
+    },
+    {
+      "id": "E02",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "workforce.attendance.trend",
+        "dimension_key": "attendance_date",
+        "window_start": "ISO-8601 date",
+        "window_end": "ISO-8601 date"
+      },
+      "used_by": [
+        "tab-daily — KPI row (working days, avg daily rate, lowest rate day, best rate day)",
+        "tab-daily — Daily Attendance Log table (one row per working day)"
+      ],
+      "response_shape": {
+        "aggregate_type": "workforce.attendance.trend",
+        "dimension_key": "attendance_date",
+        "dimension_value": "YYYY-MM-DD",
+        "window_start": "ISO-8601 date",
+        "window_end": "ISO-8601 date",
+        "metrics": {
+          "record_count": "int",
+          "present_count": "int",
+          "late_count": "int",
+          "absent_count": "int",
+          "half_day_count": "int",
+          "total_hours": "float",
+          "attendance_rate": "float",
+          "average_hours": "float"
+        }
+      },
+      "mock_workaround": "12 daily rows hardcoded Q1 2026. 14 Mar 2026 = lowest (87.0% — holiday adj.), 03 Feb 2026 = best (98.7%). Monday dip pattern visible."
+    },
+    {
+      "id": "E03",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "workforce.attendance.trend",
+        "dimension_key": "department_id",
+        "dimension_value": "<department_id | all>"
+      },
+      "used_by": [
+        "tab-dept — KPI row (best dept, lowest dept, overall rate, depts below 90%)",
+        "tab-dept — Attendance Mix by Department stacked bars",
+        "tab-dept — Department Detail Table"
+      ],
+      "response_shape": {
+        "aggregate_type": "workforce.attendance.trend",
+        "dimension_key": "department_id",
+        "dimension_value": "uuid string",
+        "metrics": {
+          "record_count": "int",
+          "present_count": "int",
+          "late_count": "int",
+          "absent_count": "int",
+          "half_day_count": "int",
+          "total_hours": "float",
+          "attendance_rate": "float",
+          "average_hours": "float"
+        }
+      },
+      "mock_workaround": "8 departments hardcoded. Finance 98.1% best, Sales 86.4% worst. Stacked bars show present/late/absent mix. Dept table shows full record counts."
+    },
+    {
+      "id": "E04",
+      "method": "GET",
+      "path": "/api/v1/attendance",
+      "params": {
+        "lifecycle_state": "Validated | Approved",
+        "anomalies": "Late,MissingCheckIn,MissingCheckOut,Overtime,EarlyDeparture,ShortShift,UnscheduledAttendance",
+        "page": "int",
+        "page_size": "int"
+      },
+      "used_by": [
+        "tab-anomalies — KPI row (late arrivals, missing check-in, missing check-out, overtime records)",
+        "tab-anomalies — Anomaly Type Breakdown inline bars",
+        "tab-anomalies — Anomaly by Department inline bars",
+        "tab-anomalies — Recent Anomaly Records table"
+      ],
+      "response_shape": {
+        "attendance_id": "uuid",
+        "employee_id": "uuid",
+        "attendance_date": "ISO-8601 date",
+        "attendance_status": "Present | Absent | Late | HalfDay | Holiday",
+        "source": "Manual | Biometric | APIImport",
+        "check_in_time": "ISO-8601 datetime | null",
+        "check_out_time": "ISO-8601 datetime | null",
+        "total_hours": "decimal | null",
+        "lifecycle_state": "Captured | Validated | Approved | Locked",
+        "anomalies": ["Late | MissingCheckIn | MissingCheckOut | EarlyDeparture | MissingRoster | UnscheduledAttendance | Overtime | ShortShift"],
+        "correction_note": "string | null"
+      },
+      "mock_workaround": "Q1 anomaly KPIs: 847 Late, 312 MissingCheckIn, 289 MissingCheckOut, 124 Overtime. 8 anomaly rows hardcoded. Dept breakdown: Sales 528 worst, HR 52 best."
+    },
+    {
+      "id": "E05",
+      "method": "GET",
+      "path": "/api/v1/attendance/corrections",
+      "params": {
+        "status": "Submitted | Approved | Rejected (optional)",
+        "page": "int",
+        "page_size": "int"
+      },
+      "used_by": [
+        "tab-corrections — KPI row (pending, approved Q1, rejected Q1, total Q1)",
+        "tab-corrections — Correction Requests table (AttendanceCorrection model)"
+      ],
+      "response_shape": {
+        "correction_id": "uuid",
+        "attendance_id": "uuid",
+        "employee_id": "uuid",
+        "requested_by_employee_id": "uuid",
+        "reason": "string",
+        "approver_employee_id": "uuid | null",
+        "requested_status": "Present | Absent | Late | HalfDay | Holiday | null",
+        "requested_check_in_time": "ISO-8601 datetime | null",
+        "requested_check_out_time": "ISO-8601 datetime | null",
+        "requested_correction_note": "string | null",
+        "status": "Submitted | Approved | Rejected",
+        "workflow_id": "string | null",
+        "decision_note": "string | null",
+        "submitted_at": "ISO-8601 datetime",
+        "decided_at": "ISO-8601 datetime | null"
+      },
+      "mock_workaround": "KPIs: 18 pending, 142 approved (89.3%), 17 rejected (10.7%), 159 total. 8 correction rows hardcoded across Mar 2026."
+    }
+  ],
+
+  "gaps": [],
+
+  "design_patterns": {
+    "P-07": "Chip anatomy applied to status chips (Present/Late/Absent/HalfDay/Holiday), record state chips (Captured/Validated/Approved/Locked), source chips (Biometric/Manual/APIImport), correction status chips (Submitted/Approved/Rejected)",
+    "P-11": "Table row hover: transition:background .12s on tbody tr:hover td — applied to all 4 tables",
+    "P-20": "Analytics layout: 5-tab report-nav, filter-bar (Period/Department/Status), topbar actions (Export PDF / Export CSV / Schedule Report primary)",
+    "P-27": "--dur-micro:120ms used for tab hover, row hover, bar transitions",
+    "P-31": "html{zoom:1.1} applied globally",
+    "P-32": ".page{flex:1;overflow-y:auto;min-height:0} + .content{padding:22px 22px 12vh}"
+  },
+
+  "tab_inventory": [
+    { "id": "overview",    "label": "Overview",              "status": "built", "api_refs": ["E01"] },
+    { "id": "daily",       "label": "Daily Attendance",      "status": "built", "api_refs": ["E02"] },
+    { "id": "dept",        "label": "Department Breakdown",  "status": "built", "api_refs": ["E03"] },
+    { "id": "anomalies",   "label": "Anomalies",             "status": "built", "api_refs": ["E04"] },
+    { "id": "corrections", "label": "Corrections",           "status": "built", "api_refs": ["E05"] }
+  ]
+}

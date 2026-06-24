@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Employee Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;--violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Slim sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;position:relative}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.tbi.bell::after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#EF4444;border:1.5px solid var(--w)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Page */
+.page{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.tab-scroll{flex:1;overflow-y:auto}
+
+/* Profile header */
+.prof-head{background:var(--w);border-bottom:1px solid var(--bd);padding:22px 26px 0;flex-shrink:0}
+.ph-row{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px}
+.ph-av{width:66px;height:66px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px var(--w),0 0 0 5px var(--bd)}
+.ph-info{flex:1}
+.ph-name{font-size:20px;font-weight:700;color:var(--t1);letter-spacing:-0.025em;margin-bottom:3px}
+.ph-role{font-size:13px;color:var(--t3);margin-bottom:10px}
+.ph-chips{display:flex;gap:6px;flex-wrap:wrap}
+.ph-acts{display:flex;gap:7px;flex-shrink:0}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.ct{background:var(--tl);color:var(--teal)}.ct::before{background:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+
+/* Tabs */
+.ptabs{display:flex;gap:2px;margin-bottom:-1px}
+.ptab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.ptab:hover{color:var(--t1)}.ptab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+
+/* Body grid */
+.prof-body{flex:1;overflow-y:auto;padding:22px 26px;display:grid;grid-template-columns:1fr 292px;gap:16px;align-items:start}
+
+/* Cards */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct2{font-size:13px;font-weight:700;color:var(--t1)}
+.cl{font-size:12px;font-weight:600;color:var(--teal);cursor:pointer}.cl:hover{text-decoration:underline}
+.cb2{padding:16px 17px}
+
+/* Field grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{background:var(--bg);border-radius:var(--r);padding:9px 12px}
+.fl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.fv{font-size:13px;font-weight:500;color:var(--t1)}
+.fv.mono{font-family:var(--mono);font-size:12.5px}
+
+/* AI risk */
+.risk{background:var(--al);border:1px solid #FCD34D;border-radius:var(--r2);padding:14px;margin-bottom:14px}
+.risk-head{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.rdot{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(180,83,9,.4)}50%{box-shadow:0 0 0 5px rgba(180,83,9,0)}}
+.rlbl{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.10em}
+.rtitle{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.rdesc{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:10px}
+.rconf{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.rconf-track{flex:1;height:4px;background:rgba(180,83,9,.12);border-radius:99px;overflow:hidden}
+.rconf-fill{height:100%;background:var(--amber);border-radius:99px}
+.rconf-pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--amber);flex-shrink:0}
+.racts{display:flex;gap:6px}
+.rb{font-size:12px;font-weight:600;padding:5px 12px;border-radius:var(--r);cursor:pointer;border:1px solid;font-family:'Inter',sans-serif;transition:all .12s}
+.rbp{background:var(--amber);color:#fff;border-color:var(--amber)}.rbp:hover{background:#92400E}
+.rbg{background:transparent;color:var(--amber);border-color:#FCD34D}.rbg:hover{background:rgba(180,83,9,.05)}
+
+/* Progress */
+.prog{margin-bottom:12px}.prog:last-child{margin-bottom:0}
+.prog-top{display:flex;justify-content:space-between;font-size:12px;color:var(--t2);margin-bottom:5px}
+.prog-top span:last-child{font-weight:600;color:var(--t1)}
+.prog-track{height:5px;background:var(--t5);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.25,.8,.25,1)}
+
+/* Timeline */
+.tl-item{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--t5)}
+.tl-item:last-child{border-bottom:none}
+.tl-left{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:3px}
+.tl-line{width:1px;flex:1;background:var(--bd);min-height:14px}
+.tl-item:last-child .tl-line{display:none}
+.tl-ti{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:1px}
+.tl-su{font-size:12px;color:var(--t3)}.tl-dt{font-size:10.5px;color:var(--t4);font-family:var(--mono);margin-top:2px}
+
+/* Leave grid */
+.lv-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.lv-item{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px}
+.lv-type{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.lv-nums{display:flex;align-items:baseline;gap:4px}
+.lv-used{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--t1)}
+.lv-tot{font-family:var(--mono);font-size:11px;color:var(--t4)}
+.lv-bar{height:3px;background:var(--t5);border-radius:99px;overflow:hidden;margin-top:7px}
+.lv-fill{height:100%;border-radius:99px}
+
+/* Data rows */
+.dr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--t5)}
+.dr:last-child{border-bottom:none}
+.dl2{font-size:12.5px;color:var(--t3)}.dv{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--t1)}
+.dv.big{font-size:14px;color:var(--teal)}
+
+/* Hidden tab panels */
+.tab-panel{display:none}.tab-panel.active{display:grid}
+.tab-panel.active.single{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>Employees</a><span class="sep">›</span><span class="cur">James Okafor</span></div>
+    <div class="tbi bell"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tbi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <div class="tb-vd"></div>
+    <button class="btn"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>Edit Profile</button>
+    <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Message</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <div class="page">
+    <!-- Profile header -->
+    <div class="prof-head">
+      <div class="ph-row">
+        <div class="ph-av">JO</div>
+        <div class="ph-info">
+          <div class="ph-name">James Okafor</div>
+          <div class="ph-role">Senior Software Engineer II · Engineering — Backend Platform</div>
+          <div class="ph-chips">
+            <span class="chip cb">Onboarding</span>
+            <span class="chip cn">San Francisco, CA</span>
+            <span class="chip cn">Reports to S. Mitchell</span>
+            <span class="chip cn">Joined Mar 10, 2026</span>
+            <span class="chip cn" style="font-family:var(--mono);font-size:11px">EMP-0341</span>
+          </div>
+        </div>
+        <div class="ph-acts">
+          <button class="btn btn-sm"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>Edit</button>
+          <button class="btn btn-sm btn-p"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Message</button>
+        </div>
+      </div>
+      <div class="ptabs" id="ptabs">
+        <div class="ptab on" onclick="switchTab(this,'overview')">Overview</div>
+        <div class="ptab" onclick="switchTab(this,'compensation')">Compensation</div>
+        <div class="ptab" onclick="switchTab(this,'attendance')">Attendance</div>
+        <div class="ptab" onclick="switchTab(this,'documents')">Documents</div>
+        <div class="ptab" onclick="switchTab(this,'history')">History</div>
+      </div>
+    </div>
+
+    <div class="tab-scroll">
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview" class="tab-panel active" style="padding:22px 26px;grid-template-columns:1fr 292px;gap:16px;align-items:start">
+      <div>
+        <!-- AI Risk -->
+        <div class="risk">
+          <div class="risk-head"><div class="rdot"></div><div class="rlbl">AI — Attrition Risk Detected</div></div>
+          <div class="rtitle">Moderate flight risk identified</div>
+          <div class="rdesc">Engagement score dropped 18 pts over 14 days. Combined with unresolved manager feedback from Feb 28 review, pattern matches pre-departure behaviour in similar profiles.</div>
+          <div class="rconf"><div class="rconf-track"><div class="rconf-fill" style="width:78%"></div></div><div class="rconf-pct">78% confidence</div></div>
+          <div class="racts"><button class="rb rbp">Schedule Check-in</button><button class="rb rbg">View Full Analysis</button></div>
+        </div>
+        <!-- Personal details -->
+        <div class="card">
+          <div class="ch"><div class="ct2">Personal Details</div><span class="cl">Edit</span></div>
+          <div class="cb2">
+            <div class="fg">
+              <div class="field"><div class="fl">Full Name</div><div class="fv">James Okafor</div></div>
+              <div class="field"><div class="fl">Employee ID</div><div class="fv mono">EMP-0341</div></div>
+              <div class="field"><div class="fl">Department</div><div class="fv">Engineering</div></div>
+              <div class="field"><div class="fl">Team</div><div class="fv">Backend Platform</div></div>
+              <div class="field"><div class="fl">Manager</div><div class="fv">Sarah Mitchell</div></div>
+              <div class="field"><div class="fl">Location</div><div class="fv">San Francisco, CA</div></div>
+              <div class="field"><div class="fl">Work Type</div><div class="fv">Hybrid · 3 days/week</div></div>
+              <div class="field"><div class="fl">Start Date</div><div class="fv mono">Mar 10, 2026</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- Onboarding -->
+        <div class="card">
+          <div class="ch"><div class="ct2">Onboarding Progress</div><span class="chip cb" style="font-size:11px">Day 9 of 30</span></div>
+          <div class="cb2">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+              <div class="field"><div class="fl">Completed</div><div class="fv mono" style="font-size:18px;font-weight:700">4 <span style="font-size:13px;color:var(--t4)">/ 10 tasks</span></div></div>
+              <div class="field"><div class="fl">Est. Completion</div><div class="fv mono" style="font-size:18px;font-weight:700">Apr 9</div></div>
+            </div>
+            <div class="prog"><div class="prog-top"><span>Profile & Contracts</span><span>100%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:#16A34A"></div></div></div>
+            <div class="prog"><div class="prog-top"><span>IT & Systems Access</span><span>60%</span></div><div class="prog-track"><div class="prog-fill" style="width:60%;background:var(--teal)"></div></div></div>
+            <div class="prog"><div class="prog-top"><span>Compliance Training</span><span>40%</span></div><div class="prog-track"><div class="prog-fill" style="width:40%;background:var(--amber)"></div></div></div>
+            <div class="prog"><div class="prog-top"><span>Benefits Enrollment</span><span style="color:var(--red)">0% — overdue</span></div><div class="prog-track"><div class="prog-fill" style="width:0%"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <!-- Leave balance -->
+        <div class="card">
+          <div class="ch"><div class="ct2">Leave Balance</div><span class="cl">Request Leave</span></div>
+          <div class="cb2">
+            <div class="lv-grid">
+              <div class="lv-item"><div class="lv-type">Annual</div><div class="lv-nums"><div class="lv-used">18</div><div class="lv-tot">/ 25d</div></div><div class="lv-bar"><div class="lv-fill" style="width:72%;background:var(--teal)"></div></div></div>
+              <div class="lv-item"><div class="lv-type">Sick</div><div class="lv-nums"><div class="lv-used">10</div><div class="lv-tot">/ 10d</div></div><div class="lv-bar"><div class="lv-fill" style="width:100%;background:#16A34A"></div></div></div>
+              <div class="lv-item"><div class="lv-type">Carry Over</div><div class="lv-nums"><div class="lv-used">3</div><div class="lv-tot">/ 5d</div></div><div class="lv-bar"><div class="lv-fill" style="width:60%;background:#3B82F6"></div></div></div>
+              <div class="lv-item"><div class="lv-type">Unpaid</div><div class="lv-nums"><div class="lv-used">0</div><div class="lv-tot">/ —</div></div><div class="lv-bar"><div class="lv-fill" style="width:0%"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <!-- At a glance -->
+        <div class="card">
+          <div class="ch"><div class="ct2">At a Glance</div></div>
+          <div style="padding:6px 17px 14px">
+            <div class="dr"><span class="dl2">Contract</span><span class="dv">Full-time · Permanent</span></div>
+            <div class="dr"><span class="dl2">Pay Grade</span><span class="dv">IC4 / Band 5</span></div>
+            <div class="dr"><span class="dl2">Probation Ends</span><span class="dv">Jun 10, 2026</span></div>
+            <div class="dr"><span class="dl2">Base Salary</span><span class="dv big">$185,000</span></div>
+            <div class="dr"><span class="dl2">Equity</span><span class="dv">120 RSUs · 4yr vest</span></div>
+            <div class="dr"><span class="dl2">Manager</span><span class="dv">Sarah Mitchell</span></div>
+          </div>
+        </div>
+        <!-- Timeline -->
+        <div class="card">
+          <div class="ch"><div class="ct2">Employment Timeline</div></div>
+          <div style="padding:6px 17px 14px">
+            <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--teal)"></div><div class="tl-line"></div></div><div><div class="tl-ti">Joined as Senior SWE II</div><div class="tl-su">Backend Platform · Engineering</div><div class="tl-dt">Mar 10, 2026</div></div></div>
+            <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:#3B82F6"></div><div class="tl-line"></div></div><div><div class="tl-ti">Offer Accepted & NDA Signed</div><div class="tl-su">Signed offer letter</div><div class="tl-dt">Feb 20, 2026</div></div></div>
+            <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:#7C3AED"></div><div class="tl-line"></div></div><div><div class="tl-ti">Final Interview — Strong Hire</div><div class="tl-su">Panel of 4 · passed</div><div class="tl-dt">Feb 12, 2026</div></div></div>
+            <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--t4)"></div></div><div><div class="tl-ti">Application Received</div><div class="tl-su">LinkedIn · Referral by R. Sharma</div><div class="tl-dt">Jan 28, 2026</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPENSATION -->
+    <div id="tab-compensation" class="tab-panel single" style="padding:22px 26px">
+      <div class="card">
+        <div class="ch"><div class="ct2">Compensation Details</div><span class="cl">Edit</span></div>
+        <div class="cb2">
+          <div class="fg">
+            <div class="field"><div class="fl">Base Salary</div><div class="fv mono" style="font-size:20px;color:var(--teal);font-weight:700">$185,000</div></div>
+            <div class="field"><div class="fl">Pay Cycle</div><div class="fv">Monthly · 1st of month</div></div>
+            <div class="field"><div class="fl">Currency</div><div class="fv mono">USD</div></div>
+            <div class="field"><div class="fl">Bonus Target</div><div class="fv mono">15% ($27,750)</div></div>
+            <div class="field"><div class="fl">Equity</div><div class="fv mono">120 RSUs · 4yr vest</div></div>
+            <div class="field"><div class="fl">Pay Grade</div><div class="fv mono">IC4 / Band 5</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div id="tab-attendance" class="tab-panel single" style="padding:22px 26px">
+      <div class="card"><div class="ch"><div class="ct2">Attendance — March 2026</div></div><div class="cb2" style="color:var(--t3)">9 days present · 0 absent · 0 late. Full heatmap view coming soon.</div></div>
+    </div>
+
+    <!-- DOCUMENTS -->
+    <div id="tab-documents" class="tab-panel single" style="padding:22px 26px">
+      <div class="card">
+        <div class="ch"><div class="ct2">Documents</div><button class="btn btn-sm"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Upload</button></div>
+        <div style="padding:6px 0">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 17px;border-bottom:1px solid var(--t5)"><span style="font-size:18px">📄</span><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--t1)">Employment Contract</div></div><span style="font-size:11.5px;font-family:var(--mono);color:var(--t4)">Feb 20, 2026</span><button class="btn btn-sm">Download</button></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 17px;border-bottom:1px solid var(--t5)"><span style="font-size:18px">📋</span><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--t1)">Non-Disclosure Agreement</div></div><span style="font-size:11.5px;font-family:var(--mono);color:var(--t4)">Feb 20, 2026</span><button class="btn btn-sm">Download</button></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 17px;border-bottom:1px solid var(--t5)"><span style="font-size:18px">🪪</span><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--t1)">Right to Work — Passport Copy</div></div><span style="font-size:11.5px;font-family:var(--mono);color:var(--t4)">Mar 05, 2026</span><button class="btn btn-sm">Download</button></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 17px"><span style="font-size:18px">📊</span><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--t1)">Benefits Enrollment Form</div><div style="font-size:11.5px;color:var(--red)">⚠ Not submitted yet</div></div><span style="font-size:11.5px;font-family:var(--mono);color:var(--t4)">Awaiting</span><button class="btn btn-sm" style="color:var(--amber);border-color:var(--amber)">Send Reminder</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="tab-history" class="tab-panel single" style="padding:22px 26px">
+      <div class="card">
+        <div class="ch"><div class="ct2">Employment History</div></div>
+        <div style="padding:6px 17px 14px">
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--teal)"></div><div class="tl-line"></div></div><div><div class="tl-ti">Senior SWE II — Acme Corp</div><div class="tl-su">Backend Platform · Current role</div><div class="tl-dt">Mar 2026 – Present</div></div></div>
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--t4)"></div><div class="tl-line"></div></div><div><div class="tl-ti">Senior Engineer — TechFlow Inc.</div><div class="tl-su">Infrastructure & Platform</div><div class="tl-dt">Aug 2022 – Feb 2026 · 3.5 years</div></div></div>
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--t4)"></div></div><div><div class="tl-ti">Software Engineer II — Nexus Labs</div><div class="tl-su">API & Data Services</div><div class="tl-dt">Jun 2019 – Aug 2022 · 3.2 years</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- /tab-scroll -->
+  </div><!-- /page -->
+</main>
+</div>
+
+<script>
+function switchTab(el, name) {
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  const tgt = document.getElementById('tab-' + name);
+  if (tgt) {
+    if (name === 'overview') { tgt.style.display = 'grid'; } else { tgt.style.display = 'block'; }
+    tgt.classList.add('active');
+  }
+  // Reset scroll to top on every tab switch
+  const scroller = document.querySelector('.tab-scroll');
+  if (scroller) scroller.scrollTop = 0;
+}
+document.querySelectorAll('.si').forEach(el => el.addEventListener('click', function() { document.querySelectorAll('.si').forEach(x => x.classList.remove('on')); this.classList.add('on'); }));
+</script>
+</body>
+</html>

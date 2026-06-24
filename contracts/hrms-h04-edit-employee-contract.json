@@ -1,0 +1,183 @@
+﻿{
+  "_meta": {
+    "id": "h04-edit-employee",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Edit Employee",
+    "variant": "Simple (section tabs)",
+    "surface": "admin",
+    "primary_actor": "HR Business Partner",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Employees", "Priya Subramaniam", "Edit Profile"],
+      "actions": [
+        { "label": "Cancel", "style": "secondary", "leads_to": "H03 Employee Profile" },
+        { "label": "Save Changes", "style": "primary", "action": "PATCH /api/v1/employees/:employeeId" }
+      ]
+    },
+
+    "FORM_HEADER": {
+      "avatar": { "initials": "PS", "gradient": "teal-blue" },
+      "name": "Priya Subramaniam",
+      "chips": ["Active", "Full Time"],
+      "meta": ["EMP-0087", "Senior HR Business Partner · People Operations", "Dubai HQ"]
+    },
+
+    "SECTION_NAV": {
+      "tabs": ["Personal Info", "Employment", "Organisation", "Contract Details"]
+    },
+
+    "FORM_SECTIONS": {
+      "personal_info": {
+        "subsections": [
+          {
+            "title": "Name & Contact",
+            "fields": [
+              { "id": "first_name",   "label": "First Name",  "type": "text",  "required": true,  "maps_to": "UpdateEmployeeInput.first_name" },
+              { "id": "last_name",    "label": "Last Name",   "type": "text",  "required": true,  "maps_to": "UpdateEmployeeInput.last_name" },
+              { "id": "email",        "label": "Work Email",  "type": "email", "required": true,  "maps_to": "UpdateEmployeeInput.email" },
+              { "id": "phone",        "label": "Phone Number","type": "tel",   "required": false, "maps_to": "UpdateEmployeeInput.phone" }
+            ]
+          },
+          {
+            "title": "Personal Details",
+            "gap_badge": "BG-008",
+            "gap_note": "Fields captured but not persisted — absent from UpdateEmployeeInput",
+            "fields": [
+              { "id": "preferred_name",  "type": "text",     "maps_to": "BG-008" },
+              { "id": "personal_email",  "type": "email",    "maps_to": "BG-008" },
+              { "id": "date_of_birth",   "type": "date",     "maps_to": "BG-008" },
+              { "id": "nationality",     "type": "text",     "maps_to": "BG-008" },
+              { "id": "home_address",    "type": "textarea", "maps_to": "BG-008" }
+            ]
+          }
+        ]
+      },
+
+      "employment": {
+        "subsections": [
+          {
+            "title": "Employment Details",
+            "fields": [
+              { "id": "employee_number",  "label": "Employee Number", "type": "text",   "disabled": true, "note": "Assigned at creation — immutable" },
+              { "id": "hire_date",        "label": "Start Date",      "type": "date",   "required": true, "maps_to": "UpdateEmployeeInput.hire_date" },
+              { "id": "employment_type",  "label": "Employment Type", "type": "radio",  "required": true, "enum_ref": "employee.model.EMPLOYMENT_TYPES", "values": ["FullTime","PartTime","Contract","Intern"], "maps_to": "UpdateEmployeeInput.employment_type" },
+              { "id": "location_id",      "label": "Office Location", "type": "select", "maps_to": "UpdateEmployeeInput.location_id" },
+              { "id": "status",           "label": "Employee Status", "type": "select", "enum_ref": "employee.model.EMPLOYEE_STATUSES", "values": ["Draft","Active","OnLeave","Suspended","Terminated"], "maps_to": "UpdateEmployeeInput.status (via UpdateEmployeeInput — status not present in UpdateEmployeeInput; use PATCH status endpoint)" },
+              { "id": "business_unit_id", "label": "Business Unit",  "type": "select", "maps_to": "UpdateEmployeeInput.business_unit_id" },
+              { "id": "legal_entity_id",  "label": "Legal Entity",   "type": "select", "maps_to": "UpdateEmployeeInput.legal_entity_id" }
+            ]
+          },
+          {
+            "title": "Probation Details",
+            "gap_badge": "BG-008",
+            "fields": [
+              { "id": "probation_end_date", "type": "date", "maps_to": "BG-008" }
+            ]
+          }
+        ]
+      },
+
+      "organisation": {
+        "subsections": [
+          {
+            "title": "Role & Department",
+            "fields": [
+              { "id": "department_id",  "label": "Department",  "type": "select", "required": true,  "source": "GET /api/v1/departments", "maps_to": "UpdateEmployeeInput.department_id" },
+              { "id": "role_id",        "label": "Role",        "type": "select", "required": true,  "source": "GET /api/v1/roles",        "maps_to": "UpdateEmployeeInput.role_id" },
+              { "id": "job_title",      "label": "Job Title",   "type": "text",   "required": true,  "maps_to": "UpdateEmployeeInput.job_position_id (display only — no job_title field in model)" }
+            ]
+          },
+          {
+            "title": "Reporting Lines",
+            "fields": [
+              { "id": "manager_employee_id", "label": "Primary Manager", "type": "select", "source": "GET /api/v1/employees?status=Active", "maps_to": "UpdateEmployeeInput.manager_employee_id" },
+              { "id": "cost_center_id",      "label": "Cost Centre",     "type": "select", "maps_to": "UpdateEmployeeInput.cost_center_id" }
+            ]
+          },
+          {
+            "title": "Grade & Position",
+            "fields": [
+              { "id": "grade_band_id",    "label": "Grade Band",    "type": "select", "maps_to": "UpdateEmployeeInput.grade_band_id" },
+              { "id": "job_position_id",  "label": "Job Position",  "type": "select", "maps_to": "UpdateEmployeeInput.job_position_id" }
+            ]
+          }
+        ]
+      },
+
+      "contract_details": {
+        "note": "Fields enabled only when employment_type = Contract. Pre-populated from ContractMetadata.",
+        "fields": [
+          { "id": "contract_type",           "maps_to": "UpdateEmployeeInput.contract_metadata.contract_type" },
+          { "id": "contract_start_date",     "maps_to": "UpdateEmployeeInput.contract_metadata.contract_start_date" },
+          { "id": "contract_end_date",       "maps_to": "UpdateEmployeeInput.contract_metadata.contract_end_date" },
+          { "id": "vendor_name",             "maps_to": "UpdateEmployeeInput.contract_metadata.vendor_name" },
+          { "id": "vendor_contact_email",    "maps_to": "UpdateEmployeeInput.contract_metadata.vendor_contact_email" },
+          { "id": "purchase_order_number",   "maps_to": "UpdateEmployeeInput.contract_metadata.purchase_order_number" },
+          { "id": "billing_rate",            "maps_to": "UpdateEmployeeInput.contract_metadata.billing_rate" },
+          { "id": "billing_currency",        "maps_to": "UpdateEmployeeInput.contract_metadata.billing_currency" },
+          { "id": "access_expires_at",       "maps_to": "UpdateEmployeeInput.contract_metadata.access_expires_at" },
+          { "id": "sponsor_employee_id",     "maps_to": "UpdateEmployeeInput.contract_metadata.sponsor_employee_id" }
+        ]
+      }
+    },
+
+    "FORM_RAIL": {
+      "current_values_summary": {
+        "fields": ["employee_number","full_name","email","department","role","employment_type","status","location","manager","hire_date"]
+      },
+      "audit_info": {
+        "fields": ["created_at","updated_at","updated_by","tenant_id"]
+      },
+      "quick_actions": [
+        { "label": "Transfer Department", "style": "secondary" },
+        { "label": "Edit System Access",  "style": "secondary", "note": "BG-007: no auth endpoint" },
+        { "label": "Suspend Employee",    "style": "warning",   "action": "PATCH /api/v1/employees/:id/status → status=Suspended" }
+      ],
+      "change_tracker": {
+        "description": "Banner appears when unsaved changes exist, listing modified field names"
+      }
+    },
+
+    "FORM_FOOTER": {
+      "left_info": "Editing employee · changes sent via PATCH /api/v1/employees/:employeeId",
+      "right": [
+        { "label": "Cancel",       "style": "secondary" },
+        { "label": "Save Changes", "style": "primary",   "action": "PATCH /api/v1/employees/:employeeId" }
+      ]
+    }
+  },
+
+  "submit_flow": {
+    "method": "PATCH",
+    "endpoint": "/api/v1/employees/:employeeId",
+    "service": "employee-service",
+    "body": "UpdateEmployeeInput (partial — only changed fields)",
+    "on_success": { "redirect": "H03 Employee Profile" }
+  },
+
+  "data_sources": [
+    { "slot": "department_id", "endpoint": "GET /api/v1/departments",            "service": "employee-service" },
+    { "slot": "role_id",       "endpoint": "GET /api/v1/roles",                  "service": "employee-service" },
+    { "slot": "manager_id",    "endpoint": "GET /api/v1/employees?status=Active", "service": "employee-service" }
+  ],
+
+  "known_gaps": ["BG-008"],
+
+  "patterns_applied": ["P-07", "P-31", "P-32"],
+
+  "mock_persona": {
+    "name": "Priya Subramaniam",
+    "employee_number": "EMP-0087",
+    "job_title": "Senior HR Business Partner",
+    "department": "People Operations",
+    "location": "Dubai HQ",
+    "employment_type": "FullTime",
+    "status": "Active"
+  }
+}

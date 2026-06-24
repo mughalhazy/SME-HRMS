@@ -1,0 +1,123 @@
+﻿{
+  "_meta": {
+    "id": "h03-leave-request-detail",
+    "archetype": "H03 Detail / Profile",
+    "page": "Leave Request Detail",
+    "surface": "admin",
+    "primary_actor": "Leave Approver / HR Administrator",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Leave", "Leave Requests", "LR-2025-0127-002"],
+      "actions": [
+        { "label": "Reject", "style": "danger", "leads_to": "H05 Reject Leave Workflow", "requires_confirm": true },
+        { "label": "Approve", "style": "primary", "leads_to": "H05 Approve Leave Workflow", "action": "PATCH /api/v1/leave/requests/:requestId → status=Approved" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "avatar": { "initials": "PS", "size": 56, "gradient": "violet" },
+      "name": "Annual Leave — Apr 7–11, 2025",
+      "role_line": "Priya Subramaniam · EMP-0127 · Senior HR Business Partner",
+      "chips": [
+        { "field": "status", "enum_ref": "ref:LEAVE_REQUEST_STATUSES", "style": "amber-if-submitted" },
+        { "field": "leave_request_id", "style": "grey", "font": "mono" },
+        { "field": "leave_type", "style": "grey" },
+        { "field": "total_days", "suffix": "days", "style": "grey" }
+      ]
+    },
+
+    "LAYOUT": {
+      "type": "2col-no-tabs",
+      "left_width": "1fr",
+      "right_width": "292px"
+    },
+
+    "LEFT_COLUMN": [
+      {
+        "card": "Request Details",
+        "service": "leave_service",
+        "model": "LeaveRequest",
+        "endpoint": "GET /api/v1/leave/requests/:requestId",
+        "fields": ["leave_request_id", "leave_type", "start_date", "end_date", "total_days", "reason", "approver_employee_id", "status", "submitted_at", "decision_at"]
+      },
+      {
+        "card": "AI Assessment",
+        "type": "ai-card",
+        "variant": "teal-informational",
+        "confidence_display": true,
+        "dismissable": true,
+        "note": "P-12 — teal = informational, no action required"
+      },
+      {
+        "card": "Approval History",
+        "type": "timeline",
+        "source": "GET /api/v1/leave/requests/:requestId/workflow-history"
+      }
+    ],
+
+    "RIGHT_COLUMN": [
+      {
+        "card": "Leave Balance",
+        "type": "balance-card",
+        "gap": "BG-006",
+        "note": "No backend endpoint. Mock data used. Requires GET /api/v1/leave/employees/:employeeId/balances",
+        "fields": ["leave_type", "entitlement_days", "taken_days", "pending_days", "remaining_days"]
+      },
+      {
+        "card": "After Approval Impact",
+        "type": "derived",
+        "description": "Shows remaining balance if this request is approved",
+        "source": "derived: remaining_days - total_days"
+      }
+    ]
+  },
+
+  "data_sources": {
+    "leave_request": {
+      "service": "leave_service",
+      "endpoint": "GET /api/v1/leave/requests/:requestId",
+      "model": "LeaveRequest"
+    },
+    "leave_balance": {
+      "service": "leave_service",
+      "endpoint": "BG-006 — NOT IMPLEMENTED",
+      "model": "LeaveBalance",
+      "gap": "BG-006"
+    }
+  },
+
+  "gaps": ["BG-006"],
+
+  "mock_data": {
+    "leave_request": {
+      "tenant_id": "t-meridian",
+      "leave_request_id": "LR-2025-0127-002",
+      "employee_id": "EMP-0127",
+      "leave_type": "Annual",
+      "start_date": "2025-04-07",
+      "end_date": "2025-04-11",
+      "total_days": 5,
+      "reason": "Family vacation — pre-planned travel",
+      "approver_employee_id": "EMP-0041",
+      "workflow_id": "WF-LVE-0041",
+      "status": "Submitted",
+      "submitted_at": "2025-03-20T10:15:00Z",
+      "decision_at": null,
+      "created_at": "2025-03-20T10:15:00Z",
+      "updated_at": "2025-03-20T10:15:00Z"
+    },
+    "leave_balance_mock": {
+      "note": "BG-006 — mock only, no real endpoint",
+      "employee_id": "EMP-0127",
+      "balances": [
+        { "leave_type": "Annual", "entitlement_days": 30, "taken_days": 3, "pending_days": 5, "remaining_days": 22 }
+      ]
+    }
+  }
+}

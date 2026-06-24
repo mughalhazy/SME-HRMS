@@ -1,0 +1,181 @@
+{
+  "contract": "hrms-h07-payroll-reports",
+  "version": "1.0",
+  "date": "2026-03-28",
+  "last_updated": "2026-03-28",
+  "page": "h07-payroll-reports.html",
+  "archetype": "H07 — HR Analytics / Reports",
+  "archetype_ref": "hrms-schema-template.json",
+  "status": "sealed",
+
+  "backend_service": "payroll_service",
+  "base_url": "/api/v1/payroll",
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "method": "GET",
+      "path": "/api/v1/payroll/records",
+      "params": {
+        "period_start": "ISO-8601 date",
+        "period_end": "ISO-8601 date"
+      },
+      "used_by": [
+        "tab-overview — KPI row (total gross, total net, employees paid, anomalies)",
+        "tab-overview — Monthly Payroll Trend line chart (last 6 months)",
+        "tab-overview — Pay Components donut (base/allowances/overtime split)",
+        "tab-overview — Department Payroll Summary table"
+      ],
+      "response_shape": {
+        "record_id": "uuid",
+        "employee_id": "uuid",
+        "pay_period_start": "ISO-8601 date",
+        "pay_period_end": "ISO-8601 date",
+        "base_salary": "decimal",
+        "allowances": "decimal",
+        "deductions": "decimal",
+        "overtime_pay": "decimal",
+        "gross_pay": "decimal",
+        "net_pay": "decimal",
+        "currency": "string (GBP)",
+        "status": "Draft | Processed | Paid | Cancelled"
+      },
+      "mock_workaround": "KPIs hardcoded: gross £4.82M, net £3.86M, 1247 paid, 3 anomalies. Trend line SVG static Oct–Mar. Donut: 68% base, 20% allowances, 12% overtime. 8 dept rows hardcoded."
+    },
+    {
+      "id": "E02",
+      "method": "GET",
+      "path": "/api/v1/payroll/records",
+      "params": {
+        "period_start": "ISO-8601 date",
+        "period_end": "ISO-8601 date",
+        "group_by": "month"
+      },
+      "used_by": [
+        "tab-monthly — KPI row (Jan/Feb/Mar gross, variance)",
+        "tab-monthly — Gross vs Net by Month grouped bar chart",
+        "tab-monthly — Deductions Breakdown inline bars",
+        "tab-monthly — Monthly Cycle Summary table (PayrollCycle data)"
+      ],
+      "response_shape": {
+        "month": "YYYY-MM string",
+        "employee_count": "int",
+        "gross_pay": "decimal",
+        "net_pay": "decimal",
+        "deductions": {
+          "income_tax": "decimal",
+          "national_insurance": "decimal",
+          "pension": "decimal",
+          "other": "decimal"
+        },
+        "currency": "string (GBP)"
+      },
+      "mock_workaround": "Jan £1,631k / Feb £1,589k / Mar £1,601k hardcoded. Deductions: Tax £432,180, NI £276,594, Pension £207,446, Other £51,800. Cycle summary 5 rows (Oct 2025–Mar 2026)."
+    },
+    {
+      "id": "E03",
+      "method": "GET",
+      "path": "/api/v1/payroll/records",
+      "params": {
+        "period_start": "ISO-8601 date",
+        "period_end": "ISO-8601 date",
+        "group_by": "department"
+      },
+      "used_by": [
+        "tab-dept — KPI row (highest dept, lowest dept, avg dept cost, eng share)",
+        "tab-dept — Payroll Cost by Department horizontal bar chart",
+        "tab-dept — Department Cost Detail table (base/allowances/overtime split)"
+      ],
+      "response_shape": {
+        "department_id": "uuid",
+        "department_name": "string",
+        "headcount": "int",
+        "base_salary": "decimal",
+        "allowances": "decimal",
+        "overtime_pay": "decimal",
+        "gross_pay": "decimal",
+        "deductions": "decimal",
+        "net_pay": "decimal",
+        "currency": "string (GBP)"
+      },
+      "mock_workaround": "8 departments hardcoded. Engineering £1,841k highest, HR £221k lowest, avg £602k. Cost detail table shows base/allowances/overtime split per dept."
+    },
+    {
+      "id": "E04",
+      "method": "GET",
+      "path": "/api/v1/payroll/records",
+      "params": {
+        "employee_id": "uuid (optional filter)",
+        "status": "Paid",
+        "period_start": "ISO-8601 date",
+        "period_end": "ISO-8601 date"
+      },
+      "used_by": [
+        "tab-payslips — Employee Payslips table (PayrollRecord fields per employee per period)"
+      ],
+      "response_shape": {
+        "record_id": "uuid",
+        "employee_id": "uuid",
+        "employee_name": "string",
+        "pay_period_start": "ISO-8601 date",
+        "pay_period_end": "ISO-8601 date",
+        "base_salary": "decimal",
+        "allowances": "decimal",
+        "overtime_pay": "decimal",
+        "deductions": "decimal",
+        "net_pay": "decimal",
+        "gross_pay": "decimal",
+        "currency": "string (GBP)",
+        "status": "Draft | Processed | Paid | Cancelled"
+      },
+      "mock_workaround": "8 payslip rows hardcoded: EMP-001 Sarah Mitchell through EMP-008 Chris Yuen. EMP-005 Amara Diallo shows Review status."
+    },
+    {
+      "id": "E05",
+      "method": "GET",
+      "path": "/api/v1/payroll/batches",
+      "params": {
+        "limit": "int (default 20)",
+        "offset": "int (default 0)"
+      },
+      "used_by": [
+        "tab-runs — KPI row (runs last 12mo, successful, partial failures, avg run time)",
+        "tab-runs — Payroll Run Log batch rows (PayrollBatch model)"
+      ],
+      "response_shape": {
+        "batch_id": "string",
+        "name": "string",
+        "pay_period_start": "ISO-8601 date",
+        "pay_period_end": "ISO-8601 date",
+        "payment_date": "ISO-8601 date",
+        "processed_count": "int",
+        "paid_count": "int",
+        "failed_count": "int",
+        "failures": ["record_id list"],
+        "status": "Pending | Processed | PartialFailure | Paid | Failed",
+        "run_at": "ISO-8601 datetime",
+        "duration_seconds": "int"
+      },
+      "mock_workaround": "5 batch rows hardcoded: BATCH-2026-03/02/01 all Paid (0 failures). BATCH-2025-11 PartialFailure (3 failed, reprocessed 01 Dec). BATCH-2025-10 Paid. KPIs: 12 runs, 11 successful, 1 partial, avg 4m 12s."
+    }
+  ],
+
+  "gaps": [],
+
+  "design_patterns": {
+    "P-07": "Chip anatomy: padding 2px 8px, border-radius 99px, font-size 11px, font-weight 600, uppercase, letter-spacing .04em — applied to status chips (Paid/Review/Partial) and run log status",
+    "P-11": "Table row hover: transition:background .12s on tbody tr:hover td",
+    "P-20": "Analytics layout: 5-tab report-nav, filter-bar (Period/Department/Status), topbar actions (Export PDF / Export CSV / Run Payroll primary)",
+    "P-27": "--dur-micro:120ms used for tab hover, row hover",
+    "P-31": "html{zoom:1.1} applied globally",
+    "P-32": ".page{flex:1;overflow-y:auto;min-height:0} + .content{padding:22px 22px 12vh}"
+  },
+
+  "tab_inventory": [
+    { "id": "overview",  "label": "Overview",           "status": "built", "api_refs": ["E01"] },
+    { "id": "monthly",   "label": "Monthly Breakdown",  "status": "built", "api_refs": ["E02"] },
+    { "id": "dept",      "label": "Department Costs",   "status": "built", "api_refs": ["E03"] },
+    { "id": "payslips",  "label": "Payslips",           "status": "built", "api_refs": ["E04"] },
+    { "id": "runs",      "label": "Run History",        "status": "built", "api_refs": ["E05"] }
+  ]
+}

@@ -1,0 +1,74 @@
+﻿{
+  "_meta": {
+    "id": "h02-documents", "archetype": "H02 List", "page": "Documents", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "HR Administrator",
+    "leads_to": ["H03 Document Detail"],
+    "actions": { "primary": "Upload Document", "secondary": [] }
+  },
+  "api_contract": {
+    "services": ["employee-service"],
+    "endpoints": {
+      "list":     "GET /api/v1/documents?status=&document_type=&employee_id=&limit=&offset=",
+      "expiring": "GET /api/v1/documents/expiring",
+      "summary":  "BG-005: no aggregate — expiry counts require client-side grouping",
+      "create":   "POST /api/v1/documents"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Documents", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Documents", "subtitle": "{{total_count}} documents · {{expiring_count}} expiring soon",
+        "actions": [{ "label": "Upload Document", "type": "primary", "icon": "upload" }]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 4, "gap_ref": "BG-005",
+        "items": [
+          { "key": "total",    "label": "Total",            "source": "BG-005 mock" },
+          { "key": "active",   "label": "Active",           "source": "BG-005 mock" },
+          { "key": "expiring", "label": "Expiring (30d)",   "source": "employee-service › GET /documents/expiring", "variant": "warn" },
+          { "key": "expired",  "label": "Expired",          "source": "BG-005 mock" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",      "filter": null },
+          { "label": "Active",   "filter": "status=Active" },
+          { "label": "Expiring", "filter": "expiring=true" },
+          { "label": "Expired",  "filter": "status=Expired" },
+          { "label": "Archived", "filter": "status=Archived" }
+        ],
+        "filters": [
+          { "key": "document_type", "label": "Document Type", "type": "select", "enum_ref": "ref:api-contracts#Document.type" },
+          { "key": "employee_id",   "label": "Employee",      "type": "select", "source": "employee-service › Employee" }
+        ],
+        "search": { "placeholder": "Search documents or employees…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "employee-service › EmployeeDocument (paginated)",
+        "row_action": "navigate → H03 Document Detail",
+        "columns": [
+          { "key": "title",          "label": "Document",     "width_pct": 22 },
+          { "key": "employee",       "label": "Employee",     "width_pct": 18, "component": "avatar_name" },
+          { "key": "document_type",  "label": "Type",         "width_pct": 12, "enum_ref": "ref:api-contracts#Document.type" },
+          { "key": "issued_on",      "label": "Issued",       "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "expiry_date",    "label": "Expiry",       "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "status",         "label": "Status",       "width_pct": 12, "component": "chip", "enum_ref": "ref:api-contracts#Document.status" },
+          { "key": "actions",        "label": "",             "width_pct": 12, "component": "row_actions" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

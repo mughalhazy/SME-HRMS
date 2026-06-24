@@ -1,0 +1,141 @@
+﻿{
+  "_meta": {
+    "id":            "h01-employee-self-service",
+    "archetype":     "H01 Dashboard",
+    "page":          "Employee Self-Service Dashboard",
+    "surface":       "employee",
+    "version":       "1.0",
+    "last_updated":  "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p1-dashboard.html",
+    "gaps":          ["BG-001"]
+  },
+
+  "workflow": {
+    "primary_actor": "Employee",
+    "leads_to": [
+      "H03 My Profile",
+      "H02 My Leave",
+      "H04 Raise Leave Request",
+      "H04 Raise Expense Claim",
+      "H04 Raise Travel Request"
+    ],
+    "actions": {
+      "primary": "Raise Request",
+      "secondary": []
+    }
+  },
+
+  "api_contract": {
+    "services": [
+      "leave_service",
+      "payroll_service",
+      "performance_service",
+      "attendance_service"
+    ],
+    "endpoints": {
+      "leave_balances":     "GET /api/v1/leave/employee/:employeeId/balances",
+      "leave_requests":     "GET /api/v1/leave/requests?employee_id=:employeeId",
+      "payroll_summary":    "GET /api/v1/payroll/employees/:employeeId/summary — BG-001",
+      "attendance_summary": "GET /api/v1/attendance/summary?employee_id=:employeeId&period_start=&period_end=",
+      "goals":              "GET /api/v1/performance/goals?employee_id=:employeeId"
+    }
+  },
+
+  "renderer_schema": {
+    "dsl_version":  "1.0",
+    "archetype":    "dashboard",
+    "surface":      "employee",
+    "page_title":   "My Dashboard",
+    "page_states":  ["loaded", "skeleton", "empty", "error"],
+
+    "chrome": {
+      "nav_active": "My Dashboard",
+      "topbar": {
+        "title":   "My Dashboard",
+        "actions": [
+          { "label": "Raise Request", "type": "primary", "icon": "plus" }
+        ]
+      }
+    },
+
+    "slots": {
+      "WELCOME_BANNER": {
+        "required": true,
+        "fields":   ["first_name", "role_title", "department_name", "employee_number", "days_tenure", "status"],
+        "source":   "employee-service › Employee",
+        "enum_ref": "ref:api-contracts#Employee.status"
+      },
+
+      "KPI_ROW": {
+        "required": true,
+        "columns":  4,
+        "items": [
+          {
+            "key":     "annual_leave_remaining",
+            "label":   "Annual Leave Left",
+            "source":  "leave_service › LeaveBalance.remaining_days (leave_type=Annual)",
+            "format":  "integer_days",
+            "gap_ref": "BG-001"
+          },
+          {
+            "key":    "next_payday",
+            "label":  "Next Payday",
+            "source": "payroll_service › PayrollCycle.payment_date",
+            "format": "date_short"
+          },
+          {
+            "key":    "goals_on_track",
+            "label":  "Goals On Track",
+            "source": "performance_service › GoalRecord (count status=Approved)"
+          },
+          {
+            "key":    "attendance_rate_month",
+            "label":  "Attendance (This Month)",
+            "source": "attendance_service › AttendanceRecord (present / working_days this month)",
+            "format": "percentage"
+          }
+        ]
+      },
+
+      "CHART_PRIMARY": {
+        "required": true,
+        "type":     "bar_horizontal",
+        "title":    "Leave Balances",
+        "source":   "leave_service › LeaveBalance (all leave types for employee)",
+        "fields":   ["leave_type", "remaining_days", "entitlement_days"],
+        "enum_ref": "ref:api-contracts#Leave.type",
+        "mock_data": [
+          { "leave_type": "Annual",  "remaining_days": 14, "entitlement_days": 25 },
+          { "leave_type": "Sick",    "remaining_days": 8,  "entitlement_days": 10 },
+          { "leave_type": "Casual",  "remaining_days": 3,  "entitlement_days": 5  },
+          { "leave_type": "Unpaid",  "remaining_days": 5,  "entitlement_days": 5  }
+        ]
+      },
+
+      "CHART_SECONDARY": {
+        "required": true,
+        "type":     "calendar_strip",
+        "title":    "Attendance — This Month",
+        "source":   "attendance_service › AttendanceRecord.attendance_status (current month)",
+        "enum_ref": "ref:api-contracts#Attendance.status"
+      },
+
+      "ACTIVITY_FEED": {
+        "required": true,
+        "type":     "progress_list",
+        "title":    "My Goals",
+        "source":   "performance_service › GoalRecord (employee_id, active cycle)",
+        "fields":   ["title", "current_value", "target_value", "status"],
+        "enum_ref": "ref:api-contracts#Goal.status",
+        "mock_data": [
+          { "title": "Reduce Forecast Variance",        "pct": 80,  "status": "Approved"  },
+          { "title": "Complete IFRS Compliance Training","pct": 100, "status": "Approved"  },
+          { "title": "Q1 Budget Reconciliation",         "pct": 55,  "status": "Approved"  },
+          { "title": "Automate Monthly Accruals",        "pct": 30,  "status": "Submitted" },
+          { "title": "Vendor Payment SLA <5 days",       "pct": 10,  "status": "Draft"     }
+        ]
+      }
+    }
+  }
+}

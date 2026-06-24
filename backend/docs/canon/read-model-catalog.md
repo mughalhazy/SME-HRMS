@@ -1,0 +1,227 @@
+﻿# Read Model Catalog
+
+This catalog defines query-optimized projections and validates each read model against canonical source services, workflows, and entities.
+
+## Cross-cutting conventions
+- Source of truth for services: `docs/canon/service-map.md`.
+- Source of truth for entities: `docs/canon/domain-model.md`.
+- Use immutable event timestamps where available for deterministic replay.
+- Preserve source identifiers (`*_id`) for traceability.
+- Keep personally identifiable information limited to operationally required fields.
+- Version read-model contracts when fields are added or renamed.
+- Read models may denormalize display-only attributes, but authoritative writes always go to owning services.
+
+## 1) `employee_directory_view`
+- **Source services:** `employee-service`
+- **Source workflows:** `employee_onboarding`
+- **Source entities:** `Employee`, `Department`, `Role`
+- **Key/grain:** one row per employee (`employee_id`)
+- **Fields:** `employee_id`, `employee_number`, `full_name`, `email`, `phone`, `hire_date`, `employment_type`, `employee_status`, `department_id`, `department_name`, `role_id`, `role_title`, `manager_employee_id`, `manager_name`, `updated_at`
+- **Primary consumers:** dashboard, employee list, employee profile
+
+## 2) `organization_structure_view`
+- **Source services:** `employee-service`
+- **Source workflows:** `employee_onboarding`
+- **Source entities:** `Department`, `Employee`, `Role`
+- **Key/grain:** one row per employee assignment within the org structure (`department_id`, `employee_id`)
+- **Fields:** `department_id`, `department_name`, `department_code`, `department_status`, `head_employee_id`, `head_employee_name`, `employee_id`, `employee_name`, `employee_status`, `manager_employee_id`, `manager_name`, `role_id`, `role_title`, `updated_at`
+- **Primary consumers:** departments page, roles page, manager hierarchy views
+
+## 3) `attendance_dashboard_view`
+- **Source services:** `attendance-service`, `employee-service`
+- **Source workflows:** `attendance_tracking`
+- **Source entities:** `AttendanceRecord`, `Employee`, `Department`
+- **Key/grain:** one row per employee per attendance date (`employee_id`, `attendance_date`)
+- **Fields:** `employee_id`, `employee_number`, `employee_name`, `department_id`, `department_name`, `attendance_date`, `attendance_status`, `check_in_time`, `check_out_time`, `total_hours`, `source`, `record_state`, `updated_at`
+- **Primary consumers:** dashboard, attendance dashboard, employee profile
+
+## 4) `leave_requests_view`
+- **Source services:** `leave-service`, `employee-service`
+- **Source workflows:** `leave_request`
+- **Source entities:** `LeaveRequest`, `Employee`, `Department`
+- **Key/grain:** one row per leave request (`leave_request_id`)
+- **Fields:** `leave_request_id`, `employee_id`, `employee_number`, `employee_name`, `department_id`, `department_name`, `leave_type`, `start_date`, `end_date`, `total_days`, `reason`, `approver_employee_id`, `approver_name`, `status`, `submitted_at`, `decision_at`, `updated_at`
+- **Primary consumers:** dashboard, leave requests, employee profile
+
+## 5) `payroll_summary_view`
+- **Source services:** `payroll-service`, `employee-service`, `attendance-service`, `leave-service`
+- **Source workflows:** `payroll_processing`
+- **Source entities:** `PayrollRecord`, `Employee`, `AttendanceRecord`, `LeaveRequest`, `Department`
+- **Key/grain:** one row per employee per pay period (`employee_id`, `pay_period_start`, `pay_period_end`)
+- **Fields:** `payroll_record_id`, `employee_id`, `employee_number`, `employee_name`, `department_id`, `department_name`, `pay_period_start`, `pay_period_end`, `base_salary`, `allowances`, `deductions`, `overtime_pay`, `gross_pay`, `net_pay`, `currency`, `payment_date`, `status`, `attendance_days_count`, `approved_leave_days`, `updated_at`
+- **Primary consumers:** dashboard, payroll dashboard, employee profile
+
+## 6) `job_posting_directory_view`
+- **Source services:** `hiring-service`, `employee-service`
+- **Source workflows:** `candidate_hiring`
+- **Source entities:** `JobPosting`, `Department`, `Role`
+- **Key/grain:** one row per job posting (`job_posting_id`)
+- **Fields:** `job_posting_id`, `title`, `department_id`, `department_name`, `role_id`, `role_title`, `employment_type`, `location`, `openings_count`, `posting_date`, `closing_date`, `status`, `candidate_count`, `updated_at`
+- **Primary consumers:** job postings page, dashboard
+
+## 7) `candidate_pipeline_view`
+- **Source services:** `hiring-service`, `employee-service`
+- **Source workflows:** `candidate_hiring`
+- **Source entities:** `Candidate`, `JobPosting`, `Department`, `Role`, `Interview`, `Employee`
+- **Key/grain:** one row per candidate application (`candidate_id`)
+- **Fields:** `candidate_id`, `candidate_name`, `candidate_email`, `job_posting_id`, `job_title`, `department_id`, `department_name`, `role_id`, `role_title`, `application_date`, `pipeline_stage`, `stage_updated_at`, `source`, `source_candidate_id`, `next_interview_at`, `interview_count`, `last_interview_recommendation`, `updated_at`
+- **Primary consumers:** candidate pipeline, dashboard
+
+## 8) `performance_review_view`
+- **Source services:** `performance-service`, `employee-service`
+- **Source workflows:** `performance_management`
+- **Source entities:** `ReviewCycle`, `Goal`, `Feedback`, `CalibrationSession`, `PipPlan`, `Employee`, `Department`
+- **Key/grain:** one row per employee per review cycle (`review_cycle_id`, `employee_id`)
+- **Fields:** `review_cycle_id`, `goal_id`, `employee_id`, `employee_name`, `manager_employee_id`, `manager_name`, `department_id`, `department_name`, `goal_title`, `goal_status`, `progress_percent`, `feedback_count`, `calibration_status`, `final_rating`, `pip_id`, `pip_status`, `pip_completion_percent`, `updated_at`
+- **Primary consumers:** performance workspace, employee profile, executive dashboard
+
+## 9) `engagement_survey_view`
+- **Source services:** `engagement-service`, `employee-service`
+- **Source workflows:** `engagement_feedback_collection`
+- **Source entities:** `Survey`, `SurveyQuestion`, `SurveyResponse`, `AggregatedSurveyResult`, `Employee`, `Department`
+- **Key/grain:** one row per survey (`survey_id`)
+- **Fields:** `survey_id`, `code`, `title`, `status`, `owner_employee_id`, `owner_name`, `target_department_id`, `target_department_name`, `response_count`, `participant_count`, `target_population`, `participation_rate`, `overall_average_score`, `favorable_ratio`, `dimension_scores`, `generated_at`, `updated_at`
+- **Primary consumers:** engagement workspace, people analytics, executive dashboards
+
+## 10) `settings_configuration_view`
+- **Source services:** `settings-service`
+- **Source workflows:** `settings_administration`
+- **Source entities:** `AttendanceRule`, `LeavePolicy`, `PayrollSettings`
+- **Key/grain:** one administrative configuration snapshot for the active tenant/workspace
+- **Fields:** `attendance_rules`, `leave_policies`, `payroll_settings`, `updated_at`
+- **Primary consumers:** settings workspace, administrative dashboards
+
+## 11) `access_control_view`
+- **Source services:** `auth-service`, `employee-service`
+- **Source workflows:** `access_provisioning`
+- **Source entities:** `UserAccount`, `RoleBinding`, `PermissionPolicy`, `Employee`, `Session`, `RefreshToken`
+- **Key/grain:** one row per user account (`user_id`)
+- **Fields:** `user_id`, `employee_id`, `employee_name`, `username`, `email`, `identity_provider`, `user_status`, `assigned_roles`, `effective_scopes`, `active_session_count`, `active_refresh_token_count`, `last_login_at`, `updated_at`
+- **Primary consumers:** settings, security administration
+
+## 12) `notification_delivery_view`
+- **Source services:** `notification-service`
+- **Source workflows:** `notification_dispatch`
+- **Source entities:** `NotificationMessage`, `DeliveryAttempt`, `NotificationTemplate`, `NotificationPreference`
+- **Key/grain:** one row per notification message (`message_id`)
+- **Fields:** `message_id`, `template_id`, `template_code`, `subject_type`, `subject_id`, `channel`, `destination`, `status`, `queued_at`, `sent_at`, `failure_reason`, `last_provider_name`, `last_attempt_outcome`, `attempt_count`, `updated_at`
+- **Primary consumers:** settings, support operations
+
+## 13) `integration_delivery_view`
+- **Source services:** `integration-service`
+- **Source workflows:** outbound integration dispatch
+- **Source entities:** `WebhookEndpoint`, `WebhookDelivery`, `WebhookDeliveryAttempt`
+- **Key/grain:** one row per webhook delivery (`delivery_id`)
+- **Fields:** `delivery_id`, `webhook_id`, `tenant_id`, `target_url`, `event_id`, `event_type`, `status`, `attempt_count`, `last_http_status`, `last_error`, `dead_lettered_at`, `updated_at`
+- **Primary consumers:** integration operations, support tooling, audit/replay views
+
+## 14) `document_library_view`
+- **Source services:** `documents`, `employee-service`
+- **Source workflows:** employee-document management, compliance tracking
+- **Source entities:** `EmployeeDocument`, `PolicyAcknowledgement`, `ComplianceTask`, `Employee`
+- **Key/grain:** one row per document metadata record (`document_id`)
+- **Fields:** `document_id`, `employee_id`, `employee_name`, `department_id`, `department_name`, `title`, `document_type`, `status`, `policy_code`, `expiry_date`, `requires_acknowledgement`, `created_at`, `updated_at`
+- **Primary consumers:** document operations, compliance dashboards, search indexing
+
+## 25) `global_search_view`
+- **Source services:** `search-service`
+- **Source workflows:** `projection_search_indexing`
+- **Source entities:** `SearchDocument`
+- **Key/grain:** one row per searchable projection document (`document_id`)
+- **Fields:** `document_id`, `tenant_id`, `source_view`, `source_key`, `domain`, `entity_type`, `display_name`, `department_id`, `department_name`, `role_id`, `role_title`, `status`, `updated_at`, `metadata`
+- **Primary consumers:** universal search, directory lookups, command palette, cross-domain navigation
+
+## 15) `compliance_status_view`
+- **Source services:** `compliance-service`, `payroll-service`
+- **Source workflows:** `compliance_submission`
+- **Source entities:** `ComplianceSubmission`, `ComplianceReport`, `ComplianceAuditRecord`
+- **Key/grain:** one row per submission (`submission_id`)
+- **Fields:** `submission_id`, `organization_id`, `legal_entity_id`, `period`, `submission_type`, `status`, `violations_count`, `report_artifact_url`, `submitted_at`, `acknowledged_at`, `payroll_gate_passed`, `updated_at`
+- **Primary consumers:** compliance dashboard, payroll processing gate, admin console
+
+## 16) `decision_cards_view`
+- **Source services:** `decision-service`
+- **Source workflows:** `anomaly_review`
+- **Source entities:** `DecisionCard`, `AnomalyRecord`, `DecisionAuditEntry`
+- **Key/grain:** one row per Decision Card (`card_id`)
+- **Fields:** `card_id`, `anomaly_type`, `domain`, `employee_id`, `employee_name`, `period`, `risk_score`, `confidence`, `threshold_level`, `recommended_action`, `reversibility`, `expires_at`, `status`, `why_flagged_summary`, `created_at`, `updated_at`
+- **Primary consumers:** decision center, manager dashboard, HR admin console
+
+## 17) `financial_wellness_view`
+- **Source services:** `ewa-financial-service`
+- **Source workflows:** `ewa_disbursement`, `advance_request`
+- **Source entities:** `EWARequest`, `SalaryAdvance`, `RepaymentSchedule`
+- **Key/grain:** one row per employee (`employee_id`)
+- **Fields:** `employee_id`, `employee_name`, `available_ewa_balance`, `active_advance_id`, `advance_outstanding_amount`, `next_deduction_amount`, `next_deduction_date`, `ewa_eligibility_status`, `advance_eligibility_status`, `updated_at`
+- **Primary consumers:** financial wellness portal, employee self-service
+
+## 18) `disbursement_status_view`
+- **Source services:** `bank-service`, `payroll-service`
+- **Source workflows:** `salary_disbursement`, `payment_reconciliation`
+- **Source entities:** `DisbursementBatch`, `PaymentRecord`, `ReconciliationReport`
+- **Key/grain:** one row per employee per disbursement batch (`disbursement_id`, `employee_id`)
+- **Fields:** `disbursement_id`, `employee_id`, `employee_name`, `period`, `expected_amount`, `payment_status`, `payment_method`, `bank_reference`, `confirmed_at`, `failure_reason`, `reconciled`, `updated_at`
+- **Primary consumers:** banking disbursement dashboard, payroll admin, reconciliation workspace
+
+## 19) `analytics_dashboard_view`
+- **Source services:** `reporting-analytics-service`
+- **Source workflows:** `report_generation`
+- **Source entities:** `AnalyticsProjection`, `ReportExecution`
+- **Key/grain:** aggregated KPI snapshot per tenant and period
+- **Fields:** `period`, `headcount_total`, `headcount_active`, `attrition_rate`, `payroll_total_cost`, `compliance_submission_rate`, `attendance_avg_rate`, `leave_utilization_rate`, `anomaly_count_high`, `anomaly_count_medium`, `updated_at`
+- **Primary consumers:** executive dashboard, HR admin analytics, manager insights
+
+## 20) `whatsapp_session_view`
+- **Source services:** `whatsapp-service`
+- **Source workflows:** `whatsapp_payslip_request`, `whatsapp_leave_application`, `whatsapp_approval_action`
+- **Source entities:** `WhatsAppIdentityMap`, `WhatsAppSession`
+- **Key/grain:** one row per employee identity mapping (`employee_id`)
+- **Fields:** `employee_id`, `employee_name`, `phone_e164`, `identity_status`, `verified_at`, `session_active`, `session_started_at`, `last_seen_at`, `message_count`, `updated_at`
+- **Primary consumers:** WhatsApp admin surface, audit log
+
+## 21) `expense_claims_view`
+- **Source services:** `expense-service`, `employee-service`
+- **Source workflows:** `expense_reimbursement`
+- **Source entities:** `ExpenseClaim`, `ExpenseReceipt`, `Employee`
+- **Key/grain:** one row per expense claim (`claim_id`)
+- **Fields:** `claim_id`, `employee_id`, `employee_name`, `department_id`, `department_name`, `category`, `amount`, `currency`, `receipt_count`, `status`, `submitted_at`, `approver_employee_id`, `approver_name`, `decision_at`, `updated_at`
+- **Primary consumers:** expense management workspace, employee self-service
+
+## 22) `helpdesk_tickets_view`
+- **Source services:** `helpdesk-service`, `employee-service`
+- **Source workflows:** `hr_ticket_resolution`
+- **Source entities:** `HelpDeskTicket`, `TicketComment`, `TicketCategory`, `Employee`
+- **Key/grain:** one row per ticket (`ticket_id`)
+- **Fields:** `ticket_id`, `employee_id`, `employee_name`, `department_id`, `department_name`, `category`, `subject`, `status`, `priority`, `assigned_to_id`, `assigned_to_name`, `sla_deadline`, `sla_breached`, `created_at`, `resolved_at`, `updated_at`
+- **Primary consumers:** helpdesk workspace, HR ops queue, employee self-service
+
+## 23) `helpdesk_sla_view`
+- **Source services:** `helpdesk-service`
+- **Source workflows:** `hr_ticket_resolution`
+- **Source entities:** `HelpDeskTicket`, `TicketCategory`
+- **Key/grain:** aggregated SLA metrics per category and period
+- **Fields:** `period`, `category`, `total_tickets`, `resolved_within_sla`, `breached_sla`, `avg_resolution_hours`, `sla_compliance_rate`, `updated_at`
+- **Primary consumers:** HR ops SLA reporting, admin analytics
+
+## 24) `automation_execution_view`
+- **Source services:** `automation-service`
+- **Source workflows:** `automation_execution`
+- **Source entities:** `AutomationRule`, `AutomationExecution`, `AutomationExecutionLog`
+- **Key/grain:** one row per automation execution (`execution_id`)
+- **Fields:** `execution_id`, `automation_id`, `automation_name`, `trigger_type`, `trigger_event`, `status`, `actions_dispatched`, `actions_succeeded`, `actions_failed`, `started_at`, `completed_at`, `error_summary`, `updated_at`
+- **Primary consumers:** automations admin surface, audit log
+
+---
+
+## Search/indexing extensions (from read-models.md)
+- `document_library_view` extends document metadata coverage for search and compliance-friendly document discovery.
+- `global_search_view` is a search-owned projection that denormalizes canonical read models into query-optimized search documents.
+- Search APIs must read from `global_search_view` / search projections only.
+- Upstream domain services remain authoritative for writes and business rules.
+
+
+## Coverage checklist
+
+- Every workflow in `docs/canon/workflow-catalog.md` produces or consumes at least one read model.
+- Every UI-facing operational area has a read model contract.
+- Every source entity listed above is defined in `docs/canon/domain-model.md`.

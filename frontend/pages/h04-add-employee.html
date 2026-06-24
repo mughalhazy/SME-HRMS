@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Add Employee</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;--grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;--blue:#1D4ED8;--bl:#DBEAFE;--violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+/* Topbar */
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+/* Step header */
+.step-header{background:var(--w);border-bottom:1px solid var(--bd);padding:0 24px;flex-shrink:0}
+.step-top{display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px}
+.step-title{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.step-sub{font-size:12.5px;color:var(--t3);margin-top:2px}
+.steps-row{display:flex;align-items:center}
+.step{display:flex;align-items:center;gap:6px;padding:9px 10px;cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.step.done{color:var(--grn)}.step.active{border-bottom-color:var(--teal)}.step.pending{color:var(--t4)}
+.step-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.step.done .step-num{background:var(--gl);color:var(--grn)}
+.step.active .step-num{background:var(--teal);color:#fff}
+.step.pending .step-num{background:var(--t5);color:var(--t4)}
+.step-lbl{font-size:12px;font-weight:600}
+.step.active .step-lbl{color:var(--teal)}.step.done .step-lbl{color:var(--grn)}.step.pending .step-lbl{color:var(--t4)}
+.step-arr{color:var(--bd);font-size:13px;line-height:1;margin:0 1px;flex-shrink:0}
+/* Form layout */
+.form-wrap{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px}
+/* P-32: min-height:0 on grid children with overflow-y:auto */
+.form-main{overflow-y:auto;min-height:0;padding:22px 26px 32px;border-right:1px solid var(--bd)}
+.form-rail{overflow-y:auto;min-height:0;background:var(--w);padding:18px}
+/* Sections */
+.section{margin-bottom:24px}
+.sec-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.sec-sub{font-size:12px;color:var(--t3);margin-bottom:14px}
+.sec-div{height:1px;background:var(--bd);margin:20px 0}
+/* Field grids */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px}
+.span2{grid-column:1/-1}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--t2)}
+.req{color:var(--red);margin-left:2px}
+input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);
+  font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);
+  transition:border-color .14s,box-shadow .14s;line-height:1.5
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+input::placeholder,textarea::placeholder{color:var(--t4)}
+textarea{resize:vertical;min-height:76px}
+.fhint{font-size:11px;color:var(--t4);line-height:1.4}
+.fgap{font-size:11px;color:var(--amber);font-weight:600;background:var(--al);padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px}
+/* Avatar upload */
+.av-upload{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg);border:1.5px dashed var(--bd);border-radius:var(--r2);margin-bottom:4px;cursor:pointer;transition:all .14s}
+.av-upload:hover{border-color:var(--teal);background:var(--tl)}
+.av-preview{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0EA5E9,#0F766E);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0}
+.av-info{flex:1}.av-lbl{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px}.av-sub{font-size:11.5px;color:var(--t3)}
+/* Radio groups */
+.radio-group{display:flex;gap:7px;flex-wrap:wrap}
+.ropt{display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;font-size:12.5px;color:var(--t2);user-select:none}
+.ropt:hover{border-color:var(--tb);background:var(--tl)}
+.ropt.on{border-color:var(--teal);background:var(--tl);color:var(--teal);font-weight:600}
+.rdot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.ropt.on .rdot{border-color:var(--teal);background:var(--teal)}
+.ropt.on .rdot::after{content:'';width:5px;height:5px;border-radius:50%;background:#fff}
+/* Access rows */
+.acc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:8px}
+.acc-row:last-child{margin-bottom:0}
+.acc-info{flex:1}.acc-name{font-size:13px;font-weight:600;color:var(--t1)}.acc-sub{font-size:11.5px;color:var(--t3)}
+.acc-row select{width:130px;padding:5px 8px;font-size:12px}
+/* Gap badge */
+.gap-note{background:var(--al);border:1px solid #FCD34D;border-radius:var(--r);padding:9px 12px;font-size:12px;color:var(--amber);margin-bottom:16px;display:flex;align-items:flex-start;gap:7px}
+.gap-note svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;flex-shrink:0;margin-top:1px}
+/* Rail */
+.rail-sec{margin-bottom:18px}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:9px}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--t5)}
+.sum-row:last-child{border-bottom:none}
+.sum-l{font-size:12px;color:var(--t3)}.sum-v{font-size:12px;font-weight:600;color:var(--t1)}.sum-e{color:var(--t4);font-style:italic;font-weight:400}
+/* AI suggest */
+.ai-sug{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);padding:11px;margin-bottom:12px}
+.ais-head{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.ais-dot{width:5px;height:5px;border-radius:50%;background:var(--teal)}
+.ais-lbl{font-size:9.5px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.10em}
+.ais-text{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:7px}
+.ais-chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:rgba(10,143,132,.10);color:var(--teal);cursor:pointer;display:inline-block;margin:2px;transition:all .12s}
+.ais-chip:hover{background:rgba(10,143,132,.2)}
+/* Checklist */
+.cl-item{display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:7px}
+.cl-num{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.cl-done{background:var(--gl);color:var(--grn)}.cl-act{background:var(--teal);color:#fff}.cl-pend{background:var(--t5);color:var(--t4)}
+/* Footer */
+.form-footer{background:var(--w);border-top:1px solid var(--bd);padding:13px 24px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ff-info{flex:1;font-size:12px;color:var(--t4)}
+.ff-info strong{color:var(--t2);font-weight:600}
+.ff-prog{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--t3);margin-right:4px}
+/* Step content */
+.step-content{display:none}.step-content.active{display:block}
+/* Review cards */
+.rev-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.rev-card{background:var(--bg);border-radius:var(--r);padding:14px}
+.rev-card-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.rev-line{font-size:12.5px;color:var(--t3);margin-bottom:2px}
+.rev-line strong{color:var(--t1);font-weight:600}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+<main class="main">
+  <div class="topbar">
+    <div class="crumb"><a>Employees</a><span class="sep">›</span><span class="cur">Add New Employee</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn btn-sm"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v14a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Draft</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- Step header -->
+  <div class="step-header">
+    <div class="step-top">
+      <div><div class="step-title">Add New Employee</div><div class="step-sub">Complete all sections to onboard the new hire &middot; employee-service · auth-service</div></div>
+      <span style="font-size:11.5px;color:var(--t4)"><span style="color:var(--red)">*</span> Required fields</span>
+    </div>
+    <div class="steps-row" id="steps-row">
+      <div class="step active" onclick="goStep(1)"><div class="step-num">1</div><div class="step-lbl">Personal</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(2)"><div class="step-num">2</div><div class="step-lbl">Employment</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(3)"><div class="step-num">3</div><div class="step-lbl">Role &amp; Dept</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(4)"><div class="step-num">4</div><div class="step-lbl">Compensation</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(5)"><div class="step-num">5</div><div class="step-lbl">Access</div></div>
+      <span class="step-arr">›</span>
+      <div class="step pending" onclick="goStep(6)"><div class="step-num">6</div><div class="step-lbl">Review</div></div>
+    </div>
+  </div>
+
+  <div class="form-wrap">
+    <div class="form-main">
+
+      <!-- STEP 1: Personal Info -->
+      <div id="step-1" class="step-content active">
+        <div class="section">
+          <div class="sec-title">Profile Photo</div>
+          <div class="sec-sub">Upload a professional photo or use initials as placeholder</div>
+          <div class="av-upload">
+            <div class="av-preview">AH</div>
+            <div class="av-info"><div class="av-lbl">Upload Profile Photo</div><div class="av-sub">JPG or PNG &middot; max 5 MB &middot; square images work best</div></div>
+            <button class="btn btn-sm" onclick="event.stopPropagation()">Choose File</button>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Personal Information</div>
+          <div class="sec-sub">Basic identity and contact details</div>
+          <div class="fg">
+            <div class="fgroup"><label>First Name <span class="req">*</span></label><input type="text" value="Amir"></div>
+            <div class="fgroup"><label>Last Name <span class="req">*</span></label><input type="text" value="Hassan"></div>
+            <div class="fgroup"><label>Preferred Name <span class="fgap">UI only &middot; BG-008</span></label><input type="text" placeholder="Optional display name"></div>
+            <div class="fgroup"><label>Date of Birth <span class="fgap">UI only &middot; BG-008</span></label><input type="date" value="1994-07-22"></div>
+            <div class="fgroup"><label>Nationality <span class="fgap">UI only &middot; BG-008</span></label><select><option>UAE National</option><option>Egyptian</option><option>Indian</option><option>British</option><option>American</option><option>Other</option></select></div>
+            <div class="fgroup"><label>Phone</label><input type="text" value="+971 50 234 5678"></div>
+            <div class="fgroup span2"><label>Work Email <span class="req">*</span></label><input type="email" value="a.hassan@meridian.ae"><div class="fhint">Provisioned work address &mdash; required for system access</div></div>
+            <div class="fgroup span2"><label>Personal Email <span class="fgap">UI only &middot; BG-008</span></label><input type="email" value="amir.hassan.ae@gmail.com"><div class="fhint">Used for pre-boarding communications before work email is active</div></div>
+            <div class="fgroup span2"><label>Home Address <span class="fgap">UI only &middot; BG-008</span></label><input type="text" value="Villa 14, Al Barsha 2, Dubai, UAE"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Employment -->
+      <div id="step-2" class="step-content">
+        <div class="section">
+          <div class="sec-title">Employment Details</div>
+          <div class="sec-sub">Hire date, employment type, and contract information</div>
+          <div class="fg">
+            <div class="fgroup"><label>Hire Date <span class="req">*</span></label><input type="date" value="2025-04-15"></div>
+            <div class="fgroup"><label>Employee Number <span class="req">*</span></label><input type="text" value="EMP-0412" style="font-family:var(--mono)"><div class="fhint">Auto-generated &mdash; edit if needed</div></div>
+            <div class="fgroup"><label>Initial Status</label><select><option>Draft</option><option selected>Active</option></select></div>
+            <div class="fgroup"><label>Probation End Date <span class="fgap">UI only &middot; BG-008</span></label><input type="date" value="2025-07-15"></div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Employment Type <span class="req">*</span></div>
+          <div class="sec-sub">Matches employee-service EMPLOYMENT_TYPES enum</div>
+          <div class="radio-group" id="rg-etype">
+            <div class="ropt on" onclick="selOpt(this,'rg-etype')"><div class="rdot"></div>Full Time</div>
+            <div class="ropt" onclick="selOpt(this,'rg-etype')"><div class="rdot"></div>Part Time</div>
+            <div class="ropt" onclick="selOpt(this,'rg-etype')"><div class="rdot"></div>Contract</div>
+            <div class="ropt" onclick="selOpt(this,'rg-etype')"><div class="rdot"></div>Intern</div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Work Location <span class="req">*</span></div>
+          <div class="radio-group" id="rg-wloc" style="margin-bottom:12px">
+            <div class="ropt on" onclick="selOpt(this,'rg-wloc')"><div class="rdot"></div>Hybrid</div>
+            <div class="ropt" onclick="selOpt(this,'rg-wloc')"><div class="rdot"></div>On-site</div>
+            <div class="ropt" onclick="selOpt(this,'rg-wloc')"><div class="rdot"></div>Remote</div>
+          </div>
+          <div class="fg">
+            <div class="fgroup"><label>Primary Office</label><select><option>Dubai, UAE (HQ)</option><option>Abu Dhabi, UAE</option><option>Riyadh, KSA</option><option>Cairo, Egypt</option></select></div>
+            <div class="fgroup"><label>Onsite Days / Week</label><select><option>3 days</option><option>2 days</option><option>4 days</option><option>5 days</option></select></div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Organisational Scope</div>
+          <div class="fg">
+            <div class="fgroup"><label>Business Unit</label><select><option>Engineering &amp; Product</option><option>HR &amp; Talent</option><option>Finance &amp; Legal</option><option>Sales &amp; GTM</option></select></div>
+            <div class="fgroup"><label>Legal Entity</label><select><option>Meridian FZCO (UAE)</option><option>Meridian KSA Ltd</option><option>Meridian Egypt LLC</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Role & Department -->
+      <div id="step-3" class="step-content">
+        <div class="section">
+          <div class="sec-title">Department &amp; Role</div>
+          <div class="sec-sub">employee-service &mdash; department_id and role_id are required</div>
+          <!-- employee-service: GET /api/v1/departments, GET /api/v1/roles -->
+          <div class="fg">
+            <div class="fgroup"><label>Department <span class="req">*</span></label><select><option>Engineering</option><option>Product</option><option>People Operations</option><option>Finance</option><option>Sales</option><option>Marketing</option></select></div>
+            <div class="fgroup"><label>Role <span class="req">*</span></label><select><option>Junior Data Engineer</option><option>Senior Data Engineer</option><option>Senior Software Engineer</option><option>Product Manager</option><option>HR Business Partner</option></select></div>
+            <div class="fgroup span2"><label>Job Title</label><input type="text" value="Junior Data Engineer"><div class="fhint">Display title &mdash; may differ from canonical role name</div></div>
+            <div class="fgroup"><label>Direct Manager</label><select><option>Omar Al-Rashidi (Engineering)</option><option>Priya Subramaniam (People Ops)</option><option>James Kolawole (People Ops)</option></select></div>
+            <div class="fgroup"><label>Job Position</label><input type="text" placeholder="Optional position reference" style="font-family:var(--mono)"><div class="fhint">Links to job_position_id if defined</div></div>
+            <div class="fgroup"><label>Grade Band</label><select><option>G3 &mdash; Junior</option><option>G4 &mdash; Mid</option><option>G5 &mdash; Senior</option><option>G6 &mdash; Staff</option><option>G7 &mdash; Principal</option></select></div>
+            <div class="fgroup"><label>Cost Centre</label><select><option>CC-ENG-001 (Engineering)</option><option>CC-HR-001 (HR &amp; Talent)</option><option>CC-FIN-001 (Finance)</option></select></div>
+            <div class="fgroup"><label>Matrix Manager</label><input type="text" placeholder="Optional &mdash; type to search employees"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Compensation -->
+      <div id="step-4" class="step-content">
+        <div class="gap-note">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>BG-007 (Compensation):</strong> Salary revision must be created via a separate <code style="font-family:var(--mono);font-size:11px">POST /compensation/salary-revisions</code> call after employee creation. This step captures the intent &mdash; submission is mocked.</div>
+        </div>
+        <div class="section">
+          <div class="sec-title">Base Salary</div>
+          <div class="sec-sub">compensation.model &mdash; SalaryRevision: base_salary · currency · effective_from</div>
+          <div class="fg">
+            <div class="fgroup"><label>Base Salary <span class="req">*</span></label><input type="number" value="145000"></div>
+            <div class="fgroup"><label>Currency <span class="req">*</span></label><select><option>AED &mdash; UAE Dirham</option><option>USD &mdash; US Dollar</option><option>GBP &mdash; British Pound</option><option>EUR &mdash; Euro</option><option>SAR &mdash; Saudi Riyal</option></select></div>
+            <div class="fgroup"><label>Pay Schedule <span class="req">*</span></label><select><option>Monthly</option><option>Semi-monthly</option><option>Bi-weekly</option></select></div>
+            <div class="fgroup"><label>Compensation Band</label><select><option>G3 &mdash; Band (AED 120k–160k)</option><option>G4 &mdash; Band (AED 165k–210k)</option><option>G5 &mdash; Band (AED 220k–280k)</option></select></div>
+            <div class="fgroup"><label>Effective From</label><input type="date" value="2025-04-15"><div class="fhint">Defaults to hire date</div></div>
+            <div class="fgroup"><label>Bonus Target %</label><input type="number" value="10"></div>
+          </div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Benefits Enrollment</div>
+          <div class="sec-sub">compensation.model &mdash; BenefitsEnrollment: BENEFITS_PLAN_TYPES (Health · Retirement · Insurance · Wellness · Other)</div>
+          <div class="radio-group" id="rg-ben">
+            <div class="ropt on" onclick="selOpt(this,'rg-ben')"><div class="rdot"></div>Standard Package</div>
+            <div class="ropt" onclick="selOpt(this,'rg-ben')"><div class="rdot"></div>Premium Package</div>
+            <div class="ropt" onclick="selOpt(this,'rg-ben')"><div class="rdot"></div>Opt Out</div>
+          </div>
+          <div style="margin-top:10px;font-size:11.5px;color:var(--t3)">Standard: Medical (Health) &middot; DEWS (Retirement) &middot; Group Life (Insurance)</div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">Allowances</div>
+          <div class="sec-sub">compensation.model &mdash; Allowance: recurring amounts credited alongside payroll</div>
+          <div class="fg">
+            <div class="fgroup"><label>Housing Allowance (AED / mo)</label><input type="number" value="5000"></div>
+            <div class="fgroup"><label>Transport Allowance (AED / mo)</label><input type="number" value="1200"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Access & Roles -->
+      <div id="step-5" class="step-content">
+        <div class="gap-note">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>BG-007 (Auth):</strong> auth-service has no HTTP endpoints for <code style="font-family:var(--mono);font-size:11px">register_user</code> or <code style="font-family:var(--mono);font-size:11px">assign_role_binding</code>. Access provisioning is mocked &mdash; must be handled out-of-band until endpoints are exposed.</div>
+        </div>
+        <div class="section">
+          <div class="sec-title">Meridian HCM Access</div>
+          <div class="sec-sub">auth-service &mdash; assign role binding for this employee</div>
+          <div class="radio-group" id="rg-hcm" style="margin-bottom:10px">
+            <div class="ropt on" onclick="selOpt(this,'rg-hcm')"><div class="rdot"></div>Employee (self-service)</div>
+            <div class="ropt" onclick="selOpt(this,'rg-hcm')"><div class="rdot"></div>Manager</div>
+            <div class="ropt" onclick="selOpt(this,'rg-hcm')"><div class="rdot"></div>HR Staff</div>
+            <div class="ropt" onclick="selOpt(this,'rg-hcm')"><div class="rdot"></div>Payroll Admin</div>
+            <div class="ropt" onclick="selOpt(this,'rg-hcm')"><div class="rdot"></div>System Admin</div>
+          </div>
+          <div class="fhint">Sets the principal role used for all permission checks within Meridian HCM</div>
+        </div>
+        <div class="sec-div"></div>
+        <div class="section">
+          <div class="sec-title">External System Access</div>
+          <div class="sec-sub">Provisioned by IT on day one &mdash; captured here for onboarding record</div>
+          <div class="acc-row"><div class="acc-info"><div class="acc-name">GitHub (Engineering Org)</div><div class="acc-sub">Source code &amp; private repositories</div></div><select><option>Member</option><option>Maintainer</option><option>No Access</option></select></div>
+          <div class="acc-row"><div class="acc-info"><div class="acc-name">AWS (Dev Environment)</div><div class="acc-sub">Development environment &amp; log access</div></div><select><option>Dev Access</option><option>Read Only</option><option>No Access</option></select></div>
+          <div class="acc-row"><div class="acc-info"><div class="acc-name">Jira &amp; Confluence</div><div class="acc-sub">Project management &amp; documentation</div></div><select><option>Member</option><option>Admin</option><option>No Access</option></select></div>
+          <div class="acc-row"><div class="acc-info"><div class="acc-name">Slack (Engineering workspace)</div><div class="acc-sub">Channels: #engineering #data-team #general</div></div><select><option>Full Member</option><option>Guest</option><option>No Access</option></select></div>
+          <div class="acc-row"><div class="acc-info"><div class="acc-name">Google Workspace</div><div class="acc-sub">Email &amp; collaborative tools</div></div><select><option>Full Access</option><option>Email Only</option><option>No Access</option></select></div>
+        </div>
+      </div>
+
+      <!-- STEP 6: Review -->
+      <div id="step-6" class="step-content">
+        <div class="section">
+          <div class="sec-title">Review &amp; Submit</div>
+          <div class="sec-sub">Confirm all details before creating the employee record &mdash; employee-service: POST /api/v1/employees</div>
+          <div class="rev-grid">
+            <div class="rev-card">
+              <div class="rev-card-lbl">Personal</div>
+              <div class="rev-line"><strong>Amir Hassan</strong></div>
+              <div class="rev-line">DOB: <strong>22 Jul 1994</strong></div>
+              <div class="rev-line">a.hassan@meridian.ae</div>
+              <div class="rev-line">+971 50 234 5678</div>
+            </div>
+            <div class="rev-card">
+              <div class="rev-card-lbl">Employment</div>
+              <div class="rev-line">ID: <strong style="font-family:var(--mono)">EMP-0412</strong></div>
+              <div class="rev-line">Type: <strong>Full Time · Permanent</strong></div>
+              <div class="rev-line">Hire: <strong>15 Apr 2025</strong></div>
+              <div class="rev-line">Location: <strong>Hybrid · Dubai HQ</strong></div>
+            </div>
+            <div class="rev-card">
+              <div class="rev-card-lbl">Role &amp; Department</div>
+              <div class="rev-line"><strong>Junior Data Engineer</strong></div>
+              <div class="rev-line">Dept: <strong>Engineering</strong></div>
+              <div class="rev-line">Manager: <strong>Omar Al-Rashidi</strong></div>
+              <div class="rev-line">Grade: <strong>G3 &mdash; Junior</strong></div>
+            </div>
+            <div class="rev-card">
+              <div class="rev-card-lbl">Compensation</div>
+              <div class="rev-line" style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--teal)">AED 145,000</div>
+              <div class="rev-line">Band G3 &middot; Monthly &middot; Bonus 10%</div>
+              <div class="rev-line">Housing AED 5k &middot; Transport AED 1.2k</div>
+              <div class="rev-line" style="color:var(--amber);font-size:11px;margin-top:4px">Salary revision set separately (BG-007)</div>
+            </div>
+            <div class="rev-card">
+              <div class="rev-card-lbl">Access &amp; Roles</div>
+              <div class="rev-line">HCM: <strong>Employee (self-service)</strong></div>
+              <div class="rev-line">GitHub, AWS, Jira, Slack, Google</div>
+              <div class="rev-line" style="color:var(--amber);font-size:11px;margin-top:4px">Auth provisioning deferred (BG-007)</div>
+            </div>
+            <div class="rev-card">
+              <div class="rev-card-lbl">Benefits</div>
+              <div class="rev-line"><strong>Standard Package</strong></div>
+              <div class="rev-line">Medical &middot; DEWS &middot; Group Life</div>
+              <div class="rev-line">Enrollment effective Apr 15, 2025</div>
+            </div>
+          </div>
+          <div style="background:var(--gl);border:1px solid #86EFAC;border-radius:var(--r);padding:11px 14px;display:flex;align-items:center;gap:8px">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0;fill:none;stroke:var(--grn);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>
+            <div style="font-size:13px;color:var(--grn);font-weight:600">All required fields complete &mdash; ready to create employee record</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /form-main -->
+
+    <!-- Rail -->
+    <div class="form-rail">
+      <div class="rail-sec">
+        <div class="rail-lbl">Summary</div>
+        <div class="sum-row"><span class="sum-l">Full Name</span><span class="sum-v">Amir Hassan</span></div>
+        <div class="sum-row"><span class="sum-l">Employee ID</span><span class="sum-v" style="font-family:var(--mono);font-size:11.5px">EMP-0412</span></div>
+        <div class="sum-row"><span class="sum-l">Department</span><span class="sum-v">Engineering</span></div>
+        <div class="sum-row"><span class="sum-l">Role</span><span class="sum-v">Jr. Data Engineer</span></div>
+        <div class="sum-row"><span class="sum-l">Hire Date</span><span class="sum-v" style="font-family:var(--mono);font-size:11px">Apr 15, 2025</span></div>
+        <div class="sum-row"><span class="sum-l">Manager</span><span class="sum-v">O. Al-Rashidi</span></div>
+        <div class="sum-row"><span class="sum-l">Location</span><span class="sum-v">Dubai HQ</span></div>
+        <div class="sum-row"><span class="sum-l">Type</span><span class="sum-v">Full Time</span></div>
+        <div class="sum-row"><span class="sum-l">Base Salary</span><span id="sum-sal" class="sum-v sum-e">Step 4</span></div>
+        <div class="sum-row"><span class="sum-l">HCM Access</span><span id="sum-acc" class="sum-v sum-e">Step 5</span></div>
+      </div>
+      <div class="rail-sec">
+        <div class="rail-lbl">AI Suggestions</div>
+        <div class="ai-sug">
+          <div class="ais-head"><div class="ais-dot"></div><div class="ais-lbl">Smart Fill</div></div>
+          <div class="ais-text">Based on Junior Data Engineer in Engineering, typical values:</div>
+          <span class="ais-chip">AED 135k&ndash;155k</span>
+          <span class="ais-chip">Grade G3</span>
+          <span class="ais-chip">Hybrid 3d</span>
+          <span class="ais-chip">GitHub member</span>
+          <span class="ais-chip">AWS dev env</span>
+        </div>
+      </div>
+      <div class="rail-sec">
+        <div class="rail-lbl">Checklist</div>
+        <div class="cl-item" id="cl-1"><div class="cl-num cl-act">1</div><span style="font-weight:600;color:var(--t1)">Personal information</span></div>
+        <div class="cl-item" id="cl-2"><div class="cl-num cl-pend">2</div><span style="color:var(--t4)">Employment details</span></div>
+        <div class="cl-item" id="cl-3"><div class="cl-num cl-pend">3</div><span style="color:var(--t4)">Role &amp; Department</span></div>
+        <div class="cl-item" id="cl-4"><div class="cl-num cl-pend">4</div><span style="color:var(--t4)">Compensation</span></div>
+        <div class="cl-item" id="cl-5"><div class="cl-num cl-pend">5</div><span style="color:var(--t4)">Access &amp; Roles</span></div>
+        <div class="cl-item" id="cl-6"><div class="cl-num cl-pend">6</div><span style="color:var(--t4)">Review &amp; Submit</span></div>
+      </div>
+    </div><!-- /form-rail -->
+  </div><!-- /form-wrap -->
+
+  <!-- Footer -->
+  <div class="form-footer">
+    <div class="ff-info">Step <strong id="step-label">1 of 6</strong> &mdash; Personal Information</div>
+    <div class="ff-prog" id="step-prog">17% complete</div>
+    <button class="btn" id="btn-back" onclick="navigateStep(-1)" disabled><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>Back</button>
+    <button class="btn">Save &amp; Exit</button>
+    <button class="btn btn-p" id="btn-next" onclick="navigateStep(1)">Next: Employment <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div>
+
+</main>
+</div>
+<script>
+let cur = 1;
+const TOTAL = 6;
+const labels = ['Personal Information','Employment Details','Role & Department','Compensation','Access & Roles','Review & Submit'];
+const progress = ['17%','33%','50%','67%','83%','100%'];
+const nextLabels = ['Next: Employment','Next: Role & Dept','Next: Compensation','Next: Access','Next: Review','Create Employee'];
+
+function selOpt(el, g) {
+  document.querySelectorAll('#'+g+' .ropt').forEach(o=>o.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function goStep(n) {
+  cur = n;
+  // Step contents
+  document.querySelectorAll('.step-content').forEach((el,i)=>el.classList.toggle('active',i+1===n));
+  // Step indicators
+  document.querySelectorAll('.steps-row .step').forEach((el,i)=>{
+    el.classList.remove('done','active','pending');
+    const num = el.querySelector('.step-num');
+    if(i+1 < n){el.classList.add('done');num.textContent='✓';}
+    else if(i+1===n){el.classList.add('active');num.textContent=i+1;}
+    else{el.classList.add('pending');num.textContent=i+1;}
+  });
+  // Checklist
+  document.querySelectorAll('.cl-item').forEach((el,i)=>{
+    const dot = el.querySelector('.cl-num');
+    const txt = el.querySelector('span');
+    dot.className='cl-num ';
+    if(i+1 < n){dot.classList.add('cl-done');dot.textContent='✓';txt.style.color='var(--grn)';txt.style.fontWeight='400';}
+    else if(i+1===n){dot.classList.add('cl-act');dot.textContent=i+1;txt.style.color='var(--t1)';txt.style.fontWeight='600';}
+    else{dot.classList.add('cl-pend');dot.textContent=i+1;txt.style.color='var(--t4)';txt.style.fontWeight='400';}
+  });
+  // Footer
+  document.getElementById('step-label').textContent = n + ' of ' + TOTAL;
+  document.getElementById('step-prog').textContent = progress[n-1];
+  document.getElementById('btn-back').disabled = (n===1);
+  const btnNext = document.getElementById('btn-next');
+  btnNext.innerHTML = n < TOTAL
+    ? nextLabels[n-1]+' <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>'
+    : '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg> Create Employee';
+  document.querySelector('.form-main').scrollTop = 0;
+}
+
+function navigateStep(dir) {
+  const next = cur + dir;
+  if(next >= 1 && next <= TOTAL) goStep(next);
+}
+
+document.querySelectorAll('.si').forEach(el=>el.addEventListener('click',function(){
+  document.querySelectorAll('.si').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+</script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+{
+  "contract": "hrms-h11-report-builder",
+  "version": "1.0",
+  "date": "2026-03-30",
+  "archetype": "H11 Builder",
+  "page": "h11-report-builder.html",
+  "service": "reporting_analytics",
+  "base_path": "/api/v1/reporting",
+  "gaps": ["BG-031"],
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "handler": "get_reporting_aggregates",
+      "description": "List aggregate snapshots — filters canvas Data & Filters card metrics strip",
+      "query_params": {
+        "aggregate_type": "string | optional — one of REPORT_TYPES",
+        "dimension_key": "string | optional",
+        "dimension_value": "string | optional"
+      },
+      "response_schema": {
+        "type": "array",
+        "items": {
+          "aggregate_id": "string",
+          "tenant_id": "string",
+          "aggregate_type": "string",
+          "dimension_key": "string",
+          "dimension_value": "string",
+          "window_start": "string | null",
+          "window_end": "string | null",
+          "metrics": "object",
+          "updated_at": "string (ISO-8601)"
+        }
+      },
+      "canvas_slot": "s1 · Data & Filters · metric strip"
+    },
+    {
+      "id": "E02",
+      "method": "GET",
+      "path": "/api/v1/reporting/reports",
+      "handler": "get_reporting_reports",
+      "description": "List all report definitions for the tenant",
+      "response_schema": {
+        "type": "array",
+        "items": {
+          "report_id": "string (UUID)",
+          "tenant_id": "string",
+          "name": "string",
+          "report_type": "string — one of REPORT_TYPES",
+          "filters": "object",
+          "delivery": "object (untyped — BG-031)",
+          "created_at": "string (ISO-8601)",
+          "updated_at": "string (ISO-8601)"
+        }
+      },
+      "canvas_slot": "s0 · Report Identity · list"
+    },
+    {
+      "id": "E03",
+      "method": "POST",
+      "path": "/api/v1/reporting/reports",
+      "handler": "post_reporting_report",
+      "description": "Create a new report definition — Save Report button",
+      "request_body": {
+        "name": "string (required)",
+        "report_type": "string (required) — one of REPORT_TYPES",
+        "filters": "object | optional — { dimension_key, dimension_value }",
+        "delivery": "object | optional (untyped — BG-031)"
+      },
+      "response_schema": {
+        "report_id": "string (UUID)",
+        "tenant_id": "string",
+        "name": "string",
+        "report_type": "string",
+        "filters": "object",
+        "delivery": "object",
+        "created_at": "string (ISO-8601)",
+        "updated_at": "string (ISO-8601)"
+      },
+      "canvas_slot": "s0 · Save Report (topbar button)"
+    },
+    {
+      "id": "E04",
+      "method": "POST",
+      "path": "/api/v1/reporting/reports/{report_id}/run",
+      "handler": "post_reporting_run",
+      "description": "Run a report against current aggregate snapshots — Run Report button",
+      "path_params": {
+        "report_id": "string (UUID)"
+      },
+      "request_body": {
+        "filters_override": "object | optional"
+      },
+      "response_schema": {
+        "report_run_id": "string (UUID)",
+        "tenant_id": "string",
+        "report_id": "string",
+        "report_type": "string",
+        "filters": "object",
+        "summary": {
+          "row_count": "integer",
+          "aggregate_type": "string",
+          "generated_from_projection": "boolean"
+        },
+        "rows": "array of AggregateSnapshot dicts",
+        "generated_at": "string (ISO-8601)",
+        "trace_id": "string"
+      },
+      "canvas_slot": "topbar · Run Report button"
+    },
+    {
+      "id": "E05",
+      "method": "POST",
+      "path": "/api/v1/reporting/reports/{report_id}/export",
+      "handler": "post_reporting_export",
+      "description": "Export report to CSV or JSON — Export button",
+      "path_params": {
+        "report_id": "string (UUID)"
+      },
+      "request_body": {
+        "export_format": "string (required) — 'csv' | 'json'",
+        "report_run_id": "string | optional — use existing run",
+        "trace_id": "string | optional"
+      },
+      "response_schema": {
+        "export_id": "string (UUID)",
+        "report_id": "string",
+        "report_run_id": "string",
+        "export_format": "string",
+        "file_name": "string",
+        "row_count": "integer",
+        "content_type": "string",
+        "content": "string (csv text or json text)",
+        "created_at": "string (ISO-8601)",
+        "trace_id": "string",
+        "schedule_id": "string | null"
+      },
+      "canvas_slot": "topbar · Export button"
+    },
+    {
+      "id": "E06",
+      "method": "GET",
+      "path": "/api/v1/reporting/exports",
+      "handler": "get_reporting_exports",
+      "description": "List all exports for the tenant",
+      "query_params": {
+        "report_id": "string | optional"
+      },
+      "response_schema": {
+        "type": "array",
+        "items": {
+          "export_id": "string",
+          "report_id": "string",
+          "report_run_id": "string",
+          "export_format": "string",
+          "file_name": "string",
+          "row_count": "integer",
+          "created_at": "string (ISO-8601)"
+        }
+      },
+      "canvas_slot": "s2 · Schedule · export history (reference)"
+    },
+    {
+      "id": "E07",
+      "method": "POST",
+      "path": "/api/v1/reporting/schedules",
+      "handler": "post_reporting_schedule",
+      "description": "Create a scheduled report — s2 Schedule card",
+      "request_body": {
+        "report_id": "string (required)",
+        "cadence": "string (required) — 'daily' | 'weekly' | 'monthly'",
+        "export_format": "string (required) — 'csv' | 'json'",
+        "next_run_at": "string (required) ISO-8601",
+        "delivery": "object | optional (untyped — BG-031)"
+      },
+      "response_schema": {
+        "schedule_id": "string (UUID)",
+        "report_id": "string",
+        "cadence": "string",
+        "export_format": "string",
+        "next_run_at": "string (ISO-8601)",
+        "delivery": "object",
+        "active": "boolean",
+        "last_enqueued_at": "string | null (ISO-8601)"
+      },
+      "canvas_slot": "s2 · Schedule card"
+    },
+    {
+      "id": "E08",
+      "method": "GET",
+      "path": "/api/v1/reporting/schedules",
+      "handler": "get_reporting_schedules",
+      "description": "List all scheduled reports for the tenant",
+      "response_schema": {
+        "type": "array",
+        "items": {
+          "schedule_id": "string",
+          "report_id": "string",
+          "cadence": "string",
+          "export_format": "string",
+          "next_run_at": "string (ISO-8601)",
+          "active": "boolean",
+          "last_enqueued_at": "string | null"
+        }
+      },
+      "canvas_slot": "s2 · Schedule card · list"
+    }
+  ],
+
+  "report_types": [
+    "hiring.pipeline.summary",
+    "hiring.funnel.summary",
+    "hiring.source.effectiveness",
+    "hiring.time_to_hire",
+    "workforce.attrition.summary",
+    "workforce.attendance.trend",
+    "workforce.dashboard.summary",
+    "organization.manager.span"
+  ],
+
+  "export_formats": ["csv", "json"],
+  "cadences": ["daily", "weekly", "monthly"],
+
+  "chrome_items": [
+    {
+      "id": "CHROME-01",
+      "gap": "BG-031",
+      "element": "s3 Delivery card — method, recipients, subject, webhook URL inputs disabled",
+      "reason": "delivery field on ReportDefinition is untyped dict — no validated schema"
+    },
+    {
+      "id": "CHROME-02",
+      "gap": "BG-031",
+      "element": "s2 Schedule active toggle — BG-031 warning note in properties panel",
+      "reason": "no PATCH /api/v1/reporting/schedules/{id} endpoint to toggle active or update cadence"
+    },
+    {
+      "id": "CHROME-03",
+      "gap": "BG-031",
+      "element": "Palette — Visualization Config and Delivery Destination items (opacity:.6)",
+      "reason": "no visualization or delivery schema in reporting_analytics service"
+    }
+  ],
+
+  "notes": [
+    "REPORT_TYPES is a closed set of 8 values — palette shows all 8 as real, clickable report sources",
+    "Selecting a report type in palette updates canvas s0 + s1 type display and PROP_PANELS s0 chip",
+    "run_report() queries list_aggregates() internally — no separate aggregate fetch needed at run time",
+    "export_report() will auto-run if no report_run_id is provided"
+  ]
+}

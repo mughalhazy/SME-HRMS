@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compliance Reports — Meridian HCM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+  <script>
+    function showTab(el, id) {
+      document.querySelectorAll('.rn-tab').forEach(function(t){ t.classList.remove('on'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('tab-' + id).classList.add('on');
+      document.getElementById('mainPage').scrollTop = 0;
+    }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{zoom:1.1}
+    html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;color:#374151;background:#F5F7FA}
+    :root{
+      --teal:#0A8F84;--grn:#15803D;--amber:#B45309;--red:#B91C1C;--blue:#1D4ED8;
+      --t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;
+      --w:#FFFFFF;--bd:#E4E7EC;--bg:#F5F7FA;--bg2:#F1F4F8;
+      --dur:120ms
+    }
+
+    /* layout */
+    .shell{display:flex;height:100vh;overflow:hidden}
+    .sb{width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+    .sb-logo{width:34px;height:34px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+    .sb-logo svg{fill:white;width:18px;height:18px}
+    .sb-nav{display:flex;flex-direction:column;gap:4px;align-items:center;width:100%;flex:1}
+    .sb-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:background var(--dur),color var(--dur);text-decoration:none}
+    .sb-ico:hover{background:var(--bg2);color:var(--t2)}
+    .sb-ico.on{background:#EDFAF8;color:var(--teal)}
+    .sb-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+    .sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0C9E92);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;margin-top:auto;flex-shrink:0}
+
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+    /* topbar */
+    .topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+    .bc{flex:1;font-size:13px;color:var(--t3)}
+    .bc b{color:var(--t1);font-weight:600}
+    .btn{padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:background var(--dur)}
+    .btn.sm{padding:4px 10px}
+    .btn.pri{background:var(--teal);color:#fff}.btn.pri:hover{background:#0C9E92}
+    .btn.sec{background:var(--w);border:1px solid var(--bd);color:var(--t2)}.btn.sec:hover{background:var(--bg2)}
+
+    /* report-nav */
+    .report-nav{background:var(--w);border-bottom:1px solid var(--bd);display:flex;padding:0 20px;flex-shrink:0;overflow-x:auto}
+    .rn-tab{padding:13px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:color var(--dur),border-color var(--dur)}
+    .rn-tab:hover{color:var(--t2)}
+    .rn-tab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+
+    /* filter bar */
+    .fbar{background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:10px 20px;gap:10px;flex-shrink:0;flex-wrap:wrap}
+    .flbl{font-size:12px;font-weight:500;color:var(--t3)}
+    .fsel{padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;color:var(--t2);background:var(--w);cursor:pointer;outline:none;font-family:inherit}
+    .fsel:focus{border-color:var(--teal)}
+    .fsep{width:1px;height:20px;background:var(--bd);margin:0 2px}
+    .factions{margin-left:auto;display:flex;gap:8px}
+
+    /* P-32 H07 scroll */
+    .page{flex:1;overflow-y:auto;min-height:0}
+    .content{padding:22px 22px 12vh}
+
+    /* tab panels */
+    .tab-panel{display:none}
+    .tab-panel.on{display:block}
+
+    /* section */
+    .sect{margin-bottom:22px}
+    .sect-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px}
+    .sect-title{font-size:15px;font-weight:600;color:var(--t1)}
+    .sect-sub{font-size:12px;color:var(--t3);margin-top:2px}
+
+    /* KPI grid */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+    .kpi{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:16px 18px;transition:transform var(--dur),box-shadow var(--dur);display:grid;grid-template-columns:52px 1fr;grid-template-rows:auto auto 1fr auto;column-gap:10px}
+    .kpi:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .kpi-spark{grid-column:1;grid-row:1/5;align-self:end;opacity:.72}
+    .kpi-dot{grid-column:2;width:8px;height:8px;border-radius:50%;margin-bottom:10px}
+    .kpi-dot.am{background:var(--amber)}.kpi-dot.gn{background:var(--grn)}.kpi-dot.rd{background:var(--red)}.kpi-dot.bl{background:var(--blue)}.kpi-dot.tl{background:var(--teal)}
+    .kpi-val{grid-column:2;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--t1);line-height:1.1}
+    .kpi-lbl{grid-column:2;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t4);margin-top:4px}
+    .kpi-tr{grid-column:2;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;margin-top:8px;padding:2px 6px;border-radius:4px}
+    .kpi-tr.up{background:#DCFCE7;color:var(--grn)}
+    .kpi-tr.dn{background:#FEE2E2;color:var(--red)}
+    .kpi-tr.nt{background:var(--bg2);color:var(--t3)}
+    .kpi-tr.wa{background:#FEF3C7;color:var(--amber)}
+
+    /* chart cards */
+    .cc{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:18px}
+    .cc-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px}
+    .cc-sub{font-size:11px;color:var(--t3);margin-bottom:14px}
+    .cg21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:22px}
+    .cg11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+    .cg31{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:22px}
+
+    /* inline bars */
+    .ibars{display:flex;flex-direction:column;gap:10px}
+    .ibar{display:flex;align-items:center;gap:10px}
+    .ibar-lbl{font-size:12px;color:var(--t2);width:150px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ibar-tr{flex:1;height:8px;background:var(--bg2);border-radius:99px;overflow:hidden}
+    .ibar-fi{height:100%;border-radius:99px}
+    .ibar-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t1);width:36px;text-align:right;flex-shrink:0}
+
+    /* gap notice */
+    .gap-notice{background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:16px;display:flex;align-items:flex-start;gap:8px}
+    .gap-notice b{font-weight:600}
+
+    /* P-11 table */
+    .twrap{background:var(--w);border:1px solid var(--bd);border-radius:11px;overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);white-space:nowrap}
+    tbody tr td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--t2);transition:background .12s}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--bg2)}
+    .tn{font-weight:600;color:var(--t1)}
+    .tnum{font-family:'JetBrains Mono',monospace;font-weight:500}
+    .trd{color:var(--red)}.tam{color:var(--amber)}
+
+    /* P-07 chips */
+    .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+    .cg{background:#DCFCE7;color:var(--grn)}
+    .ca{background:#FEF3C7;color:var(--amber)}
+    .cr{background:#FEE2E2;color:var(--red)}
+    .cb{background:#DBEAFE;color:var(--blue)}
+    .ct{background:#EDFAF8;color:var(--teal)}
+    .cgy{background:var(--bg2);color:var(--t3)}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sb">
+    <div class="sb-logo"><svg viewBox="0 0 18 18"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="10" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="10" width="6" height="6" rx="1.5"/><rect x="10" y="10" width="6" height="6" rx="1.5"/></svg></div>
+    <div class="sb-nav">
+      <a class="sb-ico" href="h01-hr-manager-dashboard.html" target="_blank" title="Dashboard"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></a>
+      <a class="sb-ico" href="h02-employees.html" target="_blank" title="Employees"><svg viewBox="0 0 20 20"><circle cx="8" cy="6" r="3"/><path d="M2 17c0-3.314 2.686-6 6-6s6 2.686 6 6"/><circle cx="15" cy="7" r="2"/><path d="M15 12c1.657 0 3 1.343 3 3"/></svg></a>
+      <a class="sb-ico" href="h06-leave-calendar.html" target="_blank" title="Leave"><svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4M13 2v4M3 9h14"/></svg></a>
+      <a class="sb-ico" href="h01-payroll-admin-dashboard.html" target="_blank" title="Payroll"><svg viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M2 9h16M6 13h2M10 13h4"/></svg></a>
+      <a class="sb-ico" href="h05-approval-inbox.html" target="_blank" title="Approvals"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="3"/><path d="M6 10l3 3 5-6"/></svg></a>
+      <a class="sb-ico on" href="h07-compliance-reports.html" title="Analytics"><svg viewBox="0 0 20 20"><path d="M2 16l4-5 3 3 4-6 5 4" stroke-width="1.8"/><circle cx="6" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+    </div>
+    <div class="sb-av">AK</div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="bc">Analytics &rsaquo; <b>Compliance Reports</b></div>
+      <button class="btn sec sm">Export PDF</button>
+      <button class="btn sec sm">Export CSV</button>
+      <button class="btn pri sm">New Task</button>
+    </div>
+
+    <!-- Report Nav -->
+    <div class="report-nav">
+      <div class="rn-tab on"  onclick="showTab(this,'overview')">&#128203; Overview</div>
+      <div class="rn-tab"     onclick="showTab(this,'documents')">&#128196; Documents</div>
+      <div class="rn-tab"     onclick="showTab(this,'expiring')">&#9201; Expiring</div>
+      <div class="rn-tab"     onclick="showTab(this,'acknowledgements')">&#9989; Acknowledgements</div>
+      <div class="rn-tab"     onclick="showTab(this,'tasks')">&#128203; Compliance Tasks</div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="fbar">
+      <span class="flbl">Period</span>
+      <select class="fsel">
+        <option>Last 30 Days</option>
+        <option>Last 60 Days</option>
+        <option>Last 90 Days</option>
+        <option>Year to Date</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Department</span>
+      <select class="fsel">
+        <option>All Departments</option>
+        <option>Engineering</option>
+        <option>Product</option>
+        <option>Sales</option>
+        <option>Finance</option>
+        <option>HR</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Doc Type</span>
+      <select class="fsel">
+        <option>All Types</option>
+        <option>Contract</option>
+        <option>Policy</option>
+        <option>Certification</option>
+        <option>License</option>
+        <option>Identification</option>
+        <option>Training</option>
+      </select>
+      <div class="factions">
+        <button class="btn sec sm">Reset</button>
+        <button class="btn pri sm">Apply</button>
+      </div>
+    </div>
+
+    <!-- Page scroll container (P-32 H07) -->
+    <div class="page" id="mainPage">
+      <div class="content">
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TAB 1 — OVERVIEW
+             API: GET /api/v1/documents + GET /api/v1/compliance-tasks
+                  (employee-service · direct · BG-020)
+        ════════════════════════════════════════════════════════════ -->
+        <div class="tab-panel on" id="tab-overview">
+
+          <div class="gap-notice">
+            <span>&#9888;</span>
+            <span><b>BG-020:</b> <code>reporting_analytics</code> has no compliance aggregate type. This page reads <code>employee-service</code> document-compliance endpoints directly. Aggregated KPIs are client-derived from raw document and task lists.</span>
+          </div>
+
+          <!-- KPIs -->
+          <div class="kpi-grid">
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,25 18,18 27,13 36,10 45,7 52,4 52,40 0,40" fill="#0A8F84" opacity=".12"/><polyline points="0,32 9,25 18,18 27,13 36,10 45,7 52,4" fill="none" stroke="#0A8F84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot tl"></div>
+              <div class="kpi-val">247</div>
+              <div class="kpi-lbl">Total Documents</div>
+              <div class="kpi-tr nt">198 active</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,23 18,27 27,19 36,9 45,14 52,4 52,40 0,40" fill="#B45309" opacity=".12"/><polyline points="0,32 9,23 18,27 27,19 36,9 45,14 52,4" fill="none" stroke="#B45309" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot am"></div>
+              <div class="kpi-val">12</div>
+              <div class="kpi-lbl">Expiring ≤ 30 Days</div>
+              <div class="kpi-tr wa">+3 vs last month</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,20 18,12 27,16 36,4 45,8 52,4 52,40 0,40" fill="#1D4ED8" opacity=".12"/><polyline points="0,32 9,20 18,12 27,16 36,4 45,8 52,4" fill="none" stroke="#1D4ED8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot bl"></div>
+              <div class="kpi-val">31</div>
+              <div class="kpi-lbl">Open Tasks</div>
+              <div class="kpi-tr nt">12 open · 11 in progress</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,26 18,21 27,26 36,15 45,10 52,4 52,40 0,40" fill="#B91C1C" opacity=".12"/><polyline points="0,32 9,26 18,21 27,26 36,15 45,10 52,4" fill="none" stroke="#B91C1C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot rd"></div>
+              <div class="kpi-val">8</div>
+              <div class="kpi-lbl">Overdue Tasks</div>
+              <div class="kpi-tr dn">+2 this week</div>
+            </div>
+          </div>
+
+          <!-- Row 1: Document Status + Task Status -->
+          <div class="cg11">
+            <div class="cc">
+              <div class="cc-title">Document Status Breakdown</div>
+              <div class="cc-sub">247 total documents · all departments</div>
+              <div class="ibars">
+                <div class="ibar">
+                  <div class="ibar-lbl">Active</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:80.2%;background:var(--grn)"></div></div>
+                  <div class="ibar-val">198</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Expired</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:7.7%;background:var(--red)"></div></div>
+                  <div class="ibar-val">19</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Archived</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:7.7%;background:var(--t4)"></div></div>
+                  <div class="ibar-val">19</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Draft</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:4.5%;background:var(--amber)"></div></div>
+                  <div class="ibar-val">11</div>
+                </div>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-title">Compliance Task Status</div>
+              <div class="cc-sub">121 total tasks · active period</div>
+              <div class="ibars">
+                <div class="ibar">
+                  <div class="ibar-lbl">Completed</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:69.4%;background:var(--grn)"></div></div>
+                  <div class="ibar-val">84</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Open</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:9.9%;background:var(--amber)"></div></div>
+                  <div class="ibar-val">12</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">In Progress</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:9.1%;background:var(--blue)"></div></div>
+                  <div class="ibar-val">11</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Overdue</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:6.6%;background:var(--red)"></div></div>
+                  <div class="ibar-val">8</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Cancelled</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:5%;background:var(--t4)"></div></div>
+                  <div class="ibar-val">6</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Document Type + Task Type -->
+          <div class="cg11">
+            <div class="cc">
+              <div class="cc-title">Document Type Distribution</div>
+              <div class="cc-sub">By document_type · all statuses</div>
+              <div class="ibars">
+                <div class="ibar">
+                  <div class="ibar-lbl">Contract</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#3B82F6"></div></div>
+                  <div class="ibar-val">62</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Policy</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:87%;background:#7C3AED"></div></div>
+                  <div class="ibar-val">54</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Certification</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:77%;background:var(--teal)"></div></div>
+                  <div class="ibar-val">48</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">License</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:50%;background:var(--amber)"></div></div>
+                  <div class="ibar-val">31</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Identification</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:39%;background:var(--grn)"></div></div>
+                  <div class="ibar-val">24</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Training</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:29%;background:#F59E0B"></div></div>
+                  <div class="ibar-val">18</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Other</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:16%;background:var(--t4)"></div></div>
+                  <div class="ibar-val">10</div>
+                </div>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-title">Task Type Distribution</div>
+              <div class="cc-sub">By compliance_task_type · all statuses</div>
+              <div class="ibars">
+                <div class="ibar">
+                  <div class="ibar-lbl">Document Expiry</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:var(--red)"></div></div>
+                  <div class="ibar-val">46</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Policy Acknowledge.</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:63%;background:var(--blue)"></div></div>
+                  <div class="ibar-val">29</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Cert. Renewal</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:52%;background:var(--teal)"></div></div>
+                  <div class="ibar-val">24</div>
+                </div>
+                <div class="ibar">
+                  <div class="ibar-lbl">Manual Review</div>
+                  <div class="ibar-tr"><div class="ibar-fi" style="width:48%;background:var(--amber)"></div></div>
+                  <div class="ibar-val">22</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /tab-overview -->
+
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TAB 2 — DOCUMENTS
+             API: GET /api/v1/documents
+                  params: document_type, status, requires_acknowledgement, expiry_to
+                  (employee-service · EmployeeDocument model)
+        ════════════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-documents">
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,25 18,18 27,13 36,10 45,7 52,4 52,40 0,40" fill="#0A8F84" opacity=".12"/><polyline points="0,32 9,25 18,18 27,13 36,10 45,7 52,4" fill="none" stroke="#0A8F84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot tl"></div>
+              <div class="kpi-val">247</div>
+              <div class="kpi-lbl">Total Documents</div>
+              <div class="kpi-tr nt">all types</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,25 18,18 27,13 36,10 45,8 52,4 52,40 0,40" fill="#15803D" opacity=".12"/><polyline points="0,32 9,25 18,18 27,13 36,10 45,8 52,4" fill="none" stroke="#15803D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot gn"></div>
+              <div class="kpi-val">198</div>
+              <div class="kpi-lbl">Active</div>
+              <div class="kpi-tr up">80.2%</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,23 18,27 27,19 36,9 45,14 52,4 52,40 0,40" fill="#B45309" opacity=".12"/><polyline points="0,32 9,23 18,27 27,19 36,9 45,14 52,4" fill="none" stroke="#B45309" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot am"></div>
+              <div class="kpi-val">12</div>
+              <div class="kpi-lbl">Expiring ≤ 30d</div>
+              <div class="kpi-tr wa">action needed</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,24 18,20 27,16 36,12 45,8 52,4 52,40 0,40" fill="#B91C1C" opacity=".12"/><polyline points="0,32 9,24 18,20 27,16 36,12 45,8 52,4" fill="none" stroke="#B91C1C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot rd"></div>
+              <div class="kpi-val">19</div>
+              <div class="kpi-lbl">Expired</div>
+              <div class="kpi-tr dn">7.7% of total</div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">All Documents</div><div class="sect-sub">EmployeeDocument model · employee-service</div></div>
+            </div>
+            <div class="twrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:22%">Title</th>
+                    <th style="width:12%">Type</th>
+                    <th style="width:16%">Employee</th>
+                    <th style="width:10%">Status</th>
+                    <th style="width:11%">Issued</th>
+                    <th style="width:11%">Expires</th>
+                    <th style="width:8%">Ack. Req.</th>
+                    <th style="width:10%">Policy Code</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="tn">Employment Contract — FY26</span></td>
+                    <td><span class="chip cb">Contract</span></td>
+                    <td>Lena Fischer</td>
+                    <td><span class="chip cg">Active</span></td>
+                    <td class="tnum">2026-01-15</td>
+                    <td class="tnum">—</td>
+                    <td style="text-align:center;color:var(--grn)">&#10003;</td>
+                    <td class="tnum" style="color:var(--t3)">—</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Data Privacy Policy v3</span></td>
+                    <td><span class="chip" style="background:#EDE9FE;color:#5B21B6">Policy</span></td>
+                    <td>All Staff</td>
+                    <td><span class="chip cg">Active</span></td>
+                    <td class="tnum">2025-09-01</td>
+                    <td class="tnum">2026-09-01</td>
+                    <td style="text-align:center;color:var(--grn)">&#10003;</td>
+                    <td class="tnum">POL-DPV3</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">AWS Solutions Architect Cert.</span></td>
+                    <td><span class="chip ct">Certification</span></td>
+                    <td>Marco Herrera</td>
+                    <td><span class="chip ca">Active</span></td>
+                    <td class="tnum">2024-04-10</td>
+                    <td class="tnum tam">2026-04-10</td>
+                    <td style="text-align:center;color:var(--t4)">—</td>
+                    <td class="tnum" style="color:var(--t3)">—</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Driver's Licence — Class C</span></td>
+                    <td><span class="chip" style="background:#DCFCE7;color:var(--grn)">License</span></td>
+                    <td>Priya Nair</td>
+                    <td><span class="chip cr">Expired</span></td>
+                    <td class="tnum">2021-03-22</td>
+                    <td class="tnum trd">2025-03-22</td>
+                    <td style="text-align:center;color:var(--t4)">—</td>
+                    <td class="tnum" style="color:var(--t3)">—</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Code of Conduct 2026</span></td>
+                    <td><span class="chip" style="background:#EDE9FE;color:#5B21B6">Policy</span></td>
+                    <td>All Staff</td>
+                    <td><span class="chip cg">Active</span></td>
+                    <td class="tnum">2026-01-02</td>
+                    <td class="tnum">2027-01-02</td>
+                    <td style="text-align:center;color:var(--grn)">&#10003;</td>
+                    <td class="tnum">POL-COC26</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Passport — Travel ID</span></td>
+                    <td><span class="chip" style="background:#F1F4F8;color:var(--t3)">Identification</span></td>
+                    <td>James Osei</td>
+                    <td><span class="chip cg">Active</span></td>
+                    <td class="tnum">2019-07-14</td>
+                    <td class="tnum">2029-07-14</td>
+                    <td style="text-align:center;color:var(--t4)">—</td>
+                    <td class="tnum" style="color:var(--t3)">—</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">GDPR Training Completion</span></td>
+                    <td><span class="chip" style="background:#FEF3C7;color:var(--amber)">Training</span></td>
+                    <td>Sofia Reyes</td>
+                    <td><span class="chip cgy">Draft</span></td>
+                    <td class="tnum">—</td>
+                    <td class="tnum">—</td>
+                    <td style="text-align:center;color:var(--t4)">—</td>
+                    <td class="tnum" style="color:var(--t3)">—</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">NDA — Third-Party Vendor</span></td>
+                    <td><span class="chip cb">Contract</span></td>
+                    <td>Kai Tanaka</td>
+                    <td><span class="chip cgy">Archived</span></td>
+                    <td class="tnum">2022-06-01</td>
+                    <td class="tnum">2025-06-01</td>
+                    <td style="text-align:center;color:var(--t4)">—</td>
+                    <td class="tnum" style="color:var(--t3)">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /tab-documents -->
+
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TAB 3 — EXPIRING
+             API: GET /api/v1/documents/expiring
+                  params: expiry_to (employee-service · listExpiringDocuments)
+        ════════════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-expiring">
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,23 9,32 18,13 27,23 36,13 45,23 52,4 52,40 0,40" fill="#B91C1C" opacity=".12"/><polyline points="0,23 9,32 18,13 27,23 36,13 45,23 52,4" fill="none" stroke="#B91C1C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot rd"></div>
+              <div class="kpi-val">3</div>
+              <div class="kpi-lbl">Expiring ≤ 7 Days</div>
+              <div class="kpi-tr dn">critical</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,27 18,23 27,18 36,13 45,9 52,4 52,40 0,40" fill="#B45309" opacity=".12"/><polyline points="0,32 9,27 18,23 27,18 36,13 45,9 52,4" fill="none" stroke="#B45309" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot am"></div>
+              <div class="kpi-val">12</div>
+              <div class="kpi-lbl">Expiring ≤ 30 Days</div>
+              <div class="kpi-tr wa">action needed</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,25 18,22 27,18 36,11 45,8 52,4 52,40 0,40" fill="#1D4ED8" opacity=".12"/><polyline points="0,32 9,25 18,22 27,18 36,11 45,8 52,4" fill="none" stroke="#1D4ED8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot bl"></div>
+              <div class="kpi-val">24</div>
+              <div class="kpi-lbl">Expiring ≤ 60 Days</div>
+              <div class="kpi-tr nt">plan renewals</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,25 18,20 27,16 36,11 45,6 52,4 52,40 0,40" fill="#0A8F84" opacity=".12"/><polyline points="0,32 9,25 18,20 27,16 36,11 45,6 52,4" fill="none" stroke="#0A8F84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot tl"></div>
+              <div class="kpi-val">41</div>
+              <div class="kpi-lbl">Expiring ≤ 90 Days</div>
+              <div class="kpi-tr nt">on watch</div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">Expiring Documents</div><div class="sect-sub">GET /api/v1/documents/expiring · sorted by expiry_date ascending</div></div>
+            </div>
+            <div class="twrap">
+              <table style="table-layout:fixed;width:100%;font-size:12px">
+                <colgroup>
+                  <col style="width:22%">
+                  <col style="width:11%">
+                  <col style="width:15%">
+                  <col style="width:12%">
+                  <col style="width:10%">
+                  <col style="width:9%">
+                  <col style="width:11%">
+                  <col style="width:10%">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style="padding:8px 10px">Title</th>
+                    <th style="padding:8px 10px">Type</th>
+                    <th style="padding:8px 10px">Employee</th>
+                    <th style="padding:8px 10px">Dept.</th>
+                    <th style="padding:8px 10px">Expires</th>
+                    <th style="padding:8px 10px">Days Left</th>
+                    <th style="padding:8px 10px">Status</th>
+                    <th style="padding:8px 10px">Renewal Task</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:9px 10px"><span class="tn">ISO 27001 Lead Auditor</span></td>
+                    <td style="padding:9px 10px"><span class="chip ct">Cert.</span></td>
+                    <td style="padding:9px 10px">Ahmad Raza</td>
+                    <td style="padding:9px 10px">Engineering</td>
+                    <td style="padding:9px 10px" class="tnum trd">2026-04-01</td>
+                    <td style="padding:9px 10px" class="tnum trd">3</td>
+                    <td style="padding:9px 10px"><span class="chip cg">Active</span></td>
+                    <td style="padding:9px 10px"><span class="chip ca">Open</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px"><span class="tn">Driver's Licence — HGV</span></td>
+                    <td style="padding:9px 10px"><span class="chip" style="background:#DCFCE7;color:var(--grn)">Lic.</span></td>
+                    <td style="padding:9px 10px">Ben Mwangi</td>
+                    <td style="padding:9px 10px">Operations</td>
+                    <td style="padding:9px 10px" class="tnum trd">2026-04-05</td>
+                    <td style="padding:9px 10px" class="tnum trd">7</td>
+                    <td style="padding:9px 10px"><span class="chip cg">Active</span></td>
+                    <td style="padding:9px 10px"><span class="chip cr">Overdue</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px"><span class="tn">First Aid Certificate</span></td>
+                    <td style="padding:9px 10px"><span class="chip ct">Cert.</span></td>
+                    <td style="padding:9px 10px">Clara Voss</td>
+                    <td style="padding:9px 10px">HR</td>
+                    <td style="padding:9px 10px" class="tnum tam">2026-04-14</td>
+                    <td style="padding:9px 10px" class="tnum tam">16</td>
+                    <td style="padding:9px 10px"><span class="chip cg">Active</span></td>
+                    <td style="padding:9px 10px"><span class="chip cb">In Progress</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px"><span class="tn">AWS Solutions Architect</span></td>
+                    <td style="padding:9px 10px"><span class="chip ct">Cert.</span></td>
+                    <td style="padding:9px 10px">Marco Herrera</td>
+                    <td style="padding:9px 10px">Engineering</td>
+                    <td style="padding:9px 10px" class="tnum tam">2026-04-10</td>
+                    <td style="padding:9px 10px" class="tnum tam">12</td>
+                    <td style="padding:9px 10px"><span class="chip cg">Active</span></td>
+                    <td style="padding:9px 10px"><span class="chip ca">Open</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px"><span class="tn">Data Privacy Policy v3</span></td>
+                    <td style="padding:9px 10px"><span class="chip" style="background:#EDE9FE;color:#5B21B6">Policy</span></td>
+                    <td style="padding:9px 10px">All Staff</td>
+                    <td style="padding:9px 10px">All</td>
+                    <td style="padding:9px 10px" class="tnum">2026-09-01</td>
+                    <td style="padding:9px 10px" class="tnum">156</td>
+                    <td style="padding:9px 10px"><span class="chip cg">Active</span></td>
+                    <td style="padding:9px 10px"><span class="chip cgy">—</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px"><span class="tn">Employment Contract — FY26</span></td>
+                    <td style="padding:9px 10px"><span class="chip cb">Contract</span></td>
+                    <td style="padding:9px 10px">Nadia Kowalski</td>
+                    <td style="padding:9px 10px">Finance</td>
+                    <td style="padding:9px 10px" class="tnum">2026-12-31</td>
+                    <td style="padding:9px 10px" class="tnum">277</td>
+                    <td style="padding:9px 10px"><span class="chip cg">Active</span></td>
+                    <td style="padding:9px 10px"><span class="chip cgy">—</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /tab-expiring -->
+
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TAB 4 — ACKNOWLEDGEMENTS
+             API: GET /api/v1/documents?requires_acknowledgement=true
+                  GET /api/v1/documents/:documentId → acknowledgements[]
+                  (employee-service · PolicyAcknowledgement model)
+        ════════════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-acknowledgements">
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,23 18,18 27,13 36,9 45,9 52,4 52,40 0,40" fill="#1D4ED8" opacity=".12"/><polyline points="0,32 9,23 18,18 27,13 36,9 45,9 52,4" fill="none" stroke="#1D4ED8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot bl"></div>
+              <div class="kpi-val">28</div>
+              <div class="kpi-lbl">Policy Documents</div>
+              <div class="kpi-tr nt">req. acknowledgement</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,24 18,20 27,16 36,12 45,8 52,4 52,40 0,40" fill="#15803D" opacity=".12"/><polyline points="0,32 9,24 18,20 27,16 36,12 45,8 52,4" fill="none" stroke="#15803D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot gn"></div>
+              <div class="kpi-val">21</div>
+              <div class="kpi-lbl">Acknowledged</div>
+              <div class="kpi-tr up">75.0%</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,4 9,4 18,13 27,13 36,23 45,23 52,32 52,40 0,40" fill="#B45309" opacity=".12"/><polyline points="0,4 9,4 18,13 27,13 36,23 45,23 52,32" fill="none" stroke="#B45309" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot am"></div>
+              <div class="kpi-val">7</div>
+              <div class="kpi-lbl">Pending Ack.</div>
+              <div class="kpi-tr wa">25.0% outstanding</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,25 18,21 27,17 36,13 45,9 52,4 52,40 0,40" fill="#0A8F84" opacity=".12"/><polyline points="0,32 9,25 18,21 27,17 36,13 45,9 52,4" fill="none" stroke="#0A8F84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot tl"></div>
+              <div class="kpi-val">75%</div>
+              <div class="kpi-lbl">Ack. Rate</div>
+              <div class="kpi-tr nt">target 100%</div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">Policy Acknowledgement Log</div><div class="sect-sub">PolicyAcknowledgement model · acknowledged_at descending</div></div>
+            </div>
+            <div class="twrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:24%">Policy Document</th>
+                    <th style="width:16%">Employee</th>
+                    <th style="width:12%">Acknowledged By</th>
+                    <th style="width:13%">Acknowledged At</th>
+                    <th style="width:10%">Policy Code</th>
+                    <th style="width:25%">Comment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="tn">Code of Conduct 2026</span></td>
+                    <td>Lena Fischer</td>
+                    <td class="tnum">lena.fischer</td>
+                    <td class="tnum">2026-03-28</td>
+                    <td class="tnum">POL-COC26</td>
+                    <td style="color:var(--t3)">Acknowledged on behalf.</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Data Privacy Policy v3</span></td>
+                    <td>Marco Herrera</td>
+                    <td class="tnum">marco.herrera</td>
+                    <td class="tnum">2026-03-27</td>
+                    <td class="tnum">POL-DPV3</td>
+                    <td style="color:var(--t3)">—</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Workplace Safety Policy</span></td>
+                    <td>Priya Nair</td>
+                    <td class="tnum">priya.nair</td>
+                    <td class="tnum">2026-03-25</td>
+                    <td class="tnum">POL-WS24</td>
+                    <td style="color:var(--t3)">Reviewed with team lead.</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Anti-Bribery Policy</span></td>
+                    <td>James Osei</td>
+                    <td class="tnum">james.osei</td>
+                    <td class="tnum">2026-03-24</td>
+                    <td class="tnum">POL-AB25</td>
+                    <td style="color:var(--t3)">—</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Code of Conduct 2026</span></td>
+                    <td>Sofia Reyes</td>
+                    <td class="tnum" style="color:var(--amber)">pending</td>
+                    <td class="tnum" style="color:var(--amber)">—</td>
+                    <td class="tnum">POL-COC26</td>
+                    <td style="color:var(--amber);font-size:12px">Awaiting employee action</td>
+                  </tr>
+                  <tr>
+                    <td><span class="tn">Data Privacy Policy v3</span></td>
+                    <td>Kai Tanaka</td>
+                    <td class="tnum" style="color:var(--amber)">pending</td>
+                    <td class="tnum" style="color:var(--amber)">—</td>
+                    <td class="tnum">POL-DPV3</td>
+                    <td style="color:var(--amber);font-size:12px">Awaiting employee action</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /tab-acknowledgements -->
+
+
+        <!-- ═══════════════════════════════════════════════════════════
+             TAB 5 — COMPLIANCE TASKS
+             API: GET /api/v1/compliance-tasks
+                  params: employee_id, task_type, status, due_to
+                  (employee-service · ComplianceTask model)
+        ════════════════════════════════════════════════════════════ -->
+        <div class="tab-panel" id="tab-tasks">
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,20 18,12 27,16 36,4 45,8 52,4 52,40 0,40" fill="#0A8F84" opacity=".12"/><polyline points="0,32 9,20 18,12 27,16 36,4 45,8 52,4" fill="none" stroke="#0A8F84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot tl"></div>
+              <div class="kpi-val">31</div>
+              <div class="kpi-lbl">Active Tasks</div>
+              <div class="kpi-tr nt">open + in progress</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,13 18,23 27,4 36,13 45,4 52,4 52,40 0,40" fill="#B45309" opacity=".12"/><polyline points="0,32 9,13 18,23 27,4 36,13 45,4 52,4" fill="none" stroke="#B45309" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot am"></div>
+              <div class="kpi-val">12</div>
+              <div class="kpi-lbl">Open</div>
+              <div class="kpi-tr wa">not yet started</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,25 18,18 27,18 36,11 45,4 52,4 52,40 0,40" fill="#1D4ED8" opacity=".12"/><polyline points="0,32 9,25 18,18 27,18 36,11 45,4 52,4" fill="none" stroke="#1D4ED8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot bl"></div>
+              <div class="kpi-val">11</div>
+              <div class="kpi-lbl">In Progress</div>
+              <div class="kpi-tr nt">being actioned</div>
+            </div>
+            <div class="kpi">
+              <svg class="kpi-spark" width="52" height="40" viewBox="0 0 52 40"><polygon points="0,32 9,26 18,21 27,26 36,15 45,10 52,4 52,40 0,40" fill="#B91C1C" opacity=".12"/><polyline points="0,32 9,26 18,21 27,26 36,15 45,10 52,4" fill="none" stroke="#B91C1C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="kpi-dot rd"></div>
+              <div class="kpi-val">8</div>
+              <div class="kpi-lbl">Overdue</div>
+              <div class="kpi-tr dn">past due_date</div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">Compliance Tasks</div><div class="sect-sub">ComplianceTask model · due_date ascending</div></div>
+            </div>
+            <div class="twrap">
+              <table style="table-layout:fixed;width:100%;font-size:12px">
+                <colgroup>
+                  <col style="width:8%">
+                  <col style="width:22%">
+                  <col style="width:14%">
+                  <col style="width:16%">
+                  <col style="width:11%">
+                  <col style="width:10%">
+                  <col style="width:10%">
+                  <col style="width:9%">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style="padding:8px 10px">Task ID</th>
+                    <th style="padding:8px 10px">Title</th>
+                    <th style="padding:8px 10px">Type</th>
+                    <th style="padding:8px 10px">Employee</th>
+                    <th style="padding:8px 10px">Due Date</th>
+                    <th style="padding:8px 10px">Status</th>
+                    <th style="padding:8px 10px">Assigned To</th>
+                    <th style="padding:8px 10px">Completed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t3)">TSK-001</td>
+                    <td style="padding:9px 10px"><span class="tn">ISO Cert. Renewal</span></td>
+                    <td style="padding:9px 10px"><span class="chip ct">Cert. Renewal</span></td>
+                    <td style="padding:9px 10px">Ahmad Raza</td>
+                    <td style="padding:9px 10px" class="tnum trd">2026-04-01</td>
+                    <td style="padding:9px 10px"><span class="chip cr">Overdue</span></td>
+                    <td style="padding:9px 10px">Ahmad Raza</td>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t4)">—</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum">TSK-002</td>
+                    <td style="padding:9px 10px"><span class="tn">HGV Licence Renewal</span></td>
+                    <td style="padding:9px 10px"><span class="chip" style="background:#DCFCE7;color:var(--grn);border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px">Doc Expiry</span></td>
+                    <td style="padding:9px 10px">Ben Mwangi</td>
+                    <td style="padding:9px 10px" class="tnum trd">2026-04-05</td>
+                    <td style="padding:9px 10px"><span class="chip cr">Overdue</span></td>
+                    <td style="padding:9px 10px">HR Team</td>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t4)">—</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum">TSK-003</td>
+                    <td style="padding:9px 10px"><span class="tn">First Aid Cert. Renewal</span></td>
+                    <td style="padding:9px 10px"><span class="chip ct">Cert. Renewal</span></td>
+                    <td style="padding:9px 10px">Clara Voss</td>
+                    <td style="padding:9px 10px" class="tnum tam">2026-04-14</td>
+                    <td style="padding:9px 10px"><span class="chip cb">In Progress</span></td>
+                    <td style="padding:9px 10px">Clara Voss</td>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t4)">—</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum">TSK-004</td>
+                    <td style="padding:9px 10px"><span class="tn">Code of Conduct Ack.</span></td>
+                    <td style="padding:9px 10px"><span class="chip cb">Policy Ack.</span></td>
+                    <td style="padding:9px 10px">Sofia Reyes</td>
+                    <td style="padding:9px 10px" class="tnum tam">2026-04-15</td>
+                    <td style="padding:9px 10px"><span class="chip ca">Open</span></td>
+                    <td style="padding:9px 10px">Sofia Reyes</td>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t4)">—</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum">TSK-005</td>
+                    <td style="padding:9px 10px"><span class="tn">Data Privacy Policy Ack.</span></td>
+                    <td style="padding:9px 10px"><span class="chip cb">Policy Ack.</span></td>
+                    <td style="padding:9px 10px">Kai Tanaka</td>
+                    <td style="padding:9px 10px" class="tnum tam">2026-04-20</td>
+                    <td style="padding:9px 10px"><span class="chip ca">Open</span></td>
+                    <td style="padding:9px 10px">Kai Tanaka</td>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t4)">—</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum">TSK-006</td>
+                    <td style="padding:9px 10px"><span class="tn">GDPR Manual Review</span></td>
+                    <td style="padding:9px 10px"><span class="chip ca">Manual Review</span></td>
+                    <td style="padding:9px 10px">Priya Nair</td>
+                    <td style="padding:9px 10px" class="tnum">2026-05-01</td>
+                    <td style="padding:9px 10px"><span class="chip cb">In Progress</span></td>
+                    <td style="padding:9px 10px">Compliance Mgr</td>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t4)">—</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum">TSK-007</td>
+                    <td style="padding:9px 10px"><span class="tn">AWS Cert. Renewal</span></td>
+                    <td style="padding:9px 10px"><span class="chip ct">Cert. Renewal</span></td>
+                    <td style="padding:9px 10px">Marco Herrera</td>
+                    <td style="padding:9px 10px" class="tnum">2026-05-10</td>
+                    <td style="padding:9px 10px"><span class="chip ca">Open</span></td>
+                    <td style="padding:9px 10px">Marco Herrera</td>
+                    <td style="padding:9px 10px" class="tnum" style="color:var(--t4)">—</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 10px" class="tnum">TSK-008</td>
+                    <td style="padding:9px 10px"><span class="tn">ISO 9001 Annual Review</span></td>
+                    <td style="padding:9px 10px"><span class="chip ca">Manual Review</span></td>
+                    <td style="padding:9px 10px">Engineering</td>
+                    <td style="padding:9px 10px" class="tnum">2026-06-30</td>
+                    <td style="padding:9px 10px"><span class="chip cg">Completed</span></td>
+                    <td style="padding:9px 10px">Tech Lead</td>
+                    <td style="padding:9px 10px" class="tnum">2026-03-10</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /tab-tasks -->
+
+      </div><!-- /content -->
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+</body>
+</html>

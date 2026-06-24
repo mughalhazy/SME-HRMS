@@ -1,0 +1,122 @@
+﻿{
+  "id": "hrms-h09-notifications-inbox-contract",
+  "version": "1.0",
+  "last_updated": "2026-03-29",
+  "archetype_ref": "hrms-schema-template.json",
+  "seed_page_ref": "frontend/seeds/p9-inbox.html",
+  "page": "Notifications Inbox",
+  "file": "pages/h09-notifications-inbox.html",
+  "backend_service": "notification_service",
+  "gaps": ["BG-022"],
+
+  "renderer_schema": {
+    "dsl_version": "1.0",
+    "slots": ["FOLDER_NAV", "MESSAGE_LIST", "DETAIL_PANEL"]
+  },
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "label": "Get Inbox",
+      "method": "GET",
+      "path": "/api/v1/notifications/inbox/:subject_id",
+      "service": "notification_service",
+      "params": {
+        "subject_id": "string — employee ID of current user",
+        "tenant_id": "string — required",
+        "unread_only": "boolean — default false",
+        "limit": "integer — default 25",
+        "cursor": "string"
+      },
+      "response_fields": {
+        "items": "NotificationMessage[] — inbox items (channel=InApp only)",
+        "items[].message_id": "notification_service › NotificationMessage.message_id",
+        "items[].event_name": "notification_service › NotificationMessage.event_name",
+        "items[].topic_code": "notification_service › NotificationMessage.topic_code — leave.submission | leave.approval | leave.rejection | leave.cancellation | travel.submission | travel.approval | travel.rejection | travel.completion | attendance.capture | performance.review_submission | performance.review_finalized | payroll.processed | payroll.paid | hiring.candidate_stage | hiring.interview_scheduled",
+        "items[].status": "notification_service › NotificationStatus — ref:api-contracts#NotificationStatus",
+        "items[].title": "notification_service › NotificationMessage.subject_text",
+        "items[].body": "notification_service › NotificationMessage.body_text",
+        "items[].queued_at": "notification_service › NotificationMessage.queued_at (ISO8601)",
+        "items[].read_at": "notification_service › NotificationMessage.read_at — null if unread",
+        "items[].unread": "boolean — derived: read_at === null",
+        "summary.total": "integer — total inbox items",
+        "summary.unread": "integer — unread count → drives topbar badge",
+        "summary.sent": "integer",
+        "summary.suppressed": "integer",
+        "summary.failed": "integer",
+        "_pagination.limit": "integer",
+        "_pagination.cursor": "string",
+        "_pagination.next_cursor": "string | null",
+        "_pagination.count": "integer"
+      },
+      "ui_surface": "MESSAGE_LIST + topbar unread badge + folder nav unread counts",
+      "gap_notes": "BG-022: service is read-only; Compose and Reply are chrome-only"
+    },
+    {
+      "id": "E02",
+      "label": "Mark Inbox Item Read",
+      "method": "POST",
+      "path": "/api/v1/notifications/inbox/:subject_id/:message_id/read",
+      "service": "notification_service",
+      "body_fields": {
+        "tenant_id": "string — required",
+        "actor": "object — optional { employee_id, name }"
+      },
+      "response_fields": {
+        "message_id": "notification_service › NotificationMessage.message_id",
+        "read_at": "notification_service › NotificationMessage.read_at (ISO8601)"
+      },
+      "ui_surface": "Triggered when user clicks a message row (selMsg) — clears unread indicator"
+    },
+    {
+      "id": "E03",
+      "label": "Get Notification Preferences",
+      "method": "GET",
+      "path": "/api/v1/notifications/preferences/:subject_id",
+      "service": "notification_service",
+      "params": {
+        "tenant_id": "string — required",
+        "subject_type": "string — default Employee",
+        "topic_code": "string — optional filter",
+        "limit": "integer",
+        "cursor": "string"
+      },
+      "response_fields": {
+        "items": "NotificationPreference[]",
+        "items[].topic_code": "notification_service › NotificationPreference.topic_code",
+        "items[].email_enabled": "boolean",
+        "items[].sms_enabled": "boolean",
+        "items[].push_enabled": "boolean",
+        "items[].in_app_enabled": "boolean"
+      },
+      "ui_surface": "Not yet wired in current build — reserved for Preferences tab"
+    }
+  ],
+
+  "topic_code_to_folder_map": {
+    "leave.submission": "approvals + leave",
+    "leave.approval": "leave",
+    "leave.rejection": "leave",
+    "leave.cancellation": "leave",
+    "travel.submission": "approvals",
+    "travel.approval": "approvals",
+    "travel.rejection": "approvals",
+    "travel.completion": "approvals",
+    "travel.cancellation": "approvals",
+    "attendance.capture": "ai (anomaly alerts)",
+    "performance.review_submission": "performance",
+    "performance.review_finalized": "performance",
+    "payroll.processed": "payroll",
+    "payroll.paid": "payroll",
+    "hiring.candidate_stage": "hiring",
+    "hiring.interview_scheduled": "hiring"
+  },
+
+  "mock_data_notes": {
+    "notification_count": 10,
+    "unread_count": 6,
+    "topic_codes_used": ["leave.submission","attendance.capture","hiring.candidate_stage","payroll.processed","performance.review_submission","leave.approval","hiring.interview_scheduled","travel.submission","payroll.paid","leave.cancellation"],
+    "ai_alert_item": "attendance.capture — shown with P-12 AI bar in detail panel",
+    "compose_reply": "chrome-only — BG-022"
+  }
+}

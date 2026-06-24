@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Approval Workflows</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;--violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1}
+.tb-sub{font-size:12px;font-weight:400;color:var(--t4);margin-left:8px}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-r{background:var(--rl);color:var(--red);border-color:#FECACA}.btn-r:hover{background:#FEE2E2}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Two-panel layout */
+.wf-body{flex:1;overflow:hidden;display:grid;grid-template-columns:380px 1fr}
+.list-col{border-right:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column}
+.detail-col{overflow-y:auto;display:flex;flex-direction:column;background:var(--w)}
+
+/* List header */
+.list-head{position:sticky;top:0;z-index:2;background:var(--w);border-bottom:1px solid var(--bd);padding:0 16px;flex-shrink:0}
+.lh-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px}
+.lh-title{font-size:13.5px;font-weight:700;color:var(--t1)}
+
+/* Filter tabs */
+.ftabs{display:flex;gap:3px;padding-bottom:0}
+.ftab{padding:7px 12px;font-size:12.5px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none}
+.ftab:hover{color:var(--t1)}.ftab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+.ftab-ct{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:4px}
+
+/* Approval cards */
+.appr{border-bottom:1px solid var(--bd);padding:14px 16px;cursor:pointer;transition:background .09s;position:relative}
+.appr:hover{background:var(--bg)}
+.appr.sel{background:var(--tl);border-left:3px solid var(--teal)}
+.appr.sel .appr-inner{margin-left:0}
+.ap-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.ap-av{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.ap-info{flex:1}
+.ap-name{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:1px}
+.ap-type{font-size:12px;color:var(--t3)}
+.ap-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:7px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.sla-txt{font-size:11px;font-family:var(--mono)}
+.sla-over{color:var(--red);font-weight:700}.sla-warn{color:var(--amber);font-weight:600}.sla-ok{color:var(--t4)}
+.ap-dates{font-size:11.5px;color:var(--t3);margin-bottom:8px}
+.ap-dates span{font-family:var(--mono);color:var(--t2);margin-left:3px}
+.ap-acts{display:flex;gap:6px}
+.ab{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:var(--r);cursor:pointer;border:1px solid;font-family:'Inter',sans-serif;transition:all .12s}
+.ab-ap{background:var(--teal);color:#fff;border-color:var(--teal)}.ab-ap:hover{background:#0C9E92}
+.ab-rj{background:var(--rl);color:var(--red);border-color:#FECACA}.ab-rj:hover{background:#FEE2E2}
+.ab-n{background:var(--w);color:var(--t2);border-color:var(--bd)}.ab-n:hover{background:var(--bg)}
+
+/* Detail panel */
+.dp-head{padding:16px 22px;background:var(--bg);border-bottom:1px solid var(--bd);flex-shrink:0}
+.dp-title{font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.015em;margin-bottom:2px}
+.dp-sub{font-size:12px;color:var(--t3)}
+.dp-sec{padding:14px 22px;border-bottom:1px solid var(--bd)}
+.dp-sec-t{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;margin-bottom:10px}
+.dp-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--t5)}
+.dp-row:last-child{border-bottom:none}
+.dp-l{font-size:12.5px;color:var(--t3)}.dp-v{font-size:12.5px;font-weight:600;color:var(--t1)}
+.dp-v.mono{font-family:var(--mono);font-size:12px}
+.policy-box{background:var(--bg);border-radius:var(--r);padding:11px 13px;margin-top:8px}
+.pb-title{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:6px}
+.pb-row{display:flex;justify-content:space-between;font-size:12px;color:var(--t3);margin-bottom:3px}
+.pb-row span:last-child{font-weight:600;color:var(--t1)}
+.pb-total{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;color:var(--t1);margin-top:7px;padding-top:7px;border-top:1px solid var(--bd)}
+.pb-total span:last-child{color:var(--teal)}
+.ai-box{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r);padding:11px 13px;margin-top:10px}
+.ai-box-lbl{font-size:9.5px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.10em;margin-bottom:4px}
+.ai-box-txt{font-size:12px;color:var(--t2);line-height:1.5}
+.hist-item{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--t5)}
+.hist-item:last-child{border-bottom:none}
+.hist-av{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;margin-top:1px}
+.hist-txt{font-size:12px;color:var(--t2);line-height:1.5}
+.hist-time{font-size:10.5px;color:var(--t4);font-family:var(--mono);margin-top:2px}
+.dp-actions{padding:14px 22px;border-top:1px solid var(--bd);flex-shrink:0;background:var(--w);display:flex;flex-direction:column;gap:7px;margin-top:auto}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="tb-t">Approval Workflows<span class="tb-sub">9 pending · 3 overdue · 2 SLA breached</span></div>
+    <div class="tb-vd"></div>
+    <button class="btn"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>Filter</button>
+    <button class="btn btn-p">Approve All Eligible</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <div class="wf-body">
+
+    <!-- Left: list -->
+    <div class="list-col">
+      <div class="list-head">
+        <div class="lh-row">
+          <div class="lh-title">Pending Approvals</div>
+          <span style="font-size:11.5px;color:var(--t4)">Sorted by urgency</span>
+        </div>
+        <div class="ftabs">
+          <div class="ftab on" onclick="setTab(this)">All<span class="ftab-ct" style="background:var(--t5);color:var(--t3)">9</span></div>
+          <div class="ftab" onclick="setTab(this)">Leave<span class="ftab-ct" style="background:var(--al);color:var(--amber)">4</span></div>
+          <div class="ftab" onclick="setTab(this)">Payroll<span class="ftab-ct" style="background:var(--rl);color:var(--red)">3</span></div>
+          <div class="ftab" onclick="setTab(this)">Contracts<span class="ftab-ct" style="background:var(--bl);color:var(--blue)">2</span></div>
+        </div>
+      </div>
+
+      <!-- Card 1 — selected -->
+      <div class="appr sel" onclick="selCard(this, 'tom')">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#B45309">TN</div>
+          <div class="ap-info"><div class="ap-name">Tom Nakamura</div><div class="ap-type">Annual Leave Request · 4 days</div></div>
+          <span class="chip cr">6d overdue</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Sales · EMEA</span><span class="sla-txt sla-over">⚑ SLA breached (5d)</span></div>
+        <div class="ap-dates">Period:<span>Apr 7–10, 2026</span> &nbsp; Submitted:<span>Mar 13</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Approve</button><button class="ab ab-rj">✕ Reject</button><button class="ab ab-n">Delegate</button></div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="appr" onclick="selCard(this, 'eva')">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#DC2626">EF</div>
+          <div class="ap-info"><div class="ap-name">Eva Fischer</div><div class="ap-type">Payroll Anomaly — Salary Change</div></div>
+          <span class="chip cr">Review now</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Finance · FP&A</span><span class="sla-txt sla-over">AI flagged · 91% confidence</span></div>
+        <div class="ap-dates">Detected:<span>Mar 18, 2026</span> &nbsp; Variance:<span>+$8,000 (+7.6%)</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">Approve</button><button class="ab ab-rj">Reject</button><button class="ab ab-n">Investigate</button></div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="appr" onclick="selCard(this, 'laila')">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#059669">LO</div>
+          <div class="ap-info"><div class="ap-name">Laila Osei</div><div class="ap-type">Contract Renewal · 6-month extension</div></div>
+          <span class="chip ca">Due in 3d</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">HR & Ops · London</span><span class="sla-txt sla-warn">⚑ Contract expires Apr 1</span></div>
+        <div class="ap-dates">Current ends:<span>Mar 31, 2026</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Renew</button><button class="ab ab-rj">Offboard</button><button class="ab ab-n">Review</button></div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="appr" onclick="selCard(this, 'marcus')">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#0284C7">MH</div>
+          <div class="ap-info"><div class="ap-name">Marcus Hill</div><div class="ap-type">Overtime Approval · 48 hours claimed</div></div>
+          <span class="chip cr">High variance</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Engineering · Remote</span><span class="sla-txt sla-over">+31% from prior month</span></div>
+        <div class="ap-dates">Cycle:<span>March 2026</span> &nbsp; Prior OT:<span>0 hrs</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">Approve OT</button><button class="ab ab-rj">Reject</button><button class="ab ab-n">Query</button></div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="appr" onclick="selCard(this, 'amara')">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#7C3AED">AK</div>
+          <div class="ap-info"><div class="ap-name">Amara Kofi</div><div class="ap-type">Sick Leave · 2 days</div></div>
+          <span class="chip cg">Low risk</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Marketing · Remote</span><span class="sla-txt sla-ok">2 days remaining</span></div>
+        <div class="ap-dates">Period:<span>Mar 20–21, 2026</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">✓ Approve</button><button class="ab ab-n">View History</button></div>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="appr" onclick="selCard(this, 'james')">
+        <div class="ap-top">
+          <div class="ap-av" style="background:#4F46E5">JO</div>
+          <div class="ap-info"><div class="ap-name">James Okafor</div><div class="ap-type">Equipment Request · MacBook Pro M3</div></div>
+          <span class="chip cb">Pending IT</span>
+        </div>
+        <div class="ap-meta"><span class="chip cn">Engineering · SF</span><span class="sla-txt sla-warn">Day 9 — overdue</span></div>
+        <div class="ap-dates">Requested:<span>Mar 10, 2026</span></div>
+        <div class="ap-acts"><button class="ab ab-ap">Approve</button><button class="ab ab-n">Forward to IT</button></div>
+      </div>
+    </div>
+
+    <!-- Right: detail panel -->
+    <div class="detail-col" id="detail-panel">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+const details = {
+  tom: {
+    title: 'Tom Nakamura — Leave Request',
+    sub: 'Annual Leave · 4 days · Apr 7–10, 2026',
+    rows: [
+      ['Employee','Tom Nakamura (EMP-0339)'],
+      ['Department','Sales · Enterprise EMEA'],
+      ['Leave Type','Annual Leave'],
+      ['Period','Apr 7 – Apr 10, 2026'],
+      ['Duration','4 working days'],
+      ['Submitted','Mar 13, 2026 (6 days ago)'],
+      ['SLA Status','⚑ Breached — SLA is 5 days','red'],
+      ['Reason','Personal / family event'],
+    ],
+    policy: { title: 'Tom Nakamura — 2026 Leave Balance', rows: [['Total Annual Entitlement','25 days'],['Used YTD','3 days'],['This Request','4 days']], total: ['Remaining After Approval','18 days'] },
+    impact: [['Team size','8 Sales reps (EMEA)'],['Others on leave','1 — dates overlap','amber'],['Coverage confirmed','Yes — L. Barnes','green']],
+    ai: 'Low risk approval. Coverage confirmed, balance adequate. Recommend approval to resolve SLA breach. No leave abuse pattern detected in 12-month history.',
+    history: [
+      {ini:'AW',c:'#4F46E5',txt:'Alex Wang opened request for review',ts:'just now'},
+      {ini:'AI',c:'#0A8F84',txt:'AI risk assessment: Low risk — recommend approve',ts:'1 hr ago'},
+      {ini:'TN',c:'#B45309',txt:'Tom Nakamura submitted leave request',ts:'Mar 13, 2026'},
+    ]
+  },
+  eva: {
+    title: 'Eva Fischer — Payroll Anomaly',
+    sub: 'Base Salary Change · +$8,000 · March 2026',
+    rows: [
+      ['Employee','Eva Fischer (EMP-0337)'],
+      ['Department','Finance · FP&A'],
+      ['Anomaly Type','Salary change — no change request on record'],
+      ['Current Cycle','$113,000 (March 2026)'],
+      ['Previous Cycle','$105,000 (February 2026)'],
+      ['Difference','+$8,000 (+7.6%)','red'],
+      ['AI Confidence','91% — likely data entry error'],
+      ['Detected','Mar 18, 2026'],
+    ],
+    policy: null,
+    impact: [['Last change request','None on record','red'],['Contract salary','$105,000'],['Approved changes','0 in last 12 months']],
+    ai: 'High confidence this is a data error. No salary change request was raised or approved. The employee\'s contract shows $105,000. Recommend rejecting the change and reverting to $105,000.',
+    history: [
+      {ini:'AI',c:'#0A8F84',txt:'AI anomaly detection flagged salary variance (+7.6%)',ts:'Mar 18, 10:14'},
+      {ini:'AW',c:'#4F46E5',txt:'Alex Wang assigned for review',ts:'Mar 18, 10:22'},
+    ]
+  },
+  laila:{title:'Laila Osei — Contract Renewal',sub:'Fixed-term extension · 6 months · from Apr 1, 2026',rows:[['Employee','Laila Osei (EMP-0290)'],['Department','HR & Ops · London'],['Current Contract Ends','Mar 31, 2026'],['Proposed Extension','6 months — to Sep 30, 2026'],['Role','HR Business Partner'],['Performance','Exceeds Expectations (last review)'],['Manager Recommendation','Renew','green']],policy:null,impact:[['Pending deliverables','GDPR audit, onboarding review'],['Replacement timeline','8–12 weeks if not renewed','amber'],['Budget approved','Yes — Q2 headcount']],ai:'Strong recommend for renewal. Employee is performing well and has two critical projects in flight. Replacing would take 8–12 weeks and pose delivery risk.',history:[{ini:'LB',c:'#059669',txt:'L. Barnes (Manager) submitted renewal request',ts:'Mar 14, 2026'},{ini:'AW',c:'#4F46E5',txt:'Alex Wang added for final approval',ts:'Mar 18, 2026'}]},
+  marcus:{title:'Marcus Hill — Overtime Approval',sub:'48 hours OT claimed · March 2026',rows:[['Employee','Marcus Hill (EMP-0336)'],['Department','Engineering · Remote'],['Pay Period','March 2026'],['OT Hours Claimed','48 hours'],['Previous Month OT','0 hours'],['Variance','+48 hrs (+∞%)','red'],['Rate','1.5× ($38.96/hr → $58.44/hr)'],['Total OT Cost','$2,805.12']],policy:null,impact:[['Project','Platform migration (deadline Apr 5)'],['Manager verified','Pending — S. Mitchell'],['Team avg OT','6 hrs / month']],ai:'Significant anomaly. 48 hrs OT with no prior history warrants verification. However, there is an active platform migration project with a known deadline. Request manager confirmation.',history:[{ini:'MH',c:'#0284C7',txt:'Marcus Hill submitted OT claim',ts:'Mar 25, 2026'},{ini:'AI',c:'#0A8F84',txt:'AI flagged: 31% net pay increase — review required',ts:'Mar 26, 09:00'}]},
+  amara:{title:'Amara Kofi — Sick Leave',sub:'Sick Leave · 2 days · Mar 20–21, 2026',rows:[['Employee','Amara Kofi (EMP-0338)'],['Department','Marketing · Remote'],['Leave Type','Sick Leave'],['Period','Mar 20–21, 2026'],['Duration','2 working days'],['Submitted','Mar 19, 2026'],['SLA Status','Within 5-day SLA','green'],['Sick Balance','10 / 10 days remaining']],policy:{title:'Sick Leave Balance',rows:[['Annual Entitlement','10 days'],['Used YTD','0 days'],['This Request','2 days']],total:['Remaining After','8 days']},impact:[['Others on leave','0 (no overlap)','green'],['Coverage needed','None — independent role'],['Medical cert required','No (under 3 days)']],ai:'Routine sick leave request. Full entitlement remaining, no prior sick leave this year, no team impact. Recommend approval.',history:[{ini:'AK',c:'#7C3AED',txt:'Amara Kofi submitted sick leave request',ts:'Mar 19, 2026'},{ini:'AI',c:'#0A8F84',txt:'AI assessment: Low risk — recommend approve',ts:'Mar 19, 2026'}]},
+  james:{title:'James Okafor — Equipment Request',sub:'MacBook Pro M3 + peripherals · Day 9 onboarding',rows:[['Employee','James Okafor (EMP-0341)'],['Department','Engineering · Backend Platform'],['Start Date','Mar 10, 2026 (Day 9)'],['Item Requested','MacBook Pro M3 Max 36GB'],['Estimated Cost','$3,499'],['Ticket Status','Pending IT approval','amber'],['Budget Code','ENG-HARDWARE-2026']],policy:null,impact:[['Dev environment setup','Blocked — needs machine'],['Onboarding milestone','IT setup at 60% (due today)'],['Manager alerted','S. Mitchell — notified']],ai:'Onboarding equipment request is 9 days delayed. Employee cannot complete dev environment setup or access secure repos without machine. Priority: High.',history:[{ini:'JO',c:'#4F46E5',txt:'James Okafor submitted equipment request',ts:'Mar 10, 2026'},{ini:'IT',c:'#64748B',txt:'IT helpdesk assigned — awaiting budget approval',ts:'Mar 11, 2026'},{ini:'AW',c:'#4F46E5',txt:'Escalated — budget approval required',ts:'Mar 18, 2026'}]},
+};
+
+function renderDetail(key) {
+  const d = details[key];
+  if (!d) return;
+  const colourMap = {red:'var(--red)',green:'var(--grn)',amber:'var(--amber)'};
+  const rowsHtml = d.rows.map(r => `<div class="dp-row"><span class="dp-l">${r[0]}</span><span class="dp-v ${r[2]&&r[2]==='mono'?'mono':''}" style="color:${r[2]&&colourMap[r[2]]?colourMap[r[2]]:'var(--t1)'}">${r[1]}</span></div>`).join('');
+  const policyHtml = d.policy ? `<div class="dp-sec"><div class="dp-sec-t">Leave Balance</div><div class="policy-box"><div class="pb-title">${d.policy.title}</div>${d.policy.rows.map(r=>`<div class="pb-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}<div class="pb-total"><span>${d.policy.total[0]}</span><span>${d.policy.total[1]}</span></div></div></div>` : '';
+  const impactHtml = d.impact.map(r=>`<div class="dp-row"><span class="dp-l">${r[0]}</span><span class="dp-v" style="color:${r[2]&&colourMap[r[2]]?colourMap[r[2]]:'var(--t1)'}">${r[1]}</span></div>`).join('');
+  const histHtml = d.history.map(h=>`<div class="hist-item"><div class="hist-av" style="background:${h.c}">${h.ini}</div><div><div class="hist-txt">${h.txt}</div><div class="hist-time">${h.ts}</div></div></div>`).join('');
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="dp-head"><div class="dp-title">${d.title}</div><div class="dp-sub">${d.sub}</div></div>
+    <div class="dp-sec"><div class="dp-sec-t">Request Details</div>${rowsHtml}</div>
+    ${policyHtml}
+    <div class="dp-sec"><div class="dp-sec-t">Impact Assessment</div>${impactHtml}
+      <div class="ai-box"><div class="ai-box-lbl">AI Assessment</div><div class="ai-box-txt">${d.ai}</div></div>
+    </div>
+    <div class="dp-sec"><div class="dp-sec-t">Approval History</div>${histHtml}</div>
+    <div class="dp-sec" style="border-bottom:none"><div class="dp-sec-t">Comment (optional)</div><textarea style="width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;resize:none;height:68px;outline:none;transition:border-color .14s" placeholder="Add a note to the employee or for your records…" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--bd)'"></textarea></div>
+    <div class="dp-actions">
+      <button class="btn btn-p" style="width:100%;justify-content:center;padding:9px">✓ Approve</button>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-r" style="flex:1;justify-content:center">✕ Reject</button>
+        <button class="btn" style="flex:1;justify-content:center">Delegate →</button>
+      </div>
+    </div>`;
+}
+
+function selCard(el, key) {
+  document.querySelectorAll('.appr').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  renderDetail(key);
+}
+
+function setTab(el) {
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+}
+
+document.querySelectorAll('.si').forEach(el => el.addEventListener('click', function() { document.querySelectorAll('.si').forEach(x => x.classList.remove('on')); this.classList.add('on'); }));
+renderDetail('tom');
+</script>
+</body>
+</html>

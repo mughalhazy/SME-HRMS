@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+Lib/
+Scripts/
+Include/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.npm
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Docker
+*.log
+
+# Distribution
+*.tar.gz
+*.zip
+
+# Workspace sealing — local cache/temp/output (never commit)
+.workspace/
+*.pid
+.mypy_cache/
+.ruff_cache/
+.turbo/
+.parcel-cache/
+coverage.xml
+junit*.xml
+
+# Claude Code local tooling (machine-specific, not project source)
+.claude/
+
+# Protocol / sealing docs (working files, not source)
+# Tracked intentionally — remove from here if you want to exclude them

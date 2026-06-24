@@ -1,0 +1,170 @@
+﻿{
+  "id": "hrms-h10-org-settings-contract",
+  "version": "1.0",
+  "last_updated": "2026-03-29",
+  "archetype_ref": "hrms-schema-template.json",
+  "seed_page_ref": "frontend/seeds/p10-settings.html",
+  "page": "Organisation Settings",
+  "file": "pages/h10-org-settings.html",
+  "backend_service": "settings-service · employee-service",
+  "gaps": ["BG-023", "BG-024", "BG-025", "BG-026", "BG-027"],
+
+  "renderer_schema": {
+    "dsl_version": "1.0",
+    "slots": ["SETTINGS_NAV", "COMPANY_DETAILS", "LEAVE_POLICIES", "PAYROLL_CONFIG", "ROLES_PERMISSIONS", "ATTENDANCE_RULES"]
+  },
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "label": "Get Settings Configuration View",
+      "method": "GET",
+      "path": "/api/v1/settings",
+      "service": "settings-service",
+      "params": {
+        "tenant_id": "string — required"
+      },
+      "response_fields": {
+        "settings_configuration_view.attendance_rules": "AttendanceRuleReadModel[] — drives ATTENDANCE_RULES section",
+        "settings_configuration_view.attendance_rules[].attendance_rule_id": "settings-service › AttendanceRule.attendance_rule_id",
+        "settings_configuration_view.attendance_rules[].code": "settings-service › AttendanceRule.code",
+        "settings_configuration_view.attendance_rules[].name": "settings-service › AttendanceRule.name",
+        "settings_configuration_view.attendance_rules[].schedule_summary": "settings-service › AttendanceRuleReadModel.schedule_summary",
+        "settings_configuration_view.attendance_rules[].compliance_summary": "settings-service › AttendanceRuleReadModel.compliance_summary",
+        "settings_configuration_view.attendance_rules[].status": "settings-service › SettingsStatus — ref:api-contracts#Settings.status",
+        "settings_configuration_view.leave_policies": "LeavePolicyReadModel[] — drives LEAVE_POLICIES section",
+        "settings_configuration_view.leave_policies[].leave_policy_id": "settings-service › LeavePolicy.leave_policy_id",
+        "settings_configuration_view.leave_policies[].code": "settings-service › LeavePolicy.code",
+        "settings_configuration_view.leave_policies[].name": "settings-service › LeavePolicy.name",
+        "settings_configuration_view.leave_policies[].leave_type": "settings-service › LeavePolicyType — ref:api-contracts#Settings.leave_policy.type",
+        "settings_configuration_view.leave_policies[].entitlement_summary": "settings-service › LeavePolicyReadModel.entitlement_summary",
+        "settings_configuration_view.leave_policies[].approval_summary": "settings-service › LeavePolicyReadModel.approval_summary",
+        "settings_configuration_view.leave_policies[].status": "settings-service › SettingsStatus",
+        "settings_configuration_view.payroll_settings": "PayrollSettingsReadModel | null — drives PAYROLL_CONFIG section",
+        "settings_configuration_view.payroll_settings.pay_schedule": "settings-service › PaySchedule — ref:api-contracts#Settings.pay_schedule",
+        "settings_configuration_view.payroll_settings.pay_day": "settings-service › PayrollSettings.pay_day",
+        "settings_configuration_view.payroll_settings.currency": "settings-service › PayrollSettings.currency",
+        "settings_configuration_view.payroll_settings.payroll_summary": "settings-service › PayrollSettingsReadModel.payroll_summary",
+        "settings_configuration_view.payroll_settings.status": "settings-service › SettingsStatus",
+        "settings_configuration_view.tenant_configuration.legal_entity": "settings-service › TenantConfig.legal_entity — drives Company Details",
+        "settings_configuration_view.tenant_configuration.locale": "settings-service › TenantConfig.locale",
+        "settings_configuration_view.tenant_configuration.enabled_locations": "settings-service › TenantConfig.enabled_locations — string[]",
+        "settings_configuration_view.tenant_configuration.feature_flags": "settings-service › TenantConfig.feature_flags — Record<string, boolean>"
+      },
+      "ui_surface": "COMPANY_DETAILS (tenant_configuration) + LEAVE_POLICIES + PAYROLL_CONFIG summary + ATTENDANCE_RULES"
+    },
+    {
+      "id": "E02",
+      "label": "Get Payroll Settings (full detail)",
+      "method": "GET",
+      "path": "/api/v1/settings/payroll",
+      "service": "settings-service",
+      "params": {
+        "tenant_id": "string — required"
+      },
+      "response_fields": {
+        "pay_schedule": "settings-service › PaySchedule — ref:api-contracts#Settings.pay_schedule",
+        "pay_day": "settings-service › PayrollSettings.pay_day — integer (day of month)",
+        "currency": "settings-service › PayrollSettings.currency — ISO 4217",
+        "overtime_multiplier": "settings-service › PayrollSettings.overtime_multiplier — float",
+        "attendance_cutoff_days": "settings-service › PayrollSettings.attendance_cutoff_days — integer",
+        "leave_deduction_mode": "settings-service › LeaveDeductionMode — None | Prorated | FullDay",
+        "approval_chain": "settings-service › PayrollSettings.approval_chain — string[] of role IDs",
+        "status": "settings-service › SettingsStatus"
+      },
+      "ui_surface": "PAYROLL_CONFIG section — full edit form"
+    },
+    {
+      "id": "E03",
+      "label": "Upsert Payroll Settings",
+      "method": "PUT",
+      "path": "/api/v1/settings/payroll",
+      "service": "settings-service",
+      "body_fields": {
+        "tenant_id": "string — required",
+        "pay_schedule": "PaySchedule — Weekly | BiWeekly | SemiMonthly | Monthly",
+        "pay_day": "integer — day of month",
+        "currency": "string — ISO 4217",
+        "overtime_multiplier": "float",
+        "attendance_cutoff_days": "integer",
+        "leave_deduction_mode": "LeaveDeductionMode — None | Prorated | FullDay",
+        "approval_chain": "string[] — ordered role IDs",
+        "status": "SettingsStatus — optional, default Active"
+      },
+      "ui_surface": "PAYROLL_CONFIG Save Changes button"
+    },
+    {
+      "id": "E04",
+      "label": "Update Leave Policy",
+      "method": "PATCH",
+      "path": "/api/v1/settings/leave-policies/:leavePolicyId",
+      "service": "settings-service",
+      "body_fields": {
+        "name": "string — optional",
+        "accrual_frequency": "AccrualFrequency — None | Monthly | Quarterly | Yearly",
+        "accrual_rate_days": "float — optional",
+        "annual_entitlement_days": "float — optional",
+        "carry_forward_limit_days": "float — optional",
+        "requires_approval": "boolean — optional",
+        "allow_negative_balance": "boolean — optional",
+        "status": "SettingsStatus — optional"
+      },
+      "ui_surface": "LEAVE_POLICIES Edit button per policy row"
+    },
+    {
+      "id": "E05",
+      "label": "Create Leave Policy",
+      "method": "POST",
+      "path": "/api/v1/settings/leave-policies",
+      "service": "settings-service",
+      "body_fields": {
+        "tenant_id": "string — optional",
+        "code": "string — required",
+        "name": "string — required",
+        "leave_type": "LeavePolicyType — Annual | Sick | Casual | Unpaid | Parental | Other",
+        "accrual_frequency": "AccrualFrequency",
+        "accrual_rate_days": "float",
+        "annual_entitlement_days": "float",
+        "carry_forward_limit_days": "float",
+        "requires_approval": "boolean — optional, default true",
+        "allow_negative_balance": "boolean — optional, default false",
+        "status": "SettingsStatus — optional, default Active"
+      },
+      "ui_surface": "LEAVE_POLICIES Add Policy button"
+    },
+    {
+      "id": "E06",
+      "label": "List Roles",
+      "method": "GET",
+      "path": "/api/v1/roles",
+      "service": "employee-service",
+      "params": {
+        "tenant_id": "string — required",
+        "status": "RoleStatus — Draft | Active | Inactive | Archived (optional filter)",
+        "limit": "integer",
+        "cursor": "string"
+      },
+      "response_fields": {
+        "items": "Role[] — drives ROLES_PERMISSIONS table",
+        "items[].role_id": "employee-service › Role.role_id",
+        "items[].title": "employee-service › Role.title",
+        "items[].level": "employee-service › Role.level — optional",
+        "items[].employment_category": "employee-service › EmploymentCategory — Staff | Manager | Executive | Contractor",
+        "items[].status": "employee-service › RoleStatus — Draft | Active | Inactive | Archived",
+        "items[].permissions": "employee-service › RolePermissionCode[] — CAP-EMP-001 | CAP-EMP-002 | CAP-ATT-001 | CAP-ATT-002 | CAP-LEV-001 | CAP-LEV-002 | CAP-PAY-001 | CAP-PAY-002 | CAP-HIR-001 | CAP-HIR-002 | CAP-PRF-001"
+      },
+      "ui_surface": "ROLES_PERMISSIONS section — roles table"
+    }
+  ],
+
+  "mock_data_notes": {
+    "leave_policies_count": 5,
+    "leave_types_used": ["Annual", "Sick", "Casual", "Parental", "Unpaid"],
+    "leave_statuses": ["Active", "Active", "Active", "Active", "Draft"],
+    "roles_count": 8,
+    "role_categories_used": ["Manager", "Staff", "Executive", "Contractor"],
+    "role_statuses": ["Active", "Draft"],
+    "attendance_rules_count": 2,
+    "chrome_sections": ["Profile (BG-023)", "Security (BG-024)", "Notifications (BG-025)", "Integrations (BG-026)", "AI & Automation (BG-027)", "Audit Log", "Data & Retention"]
+  }
+}

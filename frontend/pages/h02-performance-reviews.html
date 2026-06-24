@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Performance Reviews</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;--red:#B91C1C;--rl:#FEE2E2;--blue:#1D4ED8;--bl:#DBEAFE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--w);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s;position:relative}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.header{background:var(--w);border-bottom:1px solid var(--bd);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hd-title{font-size:17px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.hd-sub{font-size:12.5px;color:var(--t3);margin-top:3px}
+.hd-right{display:flex;gap:7px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:#0C9E92}
+.btn-sm{padding:4px 10px;font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);background:var(--w);border-bottom:1px solid var(--bd);flex-shrink:0}
+.stat{padding:11px 18px;border-right:1px solid var(--bd)}
+.stat:last-child{border-right:none}
+.s-lbl{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.s-val{font-family:var(--mono);font-size:19px;font-weight:600;color:var(--t1);line-height:1}
+.s-note{font-size:11px;color:var(--t4);margin-top:3px}
+.badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:var(--mono);display:inline-block}
+.bg{background:var(--gl);color:var(--grn)}.ba{background:var(--al);color:var(--amber)}.br{background:var(--rl);color:var(--red)}
+.toolbar{background:var(--w);border-bottom:1px solid var(--bd);padding:9px 18px;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.tab-row{display:flex;gap:2px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:3px}
+.tab{padding:4px 12px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--t3);cursor:pointer;transition:all .12s;user-select:none;white-space:nowrap}
+.tab.on{background:var(--w);color:var(--t1);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tab-ct{font-family:var(--mono);font-size:10px;padding:0 4px;border-radius:3px;margin-left:3px}
+.tsp{flex:1}
+.sinp{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 10px;width:198px;transition:all .14s}
+.sinp:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.sinp input{background:none;border:none;outline:none;font-size:12.5px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.sinp input::placeholder{color:var(--t4)}
+.sinp svg{width:12px;height:12px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sel{background:var(--w);border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;font-size:12.5px;color:var(--t2);font-family:'Inter',sans-serif;cursor:pointer;outline:none}
+.table-wrap{flex:1;overflow-y:auto;min-height:0;padding-bottom:12vh}
+table{width:100%;border-collapse:collapse}
+thead{position:sticky;top:0;z-index:2}
+thead tr{background:var(--t6);border-bottom:1px solid var(--bd)}
+th{padding:9px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--t2)}.th-s{color:var(--teal)}
+td{padding:11px 16px;border-bottom:1px solid var(--t5);vertical-align:middle;font-size:13px;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background .09s;cursor:pointer}
+tbody tr:hover td{background:var(--tl)}
+.person{display:flex;align-items:center;gap:10px}
+.pav{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff}
+.pn{font-weight:600;font-size:13px;color:var(--t1)}
+.pid{font-family:var(--mono);font-size:10.5px;color:var(--t4)}
+.td-m{color:var(--t3)}
+.td-mono{font-family:var(--mono);font-size:12px;color:var(--t2)}
+.row-acts{display:flex;gap:4px;opacity:0;transition:opacity .12s}
+tr:hover .row-acts{opacity:1}
+.ra{width:24px;height:24px;border-radius:5px;border:1px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s}
+.ra:hover{background:var(--tl);color:var(--teal);border-color:var(--tb)}
+.ra svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.ct2{background:var(--tl);color:var(--teal)}.ct2::before{background:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.tfoot{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;background:var(--t6);border-top:1px solid var(--bd);flex-shrink:0}
+.tf-info{font-size:11.5px;color:var(--t4)}
+.tf-info b{font-family:var(--mono);font-weight:600;color:var(--t2)}
+.pag{display:flex;gap:2px}
+.pg{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t3);font-family:var(--mono);transition:all .12s}
+.pg:hover{background:var(--bg)}.pg.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.pg.dim{border:none;background:none;color:var(--t4);cursor:default}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.a1{animation:fu .28s ease both}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si" title="Dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="si" title="Analytics"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si" title="Employees"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si" title="Payroll"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si" title="Leave"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+  <div class="si on" title="Performance"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main a1">
+
+  <div class="header">
+    <div>
+      <div class="hd-title">Performance Reviews</div>
+      <div class="hd-sub">Q1 2026 Cycle · 89 reviews</div>
+    </div>
+    <div class="hd-right">
+      <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+    </div>
+  </div>
+
+  <!-- Stats strip — performance-service aggregate counts — BG-005 mock -->
+  <div class="stats">
+    <div class="stat"><div class="s-lbl">Total</div><div class="s-val">89</div><div class="s-note">Q1 2026 cycle</div></div>
+    <div class="stat"><div class="s-lbl">Open</div><div class="s-val">42</div><div class="s-note">In progress</div></div>
+    <div class="stat"><div class="s-lbl">Submitted</div><div class="s-val">31</div><div class="s-note">Awaiting sign-off</div></div>
+    <div class="stat"><div class="s-lbl">Finalized</div><div class="s-val">16</div><div class="s-note"><span class="badge bg">18%</span> completion</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="tab-row">
+      <div class="tab on">All<span class="tab-ct" style="background:var(--t5)">89</span></div>
+      <div class="tab">Open<span class="tab-ct" style="background:var(--bl);color:var(--blue)">42</span></div>
+      <div class="tab">Submitted<span class="tab-ct" style="background:var(--al);color:var(--amber)">31</span></div>
+      <div class="tab">Closed<span class="tab-ct" style="background:var(--gl);color:var(--grn)">16</span></div>
+    </div>
+    <div class="tsp"></div>
+    <div class="sinp"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search employee…"></div>
+    <select class="sel">
+      <!-- ReviewCycleStatus enum: Draft · PendingApproval · Open · Closed -->
+      <option>All Statuses</option><option>Draft</option><option>Open</option><option>Submitted</option><option>Closed</option>
+    </select>
+    <select class="sel">
+      <option>Q1 2026</option><option>Q4 2025</option><option>Q3 2025</option><option>Q2 2025</option>
+    </select>
+    <select class="sel">
+      <option>All Departments</option><option>Engineering</option><option>Product</option><option>Sales</option><option>Marketing</option><option>Finance</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:22%">Employee</th>
+          <th style="width:14%">Review Cycle</th>
+          <th style="width:18%">Reviewer</th>
+          <th style="width:12%">Status</th>
+          <th class="th-s" style="width:14%">Due Date ↓</th>
+          <th style="width:10%">Goals</th>
+          <th style="width:10%"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="tfoot">
+    <div class="tf-info">Showing <b>1–7</b> of <b>89</b> reviews</div>
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="font-size:11.5px;color:var(--t3)">Rows per page:</span>
+      <select class="sel" style="padding:3px 7px;font-size:12px"><option>12</option><option>25</option><option>50</option></select>
+      <div class="pag">
+        <div class="pg dim">‹</div>
+        <div class="pg on">1</div><div class="pg">2</div><div class="pg">3</div>
+        <div class="pg dim">…</div>
+        <div class="pg">8</div><div class="pg">›</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// performance-service › PerformanceReview model
+// ReviewCycleStatus enum: Draft · PendingApproval · Open · Closed
+// GoalStatus enum: Draft · Submitted · Approved · Rejected
+const reviews=[
+  {id:'EMP-0340',n:'Priya Rajesh',  i:'PR',c:'#059669',cycle:'Q1 2026',reviewer:'David Chen',   s:'Open',     due:'31 Mar 2026',goals:'5 goals'},
+  {id:'EMP-0339',n:'Tom Nakamura',  i:'TN',c:'#B45309',cycle:'Q1 2026',reviewer:'Carlos Mendez',s:'Open',     due:'31 Mar 2026',goals:'3 goals'},
+  {id:'EMP-0341',n:'James Okafor',  i:'JO',c:'#4F46E5',cycle:'Q1 2026',reviewer:'Ravi Sharma',  s:'Submitted',due:'31 Mar 2026',goals:'4 goals'},
+  {id:'EMP-0337',n:'Eva Fischer',   i:'EF',c:'#DC2626',cycle:'Q1 2026',reviewer:'Christine Wang',s:'Open',    due:'31 Mar 2026',goals:'4 goals'},
+  {id:'EMP-0336',n:'Marcus Hill',   i:'MH',c:'#0284C7',cycle:'Q1 2026',reviewer:'Ravi Sharma',  s:'Submitted',due:'31 Mar 2026',goals:'6 goals'},
+  {id:'EMP-0335',n:'Sara Lindqvist',i:'SL',c:'#0D9488',cycle:'Q1 2026',reviewer:'David Chen',   s:'Closed',   due:'28 Feb 2026',goals:'5 goals'},
+  {id:'EMP-0241',n:'Yuki Tanaka',   i:'YT',c:'#EC4899',cycle:'Q1 2026',reviewer:'Ravi Sharma',  s:'Closed',   due:'28 Feb 2026',goals:'4 goals'},
+];
+const sc={Open:'cb',Submitted:'ca',Closed:'cg',Draft:'cn'};
+
+function render(){
+  document.getElementById('tbody').innerHTML=reviews.map(r=>`
+    <tr>
+      <td><div class="person"><div class="pav" style="background:${r.c}">${r.i}</div><div><div class="pn">${r.n}</div><div class="pid">${r.id}</div></div></div></td>
+      <td class="td-mono">${r.cycle}</td>
+      <td class="td-m">${r.reviewer}</td>
+      <td><span class="chip ${sc[r.s]||'cn'}">${r.s}</span></td>
+      <td class="td-mono">${r.due}</td>
+      <td class="td-m">${r.goals}</td>
+      <td><div class="row-acts">
+        <div class="ra" title="View"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="ra" title="Edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg></div>
+      </div></td>
+    </tr>`).join('');
+}
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',function(){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+document.querySelectorAll('.si').forEach(el=>el.addEventListener('click',function(){
+  document.querySelectorAll('.si').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+
+render();
+</script>
+</body>
+</html>

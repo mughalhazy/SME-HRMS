@@ -1,0 +1,72 @@
+﻿{
+  "_meta": {
+    "id": "h02-expense-claims", "archetype": "H02 List", "page": "Expense Claims", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "Finance Administrator",
+    "leads_to": ["H05 Approval Inbox", "H03 Expense Claim Detail"],
+    "actions": { "primary": "Export", "secondary": [] }
+  },
+  "api_contract": {
+    "services": ["expense_service"],
+    "endpoints": {
+      "list":    "GET /api/v1/expenses/claims?status=&category_id=&limit=&offset=",
+      "summary": "BG-005: no aggregate — pending amount totals require client-side sum"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Expense Claims", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Expense Claims", "subtitle": "{{total_count}} claims · ${{pending_amount}} pending reimbursement",
+        "actions": [{ "label": "Export", "type": "secondary", "icon": "download" }]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 4, "gap_ref": "BG-005",
+        "items": [
+          { "key": "total",        "label": "Total Claims",  "source": "BG-005 mock" },
+          { "key": "pending",      "label": "Pending ($)",   "source": "BG-005 mock", "format": "currency" },
+          { "key": "approved",     "label": "Approved ($)",  "source": "BG-005 mock", "format": "currency" },
+          { "key": "reimbursed",   "label": "Reimbursed (MTD)", "source": "BG-005 mock", "format": "currency" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",         "filter": null },
+          { "label": "Submitted",   "filter": "status=Submitted" },
+          { "label": "Approved",    "filter": "status=Approved" },
+          { "label": "Rejected",    "filter": "status=Rejected" },
+          { "label": "Reimbursed",  "filter": "status=Reimbursed" }
+        ],
+        "filters": [
+          { "key": "category_id", "label": "Category", "type": "select", "source": "expense_service › ExpenseCategory" }
+        ],
+        "search": { "placeholder": "Search employees…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "expense_service › ExpenseClaim (paginated)",
+        "row_action": "navigate → H03 Expense Claim Detail",
+        "columns": [
+          { "key": "employee",           "label": "Employee",   "width_pct": 20, "component": "avatar_name_id" },
+          { "key": "category_name",      "label": "Category",   "width_pct": 14 },
+          { "key": "amount",             "label": "Amount",     "width_pct": 12, "format": "currency", "font": "mono" },
+          { "key": "submitted_at",       "label": "Submitted",  "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "status",             "label": "Status",     "width_pct": 10, "component": "chip", "enum_ref": "ref:api-contracts#Expense.status" },
+          { "key": "reimbursed_at",      "label": "Reimbursed", "width_pct": 14, "format": "date_short", "font": "mono" },
+          { "key": "approver",           "label": "Approver",   "width_pct": 12 },
+          { "key": "actions",            "label": "",           "width_pct": 6, "component": "row_actions" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+﻿{
+  "_meta": {
+    "id": "h02-travel-requests", "archetype": "H02 List", "page": "Travel Requests", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "HR Manager / Finance Administrator",
+    "leads_to": ["H05 Approval Inbox", "H03 Travel Request Detail"],
+    "actions": { "primary": "Export", "secondary": [] }
+  },
+  "api_contract": {
+    "services": ["travel_service"],
+    "endpoints": {
+      "list":    "GET /api/v1/travel/requests?status=&limit=&offset=",
+      "summary": "BG-005: no aggregate — total estimated cost requires client-side sum"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Travel Requests", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Travel Requests", "subtitle": "{{total_count}} requests this quarter",
+        "actions": [{ "label": "Export", "type": "secondary", "icon": "download" }]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 4, "gap_ref": "BG-005",
+        "items": [
+          { "key": "total",          "label": "Total",          "source": "BG-005 mock" },
+          { "key": "approved",       "label": "Approved",       "source": "BG-005 mock" },
+          { "key": "pending",        "label": "Pending",        "source": "BG-005 mock" },
+          { "key": "estimated_cost", "label": "Estimated Cost", "source": "BG-005 mock", "format": "currency" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",       "filter": null },
+          { "label": "Submitted", "filter": "status=Submitted" },
+          { "label": "Approved",  "filter": "status=Approved" },
+          { "label": "Booked",    "filter": "status=Booked" },
+          { "label": "Completed", "filter": "status=Completed" }
+        ],
+        "search": { "placeholder": "Search employees or destinations…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "travel_service › TravelRequest (paginated)",
+        "row_action": "navigate → H03 Travel Request Detail",
+        "columns": [
+          { "key": "employee",         "label": "Employee",    "width_pct": 18, "component": "avatar_name_id" },
+          { "key": "destination_city", "label": "Destination", "width_pct": 14 },
+          { "key": "start_date",       "label": "Departure",   "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "end_date",         "label": "Return",      "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "estimated_cost",   "label": "Est. Cost",   "width_pct": 12, "format": "currency", "font": "mono" },
+          { "key": "status",           "label": "Status",      "width_pct": 10, "component": "chip", "enum_ref": "ref:api-contracts#Travel.status" },
+          { "key": "submitted_at",     "label": "Submitted",   "width_pct": 12, "format": "date_short", "font": "mono" },
+          { "key": "actions",          "label": "",            "width_pct": 10, "component": "row_actions" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

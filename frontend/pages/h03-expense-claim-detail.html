@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Expense Claim Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;--grn:#15803D;--gl:#DCFCE7;--amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;--blue:#1D4ED8;--bl:#DBEAFE;--violet:#7C3AED;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.crumb{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--t3);flex:1}
+.crumb a{cursor:pointer;transition:color .12s}.crumb a:hover{color:var(--teal)}
+.crumb .sep{color:var(--bd)}.crumb .cur{color:var(--t1);font-weight:600}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg)}.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.btn-d{background:var(--rl);color:var(--red);border-color:var(--red)}.btn-sm{padding:4px 10px;font-size:12px}
+.page{flex:1;overflow-y:auto;min-height:0}
+.prof-head{background:var(--w);border-bottom:1px solid var(--bd);padding:22px 26px 0;position:sticky;top:0;z-index:10}
+.ph-row{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px}
+.ph-av{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px var(--w),0 0 0 5px var(--bd)}
+.ph-info{flex:1}.ph-name{font-size:20px;font-weight:700;color:var(--t1);letter-spacing:-0.025em;margin-bottom:3px}
+.ph-role{font-size:13px;color:var(--t3);margin-bottom:10px}
+.ph-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:#3B82F6}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.cv{background:var(--vl);color:var(--violet)}.cv::before{background:var(--violet)}
+.ctl{background:var(--tl);color:var(--teal)}.ctl::before{background:var(--teal)}
+.tab-scroll{display:block;padding:22px 26px 12vh}
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.card:last-child{margin-bottom:0}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct2{font-size:13px;font-weight:700;color:var(--t1)}
+.cb2{padding:16px 17px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 20px}
+.field label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block}
+.field .val{font-size:13px;color:var(--t1);font-weight:500}
+.field .val.mono{font-family:var(--mono);font-size:12px}
+.sep-line{height:1px;background:var(--bd);margin:12px 0}
+.detail-grid{display:grid;grid-template-columns:1fr 292px;gap:16px;align-items:start}
+/* line items table */
+.li-table{width:100%;border-collapse:collapse}
+.li-table th{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;padding:7px 10px;text-align:left;border-bottom:1px solid var(--bd)}
+.li-table td{padding:10px 10px;font-size:13px;color:var(--t1);border-bottom:1px solid var(--t5)}
+.li-table tr:last-child td{border-bottom:none}
+.li-table .td-r{text-align:right}
+.li-table .td-amt{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t1);text-align:right}
+.li-table .li-total td{background:var(--t5);font-weight:700}
+.li-table .li-total .td-amt{color:var(--teal)}
+.li-cat{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+.li-cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* attachment row */
+.att-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--t5)}
+.att-row:last-child{border-bottom:none}
+.att-icon{width:34px;height:34px;border-radius:var(--r);background:var(--bl);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.att-icon svg{width:15px;height:15px;fill:none;stroke:var(--blue);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.att-info{flex:1}.att-name{font-size:13px;font-weight:500;color:var(--t1)}.att-meta{font-size:11px;color:var(--t3)}
+/* AI card */
+.ai-card{border-radius:var(--r2);border:1px solid var(--tb);background:var(--tl);padding:14px 16px;margin-bottom:14px}
+.ai-card-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ai-badge{background:var(--teal);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase}
+.ai-conf{font-size:11px;color:var(--t3);margin-left:auto}
+.ai-dismiss{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3)}
+.ai-dismiss svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ai-dismiss:hover{background:var(--tb)}
+.ai-body{font-size:12.5px;color:var(--t2);line-height:1.55}
+/* timeline */
+.tl-item{display:flex;gap:12px;padding:10px 0;position:relative}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:14px;top:32px;bottom:0;width:1px;background:var(--bd)}
+.tl-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--bd);background:var(--w);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;z-index:1}
+.tl-dot svg{width:12px;height:12px;fill:none;stroke:var(--t3);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tl-dot.tl-ok{border-color:var(--teal);background:var(--tl)}.tl-dot.tl-ok svg{stroke:var(--teal)}
+.tl-dot.tl-pend{border-color:var(--amber);background:var(--al)}.tl-dot.tl-pend svg{stroke:var(--amber)}
+.tl-body{flex:1}.tl-title{font-size:13px;font-weight:600;color:var(--t1)}.tl-sub{font-size:11.5px;color:var(--t3);margin-top:2px}
+/* status card */
+.status-card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.status-top{padding:16px 17px;border-bottom:1px solid var(--bd)}
+.status-label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.status-amount{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--t1);letter-spacing:-0.02em;margin-bottom:8px}
+.status-sub{font-size:12px;color:var(--t3)}
+.status-body{padding:14px 17px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Slim sidebar -->
+  <nav class="sb">
+    <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+    <div class="si on"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+    <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg></div>
+    <div class="sb-div"></div>
+    <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+    <div class="sb-av">JK</div>
+  </nav>
+
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="crumb">
+        <a>Expenses</a>
+        <span class="sep">›</span>
+        <a>Expense Claims</a>
+        <span class="sep">›</span>
+        <span class="cur">EXP-2025-0127-003</span>
+      </div>
+      <div class="tbi"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+      <div class="tbi"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+      <div class="tb-vd"></div>
+      <button class="btn btn-d btn-sm">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        Reject
+      </button>
+      <button class="btn btn-p btn-sm">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Approve
+      </button>
+      <div class="tb-vd"></div>
+      <div class="tav">JK</div>
+    </div>
+
+    <div class="page">
+      <!-- Profile header -->
+      <div class="prof-head">
+        <div class="ph-row">
+          <div class="ph-av">PS</div>
+          <div class="ph-info">
+            <div class="ph-name">Business Travel — Conference</div>
+            <div class="ph-role">Priya Subramaniam · EMP-0127 · Senior HR Business Partner</div>
+            <div class="ph-chips">
+              <span class="chip ca">Pending Review</span>
+              <span class="chip cn">EXP-2025-0127-003</span>
+              <span class="chip cn">Business Travel</span>
+              <span class="chip cn">Mar 12, 2025</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-0.02em">AED 1,840.00</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:3px">Total Claimed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="tab-scroll">
+        <div class="detail-grid">
+          <!-- Left column -->
+          <div>
+            <!-- Claim Details -->
+            <div class="card">
+              <div class="ch"><span class="ct2">Claim Details</span></div>
+              <div class="cb2">
+                <div class="fg3" style="margin-bottom:14px">
+                  <div class="field"><label>Claim ID</label><div class="val mono">EXP-2025-0127-003</div></div>
+                  <div class="field"><label>Category</label><div class="val">Business Travel</div></div>
+                  <div class="field"><label>Expense Date</label><div class="val">Mar 12, 2025</div></div>
+                </div>
+                <div class="fg3" style="margin-bottom:14px">
+                  <div class="field"><label>Employee</label><div class="val">Priya Subramaniam</div></div>
+                  <div class="field"><label>Department</label><div class="val">People Operations</div></div>
+                  <div class="field"><label>Submitted</label><div class="val">Mar 14, 2025</div></div>
+                </div>
+                <div class="field"><label>Description / Purpose</label><div class="val" style="margin-top:2px;line-height:1.5;color:var(--t2)">Attendance at the SHRM Annual Conference 2025 in Dubai — flights, hotel accommodation (2 nights), and conference registration fee. Pre-approved under policy EXP-POL-04.</div></div>
+              </div>
+            </div>
+
+            <!-- Line Items -->
+            <div class="card">
+              <div class="ch">
+                <span class="ct2">Line Items</span>
+                <span style="font-size:11px;color:var(--t3)">3 items</span>
+              </div>
+              <div class="cb2" style="padding:0">
+                <table class="li-table">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th>Category</th>
+                      <th>Date</th>
+                      <th class="td-r">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div style="font-weight:500">Emirates flight EK-101 return</div>
+                        <div style="font-size:11.5px;color:var(--t3)">Dubai ↔ Riyadh</div>
+                      </td>
+                      <td><div class="li-cat"><span class="li-cat-dot" style="background:#3B82F6"></span>Airfare</div></td>
+                      <td style="color:var(--t3)">Mar 12</td>
+                      <td class="td-amt">AED 820.00</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div style="font-weight:500">Hotel — Grand Hyatt Dubai</div>
+                        <div style="font-size:11.5px;color:var(--t3)">2 nights × AED 430</div>
+                      </td>
+                      <td><div class="li-cat"><span class="li-cat-dot" style="background:#7C3AED"></span>Accommodation</div></td>
+                      <td style="color:var(--t3)">Mar 12–14</td>
+                      <td class="td-amt">AED 860.00</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div style="font-weight:500">SHRM Conference registration</div>
+                        <div style="font-size:11.5px;color:var(--t3)">Early-bird rate</div>
+                      </td>
+                      <td><div class="li-cat"><span class="li-cat-dot" style="background:#0A8F84"></span>Conference Fee</div></td>
+                      <td style="color:var(--t3)">Mar 12</td>
+                      <td class="td-amt">AED 160.00</td>
+                    </tr>
+                    <tr class="li-total">
+                      <td colspan="3" style="font-size:12px;color:var(--t3)">Total</td>
+                      <td class="td-amt">AED 1,840.00</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Attachments -->
+            <div class="card">
+              <div class="ch">
+                <span class="ct2">Attachments</span>
+                <span style="font-size:11px;color:var(--t3)">3 receipts</span>
+              </div>
+              <div class="cb2">
+                <div class="att-row">
+                  <div class="att-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                  <div class="att-info">
+                    <div class="att-name">EK-101_eticket.pdf</div>
+                    <div class="att-meta">PDF · 412 KB · Uploaded Mar 14, 2025</div>
+                  </div>
+                  <button class="btn btn-sm">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download
+                  </button>
+                </div>
+                <div class="att-row">
+                  <div class="att-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                  <div class="att-info">
+                    <div class="att-name">GrandHyatt_invoice.pdf</div>
+                    <div class="att-meta">PDF · 238 KB · Uploaded Mar 14, 2025</div>
+                  </div>
+                  <button class="btn btn-sm">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download
+                  </button>
+                </div>
+                <div class="att-row">
+                  <div class="att-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                  <div class="att-info">
+                    <div class="att-name">SHRM_receipt.png</div>
+                    <div class="att-meta">PNG · 88 KB · Uploaded Mar 14, 2025</div>
+                  </div>
+                  <button class="btn btn-sm">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Assessment -->
+            <div class="ai-card">
+              <div class="ai-card-head">
+                <span class="ai-badge">AI</span>
+                <span style="font-size:13px;font-weight:600;color:var(--t1)">Policy Compliance Check</span>
+                <span class="ai-conf">Confidence 88%</span>
+                <div class="ai-dismiss"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+              </div>
+              <div class="ai-body">All 3 line items fall within pre-approved policy EXP-POL-04 limits. Flight cost (AED 820) is within economy-class cap (AED 1,200). Hotel rate (AED 430/night) is within the Dubai city cap (AED 500/night). Conference fee is pre-approved. No anomalies detected — recommend approval.</div>
+            </div>
+          </div>
+
+          <!-- Right column -->
+          <div>
+            <!-- Claim Status -->
+            <div class="status-card">
+              <div class="status-top">
+                <div class="status-label">Total Claimed</div>
+                <div class="status-amount">AED 1,840.00</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <span class="chip ca">Pending Review</span>
+                  <span class="chip cn">Submitted</span>
+                </div>
+              </div>
+              <div class="status-body">
+                <div class="fg" style="margin-bottom:12px">
+                  <div class="field"><label>Submitted</label><div class="val">Mar 14, 2025</div></div>
+                  <div class="field"><label>Approver</label><div class="val">James Kolawole</div></div>
+                </div>
+                <div class="fg">
+                  <div class="field"><label>Policy Ref</label><div class="val mono" style="font-size:11px">EXP-POL-04</div></div>
+                  <div class="field"><label>Currency</label><div class="val">AED</div></div>
+                </div>
+                <div class="sep-line"></div>
+                <div style="background:var(--al);border:1px solid #FDE68A;border-radius:var(--r);padding:9px 11px;font-size:12px;color:var(--amber)">
+                  Awaiting manager approval. Reimbursement will be processed in the next payroll cycle after approval.
+                </div>
+              </div>
+            </div>
+
+            <!-- Policy breakdown -->
+            <div class="card">
+              <div class="ch"><span class="ct2">Policy Limits</span></div>
+              <div class="cb2" style="padding:0">
+                <table class="li-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th class="td-r">Claimed</th>
+                      <th class="td-r">Cap</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Airfare</td>
+                      <td class="td-amt">AED 820</td>
+                      <td style="text-align:right;font-size:12px;color:var(--grn);font-weight:600">≤ AED 1,200 ✓</td>
+                    </tr>
+                    <tr>
+                      <td>Accommodation / night</td>
+                      <td class="td-amt">AED 430</td>
+                      <td style="text-align:right;font-size:12px;color:var(--grn);font-weight:600">≤ AED 500 ✓</td>
+                    </tr>
+                    <tr>
+                      <td>Conference Fee</td>
+                      <td class="td-amt">AED 160</td>
+                      <td style="text-align:right;font-size:12px;color:var(--grn);font-weight:600">Pre-approved ✓</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Approval History -->
+            <div class="card">
+              <div class="ch"><span class="ct2">Approval History</span></div>
+              <div class="cb2">
+                <div class="tl-item">
+                  <div class="tl-dot tl-ok">
+                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="tl-body">
+                    <div class="tl-title">Claim Submitted</div>
+                    <div class="tl-sub">Priya Subramaniam · Mar 14, 2025 09:11</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <div class="tl-dot tl-ok">
+                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="tl-body">
+                    <div class="tl-title">Policy Check Passed</div>
+                    <div class="tl-sub">Automated · Mar 14, 2025 09:12</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <div class="tl-dot tl-pend">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div class="tl-body">
+                    <div class="tl-title">Awaiting Manager Approval</div>
+                    <div class="tl-sub">James Kolawole · Pending since Mar 14, 2025</div>
+                  </div>
+                </div>
+                <div class="tl-item" style="opacity:.4">
+                  <div class="tl-dot">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div class="tl-body">
+                    <div class="tl-title">Finance Reimbursement</div>
+                    <div class="tl-sub">Pending — processed after approval</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

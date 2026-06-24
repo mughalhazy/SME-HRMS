@@ -1,0 +1,76 @@
+﻿{
+  "_meta": {
+    "id": "h02-payroll-records", "archetype": "H02 List", "page": "Payroll Records", "surface": "admin",
+    "version": "1.0", "last_updated": "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json", "seed_page_ref": "frontend/seeds/p2-list.html",
+    "gaps": ["BG-001", "BG-003", "BG-005"]
+  },
+  "workflow": {
+    "primary_actor": "Payroll Administrator",
+    "leads_to": ["H03 Payroll Record Detail", "H07 Payroll Reports"],
+    "actions": { "primary": "Run Payroll", "secondary": ["Export"] }
+  },
+  "api_contract": {
+    "services": ["payroll_service"],
+    "endpoints": {
+      "list":    "GET /api/v1/payroll/records?status=&period_start=&period_end=&department_id=&limit=&offset=",
+      "summary": "BG-001 + BG-005: no aggregate totals endpoint — gross/net sums require client aggregation",
+      "run":     "POST /api/v1/payroll/run"
+    }
+  },
+  "renderer_schema": {
+    "dsl_version": "1.0", "archetype": "list", "surface": "admin",
+    "page_title": "Payroll Records", "page_states": ["loaded","skeleton","empty","error"],
+    "chrome": {
+      "sidebar": "slim_54px",
+      "header": {
+        "title": "Payroll Records", "subtitle": "{{period_label}} · {{employee_count}} employees",
+        "actions": [
+          { "label": "Export",      "type": "secondary", "icon": "download" },
+          { "label": "Run Payroll", "type": "primary",   "icon": "activity" }
+        ]
+      }
+    },
+    "slots": {
+      "STATS_STRIP": {
+        "required": true, "columns": 5,
+        "items": [
+          { "key": "processed",    "label": "Processed",     "source": "payroll_service › PayrollBatch.processed_count" },
+          { "key": "total_gross",  "label": "Total Gross",   "source": "BG-005 mock", "format": "currency", "gap_ref": "BG-001" },
+          { "key": "total_net",    "label": "Total Net",     "source": "BG-005 mock", "format": "currency", "gap_ref": "BG-001" },
+          { "key": "anomalies",    "label": "Anomalies",     "source": "BG-003 mock", "variant": "warn",    "gap_ref": "BG-003" },
+          { "key": "failures",     "label": "Failures",      "source": "payroll_service › PayrollBatch.failed_count" }
+        ]
+      },
+      "FILTER_BAR": {
+        "required": true,
+        "tabs": [
+          { "label": "All",       "filter": null },
+          { "label": "Processed", "filter": "status=Processed" },
+          { "label": "Paid",      "filter": "status=Paid" },
+          { "label": "Draft",     "filter": "status=Draft" }
+        ],
+        "filters": [
+          { "key": "department_id", "label": "Department", "type": "select", "source": "employee-service › Department" },
+          { "key": "period",        "label": "Period",     "type": "select" }
+        ],
+        "search": { "placeholder": "Search employees…" }
+      },
+      "DATA_TABLE": {
+        "required": true,
+        "source": "payroll_service › PayrollRecord (current period, paginated)",
+        "row_action": "navigate → H03 Payroll Record Detail",
+        "columns": [
+          { "key": "employee",     "label": "Employee",   "width_pct": 22, "component": "avatar_name_id" },
+          { "key": "department",   "label": "Department", "width_pct": 14 },
+          { "key": "period",       "label": "Period",     "width_pct": 12, "font": "mono" },
+          { "key": "gross_pay",    "label": "Gross Pay",  "width_pct": 14, "format": "currency", "font": "mono" },
+          { "key": "deductions",   "label": "Deductions", "width_pct": 12, "format": "currency", "font": "mono" },
+          { "key": "net_pay",      "label": "Net Pay",    "width_pct": 14, "format": "currency", "font": "mono" },
+          { "key": "status",       "label": "Status",     "width_pct": 12, "component": "chip", "enum_ref": "ref:api-contracts#Payroll.status" }
+        ]
+      },
+      "PAGINATION": { "required": true, "default_limit": 12, "options": [12, 25, 50] }
+    }
+  }
+}

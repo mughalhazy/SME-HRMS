@@ -1,0 +1,145 @@
+﻿{
+  "_meta": {
+    "id":            "h01-payroll-admin-dashboard",
+    "archetype":     "H01 Dashboard",
+    "page":          "Payroll Admin Dashboard",
+    "surface":       "admin",
+    "version":       "1.0",
+    "last_updated":  "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p1-dashboard.html",
+    "gaps":          ["BG-001", "BG-003"]
+  },
+
+  "workflow": {
+    "primary_actor": "Payroll Administrator",
+    "leads_to": [
+      "H02 Payroll Records",
+      "H07 Payroll Reports"
+    ],
+    "actions": {
+      "primary": "Run Payroll",
+      "secondary": ["Export", "Mark as Paid", "View Batch"]
+    }
+  },
+
+  "api_contract": {
+    "services": [
+      "payroll_service",
+      "employee-service"
+    ],
+    "endpoints": {
+      "payroll_records":  "GET /api/v1/payroll/records?period_start=&period_end=&status=",
+      "payroll_run":      "POST /api/v1/payroll/run",
+      "mark_paid":        "POST /api/v1/payroll/records/:id/mark-paid",
+      "anomalies":        "BG-003: no anomaly endpoint — mock only",
+      "dept_cost":        "BG-001: no aggregate — derived from records grouped by dept"
+    }
+  },
+
+  "renderer_schema": {
+    "dsl_version":  "1.0",
+    "archetype":    "dashboard",
+    "surface":      "admin",
+    "page_title":   "Payroll Dashboard",
+    "page_states":  ["loaded", "skeleton", "empty", "error"],
+
+    "chrome": {
+      "nav_active": "Dashboard",
+      "topbar": {
+        "title":   "Payroll Dashboard",
+        "actions": [
+          { "label": "Export",      "type": "secondary", "icon": "download" },
+          { "label": "Run Payroll", "type": "primary",   "icon": "activity" }
+        ]
+      }
+    },
+
+    "slots": {
+      "CYCLE_BANNER": {
+        "required": true,
+        "type":     "status_banner",
+        "source":   "payroll_service › PayrollBatch (latest)",
+        "fields":   ["status", "period_start", "period_end", "payment_date", "processed_count", "paid_count"],
+        "enum_ref": "ref:api-contracts#PayrollBatch.status"
+      },
+
+      "KPI_ROW": {
+        "required": true,
+        "columns":  5,
+        "items": [
+          {
+            "key":    "employees_processed",
+            "label":  "Employees Processed",
+            "source": "payroll_service › PayrollBatch.processed_count"
+          },
+          {
+            "key":    "total_gross_pay",
+            "label":  "Total Gross Pay",
+            "source": "payroll_service › PayrollRecord.gross_pay (sum current period)",
+            "format": "currency"
+          },
+          {
+            "key":    "total_net_pay",
+            "label":  "Total Net Pay",
+            "source": "payroll_service › PayrollRecord.net_pay (sum current period)",
+            "format": "currency"
+          },
+          {
+            "key":     "anomalies_count",
+            "label":   "Anomalies Flagged",
+            "variant": "warn",
+            "source":  "BG-003 mock",
+            "gap_ref": "BG-003"
+          },
+          {
+            "key":    "failures_count",
+            "label":  "Processing Failures",
+            "source": "payroll_service › PayrollBatch.failed_count"
+          }
+        ]
+      },
+
+      "CHART_PRIMARY": {
+        "required": true,
+        "type":     "bar_horizontal",
+        "title":    "Payroll Cost by Department",
+        "source":   "payroll_service › PayrollRecord.gross_pay grouped by employee-service.department_id",
+        "fields":   ["department_name", "gross_pay_total"],
+        "gap_ref":  "BG-001",
+        "mock_data": [
+          { "department": "Engineering", "gross_total": 682000 },
+          { "department": "Product",     "gross_total": 286000 },
+          { "department": "Sales",       "gross_total": 248000 },
+          { "department": "Marketing",   "gross_total": 196000 },
+          { "department": "HR & Ops",    "gross_total": 162000 },
+          { "department": "Finance",     "gross_total": 148000 },
+          { "department": "Legal",       "gross_total": 118000 }
+        ]
+      },
+
+      "CHART_SECONDARY": {
+        "required": true,
+        "type":     "timeline_vertical",
+        "title":    "Processing Timeline",
+        "source":   "payroll_service › PayrollCycle stages",
+        "steps":    ["Data Lock", "Payroll Calculation", "Manager Review", "Bank Disbursement"]
+      },
+
+      "ACTIVITY_FEED": {
+        "required": true,
+        "type":     "table",
+        "title":    "Payroll Records",
+        "source":   "payroll_service › PayrollRecord (current period, limit 5)",
+        "columns": [
+          { "key": "employee",    "label": "Employee",    "width_pct": 25, "component": "avatar_name" },
+          { "key": "department",  "label": "Dept",        "width_pct": 15 },
+          { "key": "gross_pay",   "label": "Gross Pay",   "width_pct": 15, "format": "currency", "font": "mono" },
+          { "key": "deductions",  "label": "Deductions",  "width_pct": 15, "format": "currency", "font": "mono" },
+          { "key": "net_pay",     "label": "Net Pay",     "width_pct": 15, "format": "currency", "font": "mono" },
+          { "key": "status",      "label": "Status",      "width_pct": 15, "component": "chip", "enum_ref": "ref:api-contracts#Payroll.status" }
+        ]
+      }
+    }
+  }
+}

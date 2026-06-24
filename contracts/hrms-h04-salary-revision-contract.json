@@ -1,0 +1,92 @@
+﻿{
+  "_meta": {
+    "id": "h04-salary-revision",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Salary Revision",
+    "variant": "Simple",
+    "surface": "admin",
+    "primary_actor": "HR Business Partner · HR Admin",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Employees", "Priya Subramaniam", "Salary Revision"],
+      "actions": [
+        { "label": "Cancel",          "style": "secondary" },
+        { "label": "Apply Revision",  "style": "primary",  "action": "POST /api/v1/compensation/employees/:employeeId/salary-revisions" }
+      ]
+    },
+    "EMPLOYEE_CONTEXT_BAR": {
+      "employee": "Priya Subramaniam · EMP-0087",
+      "current_salary_display": "AED 195,000"
+    },
+    "FORM_SECTIONS": {
+      "new_salary": {
+        "component": "salary_change_preview",
+        "fields": [
+          { "id": "base_salary",    "type": "number", "required": true,  "maps_to": "SalaryRevision.base_salary" },
+          { "id": "currency",       "type": "select", "required": true,  "maps_to": "SalaryRevision.currency" },
+          { "id": "effective_from", "type": "date",   "required": true,  "maps_to": "SalaryRevision.effective_from" },
+          { "id": "effective_to",   "type": "date",   "required": false, "maps_to": "SalaryRevision.effective_to" }
+        ],
+        "computed": "change_pct = (new_salary - current_salary) / current_salary * 100"
+      },
+      "revision_reason": {
+        "component": "pill_selector",
+        "required": true,
+        "values": ["Annual Review","Promotion","Market Adjustment","Performance Bonus","Retention","Other"],
+        "maps_to": "SalaryRevision.reason"
+      },
+      "compensation_band": {
+        "fields": [
+          { "id": "compensation_band_id", "type": "select", "required": false, "source": "GET /api/v1/compensation-bands", "maps_to": "SalaryRevision.compensation_band_id" }
+        ]
+      },
+      "revision_history": {
+        "component": "read_only_table",
+        "source": "GET /api/v1/compensation/employees/:employeeId/salary-revisions",
+        "note": "Historical revisions shown in descending date order. Current record status: Approved; previous records: Superseded."
+      }
+    },
+    "FORM_RAIL": {
+      "revision_summary": { "fields": ["employee","current_salary","new_salary","change_pct","effective_from","reason"] },
+      "band_check": { "note": "Validates new salary is within the linked compensation band. Mock: GB-5 AED 180k–240k." },
+      "side_note": { "note": "Applying creates a new SalaryRevision (Approved) and supersedes the current active revision." }
+    },
+    "FORM_FOOTER": {
+      "left_info": "Submits POST /api/v1/compensation/employees/:id/salary-revisions — employee-service",
+      "right": [
+        { "label": "Cancel",         "style": "secondary" },
+        { "label": "Apply Revision", "style": "primary",  "action": "POST /api/v1/compensation/employees/:employeeId/salary-revisions" }
+      ]
+    }
+  },
+  "submit_flow": {
+    "method": "POST",
+    "endpoint": "/api/v1/compensation/employees/:employeeId/salary-revisions",
+    "service": "employee-service (compensation controller)",
+    "body": {
+      "employee_id": "string (required)",
+      "base_salary": "string (required)",
+      "currency": "string (required)",
+      "effective_from": "date (required)",
+      "effective_to": "date (optional)",
+      "reason": "string (optional)",
+      "compensation_band_id": "string (optional)",
+      "status": "SalaryRevisionStatus — default Approved"
+    },
+    "on_success": { "redirect": "H03 Employee Profile (Compensation tab)" }
+  },
+  "known_gaps": [],
+  "patterns_applied": ["P-07", "P-31", "P-32"],
+  "mock_persona": {
+    "name": "Priya Subramaniam",
+    "employee_number": "EMP-0087",
+    "current_salary": "195000 AED",
+    "new_salary": "215500 AED",
+    "change_pct": "+10.5%"
+  }
+}

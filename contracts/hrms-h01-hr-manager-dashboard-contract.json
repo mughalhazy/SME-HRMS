@@ -1,0 +1,181 @@
+﻿{
+  "_meta": {
+    "id":            "h01-hr-manager-dashboard",
+    "archetype":     "H01 Dashboard",
+    "page":          "HR Manager Dashboard",
+    "surface":       "admin",
+    "version":       "1.0",
+    "last_updated":  "2026-03-22",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p1-dashboard.html",
+    "gaps":          ["BG-001", "BG-002", "BG-003"]
+  },
+
+  "workflow": {
+    "primary_actor": "HR Administrator",
+    "leads_to": [
+      "H02 Employees",
+      "H02 Leave Requests",
+      "H05 Approval Inbox",
+      "H07 HR Analytics"
+    ],
+    "actions": {
+      "primary": "Add Employee",
+      "secondary": ["Export"]
+    }
+  },
+
+  "api_contract": {
+    "services": [
+      "employee-service",
+      "leave_service",
+      "payroll_service",
+      "performance_service",
+      "attendance_service"
+    ],
+    "endpoints": {
+      "headcount":       "GET /api/v1/employees (count only) — BG-001: no aggregate endpoint",
+      "attendance_today":"GET /api/v1/attendance/summary?period_start=today&period_end=today — BG-001",
+      "leave_pending":   "GET /api/v1/leave/requests?status=Submitted",
+      "payroll_anomaly": "BG-003: no anomaly endpoint — mock only",
+      "ai_attrition":    "BG-002: no AI endpoint — mock only"
+    }
+  },
+
+  "renderer_schema": {
+    "dsl_version":  "1.0",
+    "archetype":    "dashboard",
+    "surface":      "admin",
+    "page_title":   "HR Manager Dashboard",
+    "page_states":  ["loaded", "skeleton", "empty", "error"],
+
+    "chrome": {
+      "nav_active": "Dashboard",
+      "topbar": {
+        "title":   "Dashboard",
+        "actions": [
+          { "label": "Export",       "type": "secondary", "icon": "download" },
+          { "label": "Add Employee", "type": "primary",   "icon": "plus" }
+        ]
+      }
+    },
+
+    "slots": {
+      "AI_BAR": {
+        "required":    true,
+        "pattern":     "P-12",
+        "colour":      "teal",
+        "content":     "Attrition risk signal — engineering flight risk",
+        "confidence":  "83%",
+        "dismissable": true,
+        "gap_ref":     "BG-002"
+      },
+
+      "KPI_ROW": {
+        "required": true,
+        "columns":  5,
+        "items": [
+          {
+            "key":     "total_headcount",
+            "label":   "Total Headcount",
+            "value":   342,
+            "dot":     "teal",
+            "trend":   { "delta": "+14", "direction": "up", "context": "vs last quarter" },
+            "source":  "employee-service › Employee (count Active)",
+            "gap_ref": "BG-001"
+          },
+          {
+            "key":     "retention_rate",
+            "label":   "Retention Rate",
+            "value":   "94.2%",
+            "dot":     "green",
+            "trend":   { "delta": "+2.1%", "direction": "up", "context": "year-over-year" },
+            "source":  "employee-service › Employee (derived: 1 - attrition)",
+            "gap_ref": "BG-001"
+          },
+          {
+            "key":     "monthly_payroll",
+            "label":   "Monthly Payroll",
+            "value":   "$1.84M",
+            "dot":     "amber",
+            "variant": "warn",
+            "trend":   { "delta": "−3%", "direction": "down", "context": "anomaly flagged" },
+            "source":  "payroll_service › PayrollRecord.gross_pay (sum current period)",
+            "gap_ref": "BG-003"
+          },
+          {
+            "key":     "open_positions",
+            "label":   "Open Positions",
+            "value":   18,
+            "dot":     "blue",
+            "trend":   { "delta": "+3", "direction": "up", "context": "this month" },
+            "source":  "hiring_service › JobPosting (count status=Pending)"
+          },
+          {
+            "key":     "avg_time_to_hire",
+            "label":   "Avg Time-to-Hire",
+            "value":   "34d",
+            "dot":     "violet",
+            "trend":   { "delta": "target 40d", "direction": "neutral" },
+            "source":  "hiring_service › Candidate (avg days Applied→Completed)"
+          }
+        ]
+      },
+
+      "CHART_PRIMARY": {
+        "required": true,
+        "type":     "bar_horizontal",
+        "title":    "Headcount by Department",
+        "subtitle": "342 employees · 7 departments",
+        "source":   "employee-service › Employee grouped by department_id",
+        "fields":   ["department_name", "employee_count", "delta_vs_prior_month"],
+        "mock_data": [
+          { "department": "Engineering", "count": 128, "pct": 75, "delta": "+8"  },
+          { "department": "Product",     "count": 54,  "pct": 32, "delta": "+2"  },
+          { "department": "Sales",       "count": 46,  "pct": 27, "delta": "+1"  },
+          { "department": "Marketing",   "count": 38,  "pct": 22, "delta": "±0"  },
+          { "department": "HR & Ops",    "count": 32,  "pct": 19, "delta": "+1"  },
+          { "department": "Finance",     "count": 24,  "pct": 14, "delta": "−1"  },
+          { "department": "Legal",       "count": 20,  "pct": 12, "delta": "+3"  }
+        ]
+      },
+
+      "CHART_SECONDARY": {
+        "required": true,
+        "type":     "donut",
+        "title":    "Attendance Today",
+        "source":   "attendance_service › AttendanceRecord.attendance_status (today)",
+        "fields":   ["attendance_status", "count"],
+        "enum_ref": "ref:api-contracts#Attendance.status",
+        "mock_data": [
+          { "status": "Present",  "count": 249, "colour": "#3B82F6" },
+          { "status": "OnLeave",  "count": 18,  "colour": "#22C55E" },
+          { "status": "Late",     "count": 16,  "colour": "#F59E0B" },
+          { "status": "Absent",   "count": 5,   "colour": "#EF4444" }
+        ]
+      },
+
+      "ACTIVITY_FEED": {
+        "required":   true,
+        "type":       "table",
+        "title":      "Recent Hires",
+        "subtitle":   "14 new employees this month",
+        "source":     "employee-service › Employee (order by hire_date desc, limit 5)",
+        "columns": [
+          { "key": "employee",        "label": "Employee",  "width_pct": 35, "component": "avatar_name_id" },
+          { "key": "department_name", "label": "Dept",      "width_pct": 20 },
+          { "key": "hire_date",       "label": "Start",     "width_pct": 15, "format": "date_short" },
+          { "key": "status",          "label": "Status",    "width_pct": 15, "component": "chip", "enum_ref": "ref:api-contracts#Employee.status" },
+          { "key": "base_salary",     "label": "Salary",    "width_pct": 15, "format": "currency", "font": "mono" }
+        ],
+        "mock_data": [
+          { "employee_id": "EMP-0341", "first_name": "James",  "last_name": "Okafor",  "department": "Engineering", "hire_date": "2026-03-10", "status": "Active",  "base_salary": 185000 },
+          { "employee_id": "EMP-0342", "first_name": "Priya",  "last_name": "Rajesh",  "department": "Product",     "hire_date": "2026-03-03", "status": "Active",  "base_salary": 162000 },
+          { "employee_id": "EMP-0343", "first_name": "Tom",    "last_name": "Nakamura","department": "Sales",       "hire_date": "2026-02-24", "status": "Active",  "base_salary": 134000 },
+          { "employee_id": "EMP-0344", "first_name": "Amara",  "last_name": "Kofi",    "department": "Marketing",   "hire_date": "2026-02-17", "status": "Active",  "base_salary": 118000 },
+          { "employee_id": "EMP-0345", "first_name": "Eva",    "last_name": "Fischer",  "department": "Finance",     "hire_date": "2026-02-10", "status": "Draft",   "base_salary": 105000 }
+        ]
+      }
+    }
+  }
+}

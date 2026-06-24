@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Payroll Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;
+  --amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;
+  --violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─────────────────────────────── */
+.sb{width:216px;min-width:216px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-logo{padding:18px 14px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-name{font-size:14px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.logo-sub{font-size:9.5px;color:var(--t4);text-transform:uppercase;letter-spacing:.07em}
+.sb-nav{flex:1;padding:8px 8px 4px}
+.sb-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:10px 8px 3px;display:block}
+.sb-a{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);color:var(--t3);font-size:13px;font-weight:450;cursor:pointer;transition:all .12s;margin-bottom:1px;user-select:none;position:relative}
+.sb-a:hover{background:var(--bg);color:var(--t1)}
+.sb-a.on{background:var(--tl);color:var(--teal);font-weight:600}
+.sb-a.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--teal);border-radius:0 3px 3px 0}
+.sb-ic{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sb-ic svg{width:14px;height:14px;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-a:not(.on) .sb-ic svg{stroke:var(--t4)}.sb-a.on .sb-ic svg{stroke:var(--teal)}
+.sb-badge{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:99px;font-family:var(--mono)}
+.b-g{background:var(--gl);color:var(--grn)}.b-a{background:var(--al);color:var(--amber)}.b-r{background:var(--rl);color:var(--red)}
+.sb-div{height:1px;background:var(--bd);margin:6px 10px}
+.sb-foot{margin-top:auto;padding:8px;border-top:1px solid var(--bd)}
+.sb-user{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;transition:background .12s}
+.sb-user:hover{background:var(--bg)}
+.u-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.u-name{font-size:12px;font-weight:600;color:var(--t1)}.u-role{font-size:10.5px;color:var(--t4)}
+.u-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;margin-left:auto;flex-shrink:0}
+
+/* ─── MAIN ────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1;letter-spacing:-0.01em}
+.tb-d{font-size:12px;color:var(--t4);margin-left:7px;font-weight:400}
+.tb-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 11px;width:208px;transition:all .14s}
+.tb-srch:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.tb-srch input{background:none;border:none;outline:none;font-size:12.5px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.tb-srch input::placeholder{color:var(--t4)}
+.tb-srch svg{width:13px;height:13px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;position:relative}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.tbi.bell::after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#EF4444;border:1.5px solid var(--w)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:#0C9E92}
+
+/* ─── PAGE ────────────────────────────────── */
+.page{flex:1;overflow-y:auto;min-height:0;padding:24px 24px 12vh}
+
+/* Cycle status banner */
+.cycle-banner{border-radius:var(--r2);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;border:1px solid}
+.cycle-banner.processed{background:var(--bl);border-color:#93C5FD}
+.cycle-banner.pending{background:var(--al);border-color:#FCD34D}
+.cb-icon{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cb-icon svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cb-body{flex:1}
+.cb-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.cb-meta{font-size:12px;color:var(--t3)}
+.cb-actions{display:flex;gap:8px;align-items:center}
+
+/* Chips */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:#EF4444}
+.cb2{background:var(--bl);color:var(--blue)}.cb2::before{background:#3B82F6}
+.ct2{background:var(--tl);color:var(--teal)}.ct2::before{background:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+
+/* KPI strip */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px;cursor:default;transition:box-shadow .14s,transform .14s}
+.kpi:hover{box-shadow:0 4px 12px rgba(0,0,0,.06);transform:translateY(-1px)}
+.kpi.warn{background:var(--al);border-color:#FCD34D}
+.kpi-dot{width:6px;height:6px;border-radius:50%;margin-bottom:10px}
+.kpi-v{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--t1);line-height:1;margin-bottom:5px}
+.kpi-l{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.kpi-f{display:flex;align-items:center;gap:5px}
+.kpi-b{font-size:10.5px;font-weight:600;padding:2px 5px;border-radius:3px;font-family:var(--mono)}
+.ku{background:var(--gl);color:var(--grn)}.kd{background:var(--rl);color:var(--red)}.kn{background:var(--t5);color:var(--t3)}
+.kpi-n{font-size:11px;color:var(--t4)}
+
+/* Layout grids */
+.g3{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.right-col{display:flex;flex-direction:column;gap:14px}
+
+/* Cards */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct{font-size:13px;font-weight:700;color:var(--t1)}
+.cs{font-size:11.5px;color:var(--t4);margin-top:1px}
+.cl{font-size:11.5px;font-weight:600;color:var(--teal);cursor:pointer;flex-shrink:0}.cl:hover{text-decoration:underline}
+.cb-p{padding:15px 17px}
+
+/* Processing timeline */
+.timeline{display:flex;align-items:flex-start;position:relative;padding:4px 0}
+.timeline::before{content:'';position:absolute;left:13px;top:20px;bottom:20px;width:1px;background:var(--bd)}
+.tl-item{display:flex;gap:12px;margin-bottom:16px;position:relative}.tl-item:last-child{margin-bottom:0}
+.tl-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1;border:2px solid var(--bd);background:var(--w)}
+.tl-dot.done{background:var(--grn);border-color:var(--grn)}
+.tl-dot.active{background:var(--blue);border-color:var(--blue);box-shadow:0 0 0 3px var(--bl)}
+.tl-dot.pending{background:var(--t5);border-color:var(--bd)}
+.tl-dot svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.tl-body{padding-top:3px;flex:1}
+.tl-title{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:1px}
+.tl-meta{font-size:11.5px;color:var(--t3)}
+
+/* Dept cost bars */
+.dr{display:flex;align-items:center;gap:10px;margin-bottom:9px}.dr:last-child{margin-bottom:0}
+.dn{font-size:12px;font-weight:500;color:var(--t2);width:88px;flex-shrink:0}
+.dt{flex:1;height:5px;background:var(--t5);border-radius:99px;overflow:hidden}
+.df{height:100%;border-radius:99px;transition:width .9s cubic-bezier(.25,.8,.25,1)}
+.dc{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--t1);width:60px;text-align:right;flex-shrink:0}
+
+/* Anomaly list — BG-003 mock */
+.ano-row{display:flex;align-items:flex-start;gap:10px;padding:10px 15px;border-bottom:1px solid var(--t5);transition:background .09s;cursor:default}
+.ano-row:last-child{border-bottom:none}.ano-row:hover{background:var(--bg)}
+.ano-bar{width:2px;align-self:stretch;border-radius:99px;flex-shrink:0;min-height:28px}
+.ano-emp{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.ano-detail{font-size:11.5px;color:var(--t3)}
+.ano-pct{font-family:var(--mono);font-size:12px;font-weight:700;margin-left:auto;flex-shrink:0}
+
+/* Table */
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg);border-bottom:1px solid var(--bd)}
+th{padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--t5);vertical-align:middle;font-size:12.5px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--tl);cursor:pointer}
+.p{display:flex;align-items:center;gap:8px}
+.pav{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.pn{font-weight:600;color:var(--t1)}.ps{font-family:var(--mono);font-size:10.5px;color:var(--t4)}
+
+/* Motion */
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.a1{animation:fu .28s ease both}.a2{animation:fu .28s .06s ease both}
+.a3{animation:fu .28s .12s ease both}.a4{animation:fu .28s .18s ease both}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+    <div><div class="logo-name">Meridian</div><div class="logo-sub">HCM Suite</div></div>
+  </div>
+  <nav class="sb-nav">
+    <span class="sb-sec">Overview</span>
+    <div class="sb-a on"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>Dashboard</div>
+    <span class="sb-sec">Payroll</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Pay Records<span class="sb-badge b-a">3</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>Run Payroll</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>Salary Structures</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span>Compensation Bands</div>
+    <span class="sb-sec">Workforce</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>Employees<span class="sb-badge b-g">342</span></div>
+    <div class="sb-div"></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>Analytics</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>Settings</div>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="u-av">MP</div>
+      <div><div class="u-name">Maria Patel</div><div class="u-role">Payroll Administrator</div></div>
+      <div class="u-dot"></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar a1">
+    <div class="tb-t">Payroll Dashboard<span class="tb-d">Sun, 22 Mar 2026</span></div>
+    <div class="tb-srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search employees, records…"></div>
+    <div class="tb-vd"></div>
+    <div class="tbi bell"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tb-vd"></div>
+    <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Run Payroll</button>
+    <div class="tav">MP</div>
+  </div>
+
+  <div class="page">
+
+    <!-- Current cycle banner — PayrollBatch.status: Processed → blue -->
+    <div class="cycle-banner processed a1">
+      <div class="cb-icon" style="background:var(--blue)"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="cb-body">
+        <!-- PayrollBatchStatus: Processed → blue chip per api-contracts -->
+        <div class="cb-title">March 2026 Payroll Cycle <span class="chip cb2" style="margin-left:6px;vertical-align:middle">Processed</span></div>
+        <div class="cb-meta">Period: Mar 1 – Mar 31 · Payment date: Mar 31, 2026 · 338 of 342 employees processed</div>
+      </div>
+      <div class="cb-actions">
+        <button class="btn btn-p" style="height:32px;padding:0 12px;font-size:12px">Mark as Paid</button>
+        <button class="btn" style="height:32px;padding:0 12px;font-size:12px">View Batch</button>
+      </div>
+    </div>
+
+    <!-- KPI row — payroll_service + employee-service -->
+    <!-- BG-001: no aggregate endpoint; BG-003: anomaly count mock -->
+    <div class="kpi-row a2">
+      <div class="kpi">
+        <div class="kpi-dot" style="background:var(--teal)"></div>
+        <div class="kpi-v">338</div>
+        <div class="kpi-l">Employees Processed</div>
+        <div class="kpi-f"><span class="kpi-b kn">of 342</span><span class="kpi-n">4 pending</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#16A34A"></div>
+        <div class="kpi-v">$1.84M</div>
+        <div class="kpi-l">Total Gross Pay</div>
+        <!-- payroll_service › PayrollRecord.gross_pay (sum) -->
+        <div class="kpi-f"><span class="kpi-b kd">−3%</span><span class="kpi-n">vs Feb cycle</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#3B82F6"></div>
+        <div class="kpi-v">$1.41M</div>
+        <div class="kpi-l">Total Net Pay</div>
+        <!-- payroll_service › PayrollRecord.net_pay (sum) -->
+        <div class="kpi-f"><span class="kpi-b kn">avg $4,173</span><span class="kpi-n">per employee</span></div>
+      </div>
+      <div class="kpi warn">
+        <div class="kpi-dot" style="background:var(--amber)"></div>
+        <div class="kpi-v">3</div>
+        <div class="kpi-l">Anomalies Flagged</div>
+        <!-- BG-003 mock: deviation >15% from prior cycle -->
+        <div class="kpi-f"><span class="kpi-b kd">review required</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#8B5CF6"></div>
+        <div class="kpi-v">0</div>
+        <div class="kpi-l">Processing Failures</div>
+        <!-- PayrollBatch.failed_count -->
+        <div class="kpi-f"><span class="kpi-b ku">all clear</span></div>
+      </div>
+    </div>
+
+    <!-- Row 1: Dept cost (1.7fr) + Processing timeline (1fr) -->
+    <div class="g3 a3">
+      <!-- Department payroll cost — derived: employee-service.department + payroll_service.gross_pay sum -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Payroll Cost by Department</div><div class="cs">March 2026 · Gross pay</div></div>
+          <span class="cl">View report →</span>
+        </div>
+        <div class="cb-p" id="dept-cost"></div>
+      </div>
+
+      <div class="right-col">
+        <!-- Processing timeline — PayrollCycle stages -->
+        <div class="card">
+          <div class="ch"><div class="ct">Processing Timeline</div><span class="cs">March 2026</span></div>
+          <div class="cb-p">
+            <div class="timeline">
+              <div class="tl-item">
+                <div class="tl-dot done"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                <div class="tl-body"><div class="tl-title">Data Lock</div><div class="tl-meta">Mar 25 · Completed</div></div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot done"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+                <div class="tl-body"><div class="tl-title">Payroll Calculation</div><div class="tl-meta">Mar 27 · Completed</div></div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div>
+                <!-- PayrollBatchStatus: Processed → blue -->
+                <div class="tl-body"><div class="tl-title">Manager Review <span class="chip cb2" style="font-size:10px;padding:1px 5px;margin-left:4px">Processed</span></div><div class="tl-meta">Mar 28 – 30 · In progress</div></div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot pending"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+                <div class="tl-body"><div class="tl-title">Bank Disbursement</div><div class="tl-meta">Mar 31 · Scheduled</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Anomalies — BG-003 mock: 3 records deviate >15% -->
+        <div class="card" style="flex:1">
+          <div class="ch"><div class="ct">Anomalies</div><span class="cl" style="color:var(--red)">3 flagged →</span></div>
+          <div id="anomaly-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Recent payroll records table -->
+    <div class="a4">
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Payroll Records — March 2026</div><div class="cs">Showing 5 of 338 processed</div></div>
+          <span class="cl">View all →</span>
+        </div>
+        <table>
+          <thead><tr><th>Employee</th><th>Dept</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th><th>Status</th></tr></thead>
+          <tbody id="payroll-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<script>
+// Dept payroll cost — employee-service.department + payroll_service.gross_pay aggregated
+const deptCost=[
+  {n:'Engineering',cost:'$682,000',p:74,col:'#3B82F6'},
+  {n:'Product',cost:'$286,000',p:31,col:'#7C3AED'},
+  {n:'Sales',cost:'$248,000',p:27,col:'#22C55E'},
+  {n:'Marketing',cost:'$196,000',p:21,col:'#F59E0B'},
+  {n:'HR & Ops',cost:'$162,000',p:18,col:'#0EA5E9'},
+  {n:'Finance',cost:'$148,000',p:16,col:'#EF4444'},
+  {n:'Legal',cost:'$118,000',p:13,col:'#64748B'}
+];
+document.getElementById('dept-cost').innerHTML=deptCost.map(d=>`
+  <div class="dr">
+    <div class="dn">${d.n}</div>
+    <div class="dt"><div class="df" style="width:0%;background:${d.col}" data-w="${d.p}"></div></div>
+    <div class="dc">${d.cost}</div>
+  </div>`).join('');
+
+// Anomalies — BG-003 mock · deviation >15% from prior cycle
+const anomalies=[
+  {n:'C. Reinholt',id:'EMP-0118',curr:'$18,400',prev:'$12,200',pct:'+51%',col:'#EF4444'},
+  {n:'D. Osei',id:'EMP-0247',curr:'$8,100',prev:'$11,300',pct:'−28%',col:'#EF4444'},
+  {n:'L. Santos',id:'EMP-0312',curr:'$14,600',prev:'$12,100',pct:'+21%',col:'#D97706'}
+];
+document.getElementById('anomaly-list').innerHTML=anomalies.map(a=>`
+  <div class="ano-row">
+    <div class="ano-bar" style="background:${a.col}"></div>
+    <div style="flex:1">
+      <div class="ano-emp">${a.n} <span style="font-family:var(--mono);font-size:10.5px;color:var(--t4);font-weight:400">${a.id}</span></div>
+      <div class="ano-detail">Mar: ${a.curr} · Feb: ${a.prev}</div>
+    </div>
+    <div class="ano-pct" style="color:${a.col}">${a.pct}</div>
+  </div>`).join('');
+
+// Payroll records — payroll_service.PayrollRecord
+// PayrollStatus: Processed → blue, Paid → green, Draft → grey per api-contracts
+const records=[
+  {n:'James Okafor',i:'JO',c:'#4F46E5',dept:'Engineering',gross:'$18,750',ded:'$4,210',net:'$14,540',s:'Processed'},
+  {n:'Priya Rajesh',i:'PR',c:'#059669',dept:'Product',gross:'$15,400',ded:'$3,456',net:'$11,944',s:'Processed'},
+  {n:'Maria Patel',i:'MP',c:'#0A8F84',dept:'Finance',gross:'$10,500',ded:'$2,350',net:'$8,150',s:'Processed'},
+  {n:'Tom Nakamura',i:'TN',c:'#B45309',dept:'Sales',gross:'$9,800',ded:'$2,196',net:'$7,604',s:'Processed'},
+  {n:'Eva Fischer',i:'EF',c:'#DC2626',dept:'Finance',gross:'$10,850',ded:'$2,100',net:'$8,750',s:'Draft'}
+];
+const sc={Processed:'cb2',Paid:'cg',Draft:'cn',Cancelled:'cr'};
+document.getElementById('payroll-rows').innerHTML=records.map(r=>`
+  <tr>
+    <td><div class="p"><div class="pav" style="background:${r.c}">${r.i}</div><div><div class="pn">${r.n}</div></div></div></td>
+    <td style="color:var(--t3)">${r.dept}</td>
+    <td style="font-family:var(--mono);font-weight:600">${r.gross}</td>
+    <td style="font-family:var(--mono);color:var(--red)">${r.ded}</td>
+    <td style="font-family:var(--mono);font-weight:600;color:var(--teal)">${r.net}</td>
+    <td><span class="chip ${sc[r.s]||'cn'}">${r.s}</span></td>
+  </tr>`).join('');
+
+document.querySelectorAll('.sb-a').forEach(el=>el.addEventListener('click',function(){
+  document.querySelectorAll('.sb-a').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+window.addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('.df').forEach(el=>{el.style.width=el.dataset.w+'%'});
+},120));
+</script>
+</body>
+</html>

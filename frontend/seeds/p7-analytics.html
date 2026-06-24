@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:54px;min-width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+.logo-m{width:34px;height:34px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.logo-m svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.si{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t4);transition:all .12s}
+.si:hover{background:var(--bg);color:var(--t2)}.si.on{background:var(--tl);color:var(--teal)}
+.si svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:var(--bd);margin:3px 0}
+.sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:pointer;flex-shrink:0}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal)}.btn-p:hover{background:#0C9E92}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.sel{background:var(--w);border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;font-size:12.5px;color:var(--t2);font-family:'Inter',sans-serif;cursor:pointer;outline:none}
+
+/* Page */
+.page{flex:1;overflow-y:auto}
+
+/* Report type nav */
+.report-nav{display:flex;background:var(--w);border-bottom:1px solid var(--bd);padding:0 22px;gap:2px;flex-shrink:0}
+.rnav-item{display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .12s;user-select:none;white-space:nowrap}
+.rnav-item:hover{color:var(--t1)}
+.rnav-item.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+.rnav-icon{font-size:16px}
+
+/* Filter bar */
+.filter-bar{display:flex;align-items:center;gap:8px;padding:12px 22px;background:var(--w);border-bottom:1px solid var(--bd);flex-shrink:0}
+.fb-label{font-size:12px;font-weight:600;color:var(--t3)}
+.fb-sp{flex:1}
+
+/* Content */
+.content{padding:22px}
+
+/* KPI row */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:18px 20px;cursor:default;transition:box-shadow .14s}
+.kpi:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.kpi-dot{width:6px;height:6px;border-radius:50%;margin-bottom:10px}
+.kpi-v{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--t1);line-height:1;margin-bottom:5px}
+.kpi-l{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.kpi-f{display:flex;align-items:center;gap:5px}
+.badge{font-size:10.5px;font-weight:600;padding:2px 5px;border-radius:3px;font-family:var(--mono)}
+.bg{background:var(--gl);color:var(--grn)}.bd{background:var(--rl);color:var(--red)}.bn{background:var(--t5);color:var(--t3)}.ba{background:var(--al);color:var(--amber)}
+.kpi-n{font-size:11px;color:var(--t4)}
+
+/* Charts row */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.charts-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* Card */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.ct{font-size:13px;font-weight:700;color:var(--t1)}
+.cs{font-size:11.5px;color:var(--t4);margin-top:1px}
+.cl{font-size:12px;font-weight:600;color:var(--teal);cursor:pointer}.cl:hover{text-decoration:underline}
+.cb{padding:16px 18px}
+
+/* Bar chart */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding:0 4px}
+.b-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.b-val{font-size:10px;font-family:var(--mono);color:var(--t4);font-weight:600}
+.b-bars{display:flex;gap:3px;align-items:flex-end;width:100%}
+.b-bar{border-radius:4px 4px 0 0;flex:1;cursor:pointer;transition:opacity .12s}.b-bar:hover{opacity:.8}
+.b-lbl{font-size:10.5px;color:var(--t4)}
+
+/* Trend line chart */
+.trend-wrap{position:relative;height:160px;padding:0 4px}
+
+/* Donut */
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.dl{display:flex;flex-direction:column;gap:8px;flex:1}
+.dlr{display:flex;align-items:center;gap:8px;font-size:12px}
+.dld{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dll{color:var(--t2);flex:1}.dlv{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t1)}
+.dlp{font-size:10px;color:var(--t4);font-family:var(--mono);margin-left:3px}
+
+/* Sparkline row */
+.spark-row{display:flex;align-items:center;gap:8px}
+.spark-label{font-size:12px;color:var(--t2);width:100px;flex-shrink:0}
+.spark-wrap{flex:1;height:28px}
+.spark-val{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t1);width:40px;text-align:right;flex-shrink:0}
+.spark-delta{font-size:10.5px;font-weight:600;width:36px;text-align:right;flex-shrink:0}
+.s-up{color:var(--grn2)}.s-dn{color:var(--red2)}.s-fl{color:var(--t4)}
+
+/* Table */
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--t6);border-bottom:1px solid var(--bd)}
+th{padding:9px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--t2)}.th-s{color:var(--teal)}
+td{padding:10px 16px;border-bottom:1px solid var(--t5);font-size:12.5px;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--tl);cursor:pointer}
+.td-mono{font-family:var(--mono);font-size:12px}
+.td-mono-b{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--t1)}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:3px}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:var(--grn2)}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber2)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:var(--red2)}
+
+/* Inline bar */
+.ibar-wrap{display:flex;align-items:center;gap:8px}
+.ibar-track{flex:1;height:5px;background:var(--t5);border-radius:99px;overflow:hidden}
+.ibar-fill{height:100%;border-radius:99px}
+.ibar-pct{font-family:var(--mono);font-size:11px;color:var(--t4);width:32px;text-align:right;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sb">
+  <div class="logo-m"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+  <div class="si on"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div class="sb-div"></div>
+  <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+  <div class="sb-av">AW</div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="tb-t">Analytics & Reports</div>
+    <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export PDF</button>
+    <button class="btn">Schedule Report</button>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Report</button>
+    <div class="tav">AW</div>
+  </div>
+
+  <!-- Report type nav -->
+  <div class="report-nav">
+    <div class="rnav-item on" onclick="setReport(this)"><span class="rnav-icon">👥</span>Workforce</div>
+    <div class="rnav-item" onclick="setReport(this)"><span class="rnav-icon">💳</span>Payroll</div>
+    <div class="rnav-item" onclick="setReport(this)"><span class="rnav-icon">🏖️</span>Attendance & Leave</div>
+    <div class="rnav-item" onclick="setReport(this)"><span class="rnav-icon">🔍</span>Recruiting</div>
+    <div class="rnav-item" onclick="setReport(this)"><span class="rnav-icon">⭐</span>Performance</div>
+    <div class="rnav-item" onclick="setReport(this)"><span class="rnav-icon">📋</span>Saved Reports</div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <span class="fb-label">Period</span>
+    <select class="sel"><option>Q1 2026 (Jan–Mar)</option><option>Q4 2025</option><option>YTD 2026</option><option>Last 12 months</option></select>
+    <span class="fb-label">Department</span>
+    <select class="sel"><option>All Departments</option><option>Engineering</option><option>Product</option><option>Sales</option></select>
+    <span class="fb-label">Location</span>
+    <select class="sel"><option>All Locations</option><option>San Francisco</option><option>New York</option><option>London</option></select>
+    <div class="fb-sp"></div>
+    <button class="btn" style="font-size:12px">Reset</button>
+    <button class="btn btn-p" style="font-size:12px">Apply</button>
+  </div>
+
+  <div class="page">
+    <div class="content">
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-dot" style="background:var(--teal)"></div><div class="kpi-v">342</div><div class="kpi-l">Total Headcount</div><div class="kpi-f"><span class="badge bg">+14</span><span class="kpi-n">vs last quarter</span></div></div>
+        <div class="kpi"><div class="kpi-dot" style="background:var(--red2)"></div><div class="kpi-v">5.8%</div><div class="kpi-l">Attrition Rate</div><div class="kpi-f"><span class="badge bd">+1.2%</span><span class="kpi-n">above 4.5% target</span></div></div>
+        <div class="kpi"><div class="kpi-dot" style="background:var(--blue2)"></div><div class="kpi-v">3.2y</div><div class="kpi-l">Avg. Tenure</div><div class="kpi-f"><span class="badge bn">±0</span><span class="kpi-n">stable</span></div></div>
+        <div class="kpi"><div class="kpi-dot" style="background:var(--grn2)"></div><div class="kpi-v">34d</div><div class="kpi-l">Time-to-Hire</div><div class="kpi-f"><span class="badge bg">−9d</span><span class="kpi-n">vs 43d benchmark</span></div></div>
+      </div>
+
+      <!-- Row 1 -->
+      <div class="charts-row">
+        <!-- Headcount trend bar chart -->
+        <div class="card">
+          <div class="ch">
+            <div><div class="ct">Headcount Trend — Q1 2026</div><div class="cs">Monthly by department</div></div>
+            <span class="cl">Details →</span>
+          </div>
+          <div class="cb">
+            <div class="bar-chart" id="bar-chart"></div>
+            <div style="display:flex;gap:14px;margin-top:12px;justify-content:center">
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)"><div style="width:9px;height:9px;border-radius:2px;background:#3B82F6"></div>Engineering</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)"><div style="width:9px;height:9px;border-radius:2px;background:#7C3AED"></div>Product</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)"><div style="width:9px;height:9px;border-radius:2px;background:#22C55E"></div>Sales</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)"><div style="width:9px;height:9px;border-radius:2px;background:#F59E0B"></div>Marketing</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)"><div style="width:9px;height:9px;border-radius:2px;background:#94A3B8"></div>Other</div>
+            </div>
+          </div>
+        </div>
+        <!-- Workforce mix donut -->
+        <div class="card">
+          <div class="ch"><div class="ct">Workforce Mix</div></div>
+          <div class="cb">
+            <div class="donut-wrap">
+              <svg width="96" height="96" viewBox="0 0 36 36" style="flex-shrink:0">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#F1F4F8" stroke-width="4"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#3B82F6" stroke-width="4" stroke-dasharray="53 87.96" stroke-dashoffset="22" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#7C3AED" stroke-width="4" stroke-dasharray="14 87.96" stroke-dashoffset="-31" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#22C55E" stroke-width="4" stroke-dasharray="11 87.96" stroke-dashoffset="-45" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#F59E0B" stroke-width="4" stroke-dasharray="10 87.96" stroke-dashoffset="-56" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                <text x="18" y="16" text-anchor="middle" fill="#0F1623" font-size="5.5" font-weight="700" font-family="JetBrains Mono,monospace">342</text>
+                <text x="18" y="21.5" text-anchor="middle" fill="#94A3B8" font-size="3.5">total</text>
+              </svg>
+              <div class="dl">
+                <div class="dlr"><div class="dld" style="background:#3B82F6"></div><div class="dll">Engineering</div><div class="dlv">128</div><span class="dlp">37%</span></div>
+                <div class="dlr"><div class="dld" style="background:#7C3AED"></div><div class="dll">Product</div><div class="dlv">54</div><span class="dlp">16%</span></div>
+                <div class="dlr"><div class="dld" style="background:#22C55E"></div><div class="dll">Sales</div><div class="dlv">46</div><span class="dlp">13%</span></div>
+                <div class="dlr"><div class="dld" style="background:#F59E0B"></div><div class="dll">Marketing</div><div class="dlv">38</div><span class="dlp">11%</span></div>
+                <div class="dlr"><div class="dld" style="background:#94A3B8"></div><div class="dll">Other</div><div class="dlv">76</div><span class="dlp">22%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Sparklines + SVG trend lines -->
+      <div class="charts-row-3">
+        <!-- Attrition by dept -->
+        <div class="card">
+          <div class="ch"><div class="ct">Attrition by Department</div><span class="cl">Details →</span></div>
+          <div class="cb" style="display:flex;flex-direction:column;gap:10px">
+            <div class="spark-row">
+              <div class="spark-label">Engineering</div>
+              <div class="ibar-wrap" style="flex:1"><div class="ibar-track"><div class="ibar-fill" style="width:42%;background:#3B82F6"></div></div><div class="ibar-pct">4.2%</div></div>
+              <span class="spark-delta s-fl">±0</span>
+            </div>
+            <div class="spark-row">
+              <div class="spark-label">Product</div>
+              <div class="ibar-wrap" style="flex:1"><div class="ibar-track"><div class="ibar-fill" style="width:68%;background:#7C3AED"></div></div><div class="ibar-pct">6.8%</div></div>
+              <span class="spark-delta s-dn">+1.4%</span>
+            </div>
+            <div class="spark-row">
+              <div class="spark-label">Sales</div>
+              <div class="ibar-wrap" style="flex:1"><div class="ibar-track"><div class="ibar-fill" style="width:83%;background:#22C55E"></div></div><div class="ibar-pct">8.3%</div></div>
+              <span class="spark-delta s-dn">+2.1%</span>
+            </div>
+            <div class="spark-row">
+              <div class="spark-label">Marketing</div>
+              <div class="ibar-wrap" style="flex:1"><div class="ibar-track"><div class="ibar-fill" style="width:39%;background:#F59E0B"></div></div><div class="ibar-pct">3.9%</div></div>
+              <span class="spark-delta s-up">−0.8%</span>
+            </div>
+            <div class="spark-row">
+              <div class="spark-label">Finance</div>
+              <div class="ibar-wrap" style="flex:1"><div class="ibar-track"><div class="ibar-fill" style="width:100%;background:#EF4444"></div></div><div class="ibar-pct">12.5%</div></div>
+              <span class="spark-delta s-dn">+4.2%</span>
+            </div>
+            <div class="spark-row">
+              <div class="spark-label">HR & Ops</div>
+              <div class="ibar-wrap" style="flex:1"><div class="ibar-track"><div class="ibar-fill" style="width:21%;background:#0EA5E9"></div></div><div class="ibar-pct">2.1%</div></div>
+              <span class="spark-delta s-up">−1.1%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Headcount growth trend SVG -->
+        <div class="card">
+          <div class="ch"><div class="ct">Headcount Growth</div><span class="cs">Last 12 months</span></div>
+          <div class="cb" style="padding:12px 16px">
+            <svg viewBox="0 0 320 150" width="100%" height="150" style="overflow:visible">
+              <!-- Grid lines -->
+              <line x1="0" y1="30" x2="320" y2="30" stroke="#F1F4F8" stroke-width="1"/>
+              <line x1="0" y1="70" x2="320" y2="70" stroke="#F1F4F8" stroke-width="1"/>
+              <line x1="0" y1="110" x2="320" y2="110" stroke="#F1F4F8" stroke-width="1"/>
+              <!-- Y labels -->
+              <text x="0" y="28" font-size="9" fill="#94A3B8" font-family="JetBrains Mono,monospace">360</text>
+              <text x="0" y="68" font-size="9" fill="#94A3B8" font-family="JetBrains Mono,monospace">330</text>
+              <text x="0" y="108" font-size="9" fill="#94A3B8" font-family="JetBrains Mono,monospace">300</text>
+              <!-- Area fill -->
+              <path d="M32,120 L60,115 L88,112 L116,108 L144,105 L172,100 L200,95 L228,90 L256,86 L284,80 L312,72 L312,135 L32,135 Z" fill="rgba(10,143,132,.08)"/>
+              <!-- Line -->
+              <polyline points="32,120 60,115 88,112 116,108 144,105 172,100 200,95 228,90 256,86 284,80 312,72" fill="none" stroke="#0A8F84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- Dots -->
+              <circle cx="312" cy="72" r="4" fill="#0A8F84"/>
+              <circle cx="312" cy="72" r="7" fill="rgba(10,143,132,.2)"/>
+              <!-- Today label -->
+              <text x="308" y="65" font-size="9" fill="#0A8F84" font-family="JetBrains Mono,monospace" text-anchor="middle">342</text>
+              <!-- X labels -->
+              <text x="32"  y="148" font-size="9" fill="#94A3B8" text-anchor="middle" font-family="JetBrains Mono,monospace">Apr</text>
+              <text x="88"  y="148" font-size="9" fill="#94A3B8" text-anchor="middle" font-family="JetBrains Mono,monospace">Jun</text>
+              <text x="144" y="148" font-size="9" fill="#94A3B8" text-anchor="middle" font-family="JetBrains Mono,monospace">Aug</text>
+              <text x="200" y="148" font-size="9" fill="#94A3B8" text-anchor="middle" font-family="JetBrains Mono,monospace">Oct</text>
+              <text x="256" y="148" font-size="9" fill="#94A3B8" text-anchor="middle" font-family="JetBrains Mono,monospace">Dec</text>
+              <text x="312" y="148" font-size="9" fill="#94A3B8" text-anchor="middle" font-family="JetBrains Mono,monospace">Mar</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Hiring funnel -->
+        <div class="card">
+          <div class="ch"><div class="ct">Hiring Funnel</div><span class="cs">Q1 2026</span></div>
+          <div class="cb" style="display:flex;flex-direction:column;gap:8px" id="funnel"></div>
+        </div>
+      </div>
+
+      <!-- Department breakdown table -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Department Breakdown — Q1 2026</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" style="font-size:12px"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Department</th>
+            <th class="th-s">Headcount ↓</th>
+            <th>Distribution</th>
+            <th>Growth</th>
+            <th>Attrition</th>
+            <th>Avg Tenure</th>
+            <th>Payroll Cost</th>
+            <th>Health</th>
+          </tr></thead>
+          <tbody id="dept-tbody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+/* Bar chart */
+const months = ['Jan','Feb','Mar'];
+const data = [[110,118,128],[48,52,54],[42,44,46],[36,37,38],[72,77,76]];
+const colors = ['#3B82F6','#7C3AED','#22C55E','#F59E0B','#94A3B8'];
+const maxV = Math.max(...data.flat());
+document.getElementById('bar-chart').innerHTML = months.map((m,mi) => {
+  const total = data.reduce((s,d) => s+d[mi], 0);
+  const bars = data.map((d,di) => `<div class="b-bar" style="height:${(d[mi]/maxV)*148}px;background:${colors[di]}" title="${m}: ${d[mi]}"></div>`).join('');
+  return `<div class="b-col"><div class="b-val">${total}</div><div class="b-bars">${bars}</div><div class="b-lbl">${m}</div></div>`;
+}).join('');
+
+/* Hiring funnel */
+const funnel = [{l:'Applications',v:247,pct:100,c:'#3B82F6'},{l:'Screened',v:89,pct:36,c:'#7C3AED'},{l:'Interviewed',v:42,pct:17,c:'#0A8F84'},{l:'Final Round',v:18,pct:7,c:'#F59E0B'},{l:'Offers Sent',v:11,pct:4,c:'#22C55E'},{l:'Accepted',v:9,pct:4,c:'#16A34A'}];
+document.getElementById('funnel').innerHTML = funnel.map(f => `
+  <div>
+    <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px">
+      <span style="color:var(--t2);font-weight:500">${f.l}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--t1)">${f.v}</span>
+    </div>
+    <div style="height:5px;background:var(--t5);border-radius:99px;overflow:hidden">
+      <div style="width:${f.pct}%;height:100%;background:${f.c};border-radius:99px"></div>
+    </div>
+  </div>`).join('');
+
+/* Dept table */
+const depts = [
+  {n:'Engineering',ct:128,pct:75,col:'#3B82F6',delta:'+8',attr:'4.2%',tenure:'3.8y',pay:'$748K',health:'cg',hl:'Healthy'},
+  {n:'Product',    ct:54, pct:32,col:'#7C3AED',delta:'+2',attr:'6.8%',tenure:'2.9y',pay:'$312K',health:'ca',hl:'Watch'},
+  {n:'Sales',      ct:46, pct:27,col:'#22C55E',delta:'+1',attr:'8.3%',tenure:'2.4y',pay:'$285K',health:'ca',hl:'Watch'},
+  {n:'Marketing',  ct:38, pct:22,col:'#F59E0B',delta:'±0',attr:'3.9%',tenure:'3.1y',pay:'$199K',health:'cg',hl:'Healthy'},
+  {n:'HR & Ops',   ct:32, pct:19,col:'#0EA5E9',delta:'+1',attr:'2.1%',tenure:'4.2y',pay:'$168K',health:'cg',hl:'Healthy'},
+  {n:'Finance',    ct:24, pct:14,col:'#EF4444',delta:'−1',attr:'12.5%',tenure:'2.1y',pay:'$124K',health:'cr',hl:'At Risk'},
+  {n:'Legal',      ct:20, pct:12,col:'#64748B',delta:'+3',attr:'3.0%',tenure:'4.8y',pay:'$108K',health:'cg',hl:'Healthy'},
+];
+document.getElementById('dept-tbody').innerHTML = depts.map(d => `
+  <tr>
+    <td style="font-weight:600;color:var(--t1)">${d.n}</td>
+    <td class="td-mono-b">${d.ct}</td>
+    <td>
+      <div class="ibar-wrap">
+        <div class="ibar-track" style="width:120px"><div class="ibar-fill" style="width:${d.pct}%;background:${d.col}"></div></div>
+        <div class="ibar-pct">${d.pct}%</div>
+      </div>
+    </td>
+    <td class="td-mono" style="color:${d.delta.startsWith('+')&&d.delta!=='±0'?'var(--grn2)':d.delta.startsWith('−')?'var(--red2)':'var(--t4)'}">${d.delta}</td>
+    <td class="td-mono">${d.attr}</td>
+    <td class="td-mono">${d.tenure}</td>
+    <td class="td-mono-b">${d.pay}</td>
+    <td><span class="chip ${d.health}">${d.hl}</span></td>
+  </tr>`).join('');
+
+function setReport(el){document.querySelectorAll('.rnav-item').forEach(i=>i.classList.remove('on'));el.classList.add('on')}
+document.querySelectorAll('.si').forEach(el=>el.addEventListener('click',function(){document.querySelectorAll('.si').forEach(x=>x.classList.remove('on'));this.classList.add('on')}));
+</script>
+</body>
+</html>

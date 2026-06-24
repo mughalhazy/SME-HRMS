@@ -1,0 +1,222 @@
+﻿{
+  "_meta": {
+    "id": "h03-employee-profile",
+    "archetype": "H03 Detail / Profile",
+    "page": "Employee Profile",
+    "surface": "admin",
+    "primary_actor": "HR Business Partner",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p3-profile.html"
+  },
+
+  "slots": {
+    "TOPBAR": {
+      "breadcrumb": ["Employees", "Priya Subramaniam"],
+      "actions": [
+        { "label": "Edit Profile", "style": "secondary", "leads_to": "H04 Edit Employee" },
+        { "label": "Transfer", "style": "secondary", "action": "PATCH /api/v1/employees/:employeeId/department" },
+        { "label": "Suspend", "style": "danger", "requires_confirm": true, "action": "PATCH /api/v1/employees/:employeeId/status → status=Suspended" }
+      ]
+    },
+
+    "PROFILE_HEADER": {
+      "avatar": { "initials": "PS", "size": 66, "gradient": "teal-dark" },
+      "name": "Priya Subramaniam",
+      "role_line": "Senior HR Business Partner · People Operations",
+      "chips": [
+        { "field": "employee_status", "enum_ref": "ref:api-contracts#Employee.status" },
+        { "field": "employment_type", "enum_ref": "ref:api-contracts#Employee.employment_type" },
+        { "field": "location_name", "style": "grey" },
+        { "field": "manager_name", "prefix": "Reports to", "style": "grey" },
+        { "field": "hire_date", "prefix": "Joined", "style": "grey" },
+        { "field": "employee_number", "style": "grey", "font": "mono" }
+      ],
+      "header_actions": ["Edit", "Message"]
+    },
+
+    "TAB_NAV": {
+      "tabs": ["Overview", "Compensation", "Documents", "Leave", "Performance", "History"]
+    },
+
+    "TAB_CONTENT": {
+      "overview": {
+        "layout": "grid-two-col",
+        "col_left": [
+          {
+            "component": "ai_risk_banner",
+            "source": "BG-002 mock",
+            "note": "No AI inference endpoint exists. Pattern P-12: amber=actionable warning, confidence visible, dismissable."
+          },
+          {
+            "component": "field_grid",
+            "title": "Personal Details",
+            "source": "employee-service: GET /api/v1/employees/:employeeId",
+            "model": "EmployeeDirectoryReadModel",
+            "fields": ["full_name", "employee_number", "email", "phone", "department_name", "role_title", "manager_name", "location_name"]
+          },
+          {
+            "component": "field_grid",
+            "title": "Employment Details",
+            "source": "employee-service: GET /api/v1/employees/:employeeId",
+            "model": "EmployeeDirectoryReadModel",
+            "fields": ["employment_type", "employee_status", "hire_date", "probation_end", "business_unit_name", "grade_band_name", "cost_center_name", "work_type"]
+          }
+        ],
+        "col_right": [
+          {
+            "component": "data_rows",
+            "title": "At a Glance",
+            "source": "employee-service: GET /api/v1/compensation/employees/:employeeId/payroll-context",
+            "model": "EmployeeCompensationReadModel",
+            "rows": ["contract_type", "grade_band_name", "base_salary", "pay_cycle", "bonus_target", "tenure"]
+          },
+          {
+            "component": "leave_balance_mini",
+            "title": "Leave Balance",
+            "source": "BG-006 mock",
+            "note": "No GET /api/v1/leave/employees/:employeeId/balances endpoint. leave_service._balances_for_employee() is internal only.",
+            "leave_types": ["Annual", "Sick", "Casual", "Unpaid"]
+          },
+          {
+            "component": "timeline",
+            "title": "Employment Timeline",
+            "source": "employee-service audit trail",
+            "items": ["promotion", "transfer", "join_date"]
+          }
+        ]
+      },
+
+      "compensation": {
+        "layout": "single",
+        "cards": [
+          {
+            "component": "field_grid",
+            "title": "Compensation Details",
+            "source": "employee-service: GET /api/v1/compensation/employees/:employeeId/payroll-context",
+            "model": "PayrollCompensationContext",
+            "fields": ["base_salary", "currency", "pay_cycle", "bonus_target", "compensation_band_name", "allowances_total"]
+          },
+          {
+            "component": "data_rows",
+            "title": "Allowances",
+            "source": "employee-service: GET /api/v1/compensation/allowances?employee_id=",
+            "model": "Allowance[]"
+          },
+          {
+            "component": "benefit_list",
+            "title": "Benefits Enrolled",
+            "source": "employee-service: GET /api/v1/benefits/enrollments?employee_id=",
+            "model": "BenefitsEnrollment[]",
+            "status_enum_ref": "ref:api-contracts#Compensation.benefits_enrollment.status"
+          }
+        ]
+      },
+
+      "documents": {
+        "layout": "single",
+        "source": "employee-service: GET /api/v1/documents?employee_id=",
+        "model": "Document[]",
+        "status_enum_ref": "ref:api-contracts#Document.status",
+        "actions_per_row": ["Download"],
+        "expiry_warning": "amber chip when status=Expiring"
+      },
+
+      "leave": {
+        "layout": "single",
+        "cards": [
+          {
+            "component": "leave_balance_full",
+            "title": "Leave Balance",
+            "source": "BG-006 mock",
+            "note": "No per-employee leave balance HTTP endpoint. Mock used.",
+            "leave_types": ["Annual", "Sick", "Casual", "Unpaid", "Other"],
+            "fields_per_type": ["entitlement_days", "approved_days", "remaining_days"]
+          },
+          {
+            "component": "table",
+            "title": "Leave Requests",
+            "source": "leave_service: GET /api/v1/leave/requests?employee_id=",
+            "model": "LeaveRequest[]",
+            "columns": [
+              { "key": "leave_type", "label": "Type", "width": 16, "enum_ref": "ref:api-contracts#Leave.type" },
+              { "key": "from_date", "label": "From", "width": 18, "font": "mono" },
+              { "key": "to_date", "label": "To", "width": 18, "font": "mono" },
+              { "key": "days", "label": "Days", "width": 10, "font": "mono" },
+              { "key": "submitted_at", "label": "Submitted", "width": 20, "font": "mono" },
+              { "key": "status", "label": "Status", "width": 18, "chip": true, "enum_ref": "ref:api-contracts#Leave.status" }
+            ]
+          }
+        ]
+      },
+
+      "performance": {
+        "layout": "single",
+        "cards": [
+          {
+            "component": "review_cycle_summary",
+            "title": "Current Review Cycle",
+            "source": "performance_service: GET /api/v1/performance/review-cycles?employee_id=",
+            "model": "ReviewCycle",
+            "status_enum_ref": "ref:api-contracts#Performance.review_cycle.status",
+            "fields": ["cycle_name", "period", "due_date", "reviewer_name"],
+            "progress_bars": ["goals_completion", "self_assessment", "manager_assessment"]
+          },
+          {
+            "component": "goal_list",
+            "title": "Goals",
+            "source": "performance_service: GET /api/v1/performance/goals?employee_id=",
+            "model": "Goal[]",
+            "status_enum_ref": "ref:api-contracts#Goal.status"
+          }
+        ]
+      },
+
+      "history": {
+        "layout": "single",
+        "component": "timeline",
+        "title": "Employment History",
+        "source": "employee-service: audit trail / status change log",
+        "event_types": ["promotion", "transfer", "probation_complete", "join", "prior_employment"]
+      }
+    }
+  },
+
+  "gaps": ["BG-002", "BG-006"],
+
+  "mock_data": {
+    "employee": {
+      "employee_id": "emp-uuid-0127",
+      "employee_number": "EMP-0127",
+      "full_name": "Priya Subramaniam",
+      "email": "p.subramaniam@meridian.hr",
+      "phone": "+971 50 441 8823",
+      "hire_date": "2023-09-18",
+      "employment_type": "FullTime",
+      "status": "Active",
+      "department_name": "People Operations",
+      "role_title": "Senior HR Business Partner",
+      "manager_name": "James Kolawole",
+      "location_name": "Dubai, UAE",
+      "business_unit_name": "HR & Talent",
+      "grade_band_name": "P4 / Band 3",
+      "cost_center_name": "CC-0042"
+    },
+    "compensation": {
+      "base_salary": "22000",
+      "currency": "AED",
+      "allowances_total": "3500",
+      "compensation_band_name": "P4 / Band 3",
+      "active_benefits_count": 3,
+      "active_allowances_count": 3
+    },
+    "leave_balances_mock": [
+      { "leave_type": "Annual",  "entitlement_days": 18, "approved_days": 14, "remaining_days": 4 },
+      { "leave_type": "Sick",    "entitlement_days": 10, "approved_days": 7,  "remaining_days": 3 },
+      { "leave_type": "Casual",  "entitlement_days": 7,  "approved_days": 4,  "remaining_days": 3 },
+      { "leave_type": "Unpaid",  "entitlement_days": null,"approved_days": 0,  "remaining_days": null },
+      { "leave_type": "Other",   "entitlement_days": 5,  "approved_days": 1,  "remaining_days": 4 }
+    ]
+  }
+}

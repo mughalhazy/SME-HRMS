@@ -1,0 +1,15 @@
+# Normalize line endings: LF in repo (project runs on Linux in Docker/CI)
+* text=auto eol=lf
+
+# Binary files — no conversion
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.pyc binary

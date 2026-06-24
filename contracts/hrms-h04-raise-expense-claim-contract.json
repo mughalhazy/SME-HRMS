@@ -1,0 +1,69 @@
+﻿{
+  "_meta": {
+    "id": "h04-raise-expense-claim",
+    "archetype": "H04 Create / Edit Form",
+    "page": "Raise Expense Claim",
+    "variant": "Stepped (4 steps: Claim Details → Line Items → Attachments → Review & Submit)",
+    "surface": "employee self-service",
+    "primary_actor": "Employee",
+    "version": "1.0",
+    "last_updated": "2026-03-23",
+    "archetype_ref": "hrms-schema-template.json",
+    "seed_page_ref": "frontend/seeds/p4-form.html"
+  },
+  "slots": {
+    "STEP_HEADER": {
+      "title": "Raise Expense Claim",
+      "steps": ["Claim Details","Line Items","Attachments","Review & Submit"]
+    },
+    "FORM_STEPS": {
+      "step_1_claim_details": {
+        "fields": [
+          { "id": "category_id",          "type": "select",   "required": true,  "source": "GET /api/v1/expense-categories", "maps_to": "ExpenseClaim.category_id" },
+          { "id": "expense_date",         "type": "date",     "required": true,  "maps_to": "ExpenseClaim.expense_date" },
+          { "id": "amount",               "type": "number",   "required": true,  "maps_to": "ExpenseClaim.amount" },
+          { "id": "currency",             "type": "select",   "required": true,  "maps_to": "ExpenseClaim.currency" },
+          { "id": "description",          "type": "textarea", "required": true,  "maps_to": "ExpenseClaim.description" },
+          { "id": "approver_employee_id", "type": "select",   "required": false, "maps_to": "ExpenseClaim.approver_employee_id" }
+        ]
+      },
+      "step_2_line_items": {
+        "component": "line_items_table",
+        "note": "Line items are UI-only detail rows. ExpenseClaim model has no line_items[] field — items are aggregated into the main claim amount."
+      },
+      "step_3_attachments": {
+        "component": "file_upload_zone",
+        "maps_to": "ExpenseClaim.attachments[] (via separate attachment upload endpoint)",
+        "note": "File upload not implemented in prototype — mock receipts shown."
+      },
+      "step_4_review": {
+        "component": "review_summary",
+        "submit_action": "POST /api/v1/expense-claims"
+      }
+    },
+    "FORM_FOOTER": {
+      "right": [
+        { "label": "Back",         "style": "ghost",     "hidden_on": "step_1" },
+        { "label": "Save Draft",   "style": "secondary" },
+        { "label": "Next",         "style": "primary",   "visible_on": "steps_1_to_3" },
+        { "label": "Submit Claim", "style": "primary",   "visible_on": "step_4" }
+      ]
+    }
+  },
+  "submit_flow": {
+    "method": "POST",
+    "endpoint": "/api/v1/expense-claims",
+    "service": "expense_service",
+    "body": {
+      "category_id": "string (required)",
+      "amount": "float (required)",
+      "currency": "string (required)",
+      "expense_date": "date (required)",
+      "description": "string (required)",
+      "status": "Submitted"
+    },
+    "on_success": { "redirect": "H03 Expense Claim Detail" }
+  },
+  "known_gaps": [],
+  "patterns_applied": ["P-07", "P-31", "P-32"]
+}

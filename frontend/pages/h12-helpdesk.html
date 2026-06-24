@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Support &amp; Tickets — Meridian HCM</title>
+<style>
+html{zoom:1.1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#0A8F84;--teal-d:#077a70;--teal-lt:#E6F4F3;
+  --grey-50:#F8FAFC;--grey-100:#F1F5F9;--grey-200:#E2E8F0;
+  --grey-300:#CBD5E1;--grey-400:#94A3B8;--grey-500:#64748B;
+  --grey-700:#334155;--grey-900:#0F172A;
+  --amber:#D97706;--amber-lt:#FEF3C7;
+  --red:#DC2626;--red-lt:#FEE2E2;
+  --green:#16A34A;--green-lt:#DCFCE7;
+  --blue:#2563EB;--blue-lt:#DBEAFE;
+  --violet:#7C3AED;--violet-lt:#EDE9FE;
+  --font:'Inter',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --radius:6px;--radius-lg:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+}
+body{font-family:var(--font);font-size:13px;color:var(--grey-900);background:var(--grey-100);display:flex;height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* ── Sidebar ── */
+.sb{width:56px;background:#0F172A;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0;z-index:100}
+.sb-logo{width:32px;height:32px;background:var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.sb-logo svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2}
+.sb-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748B;cursor:default;transition:background .15s,color .15s}
+.sb-ico:hover{background:rgba(255,255,255,.08);color:#94A3B8}
+.sb-ico.on{background:rgba(10,143,132,.2);color:var(--teal)}
+.sb-ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-div{width:28px;height:1px;background:rgba(255,255,255,.08);margin:6px 0}
+.sb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-top:auto;cursor:default;flex-shrink:0}
+
+/* ── Main shell ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── Topbar ── */
+.topbar{height:52px;background:#fff;border-bottom:1px solid var(--grey-200);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+.tb-title{font-size:14px;font-weight:700;color:var(--grey-900);flex:1}
+.tb-div{width:1px;height:18px;background:var(--grey-200)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--radius);font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--grey-200);background:#fff;color:var(--grey-700);font-family:var(--font);transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--grey-50);border-color:var(--grey-300)}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-primary{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-primary:hover{background:var(--teal-d);border-color:var(--teal-d)}
+.btn-sm{padding:4px 9px;font-size:12px}
+.btn-red{background:var(--red-lt);color:var(--red);border-color:#FECACA}
+.btn-red:hover{background:#FEE2E2}
+.tb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:default}
+
+/* ── Stats strip ── */
+.stat-strip{display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border-bottom:1px solid var(--grey-200);flex-shrink:0}
+.stat-cell{padding:10px 18px;border-right:1px solid var(--grey-200)}
+.stat-cell:last-child{border-right:none}
+.s-lbl{font-size:10px;font-weight:700;color:var(--grey-400);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.s-val{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--grey-900);line-height:1}
+.s-note{font-size:11px;color:var(--grey-400);margin-top:3px;display:flex;align-items:center;gap:4px}
+.s-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:var(--mono)}
+.sb-red{background:var(--red-lt);color:var(--red)}
+.sb-amber{background:var(--amber-lt);color:var(--amber)}
+.sb-green{background:var(--green-lt);color:var(--green)}
+
+/* ── Chips (P-07) ── */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.chip-green{background:var(--green-lt);color:#15803D}
+.chip-amber{background:var(--amber-lt);color:#92400E}
+.chip-blue{background:var(--blue-lt);color:#1D4ED8}
+.chip-grey{background:var(--grey-100);color:var(--grey-500)}
+.chip-teal{background:var(--teal-lt);color:var(--teal)}
+.chip-red{background:var(--red-lt);color:#B91C1C}
+.chip-violet{background:var(--violet-lt);color:var(--violet)}
+
+/* ── Support body (two-panel) ── */
+.support-body{flex:1;overflow:hidden;display:grid;grid-template-columns:340px 1fr;grid-template-rows:1fr;min-height:0}
+
+/* ── Ticket list (left panel) ── */
+.ticket-list{background:#fff;border-right:1px solid var(--grey-200);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.tl-head{padding:10px 14px;border-bottom:1px solid var(--grey-200);flex-shrink:0;background:#fff}
+.tl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.tl-title{font-size:13px;font-weight:700;color:var(--grey-900)}
+.tl-new{font-size:12px;font-weight:600;color:var(--teal);cursor:pointer}
+.tl-new:hover{text-decoration:underline}
+.tabs-row{display:flex;gap:2px;background:var(--grey-100);border:1px solid var(--grey-200);border-radius:var(--radius);padding:3px}
+.tab{flex:1;padding:4px 0;border-radius:5px;font-size:12px;font-weight:500;color:var(--grey-500);cursor:pointer;transition:all .12s;text-align:center;user-select:none}
+.tab:hover{color:var(--grey-900)}
+.tab.on{background:#fff;color:var(--grey-900);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tab-badge{font-family:var(--mono);font-size:10px;padding:0 4px;border-radius:3px;margin-left:3px}
+.tl-search{display:flex;align-items:center;gap:6px;background:var(--grey-50);border:1px solid var(--grey-200);border-radius:var(--radius);padding:6px 10px;margin-top:8px;transition:all .14s}
+.tl-search:focus-within{background:#fff;border-color:var(--teal)}
+.tl-search svg{width:12px;height:12px;stroke:var(--grey-400);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.tl-search input{background:none;border:none;outline:none;font-size:12.5px;color:var(--grey-900);width:100%;font-family:var(--font)}
+.tl-search input::placeholder{color:var(--grey-400)}
+.tl-scroll{overflow-y:auto;flex:1;min-height:0}
+
+/* Ticket card */
+.tkt{padding:12px 14px;border-bottom:1px solid var(--grey-100);cursor:pointer;transition:background .09s}
+.tkt:hover{background:var(--grey-50)}
+.tkt.sel{background:var(--teal-lt);border-left:2px solid var(--teal);padding-left:12px}
+.tk-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+.tk-id{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--teal)}
+.tk-time{font-size:10.5px;color:var(--grey-400);font-family:var(--mono)}
+.tk-title{font-size:12.5px;font-weight:600;color:var(--grey-900);margin-bottom:3px;line-height:1.4}
+.tk-preview{font-size:11.5px;color:var(--grey-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:5px}
+.tk-chips{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.tk-assignee{display:flex;align-items:center;gap:5px;margin-top:5px}
+.tk-aav{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;flex-shrink:0}
+.tk-aname{font-size:11px;color:var(--grey-400)}
+
+/* ── Ticket detail (right panel) ── */
+.ticket-detail{display:flex;flex-direction:column;overflow-y:auto;min-height:0;background:var(--grey-100)}
+
+/* Detail header */
+.td-head{background:#fff;border-bottom:1px solid var(--grey-200);padding:16px 22px;flex-shrink:0}
+.tdh-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:14px}
+.tdh-left{flex:1;min-width:0}
+.tdh-id{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--teal);margin-bottom:4px}
+.tdh-title{font-size:17px;font-weight:700;color:var(--grey-900);letter-spacing:-.015em;line-height:1.3}
+.tdh-acts{display:flex;gap:7px;flex-shrink:0}
+.tdh-chips{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.sla-txt{font-size:11.5px;color:var(--grey-400);margin-left:4px}
+
+/* Detail body: main thread + rail */
+.td-body{flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 280px;align-items:start;min-height:0}
+.td-main{padding:18px 22px;padding-bottom:12vh}
+.td-rail{overflow-y:auto;min-height:100%;border-left:1px solid var(--grey-200);background:#fff;padding:16px;padding-bottom:12vh}
+
+/* Card */
+.card{background:#fff;border:1px solid var(--grey-200);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px}
+.card:last-child{margin-bottom:0}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--grey-200)}
+.card-head-title{font-size:12.5px;font-weight:700;color:var(--grey-900)}
+.card-head-link{font-size:12px;font-weight:600;color:var(--teal);cursor:pointer}
+.card-head-link:hover{text-decoration:underline}
+.card-body{padding:14px 16px}
+
+/* Thread messages */
+.thread-msg{padding:12px 0;border-bottom:1px solid var(--grey-100)}
+.thread-msg:last-child{border-bottom:none}
+.tm-head{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.tm-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.tm-name{font-size:13px;font-weight:600;color:var(--grey-900);flex:1}
+.tm-role{font-size:11.5px;color:var(--grey-400);font-weight:400}
+.tm-time{font-size:11px;color:var(--grey-400);font-family:var(--mono)}
+.tm-body{font-size:13px;color:var(--grey-700);line-height:1.7;padding-left:37px}
+.tm-body p{margin-bottom:8px}
+.tm-body p:last-child{margin-bottom:0}
+.tm-body strong{font-weight:600;color:var(--grey-900)}
+
+/* System message */
+.sys-msg{background:var(--grey-50);border-radius:var(--radius);padding:9px 12px;margin:8px 0;display:flex;align-items:center;gap:8px}
+.sys-icon{font-size:13px;flex-shrink:0}
+.sys-txt{font-size:12px;color:var(--grey-500);flex:1;line-height:1.5}
+.sys-txt strong{color:var(--grey-700);font-weight:600}
+.sys-time{font-size:10.5px;color:var(--grey-400);font-family:var(--mono);flex-shrink:0}
+
+/* Internal note */
+.internal-note{background:#FFFBEB;border:1px solid #FCD34D;border-radius:var(--radius);padding:11px 14px;margin:8px 0}
+.int-lbl{font-size:9.5px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.int-body{font-size:12.5px;color:var(--grey-700);line-height:1.6}
+
+/* Rail */
+.rail-sec{margin-bottom:16px}
+.rail-sec:last-child{margin-bottom:0}
+.rail-lbl{font-size:10px;font-weight:700;color:var(--grey-400);text-transform:uppercase;letter-spacing:.10em;margin-bottom:8px}
+.meta-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--grey-100)}
+.meta-row:last-child{border-bottom:none}
+.mr-l{font-size:12px;color:var(--grey-500)}
+.mr-v{font-size:12px;font-weight:600;color:var(--grey-900)}
+.mr-v.mono{font-family:var(--mono);font-size:11.5px}
+.mr-v.teal{color:var(--teal)}
+.mr-v.red{color:var(--red)}
+.mr-v.amber{color:var(--amber)}
+.mr-v.green{color:var(--green)}
+.sel-field{width:100%;padding:5px 8px;border:1px solid var(--grey-200);border-radius:var(--radius);font-size:12.5px;color:var(--grey-700);font-family:var(--font);cursor:pointer;outline:none;transition:border-color .14s;background:#fff}
+.sel-field:focus{border-color:var(--teal)}
+.sel-field:disabled{background:var(--grey-50);color:var(--grey-400);cursor:not-allowed}
+.assignee-row{display:flex;align-items:center;gap:8px;padding:7px 0}
+.a-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0}
+.a-name{flex:1}
+.a-name strong{display:block;font-size:12.5px;font-weight:600;color:var(--grey-900)}
+.a-name span{font-size:11px;color:var(--grey-400)}
+.related-item{padding:7px 0;border-bottom:1px solid var(--grey-100);cursor:pointer}
+.related-item:last-child{border-bottom:none}
+.related-item:hover .ri-title{color:var(--teal)}
+.ri-id{font-family:var(--mono);font-size:10.5px;color:var(--teal);margin-bottom:2px}
+.ri-title{font-size:12px;font-weight:500;color:var(--grey-700)}
+.ri-row{margin-top:3px}
+
+/* Activity timeline */
+.tl-ev{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--grey-100)}
+.tl-ev:last-child{border-bottom:none}
+.tl-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.tl-body{flex:1}
+.tl-action{font-size:12px;color:var(--grey-700)}
+.tl-action strong{font-weight:600;color:var(--grey-900)}
+.tl-time{font-size:10.5px;color:var(--grey-400);font-family:var(--mono);margin-top:2px}
+
+/* Reply area */
+.reply-area{background:#fff;border-top:1px solid var(--grey-200);padding:12px 22px;flex-shrink:0}
+.reply-tabs{display:flex;gap:0;margin-bottom:10px;border-bottom:1px solid var(--grey-200)}
+.rtab{font-size:12.5px;font-weight:500;color:var(--grey-400);cursor:pointer;padding:6px 12px 8px;border-bottom:2px solid transparent;transition:all .12s;user-select:none;margin-bottom:-1px}
+.rtab:hover{color:var(--grey-700)}
+.rtab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+.reply-inp{width:100%;padding:9px 12px;border:1px solid var(--grey-200);border-radius:var(--radius);font-size:13px;color:var(--grey-900);font-family:var(--font);outline:none;background:var(--grey-50);resize:none;overflow-y:auto;height:78px;transition:border-color .14s,background .14s,box-shadow .14s;line-height:1.6}
+.reply-inp:focus{background:#fff;border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.07)}
+.reply-inp::placeholder{color:var(--grey-400)}
+.reply-foot{display:flex;align-items:center;gap:7px;margin-top:8px}
+.rf-sp{flex:1}
+.reply-status-sel{padding:4px 8px;border:1px solid var(--grey-200);border-radius:var(--radius);font-size:12.5px;color:var(--grey-700);font-family:var(--font);outline:none;background:#fff}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--grey-200);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--grey-300)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<nav class="sb">
+  <div class="sb-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+  </div>
+  <div class="sb-ico" title="Dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+  </div>
+  <div class="sb-ico" title="Employees">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  </div>
+  <div class="sb-ico" title="Leave">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+  </div>
+  <div class="sb-ico" title="Payroll">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+  </div>
+  <div class="sb-ico" title="Attendance">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  </div>
+  <div class="sb-ico" title="Performance">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-ico" title="Analytics">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+  </div>
+  <div class="sb-ico on" title="Helpdesk">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-ico" title="Builder">
+    <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+  </div>
+  <div class="sb-ico" title="Settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </div>
+  <div class="sb-av">AW</div>
+</nav>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <span class="tb-title">Support &amp; Tickets</span>
+    <div class="tb-div"></div>
+    <button class="btn">
+      <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      Filter
+    </button>
+    <button class="btn">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <button class="btn btn-primary">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Ticket
+    </button>
+    <div class="tb-av">AW</div>
+  </header>
+
+  <!-- Stats strip -->
+  <div class="stat-strip">
+    <div class="stat-cell">
+      <div class="s-lbl">Open</div>
+      <div class="s-val">7</div>
+      <div class="s-note"><span class="s-badge sb-red">3 urgent</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">In Progress</div>
+      <div class="s-val">4</div>
+      <div class="s-note"><span class="s-badge sb-amber">2 near SLA</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">Pending Response</div>
+      <div class="s-val">2</div>
+      <div class="s-note">Awaiting reporter</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">Resolved This Week</div>
+      <div class="s-val">9</div>
+      <div class="s-note"><span class="s-badge sb-green">+3</span> vs last week</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-lbl">Avg Resolution Time</div>
+      <div class="s-val">1.4d</div>
+      <div class="s-note">Target: 2 days</div>
+    </div>
+  </div>
+
+  <!-- Two-panel body -->
+  <div class="support-body">
+
+    <!-- ══ Left: Ticket list ══ -->
+    <aside class="ticket-list">
+      <div class="tl-head">
+        <div class="tl-top">
+          <span class="tl-title">All Tickets</span>
+          <span class="tl-new">+ New Ticket</span>
+        </div>
+        <div class="tabs-row">
+          <div class="tab on" onclick="setTab(this)">Open <span class="tab-badge" style="background:var(--red-lt);color:var(--red)">7</span></div>
+          <div class="tab" onclick="setTab(this)">In Progress <span class="tab-badge" style="background:var(--amber-lt);color:var(--amber)">4</span></div>
+          <div class="tab" onclick="setTab(this)">Resolved</div>
+        </div>
+        <div class="tl-search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input placeholder="Search tickets…">
+        </div>
+      </div>
+
+      <div class="tl-scroll">
+
+        <div class="tkt sel" onclick="selTkt(this,'t148')">
+          <div class="tk-top"><span class="tk-id">TKT-0148</span><span class="tk-time">09:42</span></div>
+          <div class="tk-title">Payroll anomaly — Eva Fischer salary mismatch</div>
+          <div class="tk-preview">Employee reports March salary shows $113K vs $105K contract</div>
+          <div class="tk-chips">
+            <span class="chip chip-red" style="font-size:10px">High</span>
+            <span class="chip chip-grey" style="font-size:10px">Payroll</span>
+            <span class="chip chip-blue" style="font-size:10px">In Progress</span>
+          </div>
+          <div class="tk-assignee">
+            <div class="tk-aav" style="background:#4F46E5">AW</div>
+            <span class="tk-aname">Assigned to you · 1h ago</span>
+          </div>
+        </div>
+
+        <div class="tkt" onclick="selTkt(this,'t147')">
+          <div class="tk-top"><span class="tk-id">TKT-0147</span><span class="tk-time">Day 9</span></div>
+          <div class="tk-title">IT equipment not delivered — James Okafor</div>
+          <div class="tk-preview">New hire MacBook Pro M3 still pending, blocking dev setup</div>
+          <div class="tk-chips">
+            <span class="chip chip-amber" style="font-size:10px">Medium</span>
+            <span class="chip chip-grey" style="font-size:10px">IT / Onboarding</span>
+            <span class="chip chip-amber" style="font-size:10px">Open</span>
+          </div>
+          <div class="tk-assignee">
+            <div class="tk-aav" style="background:#4F46E5">AW</div>
+            <span class="tk-aname">Assigned to you · yesterday</span>
+          </div>
+        </div>
+
+        <div class="tkt" onclick="selTkt(this,'t146')">
+          <div class="tk-top"><span class="tk-id">TKT-0146</span><span class="tk-time">Mar 17</span></div>
+          <div class="tk-title">Benefits enrollment email not received — Y. Tanaka</div>
+          <div class="tk-preview">Employee missed enrollment deadline — no email received</div>
+          <div class="tk-chips">
+            <span class="chip chip-amber" style="font-size:10px">Medium</span>
+            <span class="chip chip-grey" style="font-size:10px">Benefits</span>
+            <span class="chip chip-amber" style="font-size:10px">Open</span>
+          </div>
+          <div class="tk-assignee">
+            <div class="tk-aav" style="background:#059669">LO</div>
+            <span class="tk-aname">L. Osei · 2 days ago</span>
+          </div>
+        </div>
+
+        <div class="tkt" onclick="selTkt(this,'t145')">
+          <div class="tk-top"><span class="tk-id">TKT-0145</span><span class="tk-time">Mar 16</span></div>
+          <div class="tk-title">Org chart missing Legal department nodes</div>
+          <div class="tk-preview">Legal team not under correct reporting line since Jan restructure</div>
+          <div class="tk-chips">
+            <span class="chip chip-grey" style="font-size:10px">Low</span>
+            <span class="chip chip-grey" style="font-size:10px">Data / Org</span>
+            <span class="chip chip-amber" style="font-size:10px">Open</span>
+          </div>
+          <div class="tk-assignee">
+            <div class="tk-aav" style="background:var(--grey-400)">—</div>
+            <span class="tk-aname">Unassigned · 3 days ago</span>
+          </div>
+        </div>
+
+        <div class="tkt" onclick="selTkt(this,'t144')">
+          <div class="tk-top"><span class="tk-id">TKT-0144</span><span class="tk-time">Mar 15</span></div>
+          <div class="tk-title">Leave balance incorrect after maternity return</div>
+          <div class="tk-preview">L. Osei shows 0 days annual leave after 6-month maternity leave</div>
+          <div class="tk-chips">
+            <span class="chip chip-red" style="font-size:10px">High</span>
+            <span class="chip chip-grey" style="font-size:10px">Leave</span>
+            <span class="chip chip-blue" style="font-size:10px">In Progress</span>
+          </div>
+          <div class="tk-assignee">
+            <div class="tk-aav" style="background:#4F46E5">AW</div>
+            <span class="tk-aname">Assigned to you · 4 days ago</span>
+          </div>
+        </div>
+
+        <div class="tkt" onclick="selTkt(this,'t143')">
+          <div class="tk-top"><span class="tk-id">TKT-0143</span><span class="tk-time">Mar 15</span></div>
+          <div class="tk-title">GDPR data access request — former employee</div>
+          <div class="tk-preview">SAR received — 30-day response deadline from March 15</div>
+          <div class="tk-chips">
+            <span class="chip chip-red" style="font-size:10px">Urgent</span>
+            <span class="chip chip-grey" style="font-size:10px">Compliance</span>
+            <span class="chip chip-red" style="font-size:10px">Deadline Apr 14</span>
+          </div>
+          <div class="tk-assignee">
+            <div class="tk-aav" style="background:var(--violet)">LS</div>
+            <span class="tk-aname">L. Santos (Legal) · 4 days ago</span>
+          </div>
+        </div>
+
+        <div class="tkt" onclick="selTkt(this,'t142')">
+          <div class="tk-top"><span class="tk-id">TKT-0142</span><span class="tk-time">Mar 14</span></div>
+          <div class="tk-title">Duplicate employee record — Marcus Hill</div>
+          <div class="tk-preview">EMP-0336 and EMP-0291 both exist for same person</div>
+          <div class="tk-chips">
+            <span class="chip chip-amber" style="font-size:10px">Medium</span>
+            <span class="chip chip-grey" style="font-size:10px">Data Quality</span>
+            <span class="chip chip-amber" style="font-size:10px">Open</span>
+          </div>
+          <div class="tk-assignee">
+            <div class="tk-aav" style="background:var(--grey-400)">—</div>
+            <span class="tk-aname">Unassigned · 5 days ago</span>
+          </div>
+        </div>
+
+      </div><!-- /tl-scroll -->
+    </aside>
+
+    <!-- ══ Right: Ticket detail ══ -->
+    <div class="ticket-detail" id="ticket-detail">
+
+      <!-- Detail header -->
+      <div class="td-head">
+        <div class="tdh-top">
+          <div class="tdh-left">
+            <div class="tdh-id" id="det-id">TKT-0148 · Opened 19 Mar 2026, 09:42</div>
+            <div class="tdh-title" id="det-title">Payroll anomaly — Eva Fischer salary mismatch</div>
+          </div>
+          <div class="tdh-acts">
+            <button class="btn btn-sm" title="Merge tickets — no backend endpoint · BG-032">Merge</button>
+            <button class="btn btn-sm">Escalate</button>
+            <button class="btn btn-sm btn-primary" onclick="decideTicket('approve')">Resolve Ticket</button>
+          </div>
+        </div>
+        <div class="tdh-chips" id="det-chips">
+          <span class="chip chip-red">High</span>
+          <span class="chip chip-blue">In Progress</span>
+          <span class="chip chip-grey">Payroll</span>
+          <span class="chip chip-grey">Finance · FP&amp;A</span>
+          <span class="sla-txt">SLA: <span id="det-sla" style="font-family:var(--mono);font-weight:600;color:var(--amber)">1d 14h remaining</span></span>
+        </div>
+      </div>
+
+      <!-- Thread + rail -->
+      <div class="td-body">
+
+        <!-- Main: conversation thread -->
+        <div class="td-main">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-head-title">Conversation</span>
+              <span class="card-head-link" id="det-msg-count">4 messages</span>
+            </div>
+            <div class="card-body" id="det-thread">
+
+              <div class="thread-msg">
+                <div class="tm-head">
+                  <div class="tm-av" style="background:#DC2626">EF</div>
+                  <span class="tm-name">Eva Fischer <span class="tm-role">· Reporter</span></span>
+                  <span class="tm-time">Today, 09:42</span>
+                </div>
+                <div class="tm-body">
+                  <p>Hi, I noticed the March 2026 payroll summary shows my base salary as <strong>$113,000</strong>. My employment contract dated January 2026 states <strong>$105,000</strong>. This may be a data entry error — I wanted to flag it before the April 1 payroll run.</p>
+                  <p>I've attached my contract for reference. Happy to jump on a call if needed.</p>
+                </div>
+              </div>
+
+              <div class="sys-msg">
+                <span class="sys-icon">🤖</span>
+                <span class="sys-txt">AI detected: <strong>Related payroll anomaly TKT-0148</strong> matches flagged record EMP-0337 in March cycle. Confidence: 91%.</span>
+                <span class="sys-time">09:44</span>
+              </div>
+
+              <div class="thread-msg">
+                <div class="tm-head">
+                  <div class="tm-av" style="background:#4F46E5">AW</div>
+                  <span class="tm-name">Alex Wang <span class="tm-role">· HR Admin</span></span>
+                  <span class="tm-time">Today, 10:08</span>
+                </div>
+                <div class="tm-body">
+                  <p>Hi Eva, thanks for flagging this. I can confirm this matches an anomaly already picked up by our payroll AI check. I'm reviewing the source data now and will confirm the correct figure shortly. The payroll run on April 1 will not go out until this is resolved.</p>
+                </div>
+              </div>
+
+              <div class="internal-note">
+                <div class="int-lbl">Internal Note — visible to HR admins only</div>
+                <div class="int-body">Checked payroll import. The $113K figure was pulled from a draft compensation band record that was accidentally promoted to live. Eva's actual contract is $105K. Need to revert the field in the payroll system before April 1 cut-off. Action: ping finance ops to fix the source record.</div>
+              </div>
+
+              <div class="sys-msg">
+                <span class="sys-icon" style="color:var(--green)">✓</span>
+                <span class="sys-txt">Status changed: <strong>Open → In Progress</strong> by Alex Wang</span>
+                <span class="sys-time">10:09</span>
+              </div>
+
+              <div class="thread-msg">
+                <div class="tm-head">
+                  <div class="tm-av" style="background:#4F46E5">AW</div>
+                  <span class="tm-name">Alex Wang <span class="tm-role">· HR Admin</span></span>
+                  <span class="tm-time">Today, 11:30</span>
+                </div>
+                <div class="tm-body">
+                  <p>Update: I've identified the cause — a draft compensation record was incorrectly promoted to your live payroll profile. Our finance ops team is reverting it now. Your March salary will correctly show <strong>$105,000</strong> before the April 1 run.</p>
+                  <p>I'll close this ticket once the fix is confirmed. Sorry for the concern this caused.</p>
+                </div>
+              </div>
+
+            </div><!-- /card-body -->
+          </div><!-- /card -->
+        </div><!-- /td-main -->
+
+        <!-- Rail -->
+        <div class="td-rail">
+
+          <div class="rail-sec">
+            <div class="rail-lbl">Ticket Details</div>
+            <div class="meta-row">
+              <span class="mr-l">Status</span>
+              <span class="mr-v amber" id="rail-status">In Progress</span>
+            </div>
+            <div class="meta-row">
+              <span class="mr-l">Priority</span>
+              <span class="mr-v red" id="rail-priority">High</span>
+            </div>
+            <div class="meta-row">
+              <span class="mr-l">Category</span>
+              <span class="mr-v" id="rail-category">Payroll</span>
+            </div>
+            <div class="meta-row">
+              <span class="mr-l">Opened</span>
+              <span class="mr-v mono">Mar 19, 09:42</span>
+            </div>
+            <div class="meta-row">
+              <span class="mr-l">SLA Deadline</span>
+              <span class="mr-v amber">Mar 21, 17:00</span>
+            </div>
+            <div class="meta-row">
+              <span class="mr-l">Ticket ID</span>
+              <span class="mr-v teal mono" id="rail-id">TKT-0148</span>
+            </div>
+          </div>
+
+          <div class="rail-sec">
+            <div class="rail-lbl">Workflow Actions</div>
+            <button class="btn btn-sm btn-primary" style="width:100%;justify-content:center;margin-bottom:6px" onclick="decideTicket('approve')">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Approve / Resolve
+            </button>
+            <button class="btn btn-sm btn-red" style="width:100%;justify-content:center" onclick="decideTicket('reject')">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Reject / Close
+            </button>
+          </div>
+
+          <div class="rail-sec" title="Priority update requires PATCH endpoint · BG-032">
+            <div class="rail-lbl">Priority <span style="font-size:10px;font-weight:600;color:var(--grey-400);background:var(--grey-100);padding:1px 5px;border-radius:3px;margin-left:4px">Chrome · BG-032</span></div>
+            <select class="sel-field" disabled>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+              <option>Urgent</option>
+            </select>
+          </div>
+
+          <div class="rail-sec" title="Assignee update requires PATCH endpoint · BG-032">
+            <div class="rail-lbl">Assignee <span style="font-size:10px;font-weight:600;color:var(--grey-400);background:var(--grey-100);padding:1px 5px;border-radius:3px;margin-left:4px">Chrome · BG-032</span></div>
+            <div class="assignee-row">
+              <div class="a-av" style="background:#4F46E5">AW</div>
+              <div class="a-name">
+                <strong>Alex Wang</strong>
+                <span>HR Administrator</span>
+              </div>
+            </div>
+            <button class="btn btn-sm" style="width:100%;justify-content:center" disabled title="Reassign requires PATCH /api/v1/helpdesk/tickets/{id} · BG-032">Reassign</button>
+          </div>
+
+          <div class="rail-sec">
+            <div class="rail-lbl">Reporter</div>
+            <div class="assignee-row">
+              <div class="a-av" style="background:#DC2626">EF</div>
+              <div class="a-name">
+                <strong>Eva Fischer</strong>
+                <span>Financial Analyst · Finance</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="rail-sec">
+            <div class="rail-lbl">Related Tickets</div>
+            <div class="related-item">
+              <div class="ri-id">TKT-0142</div>
+              <div class="ri-title">Duplicate employee record — Marcus Hill</div>
+              <div class="ri-row"><span class="chip chip-grey" style="font-size:10px">Data Quality</span></div>
+            </div>
+            <div class="related-item">
+              <div class="ri-id">Payroll Run — Mar 2026</div>
+              <div class="ri-title">3 anomalies pending review before Apr 1</div>
+              <div class="ri-row"><span class="chip chip-red" style="font-size:10px">Action Required</span></div>
+            </div>
+          </div>
+
+          <div class="rail-sec">
+            <div class="rail-lbl">Activity Log</div>
+            <div class="tl-ev">
+              <div class="tl-dot" style="background:var(--teal)"></div>
+              <div class="tl-body"><div class="tl-action"><strong>Alex Wang</strong> sent update to reporter</div><div class="tl-time">11:30 today</div></div>
+            </div>
+            <div class="tl-ev">
+              <div class="tl-dot" style="background:var(--amber)"></div>
+              <div class="tl-body"><div class="tl-action">Status changed to <strong>In Progress</strong></div><div class="tl-time">10:09 today</div></div>
+            </div>
+            <div class="tl-ev">
+              <div class="tl-dot" style="background:var(--blue)"></div>
+              <div class="tl-body"><div class="tl-action"><strong>Alex Wang</strong> assigned this ticket</div><div class="tl-time">10:08 today</div></div>
+            </div>
+            <div class="tl-ev">
+              <div class="tl-dot" style="background:var(--green)"></div>
+              <div class="tl-body"><div class="tl-action">AI linked related payroll anomaly</div><div class="tl-time">09:44 today</div></div>
+            </div>
+            <div class="tl-ev">
+              <div class="tl-dot" style="background:var(--grey-400)"></div>
+              <div class="tl-body"><div class="tl-action">Ticket opened by <strong>Eva Fischer</strong></div><div class="tl-time">09:42 today</div></div>
+            </div>
+          </div>
+
+        </div><!-- /td-rail -->
+      </div><!-- /td-body -->
+
+      <!-- Reply area -->
+      <div class="reply-area">
+        <div class="reply-tabs">
+          <div class="rtab on" onclick="setRTab(this)">Reply to Reporter</div>
+          <div class="rtab" onclick="setRTab(this)">Internal Note</div>
+          <div class="rtab" onclick="setRTab(this)" title="Forward — no backend endpoint · BG-032">Forward</div>
+        </div>
+        <textarea class="reply-inp" id="reply-inp" placeholder="Hi Eva, the fix has been confirmed — your March salary has been corrected to $105,000 in the payroll system. The April 1 run will reflect the correct amount. I'm closing this ticket now…"></textarea>
+        <div class="reply-foot">
+          <button class="btn btn-primary" onclick="sendResolve()">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Send &amp; Resolve
+          </button>
+          <button class="btn" onclick="sendComment()">Send Reply</button>
+          <div class="rf-sp"></div>
+          <select class="reply-status-sel" id="reply-status">
+            <option>Status: In Progress</option>
+            <option>Status: Resolved</option>
+            <option>Status: Pending</option>
+          </select>
+          <button class="btn" style="color:var(--grey-400)" onclick="discardReply()">Discard</button>
+        </div>
+      </div>
+
+    </div><!-- /ticket-detail -->
+  </div><!-- /support-body -->
+</div><!-- /main -->
+
+<script>
+/* ─── Ticket data ─── */
+const ticketData = {
+  t148: {id:'TKT-0148', opened:'19 Mar 2026, 09:42', title:'Payroll anomaly — Eva Fischer salary mismatch', priorityClass:'chip-red', priorityLabel:'High', statusClass:'chip-blue', statusLabel:'In Progress', cat:'Payroll', dept:'Finance · FP&A', sla:'1d 14h remaining', slaColor:'var(--amber)', reporter:'Eva Fischer', reporterRole:'Financial Analyst · Finance', reporterAvBg:'#DC2626', reporterInit:'EF', category:'Payroll', railStatus:'amber', railPriority:'red'},
+  t147: {id:'TKT-0147', opened:'11 Mar 2026', title:'IT equipment not delivered — James Okafor', priorityClass:'chip-amber', priorityLabel:'Medium', statusClass:'chip-amber', statusLabel:'Open', cat:'IT / Onboarding', dept:'Engineering', sla:'3d 2h remaining', slaColor:'var(--green)', reporter:'James Okafor', reporterRole:'Software Engineer · Engineering', reporterAvBg:'#059669', reporterInit:'JO', category:'IT / Onboarding', railStatus:'', railPriority:'amber'},
+  t146: {id:'TKT-0146', opened:'17 Mar 2026', title:'Benefits enrollment email not received — Y. Tanaka', priorityClass:'chip-amber', priorityLabel:'Medium', statusClass:'chip-amber', statusLabel:'Open', cat:'Benefits', dept:'Engineering · Data', sla:'4d remaining', slaColor:'var(--green)', reporter:'Y. Tanaka', reporterRole:'Data Analyst · Engineering', reporterAvBg:'#7C3AED', reporterInit:'YT', category:'Benefits', railStatus:'', railPriority:'amber'},
+  t145: {id:'TKT-0145', opened:'16 Mar 2026', title:'Org chart missing Legal department nodes', priorityClass:'chip-grey', priorityLabel:'Low', statusClass:'chip-amber', statusLabel:'Open', cat:'Data / Org', dept:'Legal', sla:'6d remaining', slaColor:'var(--green)', reporter:'Unassigned', reporterRole:'', reporterAvBg:'var(--grey-400)', reporterInit:'—', category:'Data / Org', railStatus:'', railPriority:''},
+  t144: {id:'TKT-0144', opened:'15 Mar 2026', title:'Leave balance incorrect after maternity return', priorityClass:'chip-red', priorityLabel:'High', statusClass:'chip-blue', statusLabel:'In Progress', cat:'Leave', dept:'HR &amp; Ops', sla:'22h remaining', slaColor:'var(--red)', reporter:'L. Osei', reporterRole:'HR Generalist · HR Operations', reporterAvBg:'#059669', reporterInit:'LO', category:'Leave', railStatus:'amber', railPriority:'red'},
+  t143: {id:'TKT-0143', opened:'15 Mar 2026', title:'GDPR data access request — former employee', priorityClass:'chip-red', priorityLabel:'Urgent', statusClass:'chip-amber', statusLabel:'Open', cat:'Compliance', dept:'Legal', sla:'Deadline Apr 14', slaColor:'var(--red)', reporter:'L. Santos (Legal)', reporterRole:'Legal Counsel · Legal', reporterAvBg:' var(--violet)', reporterInit:'LS', category:'Compliance', railStatus:'red', railPriority:'red'},
+  t142: {id:'TKT-0142', opened:'14 Mar 2026', title:'Duplicate employee record — Marcus Hill', priorityClass:'chip-amber', priorityLabel:'Medium', statusClass:'chip-amber', statusLabel:'Open', cat:'Data Quality', dept:'Engineering', sla:'5d remaining', slaColor:'var(--green)', reporter:'Unassigned', reporterRole:'', reporterAvBg:'var(--grey-400)', reporterInit:'—', category:'Data Quality', railStatus:'', railPriority:'amber'},
+};
+
+/* ─── selTkt ─── */
+function selTkt(el, key) {
+  document.querySelectorAll('.tkt').forEach(t => t.classList.remove('sel'));
+  el.classList.add('sel');
+  const d = ticketData[key];
+  if (!d) return;
+  document.getElementById('det-id').textContent = d.id + ' · Opened ' + d.opened;
+  document.getElementById('det-title').textContent = d.title;
+  document.getElementById('det-chips').innerHTML =
+    `<span class="chip ${d.priorityClass}">${d.priorityLabel}</span>` +
+    `<span class="chip ${d.statusClass}">${d.statusLabel}</span>` +
+    `<span class="chip chip-grey">${d.cat}</span>` +
+    `<span class="chip chip-grey">${d.dept}</span>` +
+    `<span class="sla-txt">SLA: <span style="font-family:var(--mono);font-weight:600;color:${d.slaColor}">${d.sla}</span></span>`;
+  document.getElementById('rail-id').textContent = d.id;
+  document.getElementById('rail-status').textContent = d.statusLabel;
+  document.getElementById('rail-status').className = 'mr-v ' + d.railStatus;
+  document.getElementById('rail-priority').textContent = d.priorityLabel;
+  document.getElementById('rail-priority').className = 'mr-v ' + d.railPriority;
+  document.getElementById('rail-category').textContent = d.category;
+  document.getElementById('det-sla').textContent = d.sla;
+  document.getElementById('det-sla').style.color = d.slaColor;
+}
+
+/* ─── setTab ─── */
+function setTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+}
+
+/* ─── setRTab ─── */
+function setRTab(el) {
+  document.querySelectorAll('.rtab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  const inp = document.getElementById('reply-inp');
+  if (el.textContent.includes('Internal')) {
+    inp.style.background = '#FFFBEB';
+    inp.style.borderColor = '#FCD34D';
+    inp.placeholder = 'Internal note — visible to HR admins only…';
+  } else {
+    inp.style.background = '';
+    inp.style.borderColor = '';
+    inp.placeholder = 'Reply to reporter…';
+  }
+}
+
+/* ─── decideTicket ─── */
+function decideTicket(action) {
+  /* POST /api/v1/helpdesk/tickets/{ticket_id}/decision — action: approve | reject */
+  console.log('POST /api/v1/helpdesk/tickets/{id}/decision', { action });
+}
+
+/* ─── sendComment ─── */
+function sendComment() {
+  /* POST /api/v1/helpdesk/tickets/{ticket_id}/comment — body, visibility */
+  const body = document.getElementById('reply-inp').value;
+  console.log('POST /api/v1/helpdesk/tickets/{id}/comment', { body, visibility: 'public' });
+}
+
+/* ─── sendResolve ─── */
+function sendResolve() {
+  /* POST comment then POST /decision action=approve */
+  sendComment();
+  decideTicket('approve');
+}
+
+/* ─── discardReply ─── */
+function discardReply() {
+  document.getElementById('reply-inp').value = '';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — My Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{zoom:1.1}
+html,body{height:100%;overflow:hidden}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;
+  --teal:#0A8F84;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;
+  --amber:#B45309;--al:#FEF3C7;
+  --red:#B91C1C;--rl:#FEE2E2;
+  --blue:#1D4ED8;--bl:#DBEAFE;
+  --violet:#5B21B6;--vl:#EDE9FE;
+  --mono:'JetBrains Mono',monospace;--r:8px;--r2:11px;
+}
+body{font-family:'Inter',sans-serif;font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─────────────────────────────── */
+.sb{width:216px;min-width:216px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-logo{padding:18px 14px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-name{font-size:14px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+.logo-sub{font-size:9.5px;color:var(--t4);text-transform:uppercase;letter-spacing:.07em}
+.sb-nav{flex:1;padding:8px 8px 4px}
+.sb-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em;padding:10px 8px 3px;display:block}
+.sb-a{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);color:var(--t3);font-size:13px;font-weight:450;cursor:pointer;transition:all .12s;margin-bottom:1px;user-select:none;position:relative}
+.sb-a:hover{background:var(--bg);color:var(--t1)}
+.sb-a.on{background:var(--tl);color:var(--teal);font-weight:600}
+.sb-a.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--teal);border-radius:0 3px 3px 0}
+.sb-ic{width:14px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sb-ic svg{width:14px;height:14px;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sb-a:not(.on) .sb-ic svg{stroke:var(--t4)}.sb-a.on .sb-ic svg{stroke:var(--teal)}
+.sb-badge{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:99px;font-family:var(--mono)}
+.b-g{background:var(--gl);color:var(--grn)}.b-a{background:var(--al);color:var(--amber)}
+.sb-div{height:1px;background:var(--bd);margin:6px 10px}
+.sb-foot{margin-top:auto;padding:8px;border-top:1px solid var(--bd)}
+.sb-user{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r);cursor:pointer;transition:background .12s}
+.sb-user:hover{background:var(--bg)}
+.u-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#059669,#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.u-name{font-size:12px;font-weight:600;color:var(--t1)}.u-role{font-size:10.5px;color:var(--t4)}
+.u-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;margin-left:auto;flex-shrink:0}
+
+/* ─── MAIN ────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 22px;gap:9px;flex-shrink:0}
+.tb-t{font-size:14px;font-weight:700;color:var(--t1);flex:1;letter-spacing:-0.01em}
+.tb-d{font-size:12px;color:var(--t4);margin-left:7px;font-weight:400}
+.tb-srch{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 11px;width:208px;transition:all .14s}
+.tb-srch:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.tb-srch input{background:none;border:none;outline:none;font-size:12.5px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.tb-srch input::placeholder{color:var(--t4)}
+.tb-srch svg{width:13px;height:13px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.tb-vd{width:1px;height:18px;background:var(--bd)}
+.tbi{width:30px;height:30px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all .12s;position:relative}
+.tbi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.tbi:hover{background:var(--bg);color:var(--t1)}
+.tbi.bell::after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#EF4444;border:1.5px solid var(--w)}
+.tav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#059669,#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 0 2px var(--w),0 0 0 3.5px var(--tb)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap}
+.btn:hover{background:var(--bg);border-color:#CBD5E1}
+.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:#0C9E92}
+
+/* ─── PAGE ────────────────────────────────── */
+.page{flex:1;overflow-y:auto;min-height:0;padding:24px 24px 12vh}
+
+/* Welcome banner */
+.welcome{background:linear-gradient(135deg,var(--t1) 0%,#1E3A5F 100%);border-radius:var(--r2);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px}
+.w-av{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#059669,#0EA5E9);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px rgba(255,255,255,.15)}
+.w-body{flex:1}
+.w-name{font-size:15px;font-weight:700;color:#fff;margin-bottom:2px}
+.w-meta{font-size:12px;color:#94A3B8}
+.w-chips{display:flex;gap:6px;margin-left:auto}
+.w-chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.1);color:#CBD5E1;border:1px solid rgba(255,255,255,.12)}
+
+/* KPI strip */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px;cursor:default;transition:box-shadow .14s,transform .14s}
+.kpi:hover{box-shadow:0 4px 12px rgba(0,0,0,.06);transform:translateY(-1px)}
+.kpi-dot{width:6px;height:6px;border-radius:50%;margin-bottom:10px}
+.kpi-v{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--t1);line-height:1;margin-bottom:5px}
+.kpi-l{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.kpi-f{display:flex;align-items:center;gap:5px}
+.kpi-b{font-size:10.5px;font-weight:600;padding:2px 5px;border-radius:3px;font-family:var(--mono)}
+.ku{background:var(--gl);color:var(--grn)}.kd{background:var(--rl);color:var(--red)}.kn{background:var(--t5);color:var(--t3)}
+.kpi-n{font-size:11px;color:var(--t4)}
+
+/* Layout grids */
+.g3{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.right-col{display:flex;flex-direction:column;gap:14px}
+
+/* Cards */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;border-bottom:1px solid var(--bd)}
+.ct{font-size:13px;font-weight:700;color:var(--t1)}
+.cs{font-size:11.5px;color:var(--t4);margin-top:1px}
+.cl{font-size:11.5px;font-weight:600;color:var(--teal);cursor:pointer;flex-shrink:0}.cl:hover{text-decoration:underline}
+.cb{padding:15px 17px}
+
+/* Leave balance bars — leave_service.LeaveBalance.remaining_days/entitlement_days */
+.lb-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}.lb-row:last-child{margin-bottom:0}
+.lb-type{font-size:12px;font-weight:500;color:var(--t2);width:72px;flex-shrink:0}
+.lb-track{flex:1;height:6px;background:var(--t5);border-radius:99px;overflow:hidden}
+.lb-fill{height:100%;border-radius:99px;transition:width .9s cubic-bezier(.25,.8,.25,1)}
+.lb-nums{font-family:var(--mono);font-size:11.5px;width:52px;text-align:right;flex-shrink:0}
+.lb-rem{font-weight:600;color:var(--t1)}.lb-tot{color:var(--t4)}
+
+/* Goal progress */
+.goal-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--t5)}
+.goal-row:last-child{border-bottom:none}
+.goal-body{flex:1;min-width:0}
+.goal-title{font-size:12.5px;font-weight:600;color:var(--t1);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.goal-track{height:4px;background:var(--t5);border-radius:99px;overflow:hidden;margin-bottom:3px}
+.goal-fill{height:100%;border-radius:99px;background:var(--teal);transition:width .9s cubic-bezier(.25,.8,.25,1)}
+.goal-meta{font-size:11px;color:var(--t4)}
+.goal-pct{font-family:var(--mono);font-size:11.5px;font-weight:600;width:36px;text-align:right;flex-shrink:0}
+
+/* Chips */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.chip::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:#16A34A}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber)}
+.cb2{background:var(--bl);color:var(--blue)}.cb2::before{background:#3B82F6}
+.ct2{background:var(--tl);color:var(--teal)}.ct2::before{background:var(--teal)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+
+/* Upcoming leave list */
+.lv-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--t5)}
+.lv-row:last-child{border-bottom:none;padding-bottom:0}
+.lv-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.lv-body{flex:1}
+.lv-t{font-size:12.5px;font-weight:600;color:var(--t1)}
+.lv-d{font-size:11.5px;color:var(--t3);margin-top:1px}
+.lv-days{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--t3);flex-shrink:0}
+
+/* Attendance week strip */
+.att-strip{display:flex;gap:6px;margin-bottom:12px}
+.att-day{flex:1;text-align:center}
+.att-day-lbl{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.att-day-box{height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:.04em}
+.att-present{background:var(--gl);color:var(--grn)}
+.att-late{background:var(--al);color:var(--amber)}
+.att-leave{background:var(--bl);color:var(--blue)}
+.att-absent{background:var(--rl);color:var(--red)}
+.att-future{background:var(--t5);color:var(--t4)}
+.att-today{outline:2px solid var(--teal);outline-offset:1px}
+.att-legend{display:flex;gap:12px;flex-wrap:wrap}
+.att-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)}
+.att-leg-dot{width:6px;height:6px;border-radius:2px;flex-shrink:0}
+
+/* Pay summary */
+.pay-row{display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--t5)}
+.pay-row:last-child{border-bottom:none}
+.pay-lbl{font-size:12.5px;color:var(--t3)}
+.pay-val{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t1)}
+.pay-val.dim{color:var(--t4)}
+.pay-val.pos{color:var(--grn)}.pay-val.neg{color:var(--red)}
+.pay-divider{height:1px;background:var(--bd);margin:6px 0}
+
+/* Quick actions */
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qa{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--bd);border-radius:var(--r);cursor:pointer;transition:all .12s;background:var(--w)}
+.qa:hover{background:var(--tl);border-color:var(--tb)}
+.qa-ic{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qa-ic svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.qa-lbl{font-size:12px;font-weight:600;color:var(--t2)}
+
+/* Motion */
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.a1{animation:fu .28s ease both}
+.a2{animation:fu .28s .06s ease both}
+.a3{animation:fu .28s .12s ease both}
+.a4{animation:fu .28s .18s ease both}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ─── SIDEBAR (employee self-service nav) ─── -->
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+    <div><div class="logo-name">Meridian</div><div class="logo-sub">HCM Suite</div></div>
+  </div>
+  <nav class="sb-nav">
+    <span class="sb-sec">My Overview</span>
+    <div class="sb-a on"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>My Dashboard</div>
+    <span class="sb-sec">Work & Time</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></span>My Attendance</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>My Leave<span class="sb-badge b-a">1</span></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>Raise Request</div>
+    <span class="sb-sec">Pay & Benefits</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>My Pay</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></span>Benefits</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>My Expenses<span class="sb-badge b-a">2</span></div>
+    <span class="sb-sec">Performance</span>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>My Goals</div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>Feedback</div>
+    <div class="sb-div"></div>
+    <div class="sb-a"><span class="sb-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>Help &amp; Support</div>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="u-av">EF</div>
+      <div><div class="u-name">Eva Fischer</div><div class="u-role">Finance Analyst</div></div>
+      <div class="u-dot"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── MAIN ────────────────────────────────── -->
+<main class="main">
+  <div class="topbar a1">
+    <div class="tb-t">My Dashboard<span class="tb-d">Sun, 22 Mar 2026</span></div>
+    <div class="tb-srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search…"></div>
+    <div class="tb-vd"></div>
+    <div class="tbi bell"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <div class="tb-vd"></div>
+    <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Raise Request</button>
+    <div class="tav">EF</div>
+  </div>
+
+  <div class="page">
+
+    <!-- Welcome banner -->
+    <div class="welcome a1">
+      <div class="w-av">EF</div>
+      <div class="w-body">
+        <div class="w-name">Good morning, Eva 👋</div>
+        <div class="w-meta">Finance Analyst · Finance · EMP-0345 · Day 41 at Meridian</div>
+      </div>
+      <div class="w-chips">
+        <!-- Employee.status: Active → green chip -->
+        <div class="w-chip" style="background:rgba(21,128,61,.2);color:#86EFAC;border-color:rgba(21,128,61,.3)">● Active</div>
+        <div class="w-chip">Full Time</div>
+        <div class="w-chip">Q1 2026 Review Open</div>
+      </div>
+    </div>
+
+    <!-- KPI row — leave_service + payroll_service + performance_service + attendance_service -->
+    <!-- BG-001: no aggregate endpoint; all values mock -->
+    <div class="kpi-row a2">
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#16A34A"></div>
+        <div class="kpi-v">14</div>
+        <div class="kpi-l">Annual Leave Left</div>
+        <!-- leave_service › LeaveBalance.remaining_days (LeaveType=Annual) -->
+        <div class="kpi-f"><span class="kpi-b kn">of 25 days</span><span class="kpi-n">Annual</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:var(--teal)"></div>
+        <div class="kpi-v">31 Mar</div>
+        <div class="kpi-l">Next Payday</div>
+        <!-- payroll_service › PayrollCycle.payment_date -->
+        <div class="kpi-f"><span class="kpi-b kn">$8,750</span><span class="kpi-n">net est.</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#8B5CF6"></div>
+        <div class="kpi-v">3 / 5</div>
+        <div class="kpi-l">Goals On Track</div>
+        <!-- performance_service › GoalRecord (count status=Approved/on-track) -->
+        <div class="kpi-f"><span class="kpi-b ku">60%</span><span class="kpi-n">Q1 2026</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-dot" style="background:#3B82F6"></div>
+        <div class="kpi-v">95%</div>
+        <div class="kpi-l">Attendance (Mar)</div>
+        <!-- attendance_service › AttendanceRecord (present days / working days this month) -->
+        <div class="kpi-f"><span class="kpi-b ku">20 / 21</span><span class="kpi-n">days present</span></div>
+      </div>
+    </div>
+
+    <!-- Row 1: Leave balances (1.7fr) + Upcoming leave + Quick actions (1fr) -->
+    <div class="g3 a3">
+      <!-- Leave balances — leave_service.LeaveBalance per LeaveType enum -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Leave Balances</div><div class="cs">Updated today · leave_service</div></div>
+          <span class="cl">Raise Request →</span>
+        </div>
+        <div class="cb" id="leave-bars"></div>
+      </div>
+
+      <div class="right-col">
+        <!-- Upcoming leave — leave_service.LeaveRequest.status: Approved/Submitted -->
+        <div class="card">
+          <div class="ch"><div class="ct">My Leave</div><span class="cl">View all →</span></div>
+          <div class="cb" style="padding-top:10px;padding-bottom:10px" id="upcoming-leave"></div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="card">
+          <div class="ch"><div class="ct">Quick Actions</div></div>
+          <div class="cb">
+            <div class="qa-grid">
+              <div class="qa"><div class="qa-ic" style="background:var(--tl);color:var(--teal)"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="qa-lbl">Raise Leave</div></div>
+              <div class="qa"><div class="qa-ic" style="background:var(--gl);color:var(--grn)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div><div class="qa-lbl">View Payslip</div></div>
+              <div class="qa"><div class="qa-ic" style="background:var(--bl);color:var(--blue)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="qa-lbl">Claim Expense</div></div>
+              <div class="qa"><div class="qa-ic" style="background:var(--al);color:var(--amber)"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div><div class="qa-lbl">Travel Request</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Attendance this month + Pay summary + Goals -->
+    <div class="g2 a4" style="grid-template-columns:1.2fr 1fr 1fr;gap:16px">
+      <!-- Attendance this month — attendance_service.AttendanceRecord (status enum) -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Attendance — March 2026</div><div class="cs">20 present · 1 late · 0 absent</div></div>
+          <span class="cl">View all →</span>
+        </div>
+        <div class="cb">
+          <div class="att-strip" id="att-strip"></div>
+          <div class="att-legend">
+            <!-- AttendanceStatus enums: Present (green), Late (amber), Absent (red), Holiday (grey) -->
+            <div class="att-leg-item"><div class="att-leg-dot" style="background:#16A34A"></div>Present</div>
+            <div class="att-leg-item"><div class="att-leg-dot" style="background:#D97706"></div>Late</div>
+            <div class="att-leg-item"><div class="att-leg-dot" style="background:#3B82F6"></div>On Leave</div>
+            <div class="att-leg-item"><div class="att-leg-dot" style="background:#94A3B8"></div>Holiday</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pay summary — payroll_service.PayrollRecord.gross/net/deductions -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">Last Payslip</div><div class="cs">Feb 2026 · Paid</div></div>
+          <span class="cl">View →</span>
+        </div>
+        <div class="cb">
+          <div class="pay-row"><span class="pay-lbl">Base Salary</span><span class="pay-val">$10,500</span></div>
+          <div class="pay-row"><span class="pay-lbl">Allowances</span><span class="pay-val pos">+$350</span></div>
+          <div class="pay-row"><span class="pay-lbl">Gross Pay</span><span class="pay-val">$10,850</span></div>
+          <div class="pay-divider"></div>
+          <div class="pay-row"><span class="pay-lbl">Tax</span><span class="pay-val neg">−$1,628</span></div>
+          <div class="pay-row"><span class="pay-lbl">Benefits</span><span class="pay-val neg">−$472</span></div>
+          <div class="pay-divider"></div>
+          <div class="pay-row"><span class="pay-lbl" style="font-weight:700;color:var(--t1)">Net Pay</span><span class="pay-val" style="font-size:15px;color:var(--teal)">$8,750</span></div>
+          <!-- PayrollRecord.status: Paid → green chip per api-contracts -->
+          <div style="margin-top:10px"><span class="chip cg">Paid</span></div>
+        </div>
+      </div>
+
+      <!-- Goals — performance_service.GoalRecord.status + current/target values -->
+      <div class="card">
+        <div class="ch">
+          <div><div class="ct">My Goals</div><div class="cs">Q1 2026 · 5 goals</div></div>
+          <span class="cl">View all →</span>
+        </div>
+        <div class="cb" id="goals-list"></div>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+</main>
+</div><!-- /shell -->
+
+<script>
+// Leave balances — leave_service › LeaveBalance per LeaveType enum (Annual/Sick/Casual/Unpaid)
+const leaves=[
+  {type:'Annual',rem:14,total:25,col:'#16A34A'},
+  {type:'Sick',rem:8,total:10,col:'#3B82F6'},
+  {type:'Casual',rem:3,total:5,col:'#7C3AED'},
+  {type:'Unpaid',rem:5,total:5,col:'#94A3B8'}
+];
+document.getElementById('leave-bars').innerHTML=leaves.map(l=>{
+  const pct=Math.round((l.rem/l.total)*100);
+  return `<div class="lb-row">
+    <div class="lb-type">${l.type}</div>
+    <div class="lb-track"><div class="lb-fill" style="width:0%;background:${l.col}" data-w="${pct}"></div></div>
+    <div class="lb-nums"><span class="lb-rem">${l.rem}</span><span class="lb-tot"> / ${l.total}d</span></div>
+  </div>`;
+}).join('');
+
+// Upcoming leave — leave_service.LeaveRequest.status: Approved/Submitted
+// LeaveStatus: Approved → green, Submitted → amber (displayed as "Pending" per api-contracts)
+const upcoming=[
+  {type:'Annual',dates:'Apr 7 – Apr 10',days:'4d',status:'Approved',dot:'#16A34A'},
+  {type:'Sick',dates:'Feb 28',days:'1d',status:'Approved',dot:'#16A34A'},
+  {type:'Annual',dates:'Jun 2 – Jun 6',days:'5d',status:'Pending',dot:'#D97706'}
+];
+document.getElementById('upcoming-leave').innerHTML=upcoming.map(l=>`
+  <div class="lv-row">
+    <div class="lv-dot" style="background:${l.dot}"></div>
+    <div class="lv-body">
+      <div class="lv-t">${l.type} Leave</div>
+      <div class="lv-d">${l.dates}</div>
+    </div>
+    <div class="lv-days">${l.days}</div>
+  </div>`).join('');
+
+// Attendance strip — 3 weeks of March · AttendanceStatus enum values
+// Present (green), Late (amber), OnLeave (blue), Holiday (grey), future (neutral)
+const days=[
+  {d:'M',s:'present'},{d:'T',s:'present'},{d:'W',s:'present'},{d:'T',s:'present'},{d:'F',s:'present'},
+  {d:'M',s:'present'},{d:'T',s:'late'},{d:'W',s:'present'},{d:'T',s:'present'},{d:'F',s:'present'},
+  {d:'M',s:'present'},{d:'T',s:'present'},{d:'W',s:'present'},{d:'T',s:'present'},{d:'F',s:'present'},
+  {d:'M',s:'present'},{d:'T',s:'present'},{d:'W',s:'present'},{d:'T',s:'present'},{d:'F',s:'present'},
+  {d:'M',s:'today',today:true}
+];
+const sLabel={present:'P',late:'L',leave:'AL',holiday:'H',future:'',today:'P'};
+const sCls={present:'att-present',late:'att-late',leave:'att-leave',holiday:'att-future',future:'att-future',today:'att-present att-today'};
+document.getElementById('att-strip').innerHTML=days.map(d=>
+  `<div class="att-day"><div class="att-day-lbl">${d.d}</div><div class="att-day-box ${sCls[d.s]||'att-future'}">${sLabel[d.s]||''}</div></div>`
+).join('');
+
+// Goals — performance_service.GoalRecord · GoalStatus: Draft/Submitted/Approved
+// current_value / target_value used to derive progress pct
+const goals=[
+  {title:'Reduce Forecast Variance',pct:80,status:'Approved',col:'#16A34A'},
+  {title:'Complete IFRS Compliance Training',pct:100,status:'Approved',col:'#16A34A'},
+  {title:'Q1 Budget Reconciliation',pct:55,status:'Approved',col:'#D97706'},
+  {title:'Automate Monthly Accruals',pct:30,status:'Submitted',col:'#3B82F6'},
+  {title:'Vendor Payment SLA <5 days',pct:10,status:'Draft',col:'#94A3B8'}
+];
+// GoalStatus chip: Approved → green, Submitted → amber, Draft → grey
+const gc={Approved:'cg',Submitted:'ca',Draft:'cn'};
+document.getElementById('goals-list').innerHTML=goals.map(g=>`
+  <div class="goal-row">
+    <div class="goal-body">
+      <div class="goal-title">${g.title}</div>
+      <div class="goal-track"><div class="goal-fill" style="width:0%;background:${g.col}" data-w="${g.pct}"></div></div>
+      <div class="goal-meta"><span class="chip ${gc[g.status]}" style="font-size:10px;padding:1px 6px">${g.status}</span></div>
+    </div>
+    <div class="goal-pct" style="color:${g.col}">${g.pct}%</div>
+  </div>`).join('');
+
+// Nav active state
+document.querySelectorAll('.sb-a').forEach(el=>el.addEventListener('click',function(){
+  document.querySelectorAll('.sb-a').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+
+// Animate bars — P-27
+window.addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('.lb-fill,.goal-fill').forEach(el=>{el.style.width=el.dataset.w+'%'});
+},120));
+</script>
+</body>
+</html>

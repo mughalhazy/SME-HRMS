@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payroll Reports — Meridian HCM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+  <script>
+    function showTab(el, id) {
+      document.querySelectorAll('.rn-tab').forEach(function(t){ t.classList.remove('on'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('on'); });
+      el.classList.add('on');
+      document.getElementById('tab-' + id).classList.add('on');
+      document.getElementById('mainPage').scrollTop = 0;
+    }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{zoom:1.1}
+    html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;color:#374151;background:#F5F7FA}
+    :root{
+      --teal:#0A8F84;--grn:#15803D;--amber:#B45309;--red:#B91C1C;--blue:#1D4ED8;
+      --t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;
+      --w:#FFFFFF;--bd:#E4E7EC;--bg:#F5F7FA;--bg2:#F1F4F8;
+      --dur:120ms
+    }
+
+    /* layout */
+    .shell{display:flex;height:100vh;overflow:hidden}
+    .sb{width:54px;background:var(--w);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0}
+    .sb-logo{width:34px;height:34px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+    .sb-logo svg{fill:white;width:18px;height:18px}
+    .sb-nav{display:flex;flex-direction:column;gap:4px;align-items:center;width:100%;flex:1}
+    .sb-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:background var(--dur),color var(--dur);text-decoration:none}
+    .sb-ico:hover{background:var(--bg2);color:var(--t2)}
+    .sb-ico.on{background:#EDFAF8;color:var(--teal)}
+    .sb-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+    .sb-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0C9E92);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;margin-top:auto;flex-shrink:0}
+
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+    /* topbar */
+    .topbar{height:52px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+    .bc{flex:1;font-size:13px;color:var(--t3)}
+    .bc b{color:var(--t1);font-weight:600}
+    .btn{padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:background var(--dur)}
+    .btn.sm{padding:4px 10px}
+    .btn.pri{background:var(--teal);color:#fff}.btn.pri:hover{background:#0C9E92}
+    .btn.sec{background:var(--w);border:1px solid var(--bd);color:var(--t2)}.btn.sec:hover{background:var(--bg2)}
+
+    /* report-nav */
+    .report-nav{background:var(--w);border-bottom:1px solid var(--bd);display:flex;padding:0 20px;flex-shrink:0;overflow-x:auto}
+    .rn-tab{padding:13px 16px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:color var(--dur),border-color var(--dur)}
+    .rn-tab:hover{color:var(--t2)}
+    .rn-tab.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+
+    /* filter bar */
+    .fbar{background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:10px 20px;gap:10px;flex-shrink:0;flex-wrap:wrap}
+    .flbl{font-size:12px;font-weight:500;color:var(--t3)}
+    .fsel{padding:6px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;color:var(--t2);background:var(--w);cursor:pointer;outline:none;font-family:inherit}
+    .fsel:focus{border-color:var(--teal)}
+    .fsep{width:1px;height:20px;background:var(--bd);margin:0 2px}
+    .factions{margin-left:auto;display:flex;gap:8px}
+
+    /* P-32 scroll */
+    .page{flex:1;overflow-y:auto;min-height:0}
+    .content{padding:22px 22px 12vh}
+
+    /* tab panels */
+    .tab-panel{display:none}
+    .tab-panel.on{display:block}
+
+    /* section */
+    .sect{margin-bottom:22px}
+    .sect-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px}
+    .sect-title{font-size:15px;font-weight:600;color:var(--t1)}
+    .sect-sub{font-size:12px;color:var(--t3);margin-top:2px}
+
+    /* KPI grid */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+    .kpi{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:16px 18px;transition:transform var(--dur),box-shadow var(--dur)}
+    .kpi:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .kpi-dot{width:8px;height:8px;border-radius:50%;margin-bottom:10px}
+    .kpi-dot.tl{background:var(--teal)}.kpi-dot.gn{background:var(--grn)}.kpi-dot.am{background:var(--amber)}.kpi-dot.bl{background:var(--blue)}.kpi-dot.re{background:var(--red)}
+    .kpi-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--t1);line-height:1.1}
+    .kpi-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t4);margin-top:4px}
+    .kpi-tr{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;margin-top:8px;padding:2px 6px;border-radius:4px}
+    .kpi-tr.up{background:#DCFCE7;color:var(--grn)}
+    .kpi-tr.dn{background:#FEE2E2;color:var(--red)}
+    .kpi-tr.nt{background:var(--bg2);color:var(--t3)}
+
+    /* chart cards */
+    .cc{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:18px}
+    .cc-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px}
+    .cc-sub{font-size:11px;color:var(--t3);margin-bottom:14px}
+    .cg11{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+    .cg21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:22px}
+
+    /* inline bars */
+    .ibars{display:flex;flex-direction:column;gap:10px}
+    .ibar{display:flex;align-items:center;gap:10px}
+    .ibar-lbl{font-size:12px;color:var(--t2);width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ibar-tr{flex:1;height:8px;background:var(--bg2);border-radius:99px;overflow:hidden}
+    .ibar-fi{height:100%;border-radius:99px}
+    .ibar-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t1);width:60px;text-align:right;flex-shrink:0}
+
+    /* line SVG */
+    .lsvg{width:100%;height:140px}
+
+    /* P-11 table */
+    .twrap{background:var(--w);border:1px solid var(--bd);border-radius:11px;overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t4);white-space:nowrap}
+    tbody tr td{padding:11px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--t2);transition:background .12s}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--bg2)}
+    .tn{font-weight:600;color:var(--t1)}
+    .tnum{font-family:'JetBrains Mono',monospace;font-weight:500}
+    .tup{color:var(--grn)}.tdn{color:var(--red)}
+
+    /* P-07 chips */
+    .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+    .cg{background:#DCFCE7;color:var(--grn)}
+    .ca{background:#FEF3C7;color:var(--amber)}
+    .cr{background:#FEE2E2;color:var(--red)}
+    .cb{background:#DBEAFE;color:var(--blue)}
+    .ct{background:#EDFAF8;color:var(--teal)}
+    .cgy{background:var(--bg2);color:var(--t3)}
+
+    /* run history status row */
+    .batch-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)}
+    .batch-row:last-child{border-bottom:none}
+    .batch-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .batch-info{flex:1}
+    .batch-name{font-size:13px;font-weight:600;color:var(--t1)}
+    .batch-meta{font-size:11px;color:var(--t3);margin-top:2px}
+    .batch-stats{display:flex;gap:16px;font-size:12px;color:var(--t3)}
+    .batch-stat b{color:var(--t1);font-family:'JetBrains Mono',monospace;font-size:12px}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sb">
+    <div class="sb-logo"><svg viewBox="0 0 18 18"><rect x="2" y="2" width="6" height="6" rx="1.5"/><rect x="10" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="10" width="6" height="6" rx="1.5"/><rect x="10" y="10" width="6" height="6" rx="1.5"/></svg></div>
+    <div class="sb-nav">
+      <a class="sb-ico" href="h01-hr-manager-dashboard.html" target="_blank" title="Dashboard"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg></a>
+      <a class="sb-ico" href="h02-employees.html" target="_blank" title="Employees"><svg viewBox="0 0 20 20"><circle cx="8" cy="6" r="3"/><path d="M2 17c0-3.314 2.686-6 6-6s6 2.686 6 6"/><circle cx="15" cy="7" r="2"/><path d="M15 12c1.657 0 3 1.343 3 3"/></svg></a>
+      <a class="sb-ico" href="h06-leave-calendar.html" target="_blank" title="Leave"><svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v4M13 2v4M3 9h14"/></svg></a>
+      <a class="sb-ico" href="h01-payroll-admin-dashboard.html" target="_blank" title="Payroll"><svg viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M2 9h16M6 13h2M10 13h4"/></svg></a>
+      <a class="sb-ico" href="h05-approval-inbox.html" target="_blank" title="Approvals"><svg viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="3"/><path d="M6 10l3 3 5-6"/></svg></a>
+      <a class="sb-ico on" href="h07-payroll-reports.html" title="Analytics"><svg viewBox="0 0 20 20"><path d="M2 16l4-5 3 3 4-6 5 4" stroke-width="1.8"/><circle cx="6" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+    </div>
+    <div class="sb-av">AK</div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="bc">Analytics &rsaquo; <b>Payroll Reports</b></div>
+      <button class="btn sec sm">Export PDF</button>
+      <button class="btn sec sm">Export CSV</button>
+      <button class="btn pri sm">Run Payroll</button>
+    </div>
+
+    <!-- Report Nav -->
+    <div class="report-nav">
+      <div class="rn-tab on"  onclick="showTab(this,'overview')">&#128200; Overview</div>
+      <div class="rn-tab"     onclick="showTab(this,'monthly')">&#128197; Monthly Breakdown</div>
+      <div class="rn-tab"     onclick="showTab(this,'dept')">&#127970; Department Costs</div>
+      <div class="rn-tab"     onclick="showTab(this,'payslips')">&#128196; Payslips</div>
+      <div class="rn-tab"     onclick="showTab(this,'runs')">&#9654; Run History</div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="fbar">
+      <span class="flbl">Period</span>
+      <select class="fsel">
+        <option>Q1 2026 (Jan–Mar)</option>
+        <option>Q4 2025 (Oct–Dec)</option>
+        <option>Q3 2025 (Jul–Sep)</option>
+        <option>Last 12 Months</option>
+        <option>Year to Date</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Department</span>
+      <select class="fsel">
+        <option>All Departments</option>
+        <option>Engineering</option>
+        <option>Sales</option>
+        <option>Operations</option>
+        <option>HR</option>
+        <option>Finance</option>
+        <option>Marketing</option>
+        <option>Product</option>
+        <option>Customer Success</option>
+      </select>
+      <div class="fsep"></div>
+      <span class="flbl">Status</span>
+      <select class="fsel">
+        <option>All Statuses</option>
+        <option>Draft</option>
+        <option>Processed</option>
+        <option>Paid</option>
+        <option>Cancelled</option>
+      </select>
+      <div class="factions">
+        <button class="btn sec sm">Reset</button>
+        <button class="btn pri sm">Apply</button>
+      </div>
+    </div>
+
+    <!-- Page -->
+    <div class="page" id="mainPage">
+      <div class="content">
+
+
+        <!-- ── OVERVIEW ────────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/payroll/records?period_start=2026-01-01&period_end=2026-03-31 -->
+        <div class="tab-panel on" id="tab-overview">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">£4.82M</div><div class="kpi-lbl">Total Gross Pay</div><div class="kpi-tr up">&#9650; +2.1% vs Q4 2025</div></div>
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">£3.86M</div><div class="kpi-lbl">Total Net Pay</div><div class="kpi-tr up">&#9650; +1.9% vs Q4 2025</div></div>
+            <div class="kpi"><div class="kpi-dot bl"></div><div class="kpi-val">1,247</div><div class="kpi-lbl">Employees Paid</div><div class="kpi-tr nt">3 cycles · Q1 2026</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">3</div><div class="kpi-lbl">Anomalies Flagged</div><div class="kpi-tr nt">Pending review</div></div>
+          </div>
+
+          <div class="cg21">
+            <!-- Monthly payroll trend -->
+            <div class="cc">
+              <div class="cc-title">Monthly Payroll Trend</div>
+              <div class="cc-sub">Last 6 months · total gross pay (£)</div>
+              <svg class="lsvg" viewBox="0 0 400 130" preserveAspectRatio="none">
+                <defs><linearGradient id="pg" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#15803D" stop-opacity=".15"/><stop offset="100%" stop-color="#15803D" stop-opacity="0"/></linearGradient></defs>
+                <line x1="0" y1="20"  x2="400" y2="20"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="65"  x2="400" y2="65"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="110" x2="400" y2="110" stroke="#F1F4F8" stroke-width="1"/>
+                <path d="M0,92 L80,85 L160,76 L240,68 L320,54 L400,40 L400,130 L0,130Z" fill="url(#pg)"/>
+                <polyline points="0,92 80,85 160,76 240,68 320,54 400,40" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="0"   cy="92" r="3.5" fill="#15803D"/>
+                <circle cx="80"  cy="85" r="3.5" fill="#15803D"/>
+                <circle cx="160" cy="76" r="3.5" fill="#15803D"/>
+                <circle cx="240" cy="68" r="3.5" fill="#15803D"/>
+                <circle cx="320" cy="54" r="3.5" fill="#15803D"/>
+                <circle cx="400" cy="40" r="4"   fill="#fff" stroke="#15803D" stroke-width="2.5"/>
+                <text x="0"   y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Oct</text>
+                <text x="80"  y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Nov</text>
+                <text x="160" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Dec</text>
+                <text x="240" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Jan</text>
+                <text x="320" y="124" font-size="9" fill="#94A3B8" font-family="Inter" text-anchor="middle">Feb</text>
+                <text x="400" y="124" font-size="9" fill="#15803D" font-weight="600" font-family="Inter" text-anchor="middle">Mar</text>
+              </svg>
+            </div>
+            <!-- Pay component breakdown donut -->
+            <div class="cc">
+              <div class="cc-title">Pay Components</div>
+              <div class="cc-sub">Q1 2026 · gross pay breakdown</div>
+              <div style="display:flex;align-items:center;gap:20px;height:150px">
+                <svg width="100" height="100" viewBox="0 0 100 100" style="flex-shrink:0">
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#F1F4F8" stroke-width="18"/>
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#15803D" stroke-width="18" stroke-dasharray="153.9 72.3" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#93C5FD" stroke-width="18" stroke-dasharray="45.2 181" stroke-dashoffset="-153.9" transform="rotate(-90 50 50)"/>
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#FCD34D" stroke-width="18" stroke-dasharray="22.6 203.6" stroke-dashoffset="-199.1" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="46" text-anchor="middle" font-size="14" font-weight="700" fill="#0F1623" font-family="JetBrains Mono,monospace">68%</text>
+                  <text x="50" y="58" text-anchor="middle" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">Base</text>
+                </svg>
+                <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:50%;background:#15803D;flex-shrink:0"></div><span style="flex:1;color:#374151">Base Salary</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:#0F1623">68%</span></div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:50%;background:#93C5FD;flex-shrink:0"></div><span style="flex:1;color:#374151">Allowances</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:#0F1623">20%</span></div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:50%;background:#FCD34D;flex-shrink:0"></div><span style="flex:1;color:#374151">Overtime</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:#0F1623">12%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary table -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Department Payroll Summary</div><div class="sect-sub">Q1 2026 · gross, deductions, net · API: GET /payroll/records</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Headcount</th><th>Total Gross</th><th>Deductions</th><th>Total Net</th><th>Avg Gross</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Engineering</td><td class="tnum">312</td><td class="tnum">£1,841,200</td><td class="tnum">£414,270</td><td class="tnum">£1,426,930</td><td class="tnum">£5,901</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">241</td><td class="tnum">£1,251,880</td><td class="tnum">£281,673</td><td class="tnum">£970,207</td><td class="tnum">£5,194</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">198</td><td class="tnum">£993,960</td><td class="tnum">£223,641</td><td class="tnum">£770,319</td><td class="tnum">£5,020</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">156</td><td class="tnum">£847,200</td><td class="tnum">£190,620</td><td class="tnum">£656,580</td><td class="tnum">£5,431</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Finance</td><td class="tnum">89</td><td class="tnum">£515,420</td><td class="tnum">£115,969</td><td class="tnum">£399,451</td><td class="tnum">£5,791</td><td><span class="chip ca">Review</span></td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">112</td><td class="tnum">£440,720</td><td class="tnum">£99,162</td><td class="tnum">£341,558</td><td class="tnum">£3,935</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Customer Success</td><td class="tnum">72</td><td class="tnum">£294,480</td><td class="tnum">£66,258</td><td class="tnum">£228,222</td><td class="tnum">£4,090</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">67</td><td class="tnum">£221,440</td><td class="tnum">£49,824</td><td class="tnum">£171,616</td><td class="tnum">£3,305</td><td><span class="chip cg">Paid</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /overview -->
+
+
+        <!-- ── MONTHLY BREAKDOWN ───────────────────────────────────── -->
+        <!-- API: GET /api/v1/payroll/records?period_start=&period_end= grouped by month -->
+        <div class="tab-panel" id="tab-monthly">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">£1,631k</div><div class="kpi-lbl">Jan Gross Pay</div><div class="kpi-tr nt">Cycle: Jan 2026</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">£1,589k</div><div class="kpi-lbl">Feb Gross Pay</div><div class="kpi-tr nt">Cycle: Feb 2026</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">£1,601k</div><div class="kpi-lbl">Mar Gross Pay</div><div class="kpi-tr nt">Cycle: Mar 2026</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">+£12k</div><div class="kpi-lbl">Variance (Jan–Mar)</div><div class="kpi-tr nt">0.7% drift</div></div>
+          </div>
+
+          <div class="cg11">
+            <div class="cc">
+              <div class="cc-title">Gross vs Net by Month</div>
+              <div class="cc-sub">Q1 2026 · £ thousands</div>
+              <!-- Grouped bar chart -->
+              <svg width="100%" height="170" viewBox="0 0 360 170" preserveAspectRatio="none">
+                <line x1="0" y1="10"  x2="360" y2="10"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="60"  x2="360" y2="60"  stroke="#F1F4F8" stroke-width="1"/>
+                <line x1="0" y1="110" x2="360" y2="110" stroke="#F1F4F8" stroke-width="1"/>
+                <!-- Jan -->
+                <rect x="20"  y="20"  width="38" height="130" rx="3" fill="#15803D" opacity=".85"/>
+                <rect x="62"  y="36"  width="38" height="114" rx="3" fill="#93C5FD" opacity=".9"/>
+                <!-- Feb -->
+                <rect x="140" y="27"  width="38" height="123" rx="3" fill="#15803D" opacity=".85"/>
+                <rect x="182" y="43"  width="38" height="107" rx="3" fill="#93C5FD" opacity=".9"/>
+                <!-- Mar -->
+                <rect x="260" y="24"  width="38" height="126" rx="3" fill="#15803D" opacity=".85"/>
+                <rect x="302" y="40"  width="38" height="110" rx="3" fill="#93C5FD" opacity=".9"/>
+                <!-- x labels -->
+                <text x="59"  y="158" font-size="10" fill="#94A3B8" font-family="Inter" text-anchor="middle">January</text>
+                <text x="179" y="158" font-size="10" fill="#94A3B8" font-family="Inter" text-anchor="middle">February</text>
+                <text x="299" y="158" font-size="10" fill="#94A3B8" font-family="Inter" text-anchor="middle">March</text>
+              </svg>
+              <div style="display:flex;gap:16px;margin-top:8px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748B"><div style="width:10px;height:10px;border-radius:2px;background:#15803D"></div>Gross Pay</div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748B"><div style="width:10px;height:10px;border-radius:2px;background:#93C5FD"></div>Net Pay</div>
+              </div>
+            </div>
+            <div class="cc">
+              <div class="cc-title">Deductions Breakdown</div>
+              <div class="cc-sub">Q1 2026 · by deduction type</div>
+              <div class="ibars" style="margin-top:14px">
+                <div class="ibar"><span class="ibar-lbl">Income Tax</span><div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#B91C1C"></div></div><span class="ibar-val">£432,180</span></div>
+                <div class="ibar"><span class="ibar-lbl">National Ins.</span><div class="ibar-tr"><div class="ibar-fi" style="width:64%;background:#B45309"></div></div><span class="ibar-val">£276,594</span></div>
+                <div class="ibar"><span class="ibar-lbl">Pension</span><div class="ibar-tr"><div class="ibar-fi" style="width:48%;background:#1D4ED8"></div></div><span class="ibar-val">£207,446</span></div>
+                <div class="ibar"><span class="ibar-lbl">Other</span><div class="ibar-tr"><div class="ibar-fi" style="width:12%;background:#94A3B8"></div></div><span class="ibar-val">£51,800</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly records table -->
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Monthly Cycle Summary</div><div class="sect-sub">PayrollCycle records · API: GET /payroll/records?period_start=&amp;period_end=</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Cycle</th><th>Period</th><th>Payment Date</th><th>Employees</th><th>Gross Pay</th><th>Net Pay</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">March 2026</td><td class="tnum">01–31 Mar 2026</td><td class="tnum">28 Mar 2026</td><td class="tnum">1,247</td><td class="tnum">£1,601,200</td><td class="tnum">£1,281,360</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">February 2026</td><td class="tnum">01–28 Feb 2026</td><td class="tnum">28 Feb 2026</td><td class="tnum">1,241</td><td class="tnum">£1,589,440</td><td class="tnum">£1,271,552</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">January 2026</td><td class="tnum">01–31 Jan 2026</td><td class="tnum">31 Jan 2026</td><td class="tnum">1,238</td><td class="tnum">£1,631,360</td><td class="tnum">£1,305,088</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">December 2025</td><td class="tnum">01–31 Dec 2025</td><td class="tnum">31 Dec 2025</td><td class="tnum">1,231</td><td class="tnum">£1,598,300</td><td class="tnum">£1,278,640</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">November 2025</td><td class="tnum">01–30 Nov 2025</td><td class="tnum">30 Nov 2025</td><td class="tnum">1,228</td><td class="tnum">£1,574,840</td><td class="tnum">£1,259,872</td><td><span class="chip cg">Paid</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /monthly -->
+
+
+        <!-- ── DEPARTMENT COSTS ────────────────────────────────────── -->
+        <div class="tab-panel" id="tab-dept">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot re"></div><div class="kpi-val">£1,841k</div><div class="kpi-lbl">Highest Dept Cost</div><div class="kpi-tr nt">Engineering · Q1</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">£221k</div><div class="kpi-lbl">Lowest Dept Cost</div><div class="kpi-tr nt">HR · Q1</div></div>
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">£602k</div><div class="kpi-lbl">Avg Dept Cost</div><div class="kpi-tr up">&#9650; +1.8% vs Q4 2025</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">38.2%</div><div class="kpi-lbl">Eng Cost Share</div><div class="kpi-tr nt">Largest single dept</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Payroll Cost by Department</div><div class="sect-sub">Q1 2026 · base salary + allowances + overtime</div></div></div>
+            <div class="cc">
+              <div class="ibars" style="padding:4px 0">
+                <div class="ibar"><span class="ibar-lbl">Engineering</span><div class="ibar-tr"><div class="ibar-fi" style="width:100%;background:#0A8F84"></div></div><span class="ibar-val">£1,841k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Operations</span><div class="ibar-tr"><div class="ibar-fi" style="width:68%;background:#0A8F84"></div></div><span class="ibar-val">£1,252k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Sales</span><div class="ibar-tr"><div class="ibar-fi" style="width:54%;background:#1D4ED8"></div></div><span class="ibar-val">£994k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Product</span><div class="ibar-tr"><div class="ibar-fi" style="width:46%;background:#1D4ED8"></div></div><span class="ibar-val">£847k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Finance</span><div class="ibar-tr"><div class="ibar-fi" style="width:28%;background:#94A3B8"></div></div><span class="ibar-val">£515k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Marketing</span><div class="ibar-tr"><div class="ibar-fi" style="width:24%;background:#94A3B8"></div></div><span class="ibar-val">£441k</span></div>
+                <div class="ibar"><span class="ibar-lbl">Customer Success</span><div class="ibar-tr"><div class="ibar-fi" style="width:16%;background:#94A3B8"></div></div><span class="ibar-val">£294k</span></div>
+                <div class="ibar"><span class="ibar-lbl">HR</span><div class="ibar-tr"><div class="ibar-fi" style="width:12%;background:#94A3B8"></div></div><span class="ibar-val">£221k</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Department Cost Detail</div><div class="sect-sub">Base · allowances · overtime split</div></div></div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Department</th><th>Base Salary</th><th>Allowances</th><th>Overtime</th><th>Total Gross</th><th>vs Q4 2025</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Engineering</td><td class="tnum">£1,251,000</td><td class="tnum">£368,200</td><td class="tnum">£222,000</td><td class="tnum">£1,841,200</td><td class="tnum tup">+3.2%</td></tr>
+                  <tr><td class="tn">Operations</td><td class="tnum">£850,280</td><td class="tnum">£250,376</td><td class="tnum">£151,224</td><td class="tnum">£1,251,880</td><td class="tnum tup">+1.8%</td></tr>
+                  <tr><td class="tn">Sales</td><td class="tnum">£675,480</td><td class="tnum">£198,792</td><td class="tnum">£119,688</td><td class="tnum">£993,960</td><td class="tnum tdn">-0.4%</td></tr>
+                  <tr><td class="tn">Product</td><td class="tnum">£575,700</td><td class="tnum">£169,440</td><td class="tnum">£102,060</td><td class="tnum">£847,200</td><td class="tnum tup">+2.1%</td></tr>
+                  <tr><td class="tn">Finance</td><td class="tnum">£350,480</td><td class="tnum">£103,082</td><td class="tnum">£61,858</td><td class="tnum">£515,420</td><td class="tnum tup">+1.1%</td></tr>
+                  <tr><td class="tn">Marketing</td><td class="tnum">£299,690</td><td class="tnum">£88,144</td><td class="tnum">£52,886</td><td class="tnum">£440,720</td><td class="tnum tdn">-1.2%</td></tr>
+                  <tr><td class="tn">Customer Success</td><td class="tnum">£200,246</td><td class="tnum">£58,896</td><td class="tnum">£35,338</td><td class="tnum">£294,480</td><td class="tnum tdn">-2.1%</td></tr>
+                  <tr><td class="tn">HR</td><td class="tnum">£150,379</td><td class="tnum">£44,288</td><td class="tnum">£26,773</td><td class="tnum">£221,440</td><td class="tnum tup">+0.6%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /dept -->
+
+
+        <!-- ── PAYSLIPS ────────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/payroll/records?employee_id=&status=Paid -->
+        <div class="tab-panel" id="tab-payslips">
+
+          <div class="sect">
+            <div class="sect-hd">
+              <div><div class="sect-title">Employee Payslips</div><div class="sect-sub">Q1 2026 · API: GET /payroll/records · PayrollRecord model</div></div>
+              <button class="btn sec sm">Bulk Export</button>
+            </div>
+            <div class="twrap">
+              <table>
+                <thead><tr><th>Employee</th><th>Employee ID</th><th>Period</th><th>Base Salary</th><th>Allowances</th><th>Overtime</th><th>Deductions</th><th>Net Pay</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="tn">Sarah Mitchell</td><td class="tnum">EMP-001</td><td class="tnum">Mar 2026</td><td class="tnum">£6,200</td><td class="tnum">£1,240</td><td class="tnum">£310</td><td class="tnum">£1,750</td><td class="tnum">£6,000</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">James Okafor</td><td class="tnum">EMP-002</td><td class="tnum">Mar 2026</td><td class="tnum">£5,400</td><td class="tnum">£1,080</td><td class="tnum">£270</td><td class="tnum">£1,527</td><td class="tnum">£5,223</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Priya Nair</td><td class="tnum">EMP-003</td><td class="tnum">Mar 2026</td><td class="tnum">£4,800</td><td class="tnum">£960</td><td class="tnum">£0</td><td class="tnum">£1,358</td><td class="tnum">£4,402</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Tom Brennan</td><td class="tnum">EMP-004</td><td class="tnum">Mar 2026</td><td class="tnum">£3,900</td><td class="tnum">£780</td><td class="tnum">£195</td><td class="tnum">£1,105</td><td class="tnum">£3,770</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Amara Diallo</td><td class="tnum">EMP-005</td><td class="tnum">Mar 2026</td><td class="tnum">£7,100</td><td class="tnum">£1,420</td><td class="tnum">£0</td><td class="tnum">£2,009</td><td class="tnum">£6,511</td><td><span class="chip ca">Review</span></td></tr>
+                  <tr><td class="tn">Daniel Marsh</td><td class="tnum">EMP-006</td><td class="tnum">Mar 2026</td><td class="tnum">£4,200</td><td class="tnum">£840</td><td class="tnum">£420</td><td class="tnum">£1,188</td><td class="tnum">£4,272</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Fatima Al-Hassan</td><td class="tnum">EMP-007</td><td class="tnum">Mar 2026</td><td class="tnum">£5,800</td><td class="tnum">£1,160</td><td class="tnum">£290</td><td class="tnum">£1,641</td><td class="tnum">£5,609</td><td><span class="chip cg">Paid</span></td></tr>
+                  <tr><td class="tn">Chris Yuen</td><td class="tnum">EMP-008</td><td class="tnum">Mar 2026</td><td class="tnum">£3,500</td><td class="tnum">£700</td><td class="tnum">£0</td><td class="tnum">£990</td><td class="tnum">£3,210</td><td><span class="chip cg">Paid</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /payslips -->
+
+
+        <!-- ── RUN HISTORY ─────────────────────────────────────────── -->
+        <!-- API: GET /api/v1/payroll/records — PayrollBatch model -->
+        <div class="tab-panel" id="tab-runs">
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">12</div><div class="kpi-lbl">Runs (Last 12 Mo)</div><div class="kpi-tr nt">1 per month</div></div>
+            <div class="kpi"><div class="kpi-dot gn"></div><div class="kpi-val">11</div><div class="kpi-lbl">Successful Runs</div><div class="kpi-tr nt">91.7% success rate</div></div>
+            <div class="kpi"><div class="kpi-dot am"></div><div class="kpi-val">1</div><div class="kpi-lbl">Partial Failures</div><div class="kpi-tr nt">Nov 2025</div></div>
+            <div class="kpi"><div class="kpi-dot tl"></div><div class="kpi-val">4m 12s</div><div class="kpi-lbl">Avg Run Time</div><div class="kpi-tr up">&#9650; 18s faster vs last yr</div></div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-hd"><div><div class="sect-title">Payroll Run Log</div><div class="sect-sub">PayrollBatch records · status: Processed / PartialFailure / Paid / Failed</div></div></div>
+            <div class="twrap" style="padding:0 18px">
+              <div class="batch-row">
+                <div class="batch-dot" style="background:#15803D"></div>
+                <div class="batch-info">
+                  <div class="batch-name">March 2026 Payroll Run</div>
+                  <div class="batch-meta">Run ID: BATCH-2026-03 · 28 Mar 2026 · 02:14 UTC</div>
+                </div>
+                <div class="batch-stats">
+                  <div class="batch-stat"><b>1,247</b> processed</div>
+                  <div class="batch-stat"><b>1,247</b> paid</div>
+                  <div class="batch-stat"><b>0</b> failed</div>
+                </div>
+                <span class="chip cg">Paid</span>
+              </div>
+              <div class="batch-row">
+                <div class="batch-dot" style="background:#15803D"></div>
+                <div class="batch-info">
+                  <div class="batch-name">February 2026 Payroll Run</div>
+                  <div class="batch-meta">Run ID: BATCH-2026-02 · 28 Feb 2026 · 02:09 UTC</div>
+                </div>
+                <div class="batch-stats">
+                  <div class="batch-stat"><b>1,241</b> processed</div>
+                  <div class="batch-stat"><b>1,241</b> paid</div>
+                  <div class="batch-stat"><b>0</b> failed</div>
+                </div>
+                <span class="chip cg">Paid</span>
+              </div>
+              <div class="batch-row">
+                <div class="batch-dot" style="background:#15803D"></div>
+                <div class="batch-info">
+                  <div class="batch-name">January 2026 Payroll Run</div>
+                  <div class="batch-meta">Run ID: BATCH-2026-01 · 31 Jan 2026 · 02:17 UTC</div>
+                </div>
+                <div class="batch-stats">
+                  <div class="batch-stat"><b>1,238</b> processed</div>
+                  <div class="batch-stat"><b>1,238</b> paid</div>
+                  <div class="batch-stat"><b>0</b> failed</div>
+                </div>
+                <span class="chip cg">Paid</span>
+              </div>
+              <div class="batch-row">
+                <div class="batch-dot" style="background:#B45309"></div>
+                <div class="batch-info">
+                  <div class="batch-name">November 2025 Payroll Run</div>
+                  <div class="batch-meta">Run ID: BATCH-2025-11 · 30 Nov 2025 · 02:31 UTC · 3 records failed — reprocessed 01 Dec</div>
+                </div>
+                <div class="batch-stats">
+                  <div class="batch-stat"><b>1,225</b> processed</div>
+                  <div class="batch-stat"><b>1,222</b> paid</div>
+                  <div class="batch-stat" style="color:#B91C1C"><b>3</b> failed</div>
+                </div>
+                <span class="chip ca">Partial</span>
+              </div>
+              <div class="batch-row">
+                <div class="batch-dot" style="background:#15803D"></div>
+                <div class="batch-info">
+                  <div class="batch-name">October 2025 Payroll Run</div>
+                  <div class="batch-meta">Run ID: BATCH-2025-10 · 31 Oct 2025 · 02:11 UTC</div>
+                </div>
+                <div class="batch-stats">
+                  <div class="batch-stat"><b>1,219</b> processed</div>
+                  <div class="batch-stat"><b>1,219</b> paid</div>
+                  <div class="batch-stat"><b>0</b> failed</div>
+                </div>
+                <span class="chip cg">Paid</span>
+              </div>
+            </div>
+          </div>
+        </div><!-- /runs -->
+
+
+      </div><!-- /content -->
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+</body>
+</html>

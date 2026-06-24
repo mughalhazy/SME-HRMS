@@ -1,0 +1,192 @@
+{
+  "contract": "hrms-h07-engagement-results",
+  "version": "1.0",
+  "date": "2026-03-28",
+  "last_updated": "2026-03-28",
+  "page": "h07-engagement-results.html",
+  "archetype": "H07 — HR Analytics / Reports",
+  "archetype_ref": "hrms-schema-template.json",
+  "status": "sealed",
+
+  "backend_service": "engagement_service",
+  "base_url": "/api/v1/engagement",
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "method": "GET",
+      "path": "/api/v1/engagement/surveys/{survey_id}/aggregated-results",
+      "params": {
+        "survey_id": "uuid"
+      },
+      "used_by": [
+        "tab-overview — KPI row (overall score, favorable ratio, responses, participation rate)",
+        "tab-overview — Participation Rate Trend line chart",
+        "tab-overview — Score Distribution donut/bars",
+        "tab-overview — Score by Dimension inline score bars"
+      ],
+      "response_shape": {
+        "tenant_id": "string",
+        "survey_id": "uuid",
+        "survey": "Survey object (see E02 response_shape)",
+        "aggregate": {
+          "survey_id": "uuid",
+          "response_count": "int",
+          "participant_count": "int",
+          "target_population": "int",
+          "participation_rate": "float (0.0–1.0)",
+          "overall_average_score": "float (1.0–5.0)",
+          "favorable_ratio": "float (0.0–1.0, score >= 4 = favorable)",
+          "question_scores": [
+            {
+              "question_id": "uuid",
+              "prompt": "string",
+              "dimension": "D1 | D2 | D3 | D4 | D5",
+              "avg_score": "float",
+              "favorable_ratio": "float"
+            }
+          ],
+          "dimension_scores": [
+            {
+              "dimension": "D1 | D2 | D3 | D4 | D5",
+              "avg_score": "float",
+              "favorable_ratio": "float",
+              "question_count": "int"
+            }
+          ],
+          "score_distribution": {
+            "1": "int",
+            "2": "int",
+            "3": "int",
+            "4": "int",
+            "5": "int"
+          },
+          "generated_at": "ISO-8601 datetime"
+        }
+      },
+      "mock_workaround": "Q1 2026 Pulse Survey: score 3.9, favorable 74.3%, 891/1024 responses (87.0%). Distribution: 5→428, 4→235, 3→107, 2→78, 1→43. D1 Wellbeing 4.1 best, D3 Learning 3.7 lowest."
+    },
+    {
+      "id": "E02",
+      "method": "GET",
+      "path": "/api/v1/engagement/surveys",
+      "params": {
+        "status": "Draft | Open | Closed (optional)"
+      },
+      "used_by": [
+        "tab-surveys — KPI row (surveys run, avg participation, avg score, questions per survey)",
+        "tab-surveys — Survey List table"
+      ],
+      "response_shape": {
+        "tenant_id": "string",
+        "items": [
+          {
+            "survey_id": "uuid",
+            "code": "string",
+            "title": "string",
+            "description": "string",
+            "status": "Draft | Open | Closed",
+            "owner_employee_id": "uuid",
+            "target_department_id": "uuid | null",
+            "questions": [
+              {
+                "question_id": "uuid",
+                "prompt": "string",
+                "dimension": "D1 | D2 | D3 | D4 | D5",
+                "kind": "Likert5",
+                "required": "boolean",
+                "scale_min": "int (1)",
+                "scale_max": "int (5)"
+              }
+            ],
+            "published_at": "ISO-8601 datetime | null",
+            "closed_at": "ISO-8601 datetime | null",
+            "created_at": "ISO-8601 datetime",
+            "updated_at": "ISO-8601 datetime"
+          }
+        ]
+      },
+      "mock_workaround": "4 surveys hardcoded: PULSE-Q1-26 (Open), ANNUAL-Q4-25 (Closed 82.3%), PULSE-Q3-25 (Closed 79.1%), PULSE-Q1-25 (Closed 77.2%)."
+    },
+    {
+      "id": "E03",
+      "method": "GET",
+      "path": "/api/v1/engagement/surveys/{survey_id}/aggregated-results",
+      "params": {
+        "survey_id": "uuid"
+      },
+      "used_by": [
+        "tab-dimensions — KPI row (top dimension, lowest dimension, best favorable, avg gain)",
+        "tab-dimensions — D1–D5 score cards (score + distribution per dimension)"
+      ],
+      "response_shape": "See E01 aggregate.dimension_scores[]",
+      "mock_workaround": "D1 Wellbeing 4.1/79.2%, D2 Management 3.9/75.0%, D3 Learning 3.7/70.4%, D4 Culture 4.0/77.1%, D5 Purpose 3.8/72.8%. Score distribution cards per dimension hardcoded."
+    },
+    {
+      "id": "E04",
+      "method": "GET",
+      "path": "/api/v1/engagement/surveys/{survey_id}/aggregated-results",
+      "params": {
+        "survey_id": "uuid"
+      },
+      "used_by": [
+        "tab-questions — KPI row (total questions, highest score, lowest score, total answers)",
+        "tab-questions — Question Scores table sorted highest → lowest"
+      ],
+      "response_shape": "See E01 aggregate.question_scores[]",
+      "mock_workaround": "10 questions hardcoded (2 per D1–D5), sorted 4.3→3.5. D3 Learning lowest: 'I receive the training and resources I need to grow' 3.5 / 66.3%."
+    },
+    {
+      "id": "E05",
+      "method": "GET",
+      "path": "/api/v1/engagement/surveys/{survey_id}/responses",
+      "params": {
+        "survey_id": "uuid"
+      },
+      "used_by": [
+        "tab-responses — KPI row (total responses, participation rate, not responded, commented %)",
+        "tab-responses — Response Log table (SurveyResponse · per-dimension scores · comment flag)"
+      ],
+      "response_shape": {
+        "tenant_id": "string",
+        "survey_id": "uuid",
+        "items": [
+          {
+            "response_id": "uuid",
+            "survey_id": "uuid",
+            "employee_id": "uuid",
+            "answers": [
+              {
+                "question_id": "uuid",
+                "score": "int (1–5)",
+                "comment": "string | null"
+              }
+            ],
+            "overall_comment": "string | null",
+            "submitted_at": "ISO-8601 datetime"
+          }
+        ]
+      },
+      "mock_workaround": "8 responses hardcoded RSP-7814 through RSP-7821. Per-dimension avg scores shown. 4/8 left comment (overall_comment present). 133 non-responders noted."
+    }
+  ],
+
+  "gaps": [],
+
+  "design_patterns": {
+    "P-07": "Chips applied to survey status (Open/Closed/Draft), dimension badges (D1–D5), comment flag (Yes/No), response dimension chips — P-07 anatomy throughout",
+    "P-11": "Table row hover: transition:background .12s — applied to survey list, question scores, response log tables",
+    "P-20": "Analytics layout: 5-tab report-nav, filter-bar (Survey/Status/Department), topbar actions (Export PDF / Export CSV / New Survey primary)",
+    "P-27": "--dur-micro:120ms for tab hover, row hover",
+    "P-31": "html{zoom:1.1} applied globally",
+    "P-32": ".page{flex:1;overflow-y:auto;min-height:0} + .content{padding:22px 22px 12vh}"
+  },
+
+  "tab_inventory": [
+    { "id": "overview",   "label": "Overview",          "status": "built", "api_refs": ["E01"] },
+    { "id": "surveys",    "label": "Survey Results",    "status": "built", "api_refs": ["E02"] },
+    { "id": "dimensions", "label": "Dimension Scores",  "status": "built", "api_refs": ["E03"] },
+    { "id": "questions",  "label": "Question Analysis", "status": "built", "api_refs": ["E04"] },
+    { "id": "responses",  "label": "Responses",         "status": "built", "api_refs": ["E05"] }
+  ]
+}

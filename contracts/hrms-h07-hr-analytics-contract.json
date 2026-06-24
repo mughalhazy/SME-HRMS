@@ -1,0 +1,254 @@
+{
+  "contract": "hrms-h07-hr-analytics",
+  "version": "1.0",
+  "date": "2026-03-28",
+  "last_updated": "2026-03-28",
+  "page": "h07-hr-analytics.html",
+  "archetype": "H07 — HR Analytics / Reports",
+  "archetype_ref": "hrms-schema-template.json",
+  "status": "sealed",
+
+  "backend_service": "reporting_analytics",
+  "base_url": "/api/v1/reporting",
+
+  "endpoints": [
+    {
+      "id": "E01",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "workforce.dashboard.summary",
+        "dimension_key": "all",
+        "dimension_value": "all"
+      },
+      "used_by": ["tab-workforce — KPI row (headcount, attrition, tenure, growth)"],
+      "response_shape": {
+        "aggregate_id": "string",
+        "aggregate_type": "workforce.dashboard.summary",
+        "dimension_key": "string",
+        "dimension_value": "string",
+        "metrics": {
+          "total_headcount": "int",
+          "active_count": "int",
+          "attrition_rate": "float",
+          "avg_tenure_years": "float",
+          "headcount_growth_pct": "float"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "KPI values hardcoded: headcount=1247, attrition=8.3%, tenure=3.2yrs, growth=+4.1%"
+    },
+    {
+      "id": "E02",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "workforce.attrition.summary",
+        "dimension_key": "department_id",
+        "dimension_value": "<department_id | all>"
+      },
+      "used_by": ["tab-workforce — Attrition by Department inline bars", "tab-workforce — Department Breakdown table"],
+      "response_shape": {
+        "aggregate_type": "workforce.attrition.summary",
+        "dimension_key": "department_id",
+        "dimension_value": "string",
+        "metrics": {
+          "total_employees": "int",
+          "terminated_count": "int",
+          "attrition_rate": "float",
+          "avg_tenure_years": "float",
+          "headcount_change": "int"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "Department rows hardcoded: Engineering 6.2%, Sales 12.1%, Customer Success 18.2%, etc."
+    },
+    {
+      "id": "E03",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "workforce.attendance.trend",
+        "dimension_key": "all",
+        "dimension_value": "all"
+      },
+      "used_by": ["tab-attendance — KPI row", "tab-attendance — Attendance Trend line chart"],
+      "response_shape": {
+        "aggregate_type": "workforce.attendance.trend",
+        "metrics": {
+          "avg_attendance_rate": "float",
+          "avg_absence_days_per_employee": "float",
+          "on_leave_today": "int",
+          "leave_days_taken_qtd": "int"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "KPIs hardcoded: 94.2% attendance, 2.8 days absence, 142 on leave, 1847 days taken"
+    },
+    {
+      "id": "E04",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "hiring.pipeline.summary",
+        "dimension_key": "all",
+        "dimension_value": "all"
+      },
+      "used_by": ["tab-recruiting — KPI row (open roles, active candidates, avg time-to-hire, offer accept rate)"],
+      "response_shape": {
+        "aggregate_type": "hiring.pipeline.summary",
+        "metrics": {
+          "open_roles_count": "int",
+          "total_active_candidates": "int",
+          "offer_accept_rate": "float"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "KPIs hardcoded: 38 open roles, 412 candidates, 24.6d TTH, 73.4% offer accept"
+    },
+    {
+      "id": "E05",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "hiring.funnel.summary",
+        "dimension_key": "all",
+        "dimension_value": "all"
+      },
+      "used_by": ["tab-recruiting — Hiring Funnel inline bars"],
+      "response_shape": {
+        "aggregate_type": "hiring.funnel.summary",
+        "metrics": {
+          "application_count": "int",
+          "screening_count": "int",
+          "interview_count": "int",
+          "offer_count": "int",
+          "hired_count": "int",
+          "screening_conversion_rate": "float",
+          "interview_conversion_rate": "float",
+          "offer_conversion_rate": "float",
+          "hire_conversion_rate": "float"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "Funnel counts hardcoded: Applied=1240, Screening=769, Interview=384, Offered=136, Hired=100"
+    },
+    {
+      "id": "E06",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "hiring.source.effectiveness",
+        "dimension_key": "source",
+        "dimension_value": "<source name | all>"
+      },
+      "used_by": ["tab-recruiting — Source Effectiveness inline bars"],
+      "response_shape": {
+        "aggregate_type": "hiring.source.effectiveness",
+        "dimension_key": "source",
+        "dimension_value": "string",
+        "metrics": {
+          "candidate_count": "int",
+          "interview_count": "int",
+          "hire_count": "int",
+          "hire_rate": "float",
+          "interview_per_candidate": "float"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "Source rows hardcoded: Employee Referral 42%, Direct Apply 24%, LinkedIn 18%, Job Boards 12%, Agencies 4%"
+    },
+    {
+      "id": "E07",
+      "method": "GET",
+      "path": "/api/v1/reporting/aggregates",
+      "params": {
+        "aggregate_type": "hiring.time_to_hire",
+        "dimension_key": "department_id",
+        "dimension_value": "<department_id | all>"
+      },
+      "used_by": ["tab-recruiting — Time-to-Hire by Department table"],
+      "response_shape": {
+        "aggregate_type": "hiring.time_to_hire",
+        "dimension_key": "department_id",
+        "dimension_value": "string",
+        "metrics": {
+          "hire_count": "int",
+          "average_days_to_hire": "float",
+          "min_days_to_hire": "float",
+          "max_days_to_hire": "float"
+        },
+        "updated_at": "ISO-8601 datetime"
+      },
+      "mock_workaround": "Department rows hardcoded with avg/min/max values"
+    },
+    {
+      "id": "E08",
+      "method": "GET",
+      "path": "/api/v1/reporting/reports",
+      "params": {},
+      "used_by": ["tab-saved — Saved Reports table (ReportDefinition list)"],
+      "response_shape": [
+        {
+          "report_id": "uuid",
+          "name": "string",
+          "report_type": "string",
+          "created_by": "string",
+          "created_at": "ISO-8601 datetime"
+        }
+      ],
+      "mock_workaround": "5 saved reports hardcoded in table"
+    },
+    {
+      "id": "E09",
+      "method": "GET",
+      "path": "/api/v1/reporting/schedules",
+      "params": { "active_only": "true" },
+      "used_by": ["tab-saved — Schedule column + Status chip in saved reports table"],
+      "response_shape": [
+        {
+          "schedule_id": "uuid",
+          "report_id": "uuid",
+          "cadence": "daily | weekly | monthly",
+          "active": "boolean",
+          "next_run_at": "ISO-8601 datetime",
+          "format": "pdf | csv | json"
+        }
+      ],
+      "mock_workaround": "Schedule cadence and format columns hardcoded per row"
+    }
+  ],
+
+  "gaps": [
+    {
+      "id": "BG-018",
+      "surface": "tab-payroll",
+      "description": "payroll_service not integrated into reporting_analytics — Payroll tab shows stub panel",
+      "workaround": "Stub panel displayed with gap notice referencing BG-018"
+    },
+    {
+      "id": "BG-019",
+      "surface": "tab-performance",
+      "description": "performance_service not integrated into reporting_analytics — Performance tab shows stub panel",
+      "workaround": "Stub panel displayed with gap notice referencing BG-019"
+    }
+  ],
+
+  "design_patterns": {
+    "P-07": "Chip anatomy: padding 2px 8px, border-radius 99px, font-size 11px, font-weight 600, uppercase, letter-spacing .04em — applied to health chips (Healthy/At Risk/Critical) and saved report chips (PDF/CSV/Active/Paused)",
+    "P-11": "Table row hover: transition:background .12s on tbody tr:hover td",
+    "P-20": "Analytics layout: 6-tab report-nav, filter-bar (Period/Dept/Location), topbar actions (Export PDF / Schedule Report / New Report primary)",
+    "P-27": "--dur-micro:120ms used for tab hover, row hover, bar chart hover",
+    "P-31": "html{zoom:1.1} applied globally",
+    "P-32": ".page{flex:1;overflow-y:auto;min-height:0} + .content{padding:22px 22px 12vh}"
+  },
+
+  "tab_inventory": [
+    { "id": "workforce",  "label": "Workforce",         "status": "built",  "api_types": ["workforce.dashboard.summary", "workforce.attrition.summary"] },
+    { "id": "payroll",    "label": "Payroll",            "status": "stub",   "gap": "BG-018" },
+    { "id": "attendance", "label": "Attendance & Leave", "status": "built",  "api_types": ["workforce.attendance.trend"] },
+    { "id": "recruiting", "label": "Recruiting",         "status": "built",  "api_types": ["hiring.pipeline.summary", "hiring.funnel.summary", "hiring.source.effectiveness", "hiring.time_to_hire"] },
+    { "id": "performance","label": "Performance",        "status": "stub",   "gap": "BG-019" },
+    { "id": "saved",      "label": "Saved Reports",      "status": "built",  "api_types": ["reports list", "schedules list"] }
+  ]
+}

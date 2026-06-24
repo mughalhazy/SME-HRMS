@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meridian HCM — Design Language</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+:root{
+  --bg:#F5F7FA;--w:#fff;--bd:#E4E7EC;--bd2:#CBD5E1;
+  --t1:#0F1623;--t2:#374151;--t3:#64748B;--t4:#94A3B8;--t5:#F1F4F8;--t6:#FAFBFD;
+  --teal:#0A8F84;--teal2:#0C9E92;--tl:#EDFAF8;--tb:#7EE8DF;
+  --grn:#15803D;--gl:#DCFCE7;--grn2:#16A34A;
+  --amber:#B45309;--al:#FEF3C7;--amber2:#D97706;
+  --red:#B91C1C;--rl:#FEE2E2;--red2:#EF4444;
+  --blue:#1D4ED8;--bl:#DBEAFE;--blue2:#3B82F6;
+  --violet:#5B21B6;--vl:#EDE9FE;--violet2:#7C3AED;
+  --indigo:#312E81;--il:#E0E7FF;
+  --mono:'JetBrains Mono',monospace;
+  --r:8px;--r2:11px;--r3:14px;
+}
+body{font-family:'Inter',sans-serif;font-size:14px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:1.6}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
+
+/* ── SHELL ─────────────────────────────────────────────────────── */
+.shell{display:flex;min-height:100vh}
+
+/* ── SIDEBAR NAV ───────────────────────────────────────────────── */
+.side-nav{width:240px;min-width:240px;background:var(--w);border-right:1px solid var(--bd);position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column}
+.sn-logo{padding:22px 18px 16px;border-bottom:1px solid var(--bd)}
+.sn-logo-mark{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.logo-icon{width:36px;height:36px;border-radius:9px;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sn-name{font-size:15px;font-weight:800;color:var(--t1);letter-spacing:-0.03em}
+.sn-tag{font-size:11px;color:var(--t4)}
+.sn-body{padding:12px 10px;flex:1}
+.sn-sec{font-size:9.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.12em;padding:10px 8px 4px;display:block}
+.sn-a{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:var(--r);color:var(--t3);font-size:13px;font-weight:500;cursor:pointer;transition:all .12s;margin-bottom:1px;text-decoration:none;user-select:none}
+.sn-a:hover{background:var(--bg);color:var(--t1)}
+.sn-a.on{background:var(--tl);color:var(--teal);font-weight:600}
+.sn-a svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;opacity:.6}
+.sn-a.on svg,.sn-a:hover svg{opacity:1}
+.sn-div{height:1px;background:var(--bd);margin:6px 8px}
+.sn-footer{padding:12px 12px 16px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--t4)}
+.sn-footer strong{color:var(--t2);font-weight:600}
+
+/* ── MAIN CONTENT ──────────────────────────────────────────────── */
+.content{flex:1;overflow-x:hidden}
+
+/* Page hero */
+.hero{background:linear-gradient(135deg,var(--t1) 0%,#1E293B 60%,#0F2027 100%);padding:64px 56px 56px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-60px;right:-60px;width:320px;height:320px;border-radius:50%;background:rgba(10,143,132,.15);pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-40px;left:200px;width:200px;height:200px;border-radius:50%;background:rgba(10,143,132,.08);pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.14em;border:1px solid rgba(10,143,132,.3);padding:4px 10px;border-radius:99px;margin-bottom:18px;background:rgba(10,143,132,.08)}
+.hero-tag svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.hero h1{font-size:40px;font-weight:800;color:#fff;letter-spacing:-0.04em;line-height:1.1;margin-bottom:14px}
+.hero h1 span{color:var(--teal)}
+.hero p{font-size:16px;color:#94A3B8;max-width:520px;line-height:1.65;margin-bottom:28px}
+.hero-pills{display:flex;gap:8px;flex-wrap:wrap}
+.hero-pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:99px;background:rgba(255,255,255,.08);color:#CBD5E1;border:1px solid rgba(255,255,255,.1)}
+.hero-pill.accent{background:rgba(10,143,132,.2);color:var(--teal);border-color:rgba(10,143,132,.3)}
+
+/* Section wrapper */
+.section{padding:52px 56px;border-bottom:1px solid var(--bd)}
+.section:last-child{border-bottom:none}
+.sec-label{font-size:10px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.16em;margin-bottom:10px}
+.sec-title{font-size:26px;font-weight:800;color:var(--t1);letter-spacing:-0.03em;margin-bottom:8px}
+.sec-desc{font-size:14px;color:var(--t3);max-width:640px;line-height:1.65;margin-bottom:36px}
+
+/* Divider */
+.div-line{height:1px;background:var(--bd);margin:32px 0}
+
+/* ── TOKENS GRID ───────────────────────────────────────────────── */
+.token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.token{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;cursor:default;transition:box-shadow .14s}
+.token:hover{box-shadow:0 4px 14px rgba(0,0,0,.07)}
+.token-swatch{height:60px;width:100%}
+.token-info{padding:10px 12px}
+.token-name{font-size:11px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.token-var{font-family:var(--mono);font-size:10px;color:var(--teal);margin-bottom:3px}
+.token-hex{font-family:var(--mono);font-size:10.5px;color:var(--t4)}
+.token-use{font-size:10px;color:var(--t3);margin-top:4px;line-height:1.4}
+
+/* ── TYPOGRAPHY ────────────────────────────────────────────────── */
+.type-row{display:flex;align-items:baseline;gap:0;border-bottom:1px solid var(--t5);padding:18px 0}
+.type-row:last-child{border-bottom:none}
+.type-meta{width:200px;flex-shrink:0}
+.type-name{font-size:12px;font-weight:700;color:var(--t2)}
+.type-spec{font-size:11px;font-family:var(--mono);color:var(--t4);margin-top:3px;line-height:1.6}
+.type-sample{flex:1}
+
+/* ── SPACING ───────────────────────────────────────────────────── */
+.space-grid{display:flex;flex-direction:column;gap:10px}
+.space-row{display:flex;align-items:center;gap:16px}
+.space-bar{background:var(--teal);border-radius:3px;height:16px;flex-shrink:0}
+.space-label{font-size:12px;font-weight:700;color:var(--t2);width:80px;flex-shrink:0;font-family:var(--mono)}
+.space-name{font-size:12px;color:var(--t3)}
+.space-px{font-family:var(--mono);font-size:12px;color:var(--t4);margin-left:auto}
+
+/* ── BORDER RADIUS ─────────────────────────────────────────────── */
+.radius-grid{display:flex;gap:16px;flex-wrap:wrap}
+.radius-item{text-align:center}
+.radius-box{width:80px;height:80px;background:var(--teal);opacity:.15;margin:0 auto 8px}
+.radius-box.teal{background:var(--teal);opacity:1}
+.radius-name{font-size:11.5px;font-weight:700;color:var(--t2)}
+.radius-val{font-family:var(--mono);font-size:10.5px;color:var(--t4)}
+
+/* ── COMPONENTS ────────────────────────────────────────────────── */
+.comp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.comp-card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:20px;display:flex;flex-direction:column;gap:12px}
+.comp-card-title{font-size:11px;font-weight:800;color:var(--t4);text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px}
+.comp-2{grid-column:span 2}
+.comp-full{grid-column:1/-1}
+
+/* Buttons showcase */
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:var(--w);color:var(--t2);font-family:'Inter',sans-serif;transition:all .13s;white-space:nowrap;user-select:none}
+.btn:hover{background:var(--bg);border-color:var(--bd2)}
+.btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{background:var(--teal);color:#fff;border-color:var(--teal);box-shadow:0 1px 3px rgba(10,143,132,.2)}.btn-p:hover{background:var(--teal2)}
+.btn-d{background:var(--rl);color:var(--red);border-color:#FECACA}.btn-d:hover{background:#FEE2E2}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--t3)}.btn-ghost:hover{background:var(--bg);color:var(--t1)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-lg{padding:10px 20px;font-size:14px}
+.btn-icon{width:34px;height:34px;padding:0;justify-content:center}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* Chips */
+.chip-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:4px;white-space:nowrap}
+.chip::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--gl);color:var(--grn)}.cg::before{background:var(--grn2)}
+.ca{background:var(--al);color:var(--amber)}.ca::before{background:var(--amber2)}
+.cr{background:var(--rl);color:var(--red)}.cr::before{background:var(--red2)}
+.cb{background:var(--bl);color:var(--blue)}.cb::before{background:var(--blue2)}
+.ct{background:var(--tl);color:var(--teal)}.ct::before{background:var(--teal)}
+.cv{background:var(--vl);color:var(--violet)}.cv::before{background:var(--violet2)}
+.cn{background:var(--t5);color:var(--t3);border:1px solid var(--bd)}.cn::before{background:var(--t4)}
+
+/* Toggle */
+.toggle-demo{display:flex;flex-direction:column;gap:12px}
+.toggle-row{display:flex;align-items:center;gap:10px}
+.toggle{width:38px;height:21px;background:var(--bd);border-radius:99px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--teal)}
+.toggle::after{content:'';position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(17px)}
+.toggle-label{font-size:13px;color:var(--t2)}
+.toggle.sm{width:32px;height:18px}
+.toggle.sm::after{width:14px;height:14px}
+.toggle.sm.on::after{transform:translateX(14px)}
+
+/* Form inputs */
+.input-demo{display:flex;flex-direction:column;gap:10px}
+.input-group{display:flex;flex-direction:column;gap:5px}
+.input-group label{font-size:12px;font-weight:600;color:var(--t2)}
+.inp{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--t1);font-family:'Inter',sans-serif;outline:none;background:var(--w);transition:border-color .14s,box-shadow .14s}
+.inp:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.inp::placeholder{color:var(--t4)}
+.inp.error{border-color:var(--red2)}
+.inp.error:focus{box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+.inp-hint{font-size:11px;color:var(--t4)}
+.inp-err{font-size:11px;color:var(--red2)}
+
+/* Search input */
+.search-inp{display:flex;align-items:center;gap:7px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:7px 12px;transition:all .14s}
+.search-inp:focus-within{background:var(--w);border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,143,132,.08)}
+.search-inp input{background:none;border:none;outline:none;font-size:13px;color:var(--t1);width:100%;font-family:'Inter',sans-serif}
+.search-inp input::placeholder{color:var(--t4)}
+.search-inp svg{width:14px;height:14px;stroke:var(--t4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* Avatars */
+.avatar-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0}
+.av-xl{width:56px;height:56px;font-size:18px}
+.av-lg{width:40px;height:40px;font-size:13px}
+.av-md{width:32px;height:32px;font-size:11px}
+.av-sm{width:24px;height:24px;font-size:9px}
+.av-xs{width:18px;height:18px;font-size:7px}
+.av-group{display:flex}
+.av-group .av{border:2px solid var(--w);margin-left:-6px}
+.av-group .av:first-child{margin-left:0}
+.av-online{position:relative}
+.av-online::after{content:'';position:absolute;bottom:0;right:0;width:9px;height:9px;border-radius:50%;background:#22C55E;border:2px solid var(--w)}
+
+/* Cards */
+.card-demo{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.card-title{font-size:13.5px;font-weight:700;color:var(--t1)}
+.card-sub{font-size:12px;color:var(--t4);margin-top:2px}
+.card-body{padding:16px 18px}
+
+/* Table mini */
+table.demo{width:100%;border-collapse:collapse}
+table.demo thead tr{background:var(--t6);border-bottom:1px solid var(--bd)}
+table.demo th{padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+table.demo td{padding:10px 14px;border-bottom:1px solid var(--t5);font-size:13px;color:var(--t1)}
+table.demo tbody tr:last-child td{border-bottom:none}
+table.demo tbody tr:hover td{background:var(--tl);cursor:pointer}
+.td-mono{font-family:var(--mono);font-size:12px;color:var(--t3)}
+.td-b{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--t1)}
+
+/* Badges / labels */
+.badge-demo{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono)}
+.bg2{background:var(--gl);color:var(--grn)}.br2{background:var(--rl);color:var(--red)}.ba2{background:var(--al);color:var(--amber)}.bb2{background:var(--bl);color:var(--blue)}.bn2{background:var(--t5);color:var(--t3)}.bt2{background:var(--tl);color:var(--teal)}.bv2{background:var(--vl);color:var(--violet)}
+
+/* Progress */
+.prog-demo{display:flex;flex-direction:column;gap:14px}
+.prog-item{}
+.prog-top{display:flex;justify-content:space-between;font-size:12.5px;color:var(--t2);margin-bottom:6px;font-weight:500}
+.prog-track{height:6px;background:var(--t5);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;transition:width .9s cubic-bezier(.25,.8,.25,1)}
+
+/* Tooltip/AI card */
+.ai-card{background:var(--tl);border:1px solid var(--tb);border-radius:var(--r2);padding:14px}
+.ai-head{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,143,132,.4)}50%{box-shadow:0 0 0 5px rgba(10,143,132,0)}}
+.ai-lbl{font-size:10px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.12em}
+.ai-title{font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.ai-body{font-size:12.5px;color:var(--t2);line-height:1.55}
+.conf-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.conf-track{flex:1;height:4px;background:rgba(10,143,132,.15);border-radius:99px;overflow:hidden}
+.conf-fill{height:100%;background:var(--teal);border-radius:99px}
+.conf-pct{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--teal)}
+
+/* Risk card amber */
+.risk-card{background:var(--al);border:1px solid #FCD34D;border-radius:var(--r2);padding:14px}
+.risk-dot{animation:pulse-amber 2s infinite}
+@keyframes pulse-amber{0%,100%{box-shadow:0 0 0 0 rgba(180,83,9,.4)}50%{box-shadow:0 0 0 5px rgba(180,83,9,0)}}
+
+/* Notification alert */
+.alert-demo{display:flex;flex-direction:column;gap:8px}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--r);border-left:3px solid}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert-body{}
+.alert-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.alert-sub{font-size:12px;line-height:1.5}
+.a-info{background:#EFF6FF;border-color:var(--blue2)}.a-info .alert-title,.a-info .alert-sub{color:var(--blue)}
+.a-warn{background:var(--al);border-color:var(--amber2)}.a-warn .alert-title,.a-warn .alert-sub{color:var(--amber)}
+.a-err{background:var(--rl);border-color:var(--red2)}.a-err .alert-title,.a-err .alert-sub{color:var(--red)}
+.a-suc{background:var(--gl);border-color:var(--grn2)}.a-suc .alert-title,.a-suc .alert-sub{color:var(--grn)}
+.a-ai{background:var(--tl);border-color:var(--teal)}.a-ai .alert-title,.a-ai .alert-sub{color:var(--teal)}
+
+/* Layout patterns */
+.layout-diagram{background:var(--t6);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden;height:220px;display:flex;position:relative}
+.ld-sb{width:54px;background:#E8EDF5;border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:6px}
+.ld-sbi{width:28px;height:28px;border-radius:6px;background:var(--bd)}
+.ld-sbi.on{background:var(--teal)}
+.ld-main{flex:1;display:flex;flex-direction:column}
+.ld-top{height:36px;background:var(--w);border-bottom:1px solid var(--bd)}
+.ld-body{flex:1;background:var(--bg);padding:10px;display:flex;gap:8px}
+.ld-b1{flex:2;background:var(--w);border:1px solid var(--bd);border-radius:6px}
+.ld-b2{flex:1;background:var(--w);border:1px solid var(--bd);border-radius:6px}
+.ld-label{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;color:var(--t4);white-space:nowrap}
+
+/* Two-panel layout */
+.ld-2panel{display:flex;height:100%;background:var(--bg)}
+.ld-list{width:44%;background:var(--w);border-right:1px solid var(--bd)}
+.ld-detail{flex:1;background:var(--w)}
+
+/* Three-panel layout */
+.ld-3panel{display:flex;height:100%;background:var(--bg)}
+.ld-nav{width:30%;background:var(--w);border-right:1px solid var(--bd)}
+.ld-3list{width:35%;background:var(--w);border-right:1px solid var(--bd)}
+.ld-3detail{flex:1}
+
+/* Builder layout */
+.ld-builder{display:flex;height:100%;background:var(--bg)}
+.ld-pal{width:28%;background:var(--w);border-right:1px solid var(--bd)}
+.ld-canvas{flex:1;background:#EEF1F6}
+.ld-props{width:28%;background:var(--w);border-left:1px solid var(--bd)}
+
+/* Layout label */
+.layout-label{font-size:12px;font-weight:700;color:var(--t2);text-align:center;margin-top:10px}
+.layout-sub{font-size:11px;color:var(--t4);text-align:center;margin-top:2px}
+.layout-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+
+/* ── MOTION ────────────────────────────────────────────────────── */
+.motion-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.motion-card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:16px}
+.motion-name{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.motion-val{font-family:var(--mono);font-size:11.5px;color:var(--teal);margin-bottom:8px}
+.motion-use{font-size:12px;color:var(--t3);line-height:1.5}
+
+/* ── ICON GRID ─────────────────────────────────────────────────── */
+.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
+.icon-item{background:var(--w);border:1px solid var(--bd);border-radius:var(--r);padding:12px 8px;text-align:center;cursor:default;transition:all .12s}
+.icon-item:hover{background:var(--tl);border-color:var(--tb)}
+.icon-item svg{width:18px;height:18px;fill:none;stroke:var(--t3);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;margin:0 auto 6px;display:block}
+.icon-item:hover svg{stroke:var(--teal)}
+.icon-item-label{font-size:9.5px;color:var(--t4)}
+
+/* ── PRINCIPLES GRID ───────────────────────────────────────────── */
+.principles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.principle-card{background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:22px}
+.pc-icon{font-size:24px;margin-bottom:12px}
+.pc-title{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.pc-desc{font-size:13px;color:var(--t3);line-height:1.6}
+
+/* ── DATA VIZ ──────────────────────────────────────────────────── */
+.viz-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* ── MISC ──────────────────────────────────────────────────────── */
+.code-block{background:var(--t1);border-radius:var(--r);padding:14px 16px;font-family:var(--mono);font-size:12px;color:#E2E8F0;overflow-x:auto;line-height:1.7}
+.code-block .key{color:#7EE8DF}.code-block .val{color:#F8C555}.code-block .str{color:#86EFAC}.code-block .cmt{color:#475569}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--t5);color:var(--t3);border:1px solid var(--bd)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.rule-list{display:flex;flex-direction:column;gap:10px}
+.rule{display:flex;align-items:flex-start;gap:10px}
+.rule-dot{width:5px;height:5px;border-radius:50%;background:var(--teal);margin-top:8px;flex-shrink:0}
+.rule-text{font-size:13px;color:var(--t2);line-height:1.6}
+.rule-text strong{color:var(--t1);font-weight:600}
+.do-dont{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.do-box{background:var(--gl);border:1px solid #86EFAC;border-radius:var(--r2);padding:16px}
+.dont-box{background:var(--rl);border:1px solid #FECACA;border-radius:var(--r2);padding:16px}
+.do-lbl{font-size:11px;font-weight:800;color:var(--grn);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
+.dont-lbl{font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
+.do-txt,.dont-txt{font-size:13px;line-height:1.6}
+.do-txt{color:var(--grn)}.dont-txt{color:var(--red)}
+/* Sticky scroll indicator */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.section{animation:fadeIn .3s ease both}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ── SIDE NAV ─────────────────────────────────────── -->
+<nav class="side-nav">
+  <div class="sn-logo">
+    <div class="sn-logo-mark">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+      <span class="sn-name">Meridian</span>
+    </div>
+    <div class="sn-tag">Design Language v1.0</div>
+  </div>
+  <div class="sn-body">
+    <span class="sn-sec">Foundations</span>
+    <a class="sn-a on" href="#principles"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Principles</a>
+    <a class="sn-a" href="#color"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20"/><path d="M12 2v20"/></svg>Colour Tokens</a>
+    <a class="sn-a" href="#typography"><svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Typography</a>
+    <a class="sn-a" href="#spacing"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Spacing & Radius</a>
+    <a class="sn-a" href="#motion"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Motion</a>
+    <a class="sn-a" href="#icons"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20"/><path d="M12 2a15.3 15.3 0 000 20"/></svg>Iconography</a>
+    <span class="sn-sec">Components</span>
+    <a class="sn-a" href="#buttons"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/></svg>Buttons</a>
+    <a class="sn-a" href="#chips"><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Chips & Badges</a>
+    <a class="sn-a" href="#forms"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/></svg>Form Controls</a>
+    <a class="sn-a" href="#cards"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Cards</a>
+    <a class="sn-a" href="#tables"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>Tables</a>
+    <a class="sn-a" href="#alerts"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>Alerts</a>
+    <a class="sn-a" href="#progress"><svg viewBox="0 0 24 24"><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/></svg>Progress</a>
+    <a class="sn-a" href="#avatars"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Avatars</a>
+    <a class="sn-a" href="#ai"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>AI Components</a>
+    <span class="sn-sec">Patterns</span>
+    <a class="sn-a" href="#layouts"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Layout Patterns</a>
+    <a class="sn-a" href="#dataviz"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Data Visualisation</a>
+    <a class="sn-a" href="#voice"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Voice & Tone</a>
+  </div>
+  <div class="sn-footer">Meridian HCM · <strong>v1.0</strong><br>12 page archetypes · 2026</div>
+</nav>
+
+<!-- ── MAIN CONTENT ──────────────────────────────────── -->
+<div class="content">
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-tag"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Design Language</div>
+  <h1>Meridian<br><span>Design Language</span></h1>
+  <p>The unified visual and interaction system behind Meridian HCM Suite — built for clarity, density, and trust in enterprise HR software.</p>
+  <div class="hero-pills">
+    <div class="hero-pill accent">Inter + JetBrains Mono</div>
+    <div class="hero-pill">Teal #0A8F84</div>
+    <div class="hero-pill">8px base radius</div>
+    <div class="hero-pill">4px grid</div>
+    <div class="hero-pill">12 archetypes</div>
+    <div class="hero-pill">Light-only</div>
+  </div>
+</div>
+
+<!-- ── 01 PRINCIPLES ──────────────────────────────────── -->
+<div class="section" id="principles">
+  <div class="sec-label">01 — Foundations</div>
+  <div class="sec-title">Design Principles</div>
+  <div class="sec-desc">Six principles guide every decision in Meridian — from pixel-level typography to macro layout choices.</div>
+  <div class="principles-grid">
+    <div class="principle-card"><div class="pc-icon">🎯</div><div class="pc-title">Data First</div><div class="pc-desc">HR software surfaces dense, critical information. Every layout prioritises data legibility over decoration. Numbers use monospace. Tables stay scannable. Colour encodes meaning, never decoration.</div></div>
+    <div class="principle-card"><div class="pc-icon">⚡</div><div class="pc-title">Zero Friction</div><div class="pc-desc">Approvals, form submissions, and data lookups are daily-use workflows. Interactions should require the fewest possible clicks and never leave users guessing what comes next.</div></div>
+    <div class="principle-card"><div class="pc-icon">🛡️</div><div class="pc-title">Trust Through Clarity</div><div class="pc-desc">Payroll, compliance, and employment records carry legal weight. Visual hierarchy and semantic colour create immediate confidence that the right information is being shown.</div></div>
+    <div class="principle-card"><div class="pc-icon">🤖</div><div class="pc-title">AI as Co-pilot</div><div class="pc-desc">AI features are surfaced with teal AI cards, confidence scores, and pulse animations. AI assists but never replaces human judgement — it always surfaces confidence and explains its reasoning.</div></div>
+    <div class="principle-card"><div class="pc-icon">📐</div><div class="pc-title">Consistent Density</div><div class="pc-desc">Enterprise users spend hours inside the product. Padding is tight but never cramped — 4px grid, single-line table rows, and concise chip labels keep information density high without fatigue.</div></div>
+    <div class="principle-card"><div class="pc-icon">🌱</div><div class="pc-title">Progressive Complexity</div><div class="pc-desc">Simple views stay simple. Advanced features (builder, analytics deep-dives) reveal complexity progressively. The sidebar nav scales from icon-only (collapsed) to full labels without layout shift.</div></div>
+  </div>
+</div>
+
+<!-- ── 02 COLOUR ──────────────────────────────────────── -->
+<div class="section" id="color">
+  <div class="sec-label">02 — Foundations</div>
+  <div class="sec-title">Colour Tokens</div>
+  <div class="sec-desc">All colours are defined as CSS custom properties. The palette is intentionally restrained — semantic colours carry functional meaning and should never be used decoratively.</div>
+
+  <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px">Brand & Neutral</div>
+  <div class="token-grid" style="margin-bottom:28px">
+    <div class="token"><div class="token-swatch" style="background:#0A8F84"></div><div class="token-info"><div class="token-name">Teal</div><div class="token-var">--teal</div><div class="token-hex">#0A8F84</div><div class="token-use">Primary actions, active states, AI components, focus rings</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#0C9E92"></div><div class="token-info"><div class="token-name">Teal Hover</div><div class="token-var">--teal2</div><div class="token-hex">#0C9E92</div><div class="token-use">Button hover state</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#EDFAF8"></div><div class="token-info"><div class="token-name">Teal Light</div><div class="token-var">--tl</div><div class="token-hex">#EDFAF8</div><div class="token-use">Active nav, selected rows, AI card backgrounds</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#0F1623"></div><div class="token-info"><div class="token-name">Ink</div><div class="token-var">--t1</div><div class="token-hex">#0F1623</div><div class="token-use">Primary text, headings</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#374151"></div><div class="token-info"><div class="token-name">Slate</div><div class="token-var">--t2</div><div class="token-hex">#374151</div><div class="token-use">Body copy, table data</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#64748B"></div><div class="token-info"><div class="token-name">Muted</div><div class="token-var">--t3</div><div class="token-hex">#64748B</div><div class="token-use">Secondary labels, meta text</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#94A3B8"></div><div class="token-info"><div class="token-name">Placeholder</div><div class="token-var">--t4</div><div class="token-hex">#94A3B8</div><div class="token-use">Placeholder text, disabled, hints</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#F1F4F8;border:1px solid #E4E7EC"></div><div class="token-info"><div class="token-name">Surface</div><div class="token-var">--t5</div><div class="token-hex">#F1F4F8</div><div class="token-use">Row dividers, progress tracks</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#F5F7FA;border:1px solid #E4E7EC"></div><div class="token-info"><div class="token-name">Page BG</div><div class="token-var">--bg</div><div class="token-hex">#F5F7FA</div><div class="token-use">Page background</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#FFFFFF;border:1px solid #E4E7EC"></div><div class="token-info"><div class="token-name">White</div><div class="token-var">--w</div><div class="token-hex">#FFFFFF</div><div class="token-use">Card surfaces, sidebar, topbar</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#E4E7EC"></div><div class="token-info"><div class="token-name">Border</div><div class="token-var">--bd</div><div class="token-hex">#E4E7EC</div><div class="token-use">Card borders, dividers, inputs</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#CBD5E1"></div><div class="token-info"><div class="token-name">Border Strong</div><div class="token-var">--bd2</div><div class="token-hex">#CBD5E1</div><div class="token-use">Hover borders, scrollbars</div></div></div>
+  </div>
+
+  <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px">Semantic Colours</div>
+  <div class="token-grid">
+    <div class="token"><div class="token-swatch" style="background:#16A34A"></div><div class="token-info"><div class="token-name">Green</div><div class="token-var">--grn2</div><div class="token-hex">#16A34A</div><div class="token-use">Success, active, healthy status</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#DCFCE7;border:1px solid #86EFAC"></div><div class="token-info"><div class="token-name">Green Light</div><div class="token-var">--gl</div><div class="token-hex">#DCFCE7</div><div class="token-use">Active chip background</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#D97706"></div><div class="token-info"><div class="token-name">Amber</div><div class="token-var">--amber2</div><div class="token-hex">#D97706</div><div class="token-use">Warning, pending, watch states</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#FEF3C7;border:1px solid #FCD34D"></div><div class="token-info"><div class="token-name">Amber Light</div><div class="token-var">--al</div><div class="token-hex">#FEF3C7</div><div class="token-use">Warning chip & card backgrounds</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#EF4444"></div><div class="token-info"><div class="token-name">Red</div><div class="token-var">--red2</div><div class="token-hex">#EF4444</div><div class="token-use">Errors, critical, danger, urgent</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#FEE2E2;border:1px solid #FECACA"></div><div class="token-info"><div class="token-name">Red Light</div><div class="token-var">--rl</div><div class="token-hex">#FEE2E2</div><div class="token-use">Error chip & danger zone backgrounds</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#3B82F6"></div><div class="token-info"><div class="token-name">Blue</div><div class="token-var">--blue2</div><div class="token-hex">#3B82F6</div><div class="token-use">Informational, onboarding, links</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#DBEAFE;border:1px solid #93C5FD"></div><div class="token-info"><div class="token-name">Blue Light</div><div class="token-var">--bl</div><div class="token-hex">#DBEAFE</div><div class="token-use">Info chip backgrounds</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#7C3AED"></div><div class="token-info"><div class="token-name">Violet</div><div class="token-var">--violet2</div><div class="token-hex">#7C3AED</div><div class="token-use">Hiring, recruiting, performance</div></div></div>
+    <div class="token"><div class="token-swatch" style="background:#EDE9FE;border:1px solid #C4B5FD"></div><div class="token-info"><div class="token-name">Violet Light</div><div class="token-var">--vl</div><div class="token-hex">#EDE9FE</div><div class="token-use">Recruiting chip backgrounds</div></div></div>
+  </div>
+
+  <div class="div-line"></div>
+  <div class="do-dont">
+    <div class="do-box"><div class="do-lbl">✓ Do</div><div class="do-txt">Use colour to communicate <strong>meaning</strong>. Red for errors, green for success, amber for warnings — every time, consistently.</div></div>
+    <div class="dont-box"><div class="dont-lbl">✕ Don't</div><div class="dont-txt">Use red, green, or amber for decoration, branding accents, or visual differentiation unrelated to status or severity.</div></div>
+  </div>
+</div>
+
+<!-- ── 03 TYPOGRAPHY ──────────────────────────────────── -->
+<div class="section" id="typography">
+  <div class="sec-label">03 — Foundations</div>
+  <div class="sec-title">Typography</div>
+  <div class="sec-desc">Two typefaces. <strong>Inter</strong> for all UI text — optimised for screen legibility at small sizes. <strong>JetBrains Mono</strong> exclusively for numeric data, IDs, timestamps, and code — making dense figures scannable at a glance.</div>
+
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Hero / Page Title</div><div class="type-spec">Inter 800<br>26–40px / -0.03em<br>--t1</div></div>
+    <div class="type-sample"><span style="font-size:36px;font-weight:800;color:var(--t1);letter-spacing:-0.03em">Employee Directory</span></div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Section Title</div><div class="type-spec">Inter 700<br>18px / -0.02em<br>--t1</div></div>
+    <div class="type-sample"><span style="font-size:18px;font-weight:700;color:var(--t1);letter-spacing:-0.02em">Compensation Details</span></div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Card Title</div><div class="type-spec">Inter 700<br>13–13.5px<br>--t1</div></div>
+    <div class="type-sample"><span style="font-size:13.5px;font-weight:700;color:var(--t1)">Headcount by Department</span></div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Body / Table Data</div><div class="type-spec">Inter 400–500<br>13px / 1.6<br>--t1 / --t2</div></div>
+    <div class="type-sample"><span style="font-size:13px;font-weight:400;color:var(--t2)">Senior Software Engineer II · Engineering — Backend Platform</span></div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Secondary / Meta</div><div class="type-spec">Inter 400<br>12–12.5px<br>--t3</div></div>
+    <div class="type-sample"><span style="font-size:12.5px;color:var(--t3)">Reports to S. Mitchell · Joined Mar 10, 2026 · Hybrid · San Francisco</span></div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Label / Uppercase</div><div class="type-spec">Inter 700<br>9.5–10px / 0.10em UC<br>--t4</div></div>
+    <div class="type-sample"><span style="font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.10em">Department · Location · Status</span></div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Numeric / KPI</div><div class="type-spec">JetBrains Mono 600<br>19–22px<br>--t1</div></div>
+    <div class="type-sample"><span style="font-size:22px;font-weight:600;color:var(--t1);font-family:var(--mono)">342</span> <span style="font-size:22px;font-weight:600;color:var(--teal);font-family:var(--mono);margin-left:16px">$1.84M</span> <span style="font-size:22px;font-weight:600;color:var(--t1);font-family:var(--mono);margin-left:16px">94.2%</span></div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta"><div class="type-name">Mono Inline</div><div class="type-spec">JetBrains Mono 500–600<br>11–12.5px<br>--t2 / --t4</div></div>
+    <div class="type-sample"><span style="font-family:var(--mono);font-size:12px;color:var(--t3)">EMP-0341</span> <span style="font-family:var(--mono);font-size:12px;color:var(--t2);margin-left:14px">Mar 10, 2026</span> <span style="font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--t1);margin-left:14px">$185,000</span></div>
+  </div>
+  <div class="type-row" style="border-bottom:none">
+    <div class="type-meta"><div class="type-name">Link / Action</div><div class="type-spec">Inter 600<br>11.5–12.5px<br>--teal</div></div>
+    <div class="type-sample"><span style="font-size:12.5px;font-weight:600;color:var(--teal);cursor:pointer">View all →</span> <span style="font-size:12.5px;font-weight:600;color:var(--teal);margin-left:20px;cursor:pointer;text-decoration:underline">Edit Profile</span></div>
+  </div>
+
+  <div class="div-line"></div>
+  <div class="two-col">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:10px">Rules</div>
+      <div class="rule-list">
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Always use JetBrains Mono</strong> for any number that will be compared, sorted, or scanned — salaries, counts, IDs, timestamps, percentages.</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Never mix font weights</strong> within a single logical element. A card title is always 700. A row value is always 400–500.</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Uppercase labels</strong> use 9.5–10px Inter 700, letter-spacing 0.10em, color --t4. Never larger, never bolder.</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Negative letter-spacing</strong> (−0.02 to −0.04em) is reserved for display sizes only — 16px and above.</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:10px">Font loading</div>
+      <div class="code-block"><span class="cmt">/* Google Fonts import */</span>
+<span class="key">@import url</span>(<span class="str">'https://fonts.googleapis.com
+  /css2?family=Inter:wght@400;500;600;700
+  &family=JetBrains+Mono:wght@500;600'</span>);
+
+<span class="key">--mono</span>: <span class="str">'JetBrains Mono'</span>, monospace;
+
+<span class="cmt">/* Use --mono for all numeric contexts */</span>
+<span class="key">.kpi-value</span>, <span class="key">.salary</span>, <span class="key">.emp-id</span>,
+<span class="key">.timestamp</span>, <span class="key">.percentage</span> {
+  <span class="key">font-family</span>: <span class="val">var</span>(--mono);
+}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 04 SPACING ─────────────────────────────────────── -->
+<div class="section" id="spacing">
+  <div class="sec-label">04 — Foundations</div>
+  <div class="sec-title">Spacing & Border Radius</div>
+  <div class="sec-desc">A 4px base grid. All spacing values are multiples of 4. Padding inside components follows a strict scale — never arbitrary.</div>
+
+  <div class="two-col">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:14px">Spacing Scale</div>
+      <div class="space-grid">
+        <div class="space-row"><div class="space-label">space-1</div><div class="space-bar" style="width:4px"></div><div class="space-name">Extra tight</div><div class="space-px">4px</div></div>
+        <div class="space-row"><div class="space-label">space-2</div><div class="space-bar" style="width:8px"></div><div class="space-name">Component gap</div><div class="space-px">8px</div></div>
+        <div class="space-row"><div class="space-label">space-3</div><div class="space-bar" style="width:12px"></div><div class="space-name">Tight padding</div><div class="space-px">12px</div></div>
+        <div class="space-row"><div class="space-label">space-4</div><div class="space-bar" style="width:16px"></div><div class="space-name">Card body padding</div><div class="space-px">16px</div></div>
+        <div class="space-row"><div class="space-label">space-5</div><div class="space-bar" style="width:20px"></div><div class="space-name">Section padding</div><div class="space-px">20px</div></div>
+        <div class="space-row"><div class="space-label">space-6</div><div class="space-bar" style="width:24px"></div><div class="space-name">Page padding</div><div class="space-px">24px</div></div>
+        <div class="space-row"><div class="space-label">space-8</div><div class="space-bar" style="width:32px"></div><div class="space-name">Between sections</div><div class="space-px">32px</div></div>
+        <div class="space-row"><div class="space-label">space-12</div><div class="space-bar" style="width:48px"></div><div class="space-name">Page section gap</div><div class="space-px">48px</div></div>
+        <div class="space-row"><div class="space-label">space-14</div><div class="space-bar" style="width:56px"></div><div class="space-name">Hero padding</div><div class="space-px">56px</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:14px">Border Radius</div>
+      <div class="radius-grid">
+        <div class="radius-item"><div class="radius-box teal" style="border-radius:0"></div><div class="radius-name">None</div><div class="radius-val">0px · Table cells</div></div>
+        <div class="radius-item"><div class="radius-box teal" style="border-radius:3px"></div><div class="radius-name">XS</div><div class="radius-val">3px · Chips, tags</div></div>
+        <div class="radius-item"><div class="radius-box teal" style="border-radius:8px"></div><div class="radius-name">Base — --r</div><div class="radius-val">8px · Buttons, inputs</div></div>
+        <div class="radius-item"><div class="radius-box teal" style="border-radius:11px"></div><div class="radius-name">Card — --r2</div><div class="radius-val">11px · Cards, panels</div></div>
+        <div class="radius-item"><div class="radius-box teal" style="border-radius:14px"></div><div class="radius-name">Large — --r3</div><div class="radius-val">14px · Modals</div></div>
+        <div class="radius-item"><div class="radius-box teal" style="border-radius:99px"></div><div class="radius-name">Pill</div><div class="radius-val">99px · Toggles, pills</div></div>
+      </div>
+
+      <div class="div-line"></div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:10px">Component padding guide</div>
+      <div style="font-size:12.5px;color:var(--t3);display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--t5)"><span>Topbar height</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600">52px</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--t5)"><span>Sidebar width (icon)</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600">54px</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--t5)"><span>Sidebar width (full)</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600">216–240px</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--t5)"><span>Card head padding</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600">13–14px 17–18px</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--t5)"><span>Card body padding</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600">16px 18px</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--t5)"><span>Table cell padding</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600">10–11px 14–16px</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Page outer padding</span><span style="font-family:var(--mono);color:var(--t2);font-weight:600">22–26px</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 05 MOTION ──────────────────────────────────────── -->
+<div class="section" id="motion">
+  <div class="sec-label">05 — Foundations</div>
+  <div class="sec-title">Motion & Animation</div>
+  <div class="sec-desc">Motion is purposeful and brief. It communicates state change and directs attention — never entertains. All transitions respect reduced-motion preferences.</div>
+  <div class="motion-grid">
+    <div class="motion-card"><div class="motion-name">Micro-interaction</div><div class="motion-val">120–140ms · ease</div><div class="motion-use">Button hover, tab switch, sidebar item hover, toggle, chip click</div></div>
+    <div class="motion-card"><div class="motion-name">Element transition</div><div class="motion-val">200ms · ease</div><div class="motion-use">Toggle state change, swatch selection, input focus border</div></div>
+    <div class="motion-card"><div class="motion-name">Panel / page entry</div><div class="motion-val">280ms · ease</div><div class="motion-use">Page section fade-in (translateY 7px → 0, opacity 0 → 1)</div></div>
+    <div class="motion-card"><div class="motion-name">Staggered reveal</div><div class="motion-val">+60ms per element</div><div class="motion-use">KPI cards, list rows on initial load — each row delayed by 60ms</div></div>
+    <div class="motion-card"><div class="motion-name">Progress bar fill</div><div class="motion-val">800–900ms · cubic-bezier(.25,.8,.25,1)</div><div class="motion-use">Onboarding progress, leave balance bars — triggered after page paint</div></div>
+    <div class="motion-card"><div class="motion-name">AI pulse</div><div class="motion-val">2s · infinite</div><div class="motion-use">Risk dot, status dot animations — box-shadow pulse at 50% keyframe</div></div>
+    <div class="motion-card"><div class="motion-name">Hover lift</div><div class="motion-val">140ms · ease</div><div class="motion-use">KPI cards, component palette items: translateY(−1px) + box-shadow on hover</div></div>
+    <div class="motion-card"><div class="motion-name">Slide panel</div><div class="motion-val">220ms · ease-out</div><div class="motion-use">Detail panels that slide in from the right (inbox, approvals)</div></div>
+    <div class="motion-card"><div class="motion-name">Dept bar enter</div><div class="motion-val">900ms · cubic-bezier</div><div class="motion-use">Dashboard headcount bars animate width 0 → value on first render</div></div>
+  </div>
+  <div class="div-line"></div>
+  <div class="code-block"><span class="cmt">/* Standard motion tokens */</span>
+<span class="key">--dur-micro</span>: <span class="val">120ms</span>;     <span class="cmt">/* hover, tab */</span>
+<span class="key">--dur-sm</span>:    <span class="val">200ms</span>;     <span class="cmt">/* toggle, focus */</span>
+<span class="key">--dur-md</span>:    <span class="val">280ms</span>;     <span class="cmt">/* page entry */</span>
+<span class="key">--dur-lg</span>:    <span class="val">900ms</span>;     <span class="cmt">/* bar charts */</span>
+<span class="key">--ease-std</span>:  <span class="val">ease</span>;
+<span class="key">--ease-bar</span>:  <span class="val">cubic-bezier(.25,.8,.25,1)</span>;
+
+<span class="cmt">/* Page entry keyframe */</span>
+<span class="key">@keyframes</span> fu {
+  <span class="key">from</span> { <span class="key">opacity</span>: <span class="val">0</span>; <span class="key">transform</span>: <span class="val">translateY(7px)</span> }
+  <span class="key">to</span>   { <span class="key">opacity</span>: <span class="val">1</span>; <span class="key">transform</span>: <span class="val">translateY(0)</span> }
+}
+<span class="cmt">/* Stagger: .a1, .a2, .a3... delay 0, 60ms, 120ms */</span></div>
+</div>
+
+<!-- ── 06 ICONS ────────────────────────────────────────── -->
+<div class="section" id="icons">
+  <div class="sec-label">06 — Foundations</div>
+  <div class="sec-title">Iconography</div>
+  <div class="sec-desc">All icons are inline SVG from the <strong>Lucide</strong> icon set. 16px in sidebars, 12–15px in UI controls. Stroke-only, stroke-width 1.75, stroke-linecap: round, stroke-linejoin: round. Never filled.</div>
+  <div class="icon-grid">
+    <div class="icon-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><div class="icon-item-label">Dashboard</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><div class="icon-item-label">Employees</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><div class="icon-item-label">Analytics</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><div class="icon-item-label">Payroll</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><div class="icon-item-label">Leave</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg><div class="icon-item-label">Calendar</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><div class="icon-item-label">Search</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div class="icon-item-label">Alerts</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div class="icon-item-label">AI / Security</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><div class="icon-item-label">Inbox</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><div class="icon-item-label">Settings</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg><div class="icon-item-label">Edit</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg><div class="icon-item-label">Delete</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><div class="icon-item-label">Download</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><div class="icon-item-label">Send</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><div class="icon-item-label">Add</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><div class="icon-item-label">Check</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><div class="icon-item-label">Close</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg><div class="icon-item-label">Chevron R</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><div class="icon-item-label">Star</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg><div class="icon-item-label">Warning</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><div class="icon-item-label">Lock</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><div class="icon-item-label">View</div></div>
+    <div class="icon-item"><svg viewBox="0 0 24 24"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"/></svg><div class="icon-item-label">Builder</div></div>
+  </div>
+  <div style="margin-top:14px;font-size:12.5px;color:var(--t3)">All icons: <strong style="color:var(--t2)">Lucide</strong> · stroke-width: 1.75 · stroke-linecap/linejoin: round · sizes: 12px (controls) / 14px (nav labels) / 16px (sidebar) / 18px (headers)</div>
+</div>
+
+<!-- ── 07 BUTTONS ─────────────────────────────────────── -->
+<div class="section" id="buttons">
+  <div class="sec-label">07 — Components</div>
+  <div class="sec-title">Buttons</div>
+  <div class="sec-desc">Five button variants, three sizes. The primary action on any screen gets the teal button — only one per view. Secondary and ghost actions use the default border style.</div>
+  <div class="comp-grid">
+    <div class="comp-card comp-full">
+      <div class="comp-card-title">Variants</div>
+      <div class="btn-row">
+        <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Primary</button>
+        <button class="btn">Secondary</button>
+        <button class="btn btn-ghost">Ghost</button>
+        <button class="btn btn-d">Danger</button>
+        <button class="btn" style="color:var(--teal);border-color:var(--teal)">Outline Teal</button>
+        <button class="btn" disabled>Disabled</button>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Sizes</div>
+      <div class="btn-row" style="align-items:center">
+        <button class="btn btn-sm btn-p">Small</button>
+        <button class="btn btn-p">Default</button>
+        <button class="btn btn-lg btn-p">Large</button>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">With Icons</div>
+      <div class="btn-row">
+        <button class="btn btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Employee</button>
+        <button class="btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Icon Only</div>
+      <div class="btn-row">
+        <button class="btn btn-icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg></button>
+        <button class="btn btn-icon"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg></button>
+        <button class="btn btn-icon btn-p"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="div-line"></div>
+  <div class="do-dont">
+    <div class="do-box"><div class="do-lbl">✓ Do</div><div class="do-txt">One primary button per view. Primary = the most important action. Lead with a verb: <strong>"Add Employee"</strong>, <strong>"Approve"</strong>, <strong>"Publish"</strong>.</div></div>
+    <div class="dont-box"><div class="dont-lbl">✕ Don't</div><div class="dont-txt">Use multiple primary buttons in the same toolbar. Never use the primary button for destructive actions — use the danger variant.</div></div>
+  </div>
+</div>
+
+<!-- ── 08 CHIPS ───────────────────────────────────────── -->
+<div class="section" id="chips">
+  <div class="sec-label">08 — Components</div>
+  <div class="sec-title">Chips & Badges</div>
+  <div class="sec-desc">Chips communicate status, category, and type inline in tables, cards, and headers. Each colour maps to a fixed semantic meaning — never repurposed.</div>
+  <div class="comp-grid">
+    <div class="comp-card comp-full">
+      <div class="comp-card-title">Status Chips — with leading dot</div>
+      <div class="chip-row">
+        <span class="chip cg">Active</span>
+        <span class="chip ca">On Leave</span>
+        <span class="chip ca">Probation</span>
+        <span class="chip cr">Urgent</span>
+        <span class="chip cb">Onboarding</span>
+        <span class="chip ct">AI Alert</span>
+        <span class="chip cv">Hiring</span>
+        <span class="chip cn">Inactive</span>
+      </div>
+    </div>
+    <div class="comp-card comp-full">
+      <div class="comp-card-title">Inline Badges — compact counters & labels</div>
+      <div class="badge-demo">
+        <span class="badge bg2">+14</span>
+        <span class="badge br2">3 overdue</span>
+        <span class="badge ba2">Pending</span>
+        <span class="badge bb2">Onboarding</span>
+        <span class="badge bn2">±0</span>
+        <span class="badge bt2">83% confidence</span>
+        <span class="badge bv2">Hiring</span>
+        <span style="font-family:var(--mono);font-size:10px;font-weight:700;background:var(--red2);color:#fff;padding:2px 7px;border-radius:99px">12</span>
+      </div>
+    </div>
+  </div>
+  <div class="div-line"></div>
+  <div class="three-col" style="font-size:13px;color:var(--t3)">
+    <div><strong style="color:var(--t1);display:block;margin-bottom:6px">Green</strong>Active, Healthy, Approved, Success, Coverage confirmed</div>
+    <div><strong style="color:var(--t1);display:block;margin-bottom:6px">Amber</strong>Warning, Pending, Watch, SLA warning, Probation, On Leave</div>
+    <div><strong style="color:var(--t1);display:block;margin-bottom:6px">Red</strong>Critical, Overdue, Error, Urgent, SLA breached, Danger</div>
+    <div><strong style="color:var(--t1);display:block;margin-bottom:6px">Blue</strong>Informational, Onboarding, In Progress, Open ticket</div>
+    <div><strong style="color:var(--t1);display:block;margin-bottom:6px">Teal</strong>AI-related, Confidence score, System detection</div>
+    <div><strong style="color:var(--t1);display:block;margin-bottom:6px">Violet</strong>Recruiting, Hiring pipeline, Performance reviews</div>
+  </div>
+</div>
+
+<!-- ── 09 FORMS ───────────────────────────────────────── -->
+<div class="section" id="forms">
+  <div class="sec-label">09 — Components</div>
+  <div class="sec-title">Form Controls</div>
+  <div class="sec-desc">Clean, accessible inputs with teal focus rings. Error states use red border + message. All inputs share the same base style — differentiated only by content and context.</div>
+  <div class="comp-grid">
+    <div class="comp-card">
+      <div class="comp-card-title">Text Inputs</div>
+      <div class="input-demo">
+        <div class="input-group"><label>Default</label><input class="inp" type="text" placeholder="Enter value…"></div>
+        <div class="input-group"><label>With value</label><input class="inp" type="text" value="James Okafor"></div>
+        <div class="input-group"><label>With hint</label><input class="inp" type="text" placeholder="EMP-0341"><div class="inp-hint">Auto-generated. Edit if needed.</div></div>
+        <div class="input-group"><label>Error state</label><input class="inp error" type="text" value="invalid-email"><div class="inp-err">Please enter a valid email address</div></div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Search & Select</div>
+      <div class="input-demo">
+        <div class="search-inp"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Search employees, reports…"></div>
+        <select class="inp" style="cursor:pointer"><option>Engineering</option><option>Product</option><option>Sales</option></select>
+        <textarea class="inp" style="height:72px;resize:none" placeholder="Add a note or comment…"></textarea>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Toggles</div>
+      <div class="toggle-demo">
+        <div class="toggle-row"><div class="toggle on" onclick="this.classList.toggle('on')"></div><span class="toggle-label">Enabled (click to toggle)</span></div>
+        <div class="toggle-row"><div class="toggle" onclick="this.classList.toggle('on')"></div><span class="toggle-label">Disabled (click to enable)</span></div>
+        <div class="toggle-row"><div class="toggle sm on" onclick="this.classList.toggle('on')"></div><span class="toggle-label" style="font-size:12px">Small toggle variant</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 10 CARDS ───────────────────────────────────────── -->
+<div class="section" id="cards">
+  <div class="sec-label">10 — Components</div>
+  <div class="sec-title">Cards</div>
+  <div class="sec-desc">Cards are the primary grouping unit. Always white, 1px border, 11px radius. The card head contains the title, optional subtitle, and a right-aligned link or action. Card body uses 16px 18px padding.</div>
+  <div class="comp-grid">
+    <div class="comp-card comp-2">
+      <div class="comp-card-title">Standard Card</div>
+      <div class="card-demo">
+        <div class="card-head">
+          <div><div class="card-title">Headcount by Department</div><div class="card-sub">342 employees · Q1 2026</div></div>
+          <span style="font-size:12px;font-weight:600;color:var(--teal);cursor:pointer">View all →</span>
+        </div>
+        <div class="card-body" style="color:var(--t3);font-size:13px">Card body content — padding 16px 18px on all sides. Content aligns to the inner edge.</div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">KPI Card</div>
+      <div style="background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--teal);margin-bottom:10px"></div>
+        <div style="font-family:var(--mono);font-size:22px;font-weight:600;color:var(--t1);margin-bottom:5px">342</div>
+        <div style="font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Total Headcount</div>
+        <div style="display:flex;align-items:center;gap:5px"><span class="badge bg2">+14</span><span style="font-size:11px;color:var(--t4)">vs last quarter</span></div>
+      </div>
+    </div>
+    <div class="comp-card comp-full">
+      <div class="comp-card-title">KPI Card — Warning State</div>
+      <div style="background:var(--al);border:1px solid #FCD34D;border-radius:var(--r2);padding:16px 18px;max-width:220px">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--amber2);margin-bottom:10px"></div>
+        <div style="font-family:var(--mono);font-size:22px;font-weight:600;color:var(--t1);margin-bottom:5px">$1.84M</div>
+        <div style="font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Monthly Payroll</div>
+        <div style="display:flex;align-items:center;gap:5px"><span class="badge ba2">anomaly</span><span style="font-size:11px;color:var(--t4)">review needed</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 11 TABLES ──────────────────────────────────────── -->
+<div class="section" id="tables">
+  <div class="sec-label">11 — Components</div>
+  <div class="sec-title">Tables</div>
+  <div class="sec-desc">Tables are the backbone of Meridian HCM. All data rows are single-line. The first column (name) stacks name + ID. Sticky headers use a light background. Hover rows show teal tint and reveal row-level actions.</div>
+  <div style="background:var(--w);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden">
+    <table class="demo">
+      <thead><tr>
+        <th>Employee</th>
+        <th>Department</th>
+        <th style="color:var(--teal)">Joined ↓</th>
+        <th>Status</th>
+        <th>Salary</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#4F46E5;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">JO</div><div><div style="font-weight:600;font-size:13px">James Okafor</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--t4)">EMP-0341</div></div></div></td><td class="td-mono">Engineering</td><td class="td-mono">Mar 10 2026</td><td><span class="chip cb">Onboarding</span></td><td class="td-b">$185,000</td></tr>
+        <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#059669;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">PR</div><div><div style="font-weight:600;font-size:13px">Priya Rajesh</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--t4)">EMP-0340</div></div></div></td><td class="td-mono">Product</td><td class="td-mono">Mar 03 2026</td><td><span class="chip cg">Active</span></td><td class="td-b">$162,000</td></tr>
+        <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#DC2626;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">EF</div><div><div style="font-weight:600;font-size:13px">Eva Fischer</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--t4)">EMP-0337</div></div></div></td><td class="td-mono">Finance</td><td class="td-mono">Feb 10 2026</td><td><span class="chip ca">Probation</span></td><td class="td-b">$105,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="div-line"></div>
+  <div class="rule-list">
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>All rows are single-line</strong> — white-space: nowrap on all columns except the name+ID stacked cell.</div></div>
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Salary columns always use JetBrains Mono</strong>, font-weight 600, --t1.</div></div>
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Row hover</strong> reveals row-level action buttons (view, edit, message) that are opacity: 0 at rest and transition to opacity: 1 on hover.</div></div>
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Sticky header</strong> uses background --t6 (#FAFBFD), border-bottom 1px --bd, position sticky top: 0, z-index: 2.</div></div>
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Sort indicator</strong>: the active sort column header gets colour --teal. Arrow appended as text, not icon.</div></div>
+  </div>
+</div>
+
+<!-- ── 12 ALERTS ──────────────────────────────────────── -->
+<div class="section" id="alerts">
+  <div class="sec-label">12 — Components</div>
+  <div class="sec-title">Alerts & Notifications</div>
+  <div class="sec-desc">Five alert types. Each has a distinct semantic colour, a 3px left border, and optional icon. Used for system messages, approvals, and AI findings.</div>
+  <div class="comp-grid">
+    <div class="comp-card comp-full">
+      <div class="comp-card-title">Alert Variants</div>
+      <div class="alert-demo">
+        <div class="alert a-info"><div class="alert-icon">ℹ️</div><div><div class="alert-title">8 contracts expiring</div><div class="alert-sub">Fixed-term renewals needed within 30 days.</div></div></div>
+        <div class="alert a-warn"><div class="alert-icon">⚠️</div><div><div class="alert-title">4 leave approvals pending</div><div class="alert-sub">Oldest request is 6 days old — SLA breach imminent.</div></div></div>
+        <div class="alert a-err"><div class="alert-icon">🚨</div><div><div class="alert-title">Payroll anomaly — 3 records flagged</div><div class="alert-sub">Records deviate more than 15% from last cycle. Review before April 1 run.</div></div></div>
+        <div class="alert a-suc"><div class="alert-icon">✅</div><div><div class="alert-title">Leave approved — Tom Nakamura</div><div class="alert-sub">4 days of annual leave confirmed for Apr 7–10.</div></div></div>
+        <div class="alert a-ai"><div class="alert-icon">🛡️</div><div><div class="alert-title">AI — Attrition risk: 3 employees in Engineering</div><div class="alert-sub">Elevated signals detected over 14 days. 83% confidence.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 13 PROGRESS ────────────────────────────────────── -->
+<div class="section" id="progress">
+  <div class="sec-label">13 — Components</div>
+  <div class="sec-title">Progress & Data Bars</div>
+  <div class="sec-desc">Progress bars are 5–6px height, rounded, with animated fills. Used for onboarding steps, leave balances, confidence scores, and inline distribution bars in tables.</div>
+  <div class="comp-grid">
+    <div class="comp-card comp-2">
+      <div class="comp-card-title">Progress Bars</div>
+      <div class="prog-demo">
+        <div class="prog-item"><div class="prog-top"><span>Profile & Contracts</span><span>100%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--grn2)"></div></div></div>
+        <div class="prog-item"><div class="prog-top"><span>IT & Systems Access</span><span>60%</span></div><div class="prog-track"><div class="prog-fill" style="width:60%;background:var(--teal)"></div></div></div>
+        <div class="prog-item"><div class="prog-top"><span>Compliance Training</span><span>40%</span></div><div class="prog-track"><div class="prog-fill" style="width:40%;background:var(--amber2)"></div></div></div>
+        <div class="prog-item"><div class="prog-top"><span>Benefits Enrollment</span><span style="color:var(--red2)">0% — overdue</span></div><div class="prog-track"><div class="prog-fill" style="width:2%;background:var(--red2)"></div></div></div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Confidence Bar (AI)</div>
+      <div style="margin-top:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--teal);margin-bottom:6px"><span>Attrition confidence</span><span style="font-family:var(--mono);font-weight:700">78%</span></div>
+        <div style="height:4px;background:rgba(10,143,132,.15);border-radius:99px;overflow:hidden"><div style="width:78%;height:100%;background:var(--teal);border-radius:99px"></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--amber2);margin-bottom:6px;margin-top:12px"><span>Payroll anomaly</span><span style="font-family:var(--mono);font-weight:700">91%</span></div>
+        <div style="height:4px;background:rgba(217,119,6,.15);border-radius:99px;overflow:hidden"><div style="width:91%;height:100%;background:var(--amber2);border-radius:99px"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 14 AVATARS ─────────────────────────────────────── -->
+<div class="section" id="avatars">
+  <div class="sec-label">14 — Components</div>
+  <div class="sec-title">Avatars</div>
+  <div class="sec-desc">Avatars always show initials (never blank) with a consistent background gradient from a fixed palette of 8 colours. Online indicator uses a green dot with white border. Groups overlap by 6px with a white border.</div>
+  <div class="comp-grid">
+    <div class="comp-card">
+      <div class="comp-card-title">Sizes</div>
+      <div class="avatar-row">
+        <div class="av av-xl" style="background:linear-gradient(135deg,#4F46E5,#7C3AED)">JO</div>
+        <div class="av av-lg" style="background:#059669">PR</div>
+        <div class="av av-md" style="background:linear-gradient(135deg,var(--teal),#0EA5E9)">AW</div>
+        <div class="av av-sm" style="background:#B45309">TN</div>
+        <div class="av av-xs" style="background:#DC2626">EF</div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Online Status & Groups</div>
+      <div class="avatar-row">
+        <div class="av av-lg av-online" style="background:linear-gradient(135deg,var(--teal),#0EA5E9)">AW</div>
+        <div style="width:1px;height:36px;background:var(--bd)"></div>
+        <div class="av-group">
+          <div class="av av-md" style="background:#4F46E5">JO</div>
+          <div class="av av-md" style="background:#059669">PR</div>
+          <div class="av av-md" style="background:#B45309">TN</div>
+          <div class="av av-md" style="background:var(--t4);font-size:10px">+4</div>
+        </div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Avatar Colour Palette</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <div class="av av-md" style="background:#4F46E5">IC</div>
+        <div class="av av-md" style="background:#059669">IC</div>
+        <div class="av av-md" style="background:#7C3AED">IC</div>
+        <div class="av av-md" style="background:#DC2626">IC</div>
+        <div class="av av-md" style="background:#0284C7">IC</div>
+        <div class="av av-md" style="background:#B45309">IC</div>
+        <div class="av av-md" style="background:#0D9488">IC</div>
+        <div class="av av-md" style="background:#EC4899">IC</div>
+        <div class="av av-md" style="background:#F59E0B">IC</div>
+        <div class="av av-md" style="background:#16A34A">IC</div>
+        <div class="av av-md" style="background:linear-gradient(135deg,var(--teal),#0EA5E9)">AW</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 15 AI COMPONENTS ───────────────────────────────── -->
+<div class="section" id="ai">
+  <div class="sec-label">15 — Components</div>
+  <div class="sec-title">AI Components</div>
+  <div class="sec-desc">AI surfaces are always visually distinct — teal or amber, with a pulsing dot, confidence score, and "AI" label. Users should always know when they're looking at an AI finding vs. factual data.</div>
+  <div class="comp-grid">
+    <div class="comp-card comp-2">
+      <div class="comp-card-title">AI Insight Bar — Teal (informational finding)</div>
+      <div class="ai-card">
+        <div class="ai-head"><div class="ai-dot"></div><div class="ai-lbl">AI — Attrition Risk</div></div>
+        <div class="ai-title">Moderate flight risk in Engineering</div>
+        <div class="ai-body">3 employees show elevated attrition signals — low engagement + manager friction patterns over 14 days.</div>
+        <div class="conf-row"><div class="conf-track"><div class="conf-fill" style="width:83%"></div></div><div class="conf-pct">83% confidence</div></div>
+      </div>
+    </div>
+    <div class="comp-card">
+      <div class="comp-card-title">Risk Card — Amber (actionable warning)</div>
+      <div class="risk-card">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><div style="width:7px;height:7px;border-radius:50%;background:var(--amber2);flex-shrink:0" class="risk-dot"></div><div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.10em">AI — Attrition Risk</div></div>
+        <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px">Moderate flight risk identified</div>
+        <div style="font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:10px">Engagement score dropped 18 pts over 14 days. Pattern matches pre-departure behaviour in similar profiles.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="flex:1;height:4px;background:rgba(180,83,9,.12);border-radius:99px;overflow:hidden"><div style="width:78%;height:100%;background:var(--amber2);border-radius:99px"></div></div><div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--amber)">78%</div></div>
+        <div style="display:flex;gap:7px"><button class="btn" style="background:var(--amber2);color:#fff;border-color:var(--amber2);font-size:12px;padding:5px 12px">Schedule Check-in</button><button class="btn" style="color:var(--amber);border-color:#FCD34D;font-size:12px;padding:5px 12px">View Analysis</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="div-line"></div>
+  <div class="rule-list">
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Always show confidence %</strong> — users need to calibrate trust. Displayed as a labelled progress bar, not just a number.</div></div>
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Pulsing dot</strong> signals live/active AI monitoring. Static dot = completed analysis. Never pulse on resolved states.</div></div>
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Teal = informational AI</strong> (dashboard bar, suggestions). <strong>Amber = actionable warning</strong> (attrition risk, anomaly). <strong>Never red for AI</strong> — that colour is reserved for system errors.</div></div>
+    <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Always dismissable.</strong> Users who disagree or have already taken action should be able to remove AI cards from their view.</div></div>
+  </div>
+</div>
+
+<!-- ── 16 LAYOUTS ─────────────────────────────────────── -->
+<div class="section" id="layouts">
+  <div class="sec-label">16 — Patterns</div>
+  <div class="sec-title">Layout Patterns</div>
+  <div class="sec-desc">Six canonical layout patterns across the 12 archetypes. All share the same chrome: icon sidebar (54px or 216–240px full), 52px topbar, scrollable main content below.</div>
+  <div class="layout-grid">
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:6px">
+          <div style="width:28px;height:28px;border-radius:7px;background:var(--teal)"></div>
+          <div style="width:28px;height:28px;border-radius:6px;background:var(--bd)"></div>
+          <div style="width:28px;height:28px;border-radius:6px;background:var(--bd)"></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="height:36px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="flex:1;background:var(--bg);padding:10px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+              <div style="height:40px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div>
+              <div style="height:40px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div>
+              <div style="height:40px;background:var(--al);border:1px solid #FCD34D;border-radius:6px"></div>
+              <div style="height:40px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div>
+              <div style="height:40px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;flex:1">
+              <div style="background:var(--w);border:1px solid var(--bd);border-radius:6px"></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="flex:1;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div><div style="flex:1;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Dashboard</div>
+      <div class="layout-sub">KPIs · Charts · Feed</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="height:36px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="height:28px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="height:28px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="flex:1;background:var(--w)">
+            <div style="height:32px;background:var(--t6);border-bottom:1px solid var(--bd)"></div>
+            <div style="height:32px;border-bottom:1px solid var(--t5);display:flex;align-items:center;padding:0 12px;gap:8px"><div style="width:20px;height:20px;border-radius:50%;background:#4F46E5"></div><div style="height:8px;background:var(--t5);border-radius:99px;flex:1"></div></div>
+            <div style="height:32px;border-bottom:1px solid var(--t5);display:flex;align-items:center;padding:0 12px;gap:8px"><div style="width:20px;height:20px;border-radius:50%;background:#059669"></div><div style="height:8px;background:var(--t5);border-radius:99px;flex:1"></div></div>
+            <div style="height:32px;display:flex;align-items:center;padding:0 12px;gap:8px"><div style="width:20px;height:20px;border-radius:50%;background:#DC2626"></div><div style="height:8px;background:var(--t5);border-radius:99px;flex:1"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">List / Table</div>
+      <div class="layout-sub">Stats · Toolbar · Full-width table</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="height:36px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="padding:12px 10px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;gap:8px;align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED)"></div><div style="flex:1"><div style="height:8px;background:var(--t5);border-radius:99px;margin-bottom:5px"></div><div style="height:6px;background:var(--t5);border-radius:99px;width:60%"></div></div></div>
+          <div style="flex:1;background:var(--bg);display:grid;grid-template-columns:1fr 100px;gap:8px;padding:10px">
+            <div style="display:flex;flex-direction:column;gap:7px"><div style="background:var(--al);border:1px solid #FCD34D;border-radius:6px;flex:1"></div><div style="background:var(--w);border:1px solid var(--bd);border-radius:6px;flex:2"></div></div>
+            <div style="display:flex;flex-direction:column;gap:7px"><div style="background:var(--w);border:1px solid var(--bd);border-radius:6px;flex:1"></div><div style="background:var(--w);border:1px solid var(--bd);border-radius:6px;flex:1"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Detail / Profile</div>
+      <div class="layout-sub">Header + tabs · 2-col grid · Rail</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="height:36px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="height:28px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 10px;gap:6px"><div style="height:6px;width:16px;background:var(--teal);border-radius:99px"></div><div style="height:6px;flex:1;background:var(--t5);border-radius:99px"></div></div>
+          <div style="flex:1;display:grid;grid-template-columns:1fr 80px">
+            <div style="border-right:1px solid var(--bd);padding:10px;display:flex;flex-direction:column;gap:8px;overflow:hidden">
+              <div style="height:40px;background:var(--bg);border-radius:6px"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><div style="height:30px;background:var(--w);border:1px solid var(--bd);border-radius:5px"></div><div style="height:30px;background:var(--w);border:1px solid var(--bd);border-radius:5px"></div><div style="height:30px;background:var(--w);border:1px solid var(--bd);border-radius:5px"></div><div style="height:30px;background:var(--w);border:1px solid var(--bd);border-radius:5px"></div></div>
+            </div>
+            <div style="background:var(--w);padding:8px;display:flex;flex-direction:column;gap:6px"><div style="height:8px;background:var(--t5);border-radius:99px;width:80%"></div><div style="height:6px;background:var(--t5);border-radius:99px;width:60%"></div><div style="height:6px;background:var(--t5);border-radius:99px;width:70%"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Create / Edit Form</div>
+      <div class="layout-sub">Step bar · Main form · Summary rail</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr">
+          <div style="border-right:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="height:36px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+            <div style="height:30px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+            <div style="padding:8px;display:flex;flex-direction:column;gap:6px;flex:1;background:var(--bg)">
+              <div style="background:var(--tl);border-left:2px solid var(--teal);border-radius:4px;padding:8px 6px"><div style="height:6px;background:var(--teal);opacity:.3;border-radius:99px;margin-bottom:4px"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:80%"></div></div>
+              <div style="background:var(--w);border:1px solid var(--bd);border-radius:4px;padding:8px 6px"><div style="height:6px;background:var(--t5);border-radius:99px;margin-bottom:4px"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:70%"></div></div>
+              <div style="background:var(--w);border:1px solid var(--bd);border-radius:4px;padding:8px 6px"><div style="height:6px;background:var(--t5);border-radius:99px;margin-bottom:4px"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:60%"></div></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <div style="height:36px;background:var(--bg);border-bottom:1px solid var(--bd)"></div>
+            <div style="flex:1;background:var(--w);padding:10px;display:flex;flex-direction:column;gap:7px"><div style="height:8px;background:var(--t5);border-radius:99px"></div><div style="height:7px;background:var(--t5);border-radius:99px;width:90%"></div><div style="height:7px;background:var(--t5);border-radius:99px;width:80%"></div></div>
+            <div style="height:40px;border-top:1px solid var(--bd);background:var(--w);display:flex;gap:6px;align-items:center;padding:0 10px"><div style="height:24px;background:var(--teal);border-radius:5px;flex:1"></div><div style="height:24px;background:var(--rl);border-radius:5px;flex:1"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Workflow / Approval</div>
+      <div class="layout-sub">List (left) · Detail + actions (right)</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="height:36px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="height:28px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="flex:1;display:grid;grid-template-columns:80px 1fr">
+            <div style="background:var(--w);border-right:1px solid var(--bd);padding:8px;display:flex;flex-direction:column;gap:5px"><div style="height:5px;background:var(--t5);border-radius:99px"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:80%"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:70%"></div></div>
+            <div style="background:var(--bg);display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:20px repeat(4,1fr);gap:1px;padding:6px">
+              <div style="grid-column:1/-1;display:flex;gap:2px">${Array(7).fill(0).map((_,i)=>`<div style="flex:1;height:16px;background:var(--w);border-radius:3px;font-size:7px;display:flex;align-items:center;justify-content:center;color:var(--t4)"></div>`).join('')}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Calendar / Timeline</div>
+      <div class="layout-sub">Mini-cal sidebar · Month grid</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="height:36px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+          <div style="display:flex;border-bottom:1px solid var(--bd);background:var(--w)"><div style="padding:6px 10px;font-size:9px;color:var(--teal);font-weight:700;border-bottom:2px solid var(--teal)">Workforce</div><div style="padding:6px 10px;font-size:9px;color:var(--t4)">Payroll</div><div style="padding:6px 10px;font-size:9px;color:var(--t4)">Leave</div></div>
+          <div style="flex:1;background:var(--bg);padding:10px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"><div style="height:36px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div><div style="height:36px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div><div style="height:36px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div><div style="height:36px;background:var(--w);border:1px solid var(--bd);border-radius:6px"></div></div>
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;flex:1"><div style="background:var(--w);border:1px solid var(--bd);border-radius:6px"></div><div style="background:var(--w);border:1px solid var(--bd);border-radius:6px"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Analytics / Reports</div>
+      <div class="layout-sub">Report nav · Filter bar · Charts + table</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="padding:10px;background:var(--w);border-bottom:1px solid var(--bd)">
+            <div style="height:28px;background:var(--bg);border:1px solid var(--bd);border-radius:7px;display:flex;align-items:center;padding:0 8px;gap:6px"><div style="width:10px;height:10px;opacity:.4;border-radius:50%;background:var(--t4)"></div><div style="height:5px;flex:1;background:var(--t5);border-radius:99px"></div></div>
+            <div style="display:flex;gap:5px;margin-top:7px"><div style="padding:3px 8px;background:var(--tl);border:1px solid var(--teal);border-radius:99px;font-size:9px;color:var(--teal);font-weight:700">Engineering</div><div style="padding:3px 8px;background:var(--tl);border:1px solid var(--teal);border-radius:99px;font-size:9px;color:var(--teal);font-weight:700">Active</div></div>
+          </div>
+          <div style="flex:1;display:grid;grid-template-columns:80px 1fr">
+            <div style="background:var(--w);border-right:1px solid var(--bd);padding:8px;display:flex;flex-direction:column;gap:5px"><div style="height:5px;background:var(--t5);border-radius:99px"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:80%"></div></div>
+            <div style="padding:0;display:flex;flex-direction:column">
+              <div style="height:24px;background:var(--t6);border-bottom:1px solid var(--bd)"></div>
+              <div style="height:32px;border-bottom:1px solid var(--t5);display:flex;align-items:center;padding:0 10px;gap:7px"><div style="width:20px;height:20px;border-radius:50%;background:#4F46E5"></div><div style="height:6px;background:var(--t5);border-radius:99px;flex:1"></div><div style="width:40px;height:14px;background:var(--gl);border-radius:3px"></div></div>
+              <div style="height:32px;display:flex;align-items:center;padding:0 10px;gap:7px"><div style="width:20px;height:20px;border-radius:50%;background:#059669"></div><div style="height:6px;background:var(--t5);border-radius:99px;flex:1"></div><div style="width:40px;height:14px;background:var(--gl);border-radius:3px"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Search / Discovery</div>
+      <div class="layout-sub">Hero search · Facets · Results</div>
+    </div>
+    <div>
+      <div class="layout-diagram">
+        <div style="width:54px;background:#E8EDF5;border-right:1px solid var(--bd);"></div>
+        <div style="flex:1;display:grid;grid-template-columns:80px 120px 1fr">
+          <div style="background:var(--w);border-right:1px solid var(--bd);padding:8px;display:flex;flex-direction:column;gap:5px"><div style="height:5px;background:var(--t5);border-radius:99px"></div><div style="height:5px;background:var(--teal);opacity:.3;border-radius:99px"></div><div style="height:5px;background:var(--t5);border-radius:99px"></div></div>
+          <div style="border-right:1px solid var(--bd);display:flex;flex-direction:column">
+            <div style="height:28px;background:var(--w);border-bottom:1px solid var(--bd)"></div>
+            <div style="flex:1;background:var(--bg)">
+              <div style="border-bottom:1px solid var(--bd);padding:8px 6px;background:var(--tl);border-left:2px solid var(--teal)"><div style="height:5px;background:var(--teal);opacity:.3;border-radius:99px;margin-bottom:4px"></div><div style="height:4px;background:var(--t5);border-radius:99px;width:80%"></div></div>
+              <div style="border-bottom:1px solid var(--t5);padding:8px 6px"><div style="height:5px;background:var(--t5);border-radius:99px;margin-bottom:4px"></div><div style="height:4px;background:var(--t5);border-radius:99px;width:70%"></div></div>
+              <div style="padding:8px 6px"><div style="height:5px;background:var(--t5);border-radius:99px;margin-bottom:4px"></div><div style="height:4px;background:var(--t5);border-radius:99px;width:75%"></div></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;background:var(--w)">
+            <div style="height:48px;border-bottom:1px solid var(--bd);padding:6px;display:flex;flex-direction:column;gap:4px"><div style="height:7px;background:var(--t5);border-radius:99px"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:60%"></div></div>
+            <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:5px"><div style="height:5px;background:var(--t5);border-radius:99px"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:90%"></div><div style="height:5px;background:var(--t5);border-radius:99px;width:80%"></div></div>
+            <div style="height:36px;border-top:1px solid var(--bd);padding:5px;display:flex;gap:5px"><div style="flex:1;background:var(--teal);border-radius:4px"></div><div style="width:40px;background:var(--t5);border-radius:4px"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="layout-label">Inbox / Feed</div>
+      <div class="layout-sub">3-panel: nav · list · detail+reply</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 17 DATA VIZ ────────────────────────────────────── -->
+<div class="section" id="dataviz">
+  <div class="sec-label">17 — Patterns</div>
+  <div class="sec-title">Data Visualisation</div>
+  <div class="sec-desc">Charts use SVG or CSS — no external chart libraries required. A strict colour order applies. Donut charts always show a centre label. All charts animate on first load.</div>
+  <div class="two-col">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px">Chart colour order</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:14px;height:14px;border-radius:3px;background:#3B82F6;flex-shrink:0"></div><span style="font-family:var(--mono);font-size:12px;color:var(--teal)">#3B82F6</span><span style="font-size:12.5px;color:var(--t3)">Engineering / Primary series</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:14px;height:14px;border-radius:3px;background:#7C3AED;flex-shrink:0"></div><span style="font-family:var(--mono);font-size:12px;color:var(--teal)">#7C3AED</span><span style="font-size:12.5px;color:var(--t3)">Product / Second series</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:14px;height:14px;border-radius:3px;background:#22C55E;flex-shrink:0"></div><span style="font-family:var(--mono);font-size:12px;color:var(--teal)">#22C55E</span><span style="font-size:12.5px;color:var(--t3)">Sales / Third series</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:14px;height:14px;border-radius:3px;background:#F59E0B;flex-shrink:0"></div><span style="font-family:var(--mono);font-size:12px;color:var(--teal)">#F59E0B</span><span style="font-size:12.5px;color:var(--t3)">Marketing / Fourth series</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:14px;height:14px;border-radius:3px;background:#0EA5E9;flex-shrink:0"></div><span style="font-family:var(--mono);font-size:12px;color:var(--teal)">#0EA5E9</span><span style="font-size:12.5px;color:var(--t3)">HR & Ops / Fifth series</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:14px;height:14px;border-radius:3px;background:#EF4444;flex-shrink:0"></div><span style="font-family:var(--mono);font-size:12px;color:var(--teal)">#EF4444</span><span style="font-size:12.5px;color:var(--t3)">Finance / Sixth series</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:14px;height:14px;border-radius:3px;background:#64748B;flex-shrink:0"></div><span style="font-family:var(--mono);font-size:12px;color:var(--teal)">#64748B</span><span style="font-size:12.5px;color:var(--t3)">Other / Neutral</span></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px">Chart rules</div>
+      <div class="rule-list">
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Trend lines</strong> use --teal with 8% fill opacity below the line. Current value point shows teal circle with pulsing ring.</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Bar charts</strong> in dashboard use grouped bars — each department gets its fixed colour, always in the same order.</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Donut charts</strong> use SVG stroke-dasharray. Track stroke: #F1F4F8. Centre always shows the total in JetBrains Mono bold.</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>Inline bar tracks</strong> in tables: height 5px, background --t5, border-radius 99px. Colour matches the department series colour.</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text"><strong>All charts animate</strong> on first render — bars and fills start at 0 and animate to their value with cubic-bezier(.25,.8,.25,1).</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 18 VOICE & TONE ────────────────────────────────── -->
+<div class="section" id="voice">
+  <div class="sec-label">18 — Patterns</div>
+  <div class="sec-title">Voice & Tone</div>
+  <div class="sec-desc">Meridian communicates with confidence and brevity. It surfaces facts, not opinion — and when AI speaks, it qualifies with confidence scores, not absolutes.</div>
+  <div class="three-col">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px">Labels & Actions</div>
+      <div class="rule-list">
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Lead with verbs: <strong>"Add Employee"</strong>, <strong>"Approve"</strong>, <strong>"Export CSV"</strong></div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Table headers are nouns only: <strong>"Department"</strong>, <strong>"Status"</strong>, <strong>"Salary"</strong></div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Nav items are nouns: <strong>"Employees"</strong>, <strong>"Analytics"</strong>, <strong>"Settings"</strong></div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Error messages say what happened and what to do: <strong>"SLA breached (5d) — approve now"</strong></div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px">AI Language</div>
+      <div class="rule-list">
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Prefix all AI findings: <strong>"AI —"</strong> followed by the finding type</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">State confidence explicitly: <strong>"83% confidence"</strong>, never just "high confidence"</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Plain language: <strong>"3 employees show elevated attrition signals"</strong> not <strong>"attrition likelihood vectors elevated"</strong></div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Always recommend an action: <strong>"Recommend scheduling a check-in"</strong></div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:12px">Numbers & Data</div>
+      <div class="rule-list">
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Salary: always <strong>$185,000</strong> — no rounding unless explicitly a summary</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Dates: <strong>Mar 10, 2026</strong> in UI · <strong>2026-03-10</strong> in export data</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Deltas: <strong>+14</strong> / <strong>−3</strong> / <strong>±0</strong> — always with sign prefix</div></div>
+        <div class="rule"><div class="rule-dot"></div><div class="rule-text">Employee IDs: <strong>EMP-0341</strong> — always 4-digit zero-padded, monospace</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="div-line"></div>
+  <div class="do-dont">
+    <div class="do-box"><div class="do-lbl">✓ Do — Meridian voice</div><div class="do-txt"><strong>"3 records deviate &gt;15% from last cycle. Review before April 1 run."</strong><br>Direct. Specific. Time-bounded. Tells user exactly what to do.</div></div>
+    <div class="dont-box"><div class="dont-lbl">✕ Don't — Generic voice</div><div class="dont-txt"><strong>"Some payroll records may require your attention."</strong><br>Vague. No numbers. No urgency. No action. Users ignore it.</div></div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /shell -->
+
+<script>
+// Active nav on scroll
+const sections = document.querySelectorAll('.section[id]');
+const navLinks = document.querySelectorAll('.sn-a[href]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('on'));
+      const active = document.querySelector(`.sn-a[href="#${entry.target.id}"]`);
+      if (active) active.classList.add('on');
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(s => observer.observe(s));
+
+// Toggle interactions
+document.querySelectorAll('.toggle').forEach(t => t.addEventListener('click', function() { this.classList.toggle('on'); }));
+</script>
+</body>
+</html>
