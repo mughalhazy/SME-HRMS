@@ -9,7 +9,7 @@ Protocol: PRE-FRONTEND GIT BASELINE, REPOSITORY HYGIENE, AND GITHUB SYNC.md
 
 # READY_FOR_FRONTEND_PHASES
 
-**One item pending (non-blocking for local development): GitHub remote not yet set.**
+**GitHub synchronized. `main` and `develop` live at `https://github.com/mughalhazy/SME-HRMS`.**
 
 ---
 
@@ -35,8 +35,8 @@ Protocol: PRE-FRONTEND GIT BASELINE, REPOSITORY HYGIENE, AND GITHUB SYNC.md
 | `.gitattributes` added | PASS | LF enforced for Linux/CI |
 | `.npmrc` workspace-local | PASS | `cache=.workspace/cache/npm` |
 | Baseline commit made | PASS | `887cde4` — 816 files, 182,621 insertions |
-| GitHub remote set | PENDING | User must provide remote URL |
-| GitHub push completed | PENDING | Depends on remote |
+| GitHub remote set | DONE | `https://github.com/mughalhazy/SME-HRMS.git` |
+| GitHub push completed | DONE | `main` + `develop` pushed (force authorized by user) |
 | CI will trigger on push | READY | `.github/workflows/ci.yml` already committed |
 | Frontend-ready baseline | PASS | L0 FROZEN, authority docs, contracts all committed |
 
@@ -67,20 +67,14 @@ Protocol: PRE-FRONTEND GIT BASELINE, REPOSITORY HYGIENE, AND GITHUB SYNC.md
 
 ---
 
-## ESCALATION: ONE ITEM
+## GITHUB SYNC — COMPLETE
 
-| Item | Type | Action |
-|------|------|--------|
-| GitHub remote URL | ESCALATION | User must provide the correct GitHub repository URL |
-
-```bash
-# Once you have the URL:
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-git push -u origin develop
-```
-
-Create the GitHub repository as **PRIVATE**.
+| Item | Result |
+|------|--------|
+| Remote URL | `https://github.com/mughalhazy/SME-HRMS.git` |
+| `origin/main` | Force-pushed (user authorized — remote had 286 unrelated commits from old flat layout, no common ancestor) |
+| `origin/develop` | Clean first push |
+| Old `codex/*` branches | Untouched — remain on remote |
 
 ---
 
